@@ -38,26 +38,29 @@ final class Dispatcher implements Handler {
     public void handle(Request request, Response response) {
         Router.Match match = router.resolve(request.method(), request.path());
         Context context = new Context(request, response,
-                match == null ? Map.of() : match.pathVariables());
+                match == null ? Map.of() : match.pathVariables(),
+                match == null ? null : match.route());
         try {
-            if (match == null) {
-                throw new HttpException(404, "no existe " + request.path());
-            }
-            if (match.methodNotAllowed()) {
-                response.header("Allow", allowHeader(request.path()));
-                throw new HttpException(405, "método no permitido en " + request.path());
-            }
-            if (authenticator != null) {
+            if (authenticator != null && match != null && !match.methodNotAllowed()) {
                 context.principal(authenticator.authenticate(context));
             }
-            render(runChain(context, match.route()), context);
+            render(runChain(context, match), context);
         } catch (Throwable failure) {
             recover(failure, context);
         }
     }
 
-    private Object runChain(Context context, RouteEntry route) throws Exception {
-        Middleware.Chain terminal = ctx -> invoke(route, ctx);
+    private Object runChain(Context context, Router.Match match) throws Exception {
+        Middleware.Chain terminal = ctx -> {
+            if (match == null) {
+                throw new HttpException(404, "no existe " + ctx.path());
+            }
+            if (match.methodNotAllowed()) {
+                ctx.response().header("Allow", allowHeader(ctx.path()));
+                throw new HttpException(405, "método no permitido en " + ctx.path());
+            }
+            return invoke(match.route(), ctx);
+        };
         Middleware.Chain chain = terminal;
         for (int i = middleware.size() - 1; i >= 0; i--) {
             Middleware step = middleware.get(i);
@@ -163,12 +166,16 @@ final class Dispatcher implements Handler {
         }
         int status = failure instanceof HttpException http ? http.status() : 500;
         String message = status == 500 ? "error interno" : failure.getMessage();
+        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("error", lux.http.HttpStatus.reason(status));
+        body.put("message", message == null ? "" : message);
+        body.put("path", context.path());
+        if (failure instanceof ValidationException invalid) {
+            body.put("fields", invalid.problems());
+        }
         try {
             context.response().status(status).type("application/json");
-            context.response().send(Json.write(Map.of(
-                    "error", lux.http.HttpStatus.reason(status),
-                    "message", message == null ? "" : message,
-                    "path", context.path())));
+            context.response().send(Json.write(body));
         } catch (RuntimeException ignored) {
         }
     }

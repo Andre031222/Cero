@@ -11,6 +11,8 @@ public final class TestSuite {
         RegistryTests.run();
         ConfigTests.run();
         DispatcherTests.run();
+        ValidationTests.run();
+        GuardTests.run();
 
         Check.report();
         if (Check.failures() > 0) {

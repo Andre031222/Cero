@@ -6,7 +6,7 @@ un lenguaje.
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Estado](https://img.shields.io/badge/Estado-fase%200-8E8E93?style=flat-square)](#estado)
+[![Pruebas](https://img.shields.io/badge/Pruebas-601-15803d?style=flat-square)](#estado)
 
 * * *
 
@@ -17,8 +17,8 @@ funciona y está en producción — pero que necesita Tomcat para arrancar y sol
 
 LuxCore cambia esas dos cosas:
 
-1. **Arranca solo.** Servidor HTTP propio sobre `java.nio` con hilos virtuales. `java -jar app.jar`
-   y está corriendo. Sin contenedor de servlets, sin `web.xml`, sin despliegue.
+1. **Arranca solo.** Servidor HTTP propio con un hilo virtual por conexión. `java -jar app.jar` y
+   está corriendo. Sin contenedor de servlets, sin `web.xml`, sin despliegue.
 2. **No es solo Java.** El objetivo final no es un framework más: es un contrato de framework
    —rutas, pipeline, request/response, DI, configuración— definido de forma neutral e
    **implementado en Java, Rust y C++**, con un mismo banco de pruebas de conformidad para los tres.
@@ -38,8 +38,9 @@ que un desarrollador puede leer entero.
 
 ## Estado
 
-**El framework ya corre solo.** `lux-http` y `lux-core` están terminados: 63 clases, **297 pruebas
-en verde**, cero dependencias, y ni una sola referencia a `jakarta.*` en todo `java/`.
+**El framework ya corre solo.** Cuatro módulos terminados —servidor, núcleo, vistas y datos—:
+102 clases, **601 pruebas en verde**, cero dependencias, y ni una sola referencia a `jakarta.*`
+en todo `java/`.
 
 ```java
 @Route("/api")
@@ -64,9 +65,9 @@ Medición local ([detalle y salvedades](docs/mediciones-locales.md)):
 | | JxMVC sobre Tomcat | LuxCore | Meta de fase 1 |
 |---|---|---|---|
 | Arranque | 1392 ms | **51 ms** | < 150 ms |
-| Artefacto | 253 KB + ~15 MB Tomcat | **193 KB** (4 JAR) | ≤ 400 KB |
+| Artefacto | 253 KB + ~15 MB Tomcat | **215 KB** (4 JAR) | ≤ 400 KB |
 | rps | 43 691 | 94 610 ⚠ | ≥ 48 000 |
-| Pruebas | 347 | **526** | — |
+| Pruebas | 347 | **601** | — |
 | Dependencias | 0 (+ Jakarta *provided*) | **0** | 0 |
 
 ⚠ El rps se midió con cliente y servidor en la misma máquina, y **no es comparable** con la tabla
@@ -79,11 +80,16 @@ Arranque y tamaño del artefacto sí son sólidos.
 chunked en ambos sentidos, `Expect: 100-continue`, HEAD, streaming, TLS, cookies, sesiones,
 multipart, gzip y archivos estáticos. Techo de conexiones, watchdog de handler y apagado ordenado.
 
-**`lux-core`** (153 pruebas) — el framework: router con plantillas `{var}` y comodines, pipeline
+**`lux-core`** (228 pruebas) — el framework: router con plantillas `{var}` y comodines, pipeline
 con middleware, inyección de dependencias con detección de ciclos, JSON propio (escritura, lectura
 y vinculación a records), vinculación de parámetros (`@Path`, `@Query`, `@Body`, `@Header`,
 `@CookieValue`), autenticación y roles (`@RequireAuth`, `@RequireRole`), manejo de errores
 (`@OnError`) y configuración por properties, entorno y propiedades del sistema.
+
+Trae además los transversales de una app real: **CORS** con preflight, **CSRF** con token en
+sesión y comparación en tiempo constante, **rate limiting** por ventana deslizante, **validación**
+declarativa (`@Required`, `@Length`, `@Range`, `@Email`, `@Match`, `@OneOf`, `@Satisfies`) que
+responde 422 con el mapa de campos, y **sanitizado** de HTML y nombres de archivo.
 
 **`lux-view`** (88 pruebas) — motor de plantillas propio, sustituye a JSP. `{{ expr }}` escapado
 por defecto, `{% if %}`, `{% for %}` con `loop.index`/`first`/`last`, `{% include %}` y herencia
@@ -95,9 +101,8 @@ carácter y los valores nunca se concatenan.
 
 ## Qué falta
 
-Del núcleo heredado quedan **19 clases y 3 450 líneas** por migrar, todas transversales y ninguna
-acoplada a Jakarta: validación, cache, scheduler, métricas, eventos, rate limiting, CORS, CSRF,
-sanitizado, logger, OpenAPI, OAuth, contraseñas y WebSocket.
+Del núcleo heredado quedan **14 clases y 2 566 líneas** por migrar, ninguna acoplada a Jakarta:
+cache, scheduler, métricas, eventos, logger, perfiles, OpenAPI, OAuth, contraseñas y WebSocket.
 
 ## Estructura
 
@@ -122,7 +127,7 @@ docs/            Documentación
 LuxCore necesita Java 21+ (hilos virtuales) y Maven. Nada más.
 
 ```bash
-cd java && mvn test          # 526 pruebas, runner propio (sin JUnit)
+cd java && mvn test          # 601 pruebas, runner propio (sin JUnit)
 cd java && mvn package       # cada módulo en su target/
 ```
 
