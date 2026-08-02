@@ -16,6 +16,10 @@ final class HttpDate {
     private HttpDate() {
     }
 
+    static String format(long epochMillis) {
+        return FORMAT.format(Instant.ofEpochMilli(epochMillis));
+    }
+
     static String now() {
         long second = System.currentTimeMillis() / 1000;
         if (second != cachedSecond) {

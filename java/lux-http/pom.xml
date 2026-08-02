@@ -31,7 +31,7 @@
                             <arguments>
                                 <argument>-classpath</argument>
                                 <classpath/>
-                                <argument>lux.http.HttpTests</argument>
+                                <argument>lux.http.TestSuite</argument>
                             </arguments>
                         </configuration>
                     </execution>

@@ -1,20 +1,32 @@
 package lux.http;
 
+import javax.net.ssl.SSLContext;
+
 public record ServerOptions(
         String host,
         int port,
         int backlog,
+        int maxConnections,
         int idleTimeoutMillis,
+        int handlerTimeoutMillis,
+        int shutdownGraceMillis,
         int maxRequestLineBytes,
         int maxHeaderBytes,
         int maxHeaderCount,
         long maxBodyBytes,
         int readBufferBytes,
-        int maxKeepAliveRequests) {
+        int maxKeepAliveRequests,
+        int sessionTimeoutMillis,
+        int gzipMinBytes,
+        boolean requireHost,
+        SSLContext tls) {
 
     public ServerOptions {
         if (port < 0 || port > 65535) {
             throw new IllegalArgumentException("puerto fuera de rango: " + port);
+        }
+        if (maxConnections < 1) {
+            throw new IllegalArgumentException("maxConnections debe ser al menos 1");
         }
         if (readBufferBytes < 512) {
             throw new IllegalArgumentException("buffer de lectura demasiado pequeño: " + readBufferBytes);
@@ -22,29 +34,144 @@ public record ServerOptions(
         if (maxRequestLineBytes < 64 || maxHeaderBytes < 64) {
             throw new IllegalArgumentException("límites de cabecera demasiado pequeños");
         }
+        if (maxBodyBytes < 0) {
+            throw new IllegalArgumentException("maxBodyBytes negativo");
+        }
     }
 
     public static ServerOptions defaults() {
-        return new ServerOptions("0.0.0.0", 8080, 1024, 30_000, 8_192, 32_768, 100, 10L << 20, 16_384, 1_000);
+        return builder().build();
     }
 
-    public ServerOptions host(String host) {
-        return new ServerOptions(host, port, backlog, idleTimeoutMillis, maxRequestLineBytes,
-                maxHeaderBytes, maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests);
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public ServerOptions port(int port) {
-        return new ServerOptions(host, port, backlog, idleTimeoutMillis, maxRequestLineBytes,
-                maxHeaderBytes, maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests);
+    public boolean secure() {
+        return tls != null;
     }
 
-    public ServerOptions idleTimeoutMillis(int millis) {
-        return new ServerOptions(host, port, backlog, millis, maxRequestLineBytes,
-                maxHeaderBytes, maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests);
+    public Builder toBuilder() {
+        return new Builder()
+                .host(host).port(port).backlog(backlog).maxConnections(maxConnections)
+                .idleTimeoutMillis(idleTimeoutMillis).handlerTimeoutMillis(handlerTimeoutMillis)
+                .shutdownGraceMillis(shutdownGraceMillis).maxRequestLineBytes(maxRequestLineBytes)
+                .maxHeaderBytes(maxHeaderBytes).maxHeaderCount(maxHeaderCount)
+                .maxBodyBytes(maxBodyBytes).readBufferBytes(readBufferBytes)
+                .maxKeepAliveRequests(maxKeepAliveRequests).sessionTimeoutMillis(sessionTimeoutMillis)
+                .gzipMinBytes(gzipMinBytes).requireHost(requireHost).tls(tls);
     }
 
-    public ServerOptions maxBodyBytes(long bytes) {
-        return new ServerOptions(host, port, backlog, idleTimeoutMillis, maxRequestLineBytes,
-                maxHeaderBytes, maxHeaderCount, bytes, readBufferBytes, maxKeepAliveRequests);
+    public static final class Builder {
+
+        private String host = "0.0.0.0";
+        private int port = 8080;
+        private int backlog = 1_024;
+        private int maxConnections = 10_000;
+        private int idleTimeoutMillis = 30_000;
+        private int handlerTimeoutMillis = 30_000;
+        private int shutdownGraceMillis = 10_000;
+        private int maxRequestLineBytes = 8_192;
+        private int maxHeaderBytes = 32_768;
+        private int maxHeaderCount = 100;
+        private long maxBodyBytes = 10L << 20;
+        private int readBufferBytes = 16_384;
+        private int maxKeepAliveRequests = 1_000;
+        private int sessionTimeoutMillis = 30 * 60_000;
+        private int gzipMinBytes = 1_024;
+        private boolean requireHost = true;
+        private SSLContext tls;
+
+        public Builder host(String value) {
+            host = value;
+            return this;
+        }
+
+        public Builder port(int value) {
+            port = value;
+            return this;
+        }
+
+        public Builder backlog(int value) {
+            backlog = value;
+            return this;
+        }
+
+        public Builder maxConnections(int value) {
+            maxConnections = value;
+            return this;
+        }
+
+        public Builder idleTimeoutMillis(int value) {
+            idleTimeoutMillis = value;
+            return this;
+        }
+
+        public Builder handlerTimeoutMillis(int value) {
+            handlerTimeoutMillis = value;
+            return this;
+        }
+
+        public Builder shutdownGraceMillis(int value) {
+            shutdownGraceMillis = value;
+            return this;
+        }
+
+        public Builder maxRequestLineBytes(int value) {
+            maxRequestLineBytes = value;
+            return this;
+        }
+
+        public Builder maxHeaderBytes(int value) {
+            maxHeaderBytes = value;
+            return this;
+        }
+
+        public Builder maxHeaderCount(int value) {
+            maxHeaderCount = value;
+            return this;
+        }
+
+        public Builder maxBodyBytes(long value) {
+            maxBodyBytes = value;
+            return this;
+        }
+
+        public Builder readBufferBytes(int value) {
+            readBufferBytes = value;
+            return this;
+        }
+
+        public Builder maxKeepAliveRequests(int value) {
+            maxKeepAliveRequests = value;
+            return this;
+        }
+
+        public Builder sessionTimeoutMillis(int value) {
+            sessionTimeoutMillis = value;
+            return this;
+        }
+
+        public Builder gzipMinBytes(int value) {
+            gzipMinBytes = value;
+            return this;
+        }
+
+        public Builder requireHost(boolean value) {
+            requireHost = value;
+            return this;
+        }
+
+        public Builder tls(SSLContext value) {
+            tls = value;
+            return this;
+        }
+
+        public ServerOptions build() {
+            return new ServerOptions(host, port, backlog, maxConnections, idleTimeoutMillis,
+                    handlerTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
+                    maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests,
+                    sessionTimeoutMillis, gzipMinBytes, requireHost, tls);
+        }
     }
 }

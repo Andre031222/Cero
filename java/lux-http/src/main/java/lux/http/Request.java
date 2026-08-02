@@ -2,6 +2,7 @@ package lux.http;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 
 public interface Request {
 
@@ -22,6 +23,22 @@ public interface Request {
     String protocol();
 
     String remoteAddress();
+
+    boolean secure();
+
+    String cookie(String name);
+
+    Map<String, String> cookies();
+
+    Session session();
+
+    Session session(boolean create);
+
+    List<Part> parts();
+
+    Part part(String name);
+
+    String field(String name);
 
     InputStream body();
 

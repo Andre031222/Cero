@@ -9,6 +9,8 @@ final class OutgoingResponse implements Response {
     private static final byte[] NO_BODY = new byte[0];
 
     private final OutputStream target;
+    private final IncomingRequest request;
+    private final ServerOptions options;
     private final Headers headers = new Headers();
     private final boolean headOnly;
 
@@ -17,16 +19,16 @@ final class OutgoingResponse implements Response {
     private boolean keepAlive = true;
     private ChunkedOutput chunked;
 
-    OutgoingResponse(OutputStream target, boolean headOnly) {
+    OutgoingResponse(OutputStream target, IncomingRequest request, ServerOptions options) {
         this.target = target;
-        this.headOnly = headOnly;
+        this.request = request;
+        this.options = options;
+        this.headOnly = request != null && request.method() == HttpMethod.HEAD;
     }
 
     @Override
     public Response status(int code) {
-        if (committed) {
-            throw new IllegalStateException("respuesta ya enviada");
-        }
+        requireOpen();
         status = code;
         return this;
     }
@@ -43,9 +45,7 @@ final class OutgoingResponse implements Response {
 
     @Override
     public Response header(String name, String value) {
-        if (committed) {
-            throw new IllegalStateException("respuesta ya enviada");
-        }
+        requireOpen();
         rejectControlCharacters(name, value);
         headers.set(name, value);
         return this;
@@ -54,6 +54,15 @@ final class OutgoingResponse implements Response {
     @Override
     public Response type(String contentType) {
         return header("Content-Type", contentType);
+    }
+
+    @Override
+    public Response cookie(Cookie cookie) {
+        requireOpen();
+        String encoded = cookie.encode();
+        rejectControlCharacters("Set-Cookie", encoded);
+        headers.add("Set-Cookie", encoded);
+        return this;
     }
 
     @Override
@@ -95,12 +104,10 @@ final class OutgoingResponse implements Response {
 
     @Override
     public OutputStream stream() {
-        if (committed) {
-            throw new IllegalStateException("respuesta ya enviada");
-        }
+        requireOpen();
         committed = true;
         try {
-            writeHead(-1, true);
+            writeHead(-1, true, null);
             chunked = new ChunkedOutput(target);
             return chunked;
         } catch (IOException cause) {
@@ -117,8 +124,10 @@ final class OutgoingResponse implements Response {
         keepAlive = value;
     }
 
-    boolean keepAlive() {
-        return keepAlive;
+    void reset() {
+        requireOpen();
+        headers.clear();
+        status = 200;
     }
 
     void finish() throws IOException {
@@ -131,6 +140,12 @@ final class OutgoingResponse implements Response {
         }
     }
 
+    private void requireOpen() {
+        if (committed) {
+            throw new IllegalStateException("respuesta ya enviada");
+        }
+    }
+
     private void typeIfAbsent(String contentType) {
         if (!headers.has("Content-Type")) {
             headers.set("Content-Type", contentType);
@@ -138,15 +153,25 @@ final class OutgoingResponse implements Response {
     }
 
     private void commit(byte[] body) {
-        if (committed) {
-            throw new IllegalStateException("respuesta ya enviada");
-        }
+        requireOpen();
         committed = true;
+
         boolean withBody = HttpStatus.allowsBody(status);
+        byte[] payload = withBody ? body : NO_BODY;
+        String encoding = null;
+
+        if (withBody && Gzip.worthwhile(request, headers, options, payload.length)) {
+            byte[] compressed = Gzip.compress(payload);
+            if (compressed.length < payload.length) {
+                payload = compressed;
+                encoding = "gzip";
+            }
+        }
+
         try {
-            writeHead(withBody ? body.length : -1, false);
-            if (withBody && !headOnly && body.length > 0) {
-                target.write(body);
+            writeHead(withBody ? payload.length : -1, false, encoding);
+            if (withBody && !headOnly && payload.length > 0) {
+                target.write(payload);
             }
             target.flush();
         } catch (IOException cause) {
@@ -154,8 +179,8 @@ final class OutgoingResponse implements Response {
         }
     }
 
-    private void writeHead(long contentLength, boolean useChunked) throws IOException {
-        StringBuilder head = new StringBuilder(160);
+    private void writeHead(long contentLength, boolean useChunked, String encoding) throws IOException {
+        StringBuilder head = new StringBuilder(192);
         head.append("HTTP/1.1 ").append(status).append(' ').append(HttpStatus.reason(status)).append("\r\n");
         head.append("Date: ").append(HttpDate.now()).append("\r\n");
 
@@ -164,7 +189,18 @@ final class OutgoingResponse implements Response {
         } else if (contentLength >= 0) {
             head.append("Content-Length: ").append(contentLength).append("\r\n");
         }
+        if (encoding != null) {
+            head.append("Content-Encoding: ").append(encoding).append("\r\n");
+            head.append("Vary: Accept-Encoding\r\n");
+        }
         head.append("Connection: ").append(keepAlive ? "keep-alive" : "close").append("\r\n");
+
+        if (request != null) {
+            Cookie pending = request.pendingSessionCookie();
+            if (pending != null) {
+                head.append("Set-Cookie: ").append(pending.encode()).append("\r\n");
+            }
+        }
 
         for (int i = 0; i < headers.size(); i++) {
             rejectControlCharacters(headers.name(i), headers.value(i));
