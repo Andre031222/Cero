@@ -11,19 +11,19 @@ capas del framework siguen enteras en `legacy/`.
 
 | | JxMVC 3.4.0 | LuxCore hoy |
 |---|---|---|
-| Clases de producción | 54 | 63 |
-| Líneas de producción | 10 379 | 4 838 |
-| Líneas de prueba | 2 248 | 2 077 |
-| Pruebas | 347 | 297 |
+| Clases de producción | 54 | 86 |
+| Líneas de producción | 10 379 | 7 037 |
+| Líneas de prueba | 2 248 | 3 421 |
+| Pruebas | 347 | **526** |
 | Dependencias en runtime | 0 (+ Jakarta *provided*) | **0, ninguna** |
 | Referencias a `jakarta.*` | 14 clases | **0** |
 | Necesita contenedor | Tomcat 10.1+ | **no** |
 | Arranque | 1392 ms | **51 ms** |
-| Artefacto | 253 KB + Tomcat (~15 MB) | **123 KB** |
+| Artefacto | 253 KB + Tomcat (~15 MB) | **193 KB** |
 
-LuxCore hace hoy más que JxMVC —porque incluye el servidor, que JxMVC delegaba— con **el 47 % de
-las líneas**. La proporción de pruebas por línea es del **43 %**, el doble que la del heredado
-(22 %).
+LuxCore hace hoy más que JxMVC —porque incluye el servidor y el motor de vistas, que JxMVC
+delegaba en Tomcat y en JSP— con **el 68 % de las líneas**. Las pruebas pesan **el 49 % del código
+de producción**, contra el 22 % del heredado.
 
 ## Por capas
 
@@ -31,8 +31,9 @@ las líneas**. La proporción de pruebas por línea es del **43 %**, el doble qu
 |---|---|---|---|
 | **0. Transporte HTTP** | Tomcat | `lux-http` propio | **cerrada** |
 | **1. Núcleo MVC** — router, pipeline, controladores | `MainLxServlet` (1041 L), `BaseDispatcher` (443 L), `JxRequest`/`JxResponse` | `lux-core` reescrito | **cerrada** |
-| **2. Transversales** — datos, cache, validación, scheduler, métricas | 40 clases puras, ~7 500 L | DI, JSON, config y seguridad hechos; el resto sin mover | **parcial, el resto es mudanza** |
-| **3. Vistas** | JSP + `JxTagFor`/`JxTagIf` | nada | **0 %, hay que reescribir** |
+| **2. Datos** | `JxDB`, `JxRepository`, `JxPool`, `JxTransaction`, `DBRow` | `lux-data` reescrito | **cerrada** |
+| **3. Vistas** | JSP + `JxTagFor`/`JxTagIf` | `lux-view` propio | **cerrada** |
+| **4. Transversales** — validación, cache, scheduler, métricas, eventos, rate limit, CORS, CSRF, OpenAPI, OAuth, WebSocket | 19 clases, 3 450 L | nada movido | **0 %, ninguna toca Jakarta** |
 
 `lux-core` no es una transliteración de `MainLxServlet`: las 1041 líneas del pipeline de 15 etapas
 se rehicieron como 11 clases con una responsabilidad cada una. El pipeline resultante es
@@ -96,15 +97,24 @@ nombre y valor, con verificación también al escribir para que no se pueda esqu
 - `lux-adapter-servlet` → para que Academia, Intranet y NFC Intranet no se rompan.
 - Portar las 347 pruebas.
 
-### En las capas 2–3
+### Transversales — 19 clases, 3 450 líneas
 
-- **`lux-view`** — motor de plantillas propio. Es lo único que impide retirar JSP, y lo que
-  bloquea que `jxmvc2x` corra en modo standalone.
-- **`lux-data`** — mudanza de `JxDB`, `JxRepository`, `JxPool`, `JxTransaction`, `DBRow`. No
-  tocan Jakarta: es trabajo mecánico.
-- **Transversales que faltan**: cache (`JxCache`), validación (`JxValidation`), scheduler
-  (`JxScheduler`), métricas (`JxMetrics`), OpenAPI (`JxOpenApi`), eventos (`JxEventBus`),
-  rate limiting (`JxRateLimiter`), CSRF y CORS. Todas son clases puras del heredado.
+Ninguna toca Jakarta, así que es trabajo de reescritura limpia, no de desacople.
+
+| Grupo | Clases | Líneas |
+|---|---|---|
+| Seguridad de petición — `BaseCorsResolver`, `JxCsrf`, `JxRateLimiter`, `BaseSanitizer` | 4 | 468 |
+| Validación — `JxValidation` | 1 | 416 |
+| Cache — `JxCache`, `JxCacheBackend` | 2 | 334 |
+| Observabilidad — `JxMetrics`, `JxLogger`, `JxProfile`, `JxDevMode` | 4 | 446 |
+| Autenticación — `JxOAuth`, `JxPasswords` | 2 | 528 |
+| WebSocket — `JxWebSocket`, `JxWsRegistrar` | 2 | 338 |
+| Tareas y eventos — `JxScheduler`, `JxEventBus` | 2 | 430 |
+| Generación — `JxOpenApi`, `GenApi` | 2 | 490 |
+
+### Y además
+
+- **`lux-launcher`** — empaquetado fat-jar. Hoy se arranca con `Lux.run(...)`, que basta.
 - **`lux-adapter-servlet`** — para que Academia, Intranet y NFC Intranet sigan desplegando en
   Tomcat mientras migran.
 - **Portar las 347 pruebas** del heredado.
@@ -123,10 +133,16 @@ con `ab`, sin aislamiento. No es comparable con la tabla del paper y no debe cit
 honesto sale del harness de `benchmarks/docker` con LuxCore como sexto contendiente, en el mismo
 Arch bare-metal.
 
-**El tercero: qué prueban las pruebas.** 297 casos, pero funcionales. No hay pruebas de
+**El tercero: qué prueban las pruebas.** 526 casos, pero funcionales. No hay pruebas de
 concurrencia real, sockets lentos (slowloris), cuerpos parciales, clientes que abortan a media
-respuesta, ni entradas generadas por fuzzing. La cobertura por línea es del 43 %; la cobertura
-por *modo de fallo* sigue siendo baja.
+respuesta, ni entradas generadas por fuzzing. Las pruebas pesan el 49 % del código de producción;
+la cobertura por *modo de fallo* sigue siendo baja.
+
+**El quinto: `lux-data` nunca ha hablado con una base de datos.** Sus 141 pruebas verifican el SQL
+generado, el orden de los parámetros y el mapeo de resultados contra un driver JDBC propio. Eso
+cubre lo que le toca al módulo, pero no cubre lo que hace cada motor real: tipos de PostgreSQL
+frente a MySQL, `LIMIT`/`OFFSET` en SQL Server, claves generadas, zonas horarias. Antes de
+producción hace falta una corrida contra al menos dos motores reales.
 
 **El cuarto, nuevo: reflexión en el camino caliente.** `lux-core` resuelve los argumentos de cada
 acción por reflexión en cada petición. Cuesta el 12 % de rps medido, y es exactamente el tipo de
@@ -135,5 +151,7 @@ poliglota habrá que resolver el registro de rutas y la vinculación en tiempo d
 
 ## Siguiente paso recomendado
 
-`lux-view`. Es lo único que impide retirar JSP y lo que bloquea que `jxmvc2x` corra en modo
-standalone — y esa es la prueba de que la paridad con el heredado es real.
+Los cuatro transversales que una app real necesita antes que el resto: **CORS, CSRF, rate limiting
+y validación** (5 clases, 884 líneas). Con eso, las apps AUR tienen todo lo que usan hoy salvo
+WebSocket, y `jxmvc2x` puede intentar correr entero en modo standalone — que es la prueba de que
+la paridad es real y no una lista de casillas.

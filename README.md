@@ -64,9 +64,9 @@ Medición local ([detalle y salvedades](docs/mediciones-locales.md)):
 | | JxMVC sobre Tomcat | LuxCore | Meta de fase 1 |
 |---|---|---|---|
 | Arranque | 1392 ms | **51 ms** | < 150 ms |
-| Artefacto | 253 KB + ~15 MB Tomcat | **123 KB** | ≤ 400 KB |
+| Artefacto | 253 KB + ~15 MB Tomcat | **193 KB** (4 JAR) | ≤ 400 KB |
 | rps | 43 691 | 94 610 ⚠ | ≥ 48 000 |
-| Pruebas | 347 | **297** | — |
+| Pruebas | 347 | **526** | — |
 | Dependencias | 0 (+ Jakarta *provided*) | **0** | 0 |
 
 ⚠ El rps se midió con cliente y servidor en la misma máquina, y **no es comparable** con la tabla
@@ -75,18 +75,29 @@ Arranque y tamaño del artefacto sí son sólidos.
 
 ## Qué trae cada módulo
 
-**`lux-http`** — servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive, chunked en ambos
-sentidos, `Expect: 100-continue`, HEAD, streaming, TLS, cookies, sesiones, multipart, gzip y
-archivos estáticos. Techo de conexiones, watchdog de handler y apagado ordenado.
+**`lux-http`** (144 pruebas) — servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive,
+chunked en ambos sentidos, `Expect: 100-continue`, HEAD, streaming, TLS, cookies, sesiones,
+multipart, gzip y archivos estáticos. Techo de conexiones, watchdog de handler y apagado ordenado.
 
-**`lux-core`** — el framework: router con plantillas `{var}` y comodines, pipeline con middleware,
-inyección de dependencias con detección de ciclos, JSON propio (escritura, lectura y vinculación a
-records), vinculación de parámetros (`@Path`, `@Query`, `@Body`, `@Header`, `@CookieValue`),
-autenticación y roles (`@RequireAuth`, `@RequireRole`), manejo de errores (`@OnError`) y
-configuración por properties, entorno y propiedades del sistema.
+**`lux-core`** (153 pruebas) — el framework: router con plantillas `{var}` y comodines, pipeline
+con middleware, inyección de dependencias con detección de ciclos, JSON propio (escritura, lectura
+y vinculación a records), vinculación de parámetros (`@Path`, `@Query`, `@Body`, `@Header`,
+`@CookieValue`), autenticación y roles (`@RequireAuth`, `@RequireRole`), manejo de errores
+(`@OnError`) y configuración por properties, entorno y propiedades del sistema.
 
-Lo siguiente es `lux-view` —para retirar JSP— y `lux-data`, que es sobre todo mudanza: las 40
-clases puras del heredado no tocan Jakarta.
+**`lux-view`** (88 pruebas) — motor de plantillas propio, sustituye a JSP. `{{ expr }}` escapado
+por defecto, `{% if %}`, `{% for %}` con `loop.index`/`first`/`last`, `{% include %}` y herencia
+con `{% extends %}` y `{% block %}`. Plantillas compiladas y cacheadas.
+
+**`lux-data`** (141 pruebas) — `Row`, `Db`, `Pool`, `Tx` y `Repository<T, ID>` sobre `@Table`,
+`@Id` y `@Column`. Todo por `PreparedStatement`; los identificadores se validan carácter a
+carácter y los valores nunca se concatenan.
+
+## Qué falta
+
+Del núcleo heredado quedan **19 clases y 3 450 líneas** por migrar, todas transversales y ninguna
+acoplada a Jakarta: validación, cache, scheduler, métricas, eventos, rate limiting, CORS, CSRF,
+sanitizado, logger, OpenAPI, OAuth, contraseñas y WebSocket.
 
 ## Estructura
 
@@ -94,9 +105,9 @@ clases puras del heredado no tocan Jakarta.
 java/
   lux-http/      Servidor HTTP/1.1 propio, TLS, sesiones, estáticos — hecho
   lux-core/      Router, pipeline, DI, JSON, configuración          — hecho
-  lux-view/      Motor de plantillas, sustituye JSP                   (siguiente)
-  lux-data/      Acceso a datos, migrado desde legacy                 (fase 2)
-  lux-launcher/  Fat-jar, java -jar app.jar                           (fase 2)
+  lux-view/      Motor de plantillas, sustituye JSP                 — hecho
+  lux-data/      Acceso a datos: Db, Pool, Tx, Repository           — hecho
+  lux-launcher/  Fat-jar, java -jar app.jar                           (pendiente)
 legacy/
   jxmvc-core/    Núcleo heredado — origen de la migración
   jxmvc2x/       Web de referencia en JSP — banco de pruebas de lux-view
@@ -111,8 +122,8 @@ docs/            Documentación
 LuxCore necesita Java 21+ (hilos virtuales) y Maven. Nada más.
 
 ```bash
-cd java && mvn test          # 297 pruebas, runner propio (sin JUnit)
-cd java && mvn package       # lux-http y lux-core en sus target/
+cd java && mvn test          # 526 pruebas, runner propio (sin JUnit)
+cd java && mvn package       # cada módulo en su target/
 ```
 
 El núcleo heredado sigue compilando aparte, y todavía necesita Tomcat para `jxmvc2x`:
