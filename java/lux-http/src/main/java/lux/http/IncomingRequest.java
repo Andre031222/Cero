@@ -7,10 +7,13 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 final class IncomingRequest implements Request {
+
+    private static final int MAX_PARTS = 256;
 
     private final HttpMethod method;
     private final String path;
@@ -19,12 +22,17 @@ final class IncomingRequest implements Request {
     private final Headers headers;
     private final InputStream body;
     private final String remoteAddress;
+    private final ServerContext context;
 
     private Map<String, List<String>> params;
+    private Map<String, String> cookies;
+    private List<Part> parts;
     private byte[] cachedBody;
+    private Sessions.Entry session;
+    private boolean sessionIsNew;
 
     IncomingRequest(HttpMethod method, String path, String rawQuery, String protocol,
-                    Headers headers, InputStream body, String remoteAddress) {
+                    Headers headers, InputStream body, String remoteAddress, ServerContext context) {
         this.method = method;
         this.path = path;
         this.rawQuery = rawQuery;
@@ -32,6 +40,7 @@ final class IncomingRequest implements Request {
         this.headers = headers;
         this.body = body;
         this.remoteAddress = remoteAddress;
+        this.context = context;
     }
 
     @Override
@@ -81,6 +90,75 @@ final class IncomingRequest implements Request {
     }
 
     @Override
+    public boolean secure() {
+        return context.options().secure();
+    }
+
+    @Override
+    public String cookie(String name) {
+        return cookies().get(name);
+    }
+
+    @Override
+    public Map<String, String> cookies() {
+        if (cookies == null) {
+            cookies = parseCookies();
+        }
+        return cookies;
+    }
+
+    @Override
+    public Session session() {
+        return session(true);
+    }
+
+    @Override
+    public Session session(boolean create) {
+        if (session != null && session.valid()) {
+            return session;
+        }
+        session = context.sessions().find(cookie(Sessions.COOKIE));
+        if (session != null) {
+            return session;
+        }
+        if (!create) {
+            return null;
+        }
+        session = context.sessions().create();
+        session.markCreated();
+        sessionIsNew = true;
+        return session;
+    }
+
+    @Override
+    public List<Part> parts() {
+        if (parts == null) {
+            String contentType = headers.get("Content-Type");
+            if (!Multipart.applies(contentType)) {
+                throw new HttpException(415, "la petición no es multipart/form-data");
+            }
+            parts = Multipart.parse(bodyBytes(), contentType, MAX_PARTS);
+        }
+        return parts;
+    }
+
+    @Override
+    public Part part(String name) {
+        for (Part part : parts()) {
+            if (part.name().equals(name)) {
+                return part;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String field(String name) {
+        Part found = part(name);
+        return found == null ? null : found.text();
+    }
+
+    @Override
     public InputStream body() {
         return body;
     }
@@ -102,7 +180,21 @@ final class IncomingRequest implements Request {
         return new String(bodyBytes(), charset());
     }
 
+    Cookie pendingSessionCookie() {
+        if (!sessionIsNew || session == null || !session.valid()) {
+            return null;
+        }
+        sessionIsNew = false;
+        return Cookie.of(Sessions.COOKIE, session.id())
+                .httpOnly(true)
+                .secure(secure())
+                .sameSite("Lax");
+    }
+
     boolean bodyDrained() {
+        if (cachedBody != null) {
+            return true;
+        }
         if (body instanceof FixedBody fixed) {
             return fixed.drained();
         }
@@ -117,6 +209,24 @@ final class IncomingRequest implements Request {
         while (body.read(scratch, 0, scratch.length) >= 0) {
             continue;
         }
+    }
+
+    private Map<String, String> parseCookies() {
+        Map<String, String> found = new LinkedHashMap<>();
+        for (String header : headers.all("Cookie")) {
+            for (String pair : header.split(";")) {
+                int equals = pair.indexOf('=');
+                if (equals <= 0) {
+                    continue;
+                }
+                String name = pair.substring(0, equals).trim();
+                String value = pair.substring(equals + 1).trim();
+                if (!name.isEmpty()) {
+                    found.putIfAbsent(name, value);
+                }
+            }
+        }
+        return found;
     }
 
     private Map<String, List<String>> params() {

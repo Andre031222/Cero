@@ -14,6 +14,8 @@ public interface Response {
 
     Response type(String contentType);
 
+    Response cookie(Cookie cookie);
+
     void send(byte[] body);
 
     void send(String body);

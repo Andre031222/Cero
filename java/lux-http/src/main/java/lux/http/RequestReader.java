@@ -9,11 +9,13 @@ final class RequestReader {
     private static final InputStream EMPTY = new ByteArrayInputStream(new byte[0]);
 
     private final ByteReader reader;
+    private final ServerContext context;
     private final ServerOptions options;
 
-    RequestReader(ByteReader reader, ServerOptions options) {
+    RequestReader(ByteReader reader, ServerContext context) {
         this.reader = reader;
-        this.options = options;
+        this.context = context;
+        this.options = context.options();
     }
 
     IncomingRequest read(String remoteAddress) throws IOException {
@@ -47,9 +49,24 @@ final class RequestReader {
         String rawQuery = mark < 0 ? null : target.substring(mark + 1);
 
         Headers headers = readHeaders();
+        requireHost(headers, protocol);
         InputStream body = openBody(method, headers);
 
-        return new IncomingRequest(method, Url.decodePath(path), rawQuery, protocol, headers, body, remoteAddress);
+        return new IncomingRequest(method, Url.decodePath(path), rawQuery, protocol,
+                headers, body, remoteAddress, context);
+    }
+
+    private void requireHost(Headers headers, String protocol) {
+        if (!options.requireHost()) {
+            return;
+        }
+        int count = headers.all("Host").size();
+        if (protocol.equals("HTTP/1.1") && count != 1) {
+            throw new HttpException(400, count == 0 ? "falta la cabecera Host" : "cabecera Host duplicada");
+        }
+        if (count > 1) {
+            throw new HttpException(400, "cabecera Host duplicada");
+        }
     }
 
     private Headers readHeaders() throws IOException {
