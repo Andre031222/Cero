@@ -13,6 +13,7 @@ public final class TestSuite {
         DispatcherTests.run();
         ValidationTests.run();
         GuardTests.run();
+        ObservabilidadTests.run();
 
         Check.report();
         if (Check.failures() > 0) {
