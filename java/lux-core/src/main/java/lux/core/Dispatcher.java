@@ -1,0 +1,213 @@
+package lux.core;
+
+import lux.http.Handler;
+import lux.http.HttpException;
+import lux.http.HttpMethod;
+import lux.http.Request;
+import lux.http.Response;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentHashMap;
+
+final class Dispatcher implements Handler {
+
+    private final Router router;
+    private final Registry registry;
+    private final List<Middleware> middleware;
+    private final Authenticator authenticator;
+    private final ViewRenderer views;
+    private final List<Recovery> recoveries;
+    private final Map<Class<?>, Object> controllers = new ConcurrentHashMap<>();
+
+    Dispatcher(Router router, Registry registry, List<Middleware> middleware,
+               Authenticator authenticator, ViewRenderer views) {
+        this.router = router;
+        this.registry = registry;
+        this.middleware = List.copyOf(middleware);
+        this.authenticator = authenticator;
+        this.views = views;
+        this.recoveries = collectRecoveries(router);
+    }
+
+    @Override
+    public void handle(Request request, Response response) {
+        Router.Match match = router.resolve(request.method(), request.path());
+        Context context = new Context(request, response,
+                match == null ? Map.of() : match.pathVariables());
+        try {
+            if (match == null) {
+                throw new HttpException(404, "no existe " + request.path());
+            }
+            if (match.methodNotAllowed()) {
+                response.header("Allow", allowHeader(request.path()));
+                throw new HttpException(405, "método no permitido en " + request.path());
+            }
+            if (authenticator != null) {
+                context.principal(authenticator.authenticate(context));
+            }
+            render(runChain(context, match.route()), context);
+        } catch (Throwable failure) {
+            recover(failure, context);
+        }
+    }
+
+    private Object runChain(Context context, RouteEntry route) throws Exception {
+        Middleware.Chain terminal = ctx -> invoke(route, ctx);
+        Middleware.Chain chain = terminal;
+        for (int i = middleware.size() - 1; i >= 0; i--) {
+            Middleware step = middleware.get(i);
+            Middleware.Chain next = chain;
+            chain = ctx -> step.handle(ctx, next);
+        }
+        return chain.proceed(context);
+    }
+
+    private Object invoke(RouteEntry route, Context context) throws Exception {
+        if (route.isLambda()) {
+            return route.endpoint().handle(context);
+        }
+        authorize(route, context);
+        Object controller = controllers.computeIfAbsent(route.controller(), registry::create);
+        try {
+            Method action = route.action();
+            action.setAccessible(true);
+            return action.invoke(controller, Binder.argumentsFor(action, context));
+        } catch (InvocationTargetException wrapped) {
+            Throwable cause = wrapped.getCause();
+            if (cause instanceof Exception failure) {
+                throw failure;
+            }
+            throw new IllegalStateException(cause);
+        }
+    }
+
+    private void authorize(RouteEntry route, Context context) {
+        boolean needsAuth = route.action().isAnnotationPresent(RequireAuth.class)
+                || route.controller().isAnnotationPresent(RequireAuth.class);
+        RequireRole role = route.action().getAnnotation(RequireRole.class) != null
+                ? route.action().getAnnotation(RequireRole.class)
+                : route.controller().getAnnotation(RequireRole.class);
+
+        if (!needsAuth && role == null) {
+            return;
+        }
+        Principal principal = context.principal();
+        if (principal == null) {
+            throw new HttpException(401, "se requiere autenticación");
+        }
+        if (role == null) {
+            return;
+        }
+        for (String allowed : role.value()) {
+            if (principal.hasRole(allowed)) {
+                return;
+            }
+        }
+        throw new HttpException(403, "rol insuficiente");
+    }
+
+    private void render(Object outcome, Context context) throws Exception {
+        Response response = context.response();
+        if (response.committed()) {
+            return;
+        }
+        Result result = asResult(outcome);
+        response.status(result.statusCode());
+        result.extraHeaders().forEach(response::header);
+
+        switch (result.kind()) {
+            case TEXT -> response.text(result.payload());
+            case HTML -> response.html(result.payload());
+            case JSON -> response.json(result.payload());
+            case REDIRECT -> response.redirect(result.payload());
+            case EMPTY -> response.send(new byte[0]);
+            case VIEW -> {
+                if (views == null) {
+                    throw new HttpException(501, "no hay motor de vistas configurado");
+                }
+                response.html(views.render(result.payload(), result.model()));
+            }
+        }
+    }
+
+    private static Result asResult(Object outcome) {
+        return switch (outcome) {
+            case null -> Result.noContent();
+            case Result result -> result;
+            case CharSequence text -> Result.text(text.toString());
+            default -> Result.json(outcome);
+        };
+    }
+
+    private void recover(Throwable failure, Context context) {
+        if (context.response().committed()) {
+            return;
+        }
+        for (Recovery recovery : recoveries) {
+            if (recovery.type().isInstance(failure)) {
+                try {
+                    Object controller = controllers.computeIfAbsent(recovery.controller(), registry::create);
+                    recovery.action().setAccessible(true);
+                    render(recovery.action().invoke(controller, recoveryArguments(recovery, failure, context)),
+                            context);
+                    return;
+                } catch (Exception ignored) {
+                    break;
+                }
+            }
+        }
+        int status = failure instanceof HttpException http ? http.status() : 500;
+        String message = status == 500 ? "error interno" : failure.getMessage();
+        try {
+            context.response().status(status).type("application/json");
+            context.response().send(Json.write(Map.of(
+                    "error", lux.http.HttpStatus.reason(status),
+                    "message", message == null ? "" : message,
+                    "path", context.path())));
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    private static Object[] recoveryArguments(Recovery recovery, Throwable failure, Context context) {
+        Class<?>[] parameters = recovery.action().getParameterTypes();
+        Object[] arguments = new Object[parameters.length];
+        for (int i = 0; i < parameters.length; i++) {
+            arguments[i] = parameters[i] == Context.class ? context
+                    : parameters[i].isInstance(failure) ? failure : null;
+        }
+        return arguments;
+    }
+
+    private String allowHeader(String path) {
+        StringJoiner joined = new StringJoiner(", ");
+        for (HttpMethod verb : router.allowedFor(path)) {
+            joined.add(verb.name());
+        }
+        return joined.toString();
+    }
+
+    private static List<Recovery> collectRecoveries(Router router) {
+        List<Recovery> found = new ArrayList<>();
+        for (RouteEntry route : router.routes()) {
+            if (route.isLambda()) {
+                continue;
+            }
+            for (Method method : route.controller().getDeclaredMethods()) {
+                OnError marker = method.getAnnotation(OnError.class);
+                if (marker != null && found.stream().noneMatch(item -> item.action().equals(method))) {
+                    found.add(new Recovery(marker.value(), route.controller(), method));
+                }
+            }
+        }
+        found.sort((left, right) -> left.type().isAssignableFrom(right.type()) ? 1 : -1);
+        return found;
+    }
+
+    private record Recovery(Class<? extends Throwable> type, Class<?> controller, Method action) {
+    }
+}

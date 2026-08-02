@@ -16,20 +16,23 @@ resultado.
 
 ## Resultados
 
-| Métrica | Fase 1 inicial | Tras fases A–D | Meta | JxMVC sobre Tomcat |
-|---|---|---|---|---|
-| Arranque | 17 ms | **28 ms** | < 150 ms | 1392 ms |
-| JAR | 36 455 B | **64 035 B** | ≤ 400 KB | 253 KB |
-| Heap tras arrancar | 4 MB | **4 MB** | — | — |
-| rps `/plaintext` | 107 779 | **100 554** | ≥ 48 000 | 43 691 |
-| Pruebas | 30 | **144** | — | 347 |
+| Métrica | lux-http inicial | lux-http completo | Con lux-core | Meta | JxMVC/Tomcat |
+|---|---|---|---|---|---|
+| Arranque | 17 ms | 28 ms | **51 ms** | < 150 ms | 1392 ms |
+| Artefacto | 36 KB | 64 KB | **123 KB** | ≤ 400 KB | 253 KB + Tomcat |
+| rps | 107 779 | 100 554 | **94 610** | ≥ 48 000 | 43 691 |
+| Pruebas | 30 | 144 | **297** | — | 347 |
 
-100 000 peticiones completas, **0 fallidas**, 99 936 sobre conexiones keep-alive reutilizadas.
+Sin fallos en ninguna corrida. El `ab` de `lux-http` fueron 100 000 peticiones (99 936 sobre
+keep-alive reutilizado); el de LuxCore completo, 50 000.
 
-El coste de las fases A–D: **+11 ms de arranque, +27 KB de JAR y −7 % de rps**. A cambio entran
-TLS, techo de conexiones, watchdog de handler, apagado ordenado, cookies, sesiones, multipart,
-gzip y estáticos. El arranque sigue siendo 50× mejor que Tomcat y el JAR sigue siendo la sexta
-parte del presupuesto.
+Los 51 ms del framework completo incluyen carga de clases, escaneo de anotaciones de los
+controladores y arranque del servidor: el servidor solo tarda 19 ms, el resto es la JVM.
+
+El coste de ir sumando capas ha sido: **+11 ms y +27 KB** por TLS, sesiones, multipart, gzip y
+estáticos; **+23 ms y +59 KB** por el router, la inyección de dependencias y el JSON. El rps baja
+un 12 % desde el servidor pelado hasta el framework completo — lo que cuesta enrutar, resolver
+parámetros por reflexión y serializar.
 
 ## Lo que estos números no dicen
 
@@ -41,7 +44,7 @@ parte del presupuesto.
 - **El handler no hace trabajo.** Devuelve una constante. El endpoint `/db` del harness es el que
   mide el framework haciendo trabajo de aplicación.
 
-Lo que sí es sólido y no depende del entorno: **28 ms de arranque y 64 KB de JAR**, contra
+Lo que sí es sólido y no depende del entorno: **51 ms de arranque y 123 KB de artefacto**, contra
 1392 ms y 253 KB más un Tomcat de ~15 MB.
 
 ## Cómo reproducir
