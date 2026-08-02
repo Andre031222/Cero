@@ -11,6 +11,7 @@
     <modules>
         <module>lux-http</module>
         <module>lux-core</module>
+        <module>lux-view</module>
     </modules>
 
     <properties>
