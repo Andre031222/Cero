@@ -152,9 +152,18 @@ HTML, una hoja de estilo y dos guiones. Nada de npm.
 | [estado.html](docs/web/estado.html) | Qué está probado y qué falta para producción |
 | [marca/](docs/web/marca/) | El logo: construcción, tamaños, uso y `logo.svg` suelto |
 
-Las páginas se generan con `python3 docs/web/construir.py`, que envuelve los fragmentos de
-`docs/web/contenido/` con la cabecera, la navegación y el pie. Así la navegación se escribe una
-sola vez.
+Las páginas se generan con `./lux sitio`, que envuelve los fragmentos de `docs/web/contenido/`
+con la cabecera, la navegación y el pie. Así la navegación se escribe una sola vez.
+
+El mismo generador produce `docs/web/completo.html`: el sitio entero en **un archivo de 126 KB**,
+sin recursos externos. Sirve para leerlo sin conexión, mandarlo por correo o abrirlo con doble
+clic — y es una demostración de lo que el proyecto defiende.
+
+Para verlo servido por el propio LuxCore:
+
+```bash
+./lux web        # http://localhost:8095
+```
 
 Se puede servir con el propio LuxCore:
 
