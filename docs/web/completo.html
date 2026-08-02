@@ -416,6 +416,159 @@ footer.pie {
   display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: baseline;
 }
 
+/* ═══ portada ═══ */
+
+.portada {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 3rem;
+  align-items: center;
+  padding: 3.5rem 0 3rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+@media (max-width: 64rem) {
+  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 2.5rem; }
+}
+
+.titular {
+  font-family: var(--mono);
+  font-size: clamp(3rem, 8vw, 4.75rem);
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: .95;
+  margin: 0;
+}
+.titular span { color: var(--laton); }
+
+.subtitular {
+  font-family: var(--mono);
+  font-size: clamp(.9rem, 2vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--apagado);
+  margin: .7rem 0 1.1rem;
+}
+
+.promesa { font-size: 1.0625rem; line-height: 1.55; max-width: 32rem; margin: 0 0 1.75rem; }
+
+.botones { display: flex; flex-wrap: wrap; gap: .65rem; margin-bottom: 2rem; }
+
+.boton {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: .62rem 1.35rem; border-radius: 7px;
+  border: 1px solid var(--linea);
+  font-family: var(--mono); font-size: .8125rem; font-weight: 600; letter-spacing: .04em;
+  text-decoration: none; color: var(--tinta); background: transparent;
+  transition: transform .14s cubic-bezier(.16,1,.3,1), border-color .14s, background .14s;
+}
+.boton:hover { border-color: var(--laton); color: var(--laton); transform: translateY(-1px); }
+.boton:active { transform: scale(.98); }
+
+.boton.principal {
+  background: var(--laton); border-color: var(--laton); color: var(--papel);
+}
+.boton.principal:hover { color: var(--papel); filter: brightness(1.08); }
+
+@media (prefers-reduced-motion: reduce) {
+  .boton, .boton:hover, .boton:active { transform: none; transition: none; }
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+
+.chip {
+  border: 1px solid var(--linea); border-radius: 8px;
+  padding: .5rem .8rem .55rem; min-width: 4.75rem;
+}
+.chip b {
+  font-family: var(--mono); font-size: 1.15rem; font-weight: 700;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.chip span {
+  font-family: var(--mono); font-size: .6875rem; color: var(--apagado); margin-left: .18rem;
+}
+.chip em {
+  display: block; font-style: normal; font-family: var(--mono);
+  font-size: .5938rem; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--tenue); margin-top: .12rem;
+}
+
+.orden {
+  display: flex; align-items: center; gap: .5rem;
+  border: 1px solid var(--linea); border-radius: 7px;
+  padding: .55rem .7rem .55rem .9rem;
+  background: var(--panel); max-width: 24rem;
+}
+.orden code {
+  flex: 1; background: none; padding: 0;
+  font-family: var(--mono); font-size: .8125rem; color: var(--tinta);
+}
+.orden .senal { color: var(--laton); font-weight: 700; margin-right: .35rem; }
+
+.copiar {
+  flex: none; width: 1.7rem; height: 1.7rem; display: grid; place-items: center;
+  border: 0; border-radius: 5px; background: transparent; color: var(--apagado);
+  cursor: pointer; transition: color .14s, background .14s;
+}
+.copiar:hover { color: var(--laton); background: var(--laton-suave); }
+.copiar svg { width: 14px; height: 14px; }
+.copiar[data-copiado="si"] { color: var(--verde); }
+
+/* ─── ventana de código con pestañas ─── */
+
+.ventana {
+  background: var(--term-fondo); border: 1px solid var(--term-borde);
+  border-radius: 9px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 32px rgba(0,0,0,.08), var(--term-brillo);
+}
+@media (prefers-color-scheme: dark) { .ventana { box-shadow: var(--term-brillo); } }
+:root[data-theme="dark"] .ventana { box-shadow: var(--term-brillo); }
+
+.ventana-barra {
+  display: flex; align-items: center; gap: .9rem;
+  padding: .5rem .8rem; background: var(--term-barra);
+  border-bottom: 1px solid var(--term-borde);
+}
+
+.pestanas { display: flex; gap: .12rem; overflow-x: auto; scrollbar-width: none; }
+.pestanas::-webkit-scrollbar { display: none; }
+.pestanas button {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600; letter-spacing: .06em;
+  padding: .28rem .6rem; border: 0; border-radius: 5px;
+  background: transparent; color: var(--term-tenue); cursor: pointer; white-space: nowrap;
+  transition: color .14s, background .14s;
+}
+.pestanas button:hover { color: var(--term-texto); }
+.pestanas button[aria-selected="true"] {
+  background: var(--laton-suave); color: var(--term-prompt);
+}
+
+.ventana .panel { max-height: 30rem; overflow: auto; }
+.ventana .panel[hidden] { display: none; }
+.ventana pre {
+  margin: 0; padding: 1rem 1.15rem 1.2rem;
+  font-family: var(--mono); font-size: .78rem; line-height: 1.75; tab-size: 4;
+  color: var(--term-texto);
+}
+.ventana .panel::-webkit-scrollbar { width: 8px; height: 8px; }
+.ventana .panel::-webkit-scrollbar-thumb { background: var(--term-borde); border-radius: 4px; }
+
+/* ─── rejilla de rasgos ─── */
+
+.rejilla-rasgos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  border-top: 1px solid var(--fina); border-left: 1px solid var(--fina);
+}
+.rasgo {
+  border-right: 1px solid var(--fina); border-bottom: 1px solid var(--fina);
+  padding: 1.1rem 1.2rem 1.25rem;
+}
+.rasgo .etiqueta { color: var(--laton); }
+.rasgo p { font-size: .875rem; color: var(--apagado); margin: .35rem 0 0; max-width: none; }
+
+td.huella { color: var(--tenue); font-size: .75rem; }
+
 .hoja[hidden] { display: none; }
 </style>
 </head>
@@ -455,6 +608,7 @@ footer.pie {
     </a>
     <nav class="nav-sitio" aria-label="Secciones del sitio">
         <a href="#p-index" data-hoja="p-index">Portada</a>
+        <a href="#p-descargas" data-hoja="p-descargas">Descargas</a>
         <a href="#p-empezar" data-hoja="p-empezar">Empezar</a>
         <a href="#p-guia" data-hoja="p-guia">Guía</a>
         <a href="#p-modulos" data-hoja="p-modulos">Módulos</a>
@@ -478,174 +632,496 @@ footer.pie {
 
 <div class="marco">
 <div class="hoja" id="p-index" hidden>
-  <header class="cabecera-pagina">
-    <h1 class="titulo-pagina">Un framework web que no arrastra nada</h1>
-    <p class="entradilla">
-      LuxCore atiende HTTP, enruta, inyecta, valida, renderiza y habla con la base de datos
-      usando solo el JDK. Sin contenedor de servlets, sin <code>web.xml</code>, sin despliegue:
-      <code>java -jar</code> y está corriendo.
-    </p>
-  </header>
+  <section class="portada">
+    <div class="portada-texto">
+      <h1 class="titular">Lux<span>Core</span></h1>
+      <p class="subtitular">Framework web para Java</p>
+      <p class="promesa">
+        Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.
+        264 KB en cinco módulos que se toman por separado.
+      </p>
 
-  <div class="medidas">
-    <div class="celda">
-      <span class="cifra-grande">70<span class="unidad"> ms</span></span>
-      <div class="etiqueta">Arranque</div>
-      <div class="contra">JVM incluida · <s>1392 ms</s> sobre Tomcat</div>
-    </div>
-    <div class="celda">
-      <span class="cifra-grande">223<span class="unidad"> KB</span></span>
-      <div class="etiqueta">Artefacto</div>
-      <div class="contra">los cuatro módulos juntos</div>
-    </div>
-    <div class="celda">
-      <span class="cifra-grande">0</span>
-      <div class="etiqueta">Dependencias</div>
-      <div class="contra">solo el JDK</div>
-    </div>
-    <div class="celda">
-      <span class="cifra-grande">889</span>
-      <div class="etiqueta">Pruebas</div>
-      <div class="contra">runner propio, sin JUnit</div>
-    </div>
-    <div class="celda">
-      <span class="cifra-grande">8019</span>
-      <div class="etiqueta">Líneas</div>
-      <div class="contra">103 clases de producción</div>
-    </div>
-  </div>
+      <div class="botones">
+        <a class="boton principal" href="#p-descargas" data-hoja="p-descargas">Descargar</a>
+        <a class="boton" href="#p-guia" data-hoja="p-guia">Documentación</a>
+      </div>
 
-  <div class="cuerpo sin-indice">
-    <main>
+      <div class="chips">
+        <div class="chip"><b>264</b><span>KB</span><em>Cinco módulos</em></div>
+        <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
+        <div class="chip"><b>114</b><span>cls</span><em>De producción</em></div>
+        <div class="chip"><b>70</b><span>ms</span><em>Arranque</em></div>
+        <div class="chip"><b>940</b><span></span><em>Pruebas</em></div>
+      </div>
 
-      <section id="vistazo">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Un vistazo</h2></div>
+      <div class="orden" data-copiar="./lux correr">
+        <code><span class="senal">$</span> ./lux correr</code>
+        <button type="button" class="copiar" aria-label="Copiar la orden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="12" height="12" rx="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
 
-        <p>
-          Un controlador es una clase corriente. Lo que devuelve decide el formato: un objeto se
-          serializa a JSON, un <code>String</code> sale como texto plano, <code>null</code> es un
-          204. Sin anotación de por medio.
-        </p>
+    <div class="portada-codigo">
+      <div class="ventana">
+        <div class="ventana-barra">
+          <div class="luces" aria-hidden="true"><i class="luz"></i><i class="luz"></i><i class="luz"></i></div>
+          <div class="pestanas" role="tablist" aria-label="Ejemplo de código">
+            <button type="button" role="tab" aria-selected="true"  data-panel="pn-controlador">Controlador</button>
+            <button type="button" role="tab" aria-selected="false" data-panel="pn-modelo">Modelo</button>
+            <button type="button" role="tab" aria-selected="false" data-panel="pn-arranque">Arranque</button>
+          </div>
+        </div>
 
-        <div class="codigo">
-          <div class="barra"><span class="etiqueta">TareaController.java</span><span class="etiqueta">Java</span></div>
+        <div class="panel" id="pn-controlador" role="tabpanel">
 <pre><span class="an">@Route</span>(<span class="st">"/api/tareas"</span>)
 <span class="kw">public class</span> TareaController {
 
     <span class="an">@Inject</span> Tareas tareas;
 
+    <span class="an">@Get</span>
+    <span class="kw">public</span> Object listar(<span class="an">@Query</span>(value = <span class="st">"pagina"</span>, orElse = <span class="st">"1"</span>) <span class="kw">int</span> pagina) {
+        <span class="kw">return</span> tareas.findPage(pagina, <span class="st">20</span>);
+    }
+
     <span class="an">@Get</span>(<span class="st">"/{id}"</span>)
     <span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
-        <span class="kw">return</span> tareas.findById(id);
+        Tarea t = tareas.findById(id);
+        <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">throw new</span> HttpException(<span class="st">404</span>, <span class="st">"no existe"</span>);
+        <span class="kw">return</span> t;
     }
 
     <span class="an">@Post</span>
     <span class="kw">public</span> Object crear(<span class="an">@Body @Valid</span> Tarea tarea) {
         <span class="kw">return</span> Result.created(tareas.insert(tarea));
     }
-}
 
-Lux.run(<span class="st">8080</span>, TareaController.class);</pre>
+    <span class="an">@Delete</span>(<span class="st">"/{id}"</span>)
+    <span class="kw">public</span> Object borrar(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+        <span class="kw">return</span> tareas.deleteById(id) == <span class="st">0</span>
+             ? Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
+             : Result.noContent();
+    }
+}</pre>
         </div>
 
-        <p>
-          Si un campo no pasa la validación, la respuesta es un 422 con el mapa de campos y su
-          motivo, sin que haya que escribirlo.
-        </p>
-      </section>
+        <div class="panel" id="pn-modelo" role="tabpanel" hidden>
+<pre><span class="cm">// El record es la entidad, la validación y el mapeo. No hay tres clases.</span>
+<span class="an">@Table</span>(<span class="st">"tareas"</span>)
+<span class="kw">public record</span> Tarea(
+        <span class="an">@Id</span> <span class="kw">long</span> id,
+        <span class="an">@Required @Length</span>(min = <span class="st">3</span>, max = <span class="st">120</span>) String titulo,
+        <span class="an">@OneOf</span>({<span class="st">"baja"</span>, <span class="st">"media"</span>, <span class="st">"alta"</span>}) String prioridad,
+        <span class="an">@Column</span>(<span class="st">"hecha"</span>) <span class="kw">boolean</span> completada) {}
 
-      <section id="por-donde">
-        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Por dónde seguir</h2></div>
+<span class="an">@Service</span>
+<span class="kw">public class</span> Tareas <span class="kw">extends</span> Repository&lt;Tarea, Long&gt; {
 
-        <div class="tarjetas">
-          <a class="tarjeta" href="#p-empezar" data-hoja="p-empezar">
-            <div class="etiqueta">01</div>
-            <h3>Empezar</h3>
-            <p>Clonar, compilar y tener un servidor respondiendo, con la guía en terminal paso a paso.</p>
-          </a>
-          <a class="tarjeta" href="#p-guia" data-hoja="p-guia">
-            <div class="etiqueta">02</div>
-            <h3>Guía</h3>
-            <p>Rutas, vinculación de parámetros, respuestas, inyección, validación y manejo de errores.</p>
-          </a>
-          <a class="tarjeta" href="#p-modulos" data-hoja="p-modulos">
-            <div class="etiqueta">03</div>
-            <h3>Módulos</h3>
-            <p>Servidor, vistas, datos y seguridad. Qué trae cada uno y cómo tomarlos por separado.</p>
-          </a>
-          <a class="tarjeta" href="#p-referencia" data-hoja="p-referencia">
-            <div class="etiqueta">04</div>
-            <h3>Referencia</h3>
-            <p>Motores de base de datos verificados, sistemas donde corre y comparación con Tomcat.</p>
-          </a>
-          <a class="tarjeta" href="#p-estado" data-hoja="p-estado">
-            <div class="etiqueta">05</div>
-            <h3>Estado</h3>
-            <p>Qué está probado de verdad y qué falta antes de poner esto delante de tráfico real.</p>
-          </a>
-          <a class="tarjeta" href="#p-marca" data-hoja="p-marca">
-            <div class="etiqueta">06</div>
-            <h3>Logo</h3>
-            <p>Construcción de la marca, tamaños, uso sobre fondos y el SVG suelto.</p>
-          </a>
+    <span class="kw">public</span> Tareas() { <span class="kw">super</span>(Tarea.class); }
+
+    <span class="kw">public</span> List&lt;Tarea&gt; pendientes() {
+        <span class="kw">return</span> findBy(<span class="st">"hecha = ?"</span>, <span class="kw">false</span>);
+    }
+
+    <span class="kw">public void</span> completar(<span class="kw">long</span> id) {
+        Tx.run(() -&gt; db().update(<span class="st">"tareas"</span>,
+                Row.of(<span class="st">"hecha"</span>, <span class="kw">true</span>), <span class="st">"id = ?"</span>, id));
+    }
+}</pre>
         </div>
-      </section>
 
-      <section id="principios">
-        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Principios</h2></div>
+        <div class="panel" id="pn-arranque" role="tabpanel" hidden>
+<pre><span class="cm">// Una línea para lo simple…</span>
+Lux.run(<span class="st">8080</span>, TareaController.class);
 
-        <div class="ficha">
-          <div class="campo">
-            <div class="etiqueta">Cero dependencias</div>
-            <div>Solo el JDK. El driver JDBC de tu base de datos es la única excepción, y la pone
-              la aplicación. Esta misma página se sirve con LuxCore y tampoco necesita nada.</div>
-          </div>
-          <div class="campo">
-            <div class="etiqueta">Legible antes que ingenioso</div>
-            <div>Si una clase no se puede leer de corrido, se parte. Las 1041 líneas del despachador
-              heredado se rehicieron como once clases con una responsabilidad cada una.</div>
-          </div>
-          <div class="campo">
-            <div class="etiqueta">Medido, no proclamado</div>
-            <div>Toda afirmación de rendimiento sale del banco de pruebas. Los números que no se
-              pudieron medir en condiciones no aparecen — ni siquiera con letra pequeña.</div>
-          </div>
-          <div class="campo">
-            <div class="etiqueta">Honesto sobre lo que falta</div>
-            <div>La página de <a href="#p-estado" data-hoja="p-estado">estado</a> dice que no está listo para
-              producción y enumera por qué. Prometer madurez que no existe es la forma más rápida
-              de quemar el proyecto con el primer usuario.</div>
-          </div>
+<span class="cm">// …y todo declarado para lo serio.</span>
+Lux.app()
+   .loadConfig()
+   .views(Templates.fromClasspath(<span class="st">"plantillas"</span>))
+   .fallback(StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">"/estaticos"</span>))
+   .authenticator(ctx -&gt; sesiones.verificar(ctx.header(<span class="st">"Authorization"</span>)))
+   .use(SecurityHeaders.standard())
+   .use(Cors.allowing(<span class="st">"https://app.pe"</span>))
+   .use(Csrf.enabled().exempt(<span class="st">"/api/"</span>))
+   .use(RateLimit.perMinute(<span class="st">300</span>))
+   .use(AccessLog.combined())
+   .use(metricas)
+   .controllers(TareaController.class, AdminController.class)
+   .routes(r -&gt; r.get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
+                 .get(<span class="st">"/lux/metrics"</span>, metricas.endpoint()))
+   .start()
+   .await();</pre>
         </div>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <section id="de-donde">
-        <div class="titulo-seccion"><span class="indice-num">04</span><h2>De dónde viene</h2></div>
+  <div class="cuerpo sin-indice">
+    <main>
 
-        <p>
-          LuxCore nace de JxMVC 3.4.0, un framework MVC con cero dependencias que funciona y está
-          en producción — pero que necesita Tomcat para arrancar. La comparación no es contra un
-          rival cualquiera: es contra su propio antecesor.
+      <section id="por-que">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Por qué existe</h2></div>
+
+        <p class="medida">
+          LuxCore nace de JxMVC, un framework MVC que funciona y está en producción — pero que
+          necesita Tomcat para arrancar. Quitar el contenedor no era un capricho: era el 94 % del
+          tiempo de arranque y el 98 % del peso desplegado.
         </p>
 
         <div class="envoltura">
           <table>
-            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th><th class="cifra">Diferencia</th></tr></thead>
             <tbody>
-              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
-              <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td></tr>
-              <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
-              <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">889</td></tr>
+              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td><td class="cifra">20×</td></tr>
+              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">264 KB</td><td class="cifra">58×</td></tr>
+              <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
+              <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">940</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
 
-        <p>
-          Y no hay que saltar de golpe: <code>lux-adapter-servlet</code> permite desplegar una
-          aplicación LuxCore dentro de Tomcat, así que la migración es reversible.
+        <p class="medida">
+          Y no hay que saltar de golpe: <code>lux-adapter-servlet</code> despliega una aplicación
+          LuxCore dentro de Tomcat, así que la migración es reversible.
         </p>
+      </section>
+
+      <section id="que-trae">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Qué trae</h2></div>
+
+        <div class="rejilla-rasgos">
+          <div class="rasgo">
+            <div class="etiqueta">Servidor</div>
+            <p>HTTP/1.1 con un hilo virtual por conexión. TLS, keep-alive, chunked, multipart,
+              gzip, cookies, sesiones y archivos estáticos.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Rutas</div>
+            <p>Plantillas <code>{var}</code>, comodines y una regla sin excepciones. Lo literal
+              gana a lo variable y las rutas duplicadas fallan al arrancar, no en producción.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Datos</div>
+            <p>JDBC directo sin ORM, con pool, transacciones y repositorios. Verificado contra
+              PostgreSQL 16, MySQL 8 y H2 con la misma batería.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Vistas</div>
+            <p>Plantillas compiladas con herencia, bucles e inclusión. El escapado HTML es el
+              comportamiento por defecto, no una opción que se olvida.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Seguridad</div>
+            <p>CORS, CSRF, rate limiting, validación declarativa, sanitizado y cabeceras de
+              seguridad. Probado con clientes hostiles y entradas malformadas.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Asíncrono</div>
+            <p>Tareas en segundo plano sobre hilos virtuales, programación por intervalo y cron
+              de cinco campos. Una tarea que falla no derriba el planificador.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Integración</div>
+            <p>Cliente HTTP con reintentos y eventos servidos — que es como transmiten las APIs
+              de IA, así que consumirlas es una línea.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Observabilidad</div>
+            <p>Métricas por ruta con percentiles, en JSON o formato Prometheus, y log de acceso
+              combinado o compacto.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="honestidad">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Lo que todavía no</h2></div>
+
+        <div class="aviso">
+          <div class="etiqueta">No lo pongas delante de tráfico de desconocidos</div>
+          <p>
+            El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
+            pocas horas de escribirlo, y la primera aplicación real destapó otros cuatro fallos.
+            Todos corregidos y cubiertos — el punto es que aparecieron.
+          </p>
+        </div>
+
+        <p class="medida">
+          Sirve hoy para un proyecto interno, un prototipo o una herramienta de equipo. Falta
+          correrlo en Linux, medir el rendimiento en condiciones y dejarlo semanas recibiendo
+          tráfico real. Está todo detallado, sin adornos, en
+          <a href="#p-estado" data-hoja="p-estado">Estado</a>.
+        </p>
+      </section>
+
+      <section id="empezar-ya">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Empezar</h2></div>
+
+        <div class="tarjetas">
+          <a class="tarjeta" href="#p-descargas" data-hoja="p-descargas">
+            <div class="etiqueta">Descargas</div>
+            <h3>Módulos y artefactos</h3>
+            <p>Los cinco JAR con su tamaño y huella, coordenadas de Maven y qué necesita cada uno.</p>
+          </a>
+          <a class="tarjeta" href="#p-empezar" data-hoja="p-empezar">
+            <div class="etiqueta">Instalación</div>
+            <h3>De cero a corriendo</h3>
+            <p>Cuatro órdenes, con la guía paso a paso en terminal.</p>
+          </a>
+          <a class="tarjeta" href="#p-guia" data-hoja="p-guia">
+            <div class="etiqueta">Guía</div>
+            <h3>Escribir una aplicación</h3>
+            <p>Rutas, parámetros, respuestas, inyección, validación y errores.</p>
+          </a>
+          <a class="tarjeta" href="#p-modulos" data-hoja="p-modulos">
+            <div class="etiqueta">Módulos</div>
+            <h3>Servidor, vistas, datos</h3>
+            <p>Qué trae cada pieza y cómo tomarlas por separado.</p>
+          </a>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-descargas" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Descargas</h1>
+    <p class="entradilla">
+      Cinco módulos que se toman por separado. Toma solo lo que uses: si únicamente necesitas
+      atender HTTP, son 64 KB y no arrastras nada más.
+    </p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#artefactos"><span class="n">01</span> Artefactos</a></li>
+        <li><a href="#maven"><span class="n">02</span> Maven</a></li>
+        <li><a href="#elegir"><span class="n">03</span> Qué tomar</a></li>
+        <li><a href="#fuente"><span class="n">04</span> Desde el código</a></li>
+        <li><a href="#requisitos"><span class="n">05</span> Requisitos</a></li>
+        <li><a href="#licencia"><span class="n">06</span> Licencia</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <section id="artefactos">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Artefactos · 0.2.0</h2></div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Todavía no hay binarios publicados</div>
+          <p>
+            LuxCore no está en Maven Central y su repositorio es privado. Los artefactos se
+            generan compilando, que es una orden. Las huellas de abajo son las de esta versión,
+            para que puedas comprobar que lo que compilaste coincide.
+          </p>
+        </div>
+
+        <div class="envoltura">
+          <table>
+            <thead>
+              <tr>
+                <th>Módulo</th><th>Necesita</th>
+                <th class="cifra">Clases</th><th class="cifra">Tamaño</th><th>SHA-256</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
+                <td>—</td><td class="cifra">31</td><td class="cifra">64 KB</td>
+                <td class="mono huella">79296a8a38a961c1…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, cliente HTTP, tareas</span></td>
+                <td>lux-http</td><td class="cifra">56</td><td class="cifra">114 KB</td>
+                <td class="mono huella">5309738f66a6fbde…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
+                <td>lux-core</td><td class="cifra">9</td><td class="cifra">38 KB</td>
+                <td class="mono huella">cd0bf0447a2435f3…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">34 KB</td>
+                <td class="mono huella">dc57b2ccddf94d4f…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">12 KB</td>
+                <td class="mono huella">b7cc3a24d28302ef…</td>
+              </tr>
+              <tr class="total">
+                <td>Los cinco</td><td>—</td><td class="cifra">114</td><td class="cifra">264 KB</td><td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="medida">
+          Ninguno arrastra dependencias externas. El único JAR ajeno que verás en tu aplicación
+          es el driver JDBC de tu base de datos, y lo pones tú.
+        </p>
+      </section>
+
+      <section id="maven">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Maven</h2></div>
+
+        <p class="medida">
+          Tras <code>./lux instalar</code>, los artefactos quedan en tu repositorio local y se
+          declaran como cualquier otro.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">pom.xml</span><span class="etiqueta">XML</span></div>
+<pre><span class="cm">&lt;!-- lo mínimo para una API: arrastra lux-http --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- si sirves HTML --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- si hablas con una base de datos --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- el driver lo pones tú: este es el único externo --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">42.7.4</span>&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+        </div>
+      </section>
+
+      <section id="elegir">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Qué tomar</h2></div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Solo HTTP</div>
+            <div><span class="mono">lux-http</span> · <b>64 KB</b><br>
+              Un servidor con handlers a mano, sin rutas ni inyección. Para un webhook, un
+              healthcheck o un proxy pequeño.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Una API JSON</div>
+            <div><span class="mono">lux-core</span> · <b>178 KB</b><br>
+              Rutas, inyección, validación, seguridad y métricas. Lo habitual para un servicio.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Una web con HTML</div>
+            <div><span class="mono">+ lux-view</span> · <b>216 KB</b><br>
+              Añade plantillas con herencia y escapado por defecto.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Con base de datos</div>
+            <div><span class="mono">+ lux-data</span> · <b>250 KB</b><br>
+              JDBC, pool, transacciones y repositorios. Más el driver de tu motor.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Migrando desde Tomcat</div>
+            <div><span class="mono">+ lux-adapter-servlet</span> · <b>264 KB</b><br>
+              Despliega la misma aplicación dentro de Tomcat mientras haces el cambio, y vuelve
+              atrás si hace falta.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fuente">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Desde el código</h2></div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Compilar e instalar</span><span class="etiqueta">Shell</span></div>
+<pre>git clone git@github.com:Andre031222/45.Soft_LuxCore.git
+<span class="kw">cd</span> 45.Soft_LuxCore
+
+./lux instalar       <span class="cm"># compila, prueba e instala en ~/.m2</span>
+./lux empaquetar     <span class="cm"># solo los JAR, con sus tamaños</span>
+./lux probar         <span class="cm"># las 940 pruebas</span>
+./lux correr         <span class="cm"># la aplicación de ejemplo en :8080</span>
+./lux web            <span class="cm"># esta documentación, servida por LuxCore</span>
+./lux cache          <span class="cm"># qué ocupa, y --purgar para vaciarla</span>
+./lux limpiar        <span class="cm"># borra lo generado</span></pre>
+        </div>
+
+        <p class="medida">
+          La aplicación de ejemplo está en <code>java/ejemplo</code>: un gestor de tareas
+          completo con vistas, formularios, base de datos y API REST, con 36 pruebas de punta a
+          punta. Es el mejor sitio por donde empezar a leer.
+        </p>
+
+        <h3>Comprobar lo que compilaste</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Huellas</span><span class="etiqueta">Shell</span></div>
+<pre>shasum -a 256 java/lux-core/target/lux-core-0.2.0.jar
+
+<span class="cm"># debe empezar por 5309738f66a6fbde</span></pre>
+        </div>
+      </section>
+
+      <section id="requisitos">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Requisitos</h2></div>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Qué</th><th>Versión</th><th>Por qué</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">JDK</td><td class="mono">21 o superior</td>
+                  <td>Hilos virtuales: el servidor asigna uno por conexión y sin ellos el modelo no se sostiene. Desarrollado y medido con OpenJDK 25.</td></tr>
+              <tr><td class="mono">Maven</td><td class="mono">3.9+</td>
+                  <td>Solo para compilar. En ejecución no hace falta.</td></tr>
+              <tr><td class="mono">Sistema</td><td class="mono">cualquiera</td>
+                  <td>Sin código nativo ni rutas del sistema. Probado en macOS; sin verificar en Linux ni Windows.</td></tr>
+              <tr><td class="mono">Driver JDBC</td><td class="mono">el de tu motor</td>
+                  <td>Solo si usas <code>lux-data</code>. Verificado con PostgreSQL 16, MySQL 8 y H2.</td></tr>
+              <tr><td class="mono">Tomcat</td><td class="mono">10.1+</td>
+                  <td>Solo si despliegas con <code>lux-adapter-servlet</code>. En modo normal no se usa.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="licencia">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Licencia</h2></div>
+
+        <p class="medida">
+          <b>MIT.</b> Puedes usarlo, modificarlo, distribuirlo y venderlo, con o sin cambios, en
+          proyectos abiertos o cerrados. La única condición es conservar el aviso de copyright.
+        </p>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Autor</div>
+            <div>Richar Andre Vilca-Solorzano · Universidad Nacional del Altiplano, Puno, Perú</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Procedencia</div>
+            <div>Deriva de JxMVC 3.4.0, también MIT y con el mismo titular de copyright.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Citación</div>
+            <div><span class="mono">Vilca-Solorzano, R. A. (2026). LuxCore: núcleo de framework web
+              poliglota sin dependencias. v0.2.0.</span></div>
+          </div>
+        </div>
       </section>
 
     </main>
@@ -2068,6 +2544,45 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
     secciones.forEach(function (s) { observador.observe(s); });
   });
 })();
+
+// ── pestañas de código y copiar al portapapeles ──
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.pestanas').forEach(function (grupo) {
+    var botones = Array.prototype.slice.call(grupo.querySelectorAll('button[data-panel]'));
+    botones.forEach(function (boton) {
+      boton.addEventListener('click', function () {
+        botones.forEach(function (otro) {
+          var suyo = otro === boton;
+          otro.setAttribute('aria-selected', String(suyo));
+          var panel = document.getElementById(otro.dataset.panel);
+          if (panel) { panel.hidden = !suyo; }
+        });
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-copiar]').forEach(function (caja) {
+    var boton = caja.querySelector('.copiar');
+    if (!boton) { return; }
+    boton.addEventListener('click', function () {
+      var texto = caja.dataset.copiar;
+      var listo = function () {
+        boton.dataset.copiado = 'si';
+        setTimeout(function () { delete boton.dataset.copiado; }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(listo, function () {});
+      } else {
+        var campo = document.createElement('textarea');
+        campo.value = texto;
+        document.body.appendChild(campo);
+        campo.select();
+        try { document.execCommand('copy'); listo(); } catch (sinSoporte) {}
+        document.body.removeChild(campo);
+      }
+    });
+  });
+});
 
 </script>
 <script>

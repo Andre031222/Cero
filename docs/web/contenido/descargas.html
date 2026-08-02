@@ -1,0 +1,236 @@
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Descargas</h1>
+    <p class="entradilla">
+      Cinco módulos que se toman por separado. Toma solo lo que uses: si únicamente necesitas
+      atender HTTP, son 64 KB y no arrastras nada más.
+    </p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#artefactos"><span class="n">01</span> Artefactos</a></li>
+        <li><a href="#maven"><span class="n">02</span> Maven</a></li>
+        <li><a href="#elegir"><span class="n">03</span> Qué tomar</a></li>
+        <li><a href="#fuente"><span class="n">04</span> Desde el código</a></li>
+        <li><a href="#requisitos"><span class="n">05</span> Requisitos</a></li>
+        <li><a href="#licencia"><span class="n">06</span> Licencia</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <section id="artefactos">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Artefactos · 0.2.0</h2></div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Todavía no hay binarios publicados</div>
+          <p>
+            LuxCore no está en Maven Central y su repositorio es privado. Los artefactos se
+            generan compilando, que es una orden. Las huellas de abajo son las de esta versión,
+            para que puedas comprobar que lo que compilaste coincide.
+          </p>
+        </div>
+
+        <div class="envoltura">
+          <table>
+            <thead>
+              <tr>
+                <th>Módulo</th><th>Necesita</th>
+                <th class="cifra">Clases</th><th class="cifra">Tamaño</th><th>SHA-256</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
+                <td>—</td><td class="cifra">31</td><td class="cifra">64 KB</td>
+                <td class="mono huella">79296a8a38a961c1…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, cliente HTTP, tareas</span></td>
+                <td>lux-http</td><td class="cifra">56</td><td class="cifra">114 KB</td>
+                <td class="mono huella">5309738f66a6fbde…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
+                <td>lux-core</td><td class="cifra">9</td><td class="cifra">38 KB</td>
+                <td class="mono huella">cd0bf0447a2435f3…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">34 KB</td>
+                <td class="mono huella">dc57b2ccddf94d4f…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">12 KB</td>
+                <td class="mono huella">b7cc3a24d28302ef…</td>
+              </tr>
+              <tr class="total">
+                <td>Los cinco</td><td>—</td><td class="cifra">114</td><td class="cifra">264 KB</td><td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="medida">
+          Ninguno arrastra dependencias externas. El único JAR ajeno que verás en tu aplicación
+          es el driver JDBC de tu base de datos, y lo pones tú.
+        </p>
+      </section>
+
+      <section id="maven">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Maven</h2></div>
+
+        <p class="medida">
+          Tras <code>./lux instalar</code>, los artefactos quedan en tu repositorio local y se
+          declaran como cualquier otro.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">pom.xml</span><span class="etiqueta">XML</span></div>
+<pre><span class="cm">&lt;!-- lo mínimo para una API: arrastra lux-http --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- si sirves HTML --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- si hablas con una base de datos --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- el driver lo pones tú: este es el único externo --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">42.7.4</span>&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+        </div>
+      </section>
+
+      <section id="elegir">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Qué tomar</h2></div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Solo HTTP</div>
+            <div><span class="mono">lux-http</span> · <b>64 KB</b><br>
+              Un servidor con handlers a mano, sin rutas ni inyección. Para un webhook, un
+              healthcheck o un proxy pequeño.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Una API JSON</div>
+            <div><span class="mono">lux-core</span> · <b>178 KB</b><br>
+              Rutas, inyección, validación, seguridad y métricas. Lo habitual para un servicio.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Una web con HTML</div>
+            <div><span class="mono">+ lux-view</span> · <b>216 KB</b><br>
+              Añade plantillas con herencia y escapado por defecto.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Con base de datos</div>
+            <div><span class="mono">+ lux-data</span> · <b>250 KB</b><br>
+              JDBC, pool, transacciones y repositorios. Más el driver de tu motor.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Migrando desde Tomcat</div>
+            <div><span class="mono">+ lux-adapter-servlet</span> · <b>264 KB</b><br>
+              Despliega la misma aplicación dentro de Tomcat mientras haces el cambio, y vuelve
+              atrás si hace falta.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fuente">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Desde el código</h2></div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Compilar e instalar</span><span class="etiqueta">Shell</span></div>
+<pre>git clone git@github.com:Andre031222/45.Soft_LuxCore.git
+<span class="kw">cd</span> 45.Soft_LuxCore
+
+./lux instalar       <span class="cm"># compila, prueba e instala en ~/.m2</span>
+./lux empaquetar     <span class="cm"># solo los JAR, con sus tamaños</span>
+./lux probar         <span class="cm"># las 940 pruebas</span>
+./lux correr         <span class="cm"># la aplicación de ejemplo en :8080</span>
+./lux web            <span class="cm"># esta documentación, servida por LuxCore</span>
+./lux cache          <span class="cm"># qué ocupa, y --purgar para vaciarla</span>
+./lux limpiar        <span class="cm"># borra lo generado</span></pre>
+        </div>
+
+        <p class="medida">
+          La aplicación de ejemplo está en <code>java/ejemplo</code>: un gestor de tareas
+          completo con vistas, formularios, base de datos y API REST, con 36 pruebas de punta a
+          punta. Es el mejor sitio por donde empezar a leer.
+        </p>
+
+        <h3>Comprobar lo que compilaste</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Huellas</span><span class="etiqueta">Shell</span></div>
+<pre>shasum -a 256 java/lux-core/target/lux-core-0.2.0.jar
+
+<span class="cm"># debe empezar por 5309738f66a6fbde</span></pre>
+        </div>
+      </section>
+
+      <section id="requisitos">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Requisitos</h2></div>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Qué</th><th>Versión</th><th>Por qué</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">JDK</td><td class="mono">21 o superior</td>
+                  <td>Hilos virtuales: el servidor asigna uno por conexión y sin ellos el modelo no se sostiene. Desarrollado y medido con OpenJDK 25.</td></tr>
+              <tr><td class="mono">Maven</td><td class="mono">3.9+</td>
+                  <td>Solo para compilar. En ejecución no hace falta.</td></tr>
+              <tr><td class="mono">Sistema</td><td class="mono">cualquiera</td>
+                  <td>Sin código nativo ni rutas del sistema. Probado en macOS; sin verificar en Linux ni Windows.</td></tr>
+              <tr><td class="mono">Driver JDBC</td><td class="mono">el de tu motor</td>
+                  <td>Solo si usas <code>lux-data</code>. Verificado con PostgreSQL 16, MySQL 8 y H2.</td></tr>
+              <tr><td class="mono">Tomcat</td><td class="mono">10.1+</td>
+                  <td>Solo si despliegas con <code>lux-adapter-servlet</code>. En modo normal no se usa.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="licencia">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Licencia</h2></div>
+
+        <p class="medida">
+          <b>MIT.</b> Puedes usarlo, modificarlo, distribuirlo y venderlo, con o sin cambios, en
+          proyectos abiertos o cerrados. La única condición es conservar el aviso de copyright.
+        </p>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Autor</div>
+            <div>Richar Andre Vilca-Solorzano · Universidad Nacional del Altiplano, Puno, Perú</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Procedencia</div>
+            <div>Deriva de JxMVC 3.4.0, también MIT y con el mismo titular de copyright.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Citación</div>
+            <div><span class="mono">Vilca-Solorzano, R. A. (2026). LuxCore: núcleo de framework web
+              poliglota sin dependencias. v0.2.0.</span></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>

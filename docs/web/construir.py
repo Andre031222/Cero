@@ -18,6 +18,7 @@ AQUI = pathlib.Path(__file__).resolve().parent
 PAGINAS = [
     # archivo,           título,                        entradilla,                                                        en el menú
     ("index.html",       "LuxCore",                     "Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.", None),
+    ("descargas.html",   "Descargas",                   "Los cinco módulos con su tamaño, huella y coordenadas de Maven.",  "Descargas"),
     ("empezar.html",     "Empezar",                     "De cero a un servidor respondiendo, en cuatro órdenes.",           "Empezar"),
     ("guia.html",        "Guía",                        "Rutas, parámetros, respuestas, inyección, validación y errores.",  "Guía"),
     ("modulos.html",     "Módulos",                     "Qué trae cada uno y cómo se usan por separado.",                   "Módulos"),
@@ -119,6 +120,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 
 PAGINAS_UNICO = [
     ("index.html", "Portada"),
+    ("descargas.html", "Descargas"),
     ("empezar.html", "Empezar"),
     ("guia.html", "Guía"),
     ("modulos.html", "Módulos"),
