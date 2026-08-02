@@ -1,0 +1,18 @@
+LuxCore
+Copyright (c) 2026 Richar Andre Vilca-Solorzano
+
+Este producto incluye software desarrollado como parte del proyecto JxMVC
+(https://github.com/Andre031222/19.Soft_JXMVC), publicado bajo licencia MIT.
+
+  JxMVC / Lux Framework, versión 3.4.0
+  Copyright (c) 2026 R. Andre Vilca Solorzano
+  Autor original de parte del núcleo: Dr. Ramiro Pedro Laura Murillo
+
+Las clases heredadas de JxMVC conservan sus cabeceras de atribución originales.
+El detalle de qué se hereda y qué es obra nueva está en AUTORES.md; la
+procedencia exacta de la copia, en ORIGEN.md.
+
+El banco de pruebas de rendimiento (benchmarks/) construye y ejecuta Spring
+Boot, Quarkus, Micronaut y Javalin con fines de comparación. Esos frameworks
+son obra de sus respectivos autores, se descargan en tiempo de build y no se
+redistribuyen como parte de este repositorio.

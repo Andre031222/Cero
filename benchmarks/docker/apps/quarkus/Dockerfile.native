@@ -1,0 +1,19 @@
+# Quarkus compilado a binario NATIVO con GraalVM/Mandrel (arranque en ms, RSS mínimo).
+FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 AS build
+USER root
+WORKDIR /a
+RUN curl -sL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz \
+      | tar xz -C /opt && ln -s /opt/apache-maven-3.9.9/bin/mvn /usr/local/bin/mvn
+COPY pom.xml .
+COPY src ./src
+# -Dquarkus.native.enabled=true activa el build nativo directamente (este pom no define el
+# profile `native`, así que el atajo -Dnative se ignoraría). -B (no -q) para ver errores reales.
+RUN mvn -B -DskipTests package -Dquarkus.native.enabled=true -Dquarkus.native.native-image-xmx=5g \
+    && cp target/*-runner /work-runner
+
+FROM quay.io/quarkus/quarkus-micro-image:2.0
+WORKDIR /app
+COPY --from=build /work-runner /app/application
+RUN chmod +x /app/application
+EXPOSE 8080
+ENTRYPOINT ["/app/application","-Dquarkus.http.host=0.0.0.0","-Dquarkus.http.port=8080"]

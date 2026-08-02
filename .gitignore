@@ -1,0 +1,102 @@
+# === Herramientas de IA / asistentes (no se versionan) ===
+.claude/
+.agents/
+CLAUDE.md
+skills-lock.json
+
+# === Secretos y configuración local ===
+.env
+.env.*
+!.env.example
+appsettings.local.json
+appsettings.Production.json
+appsettings.Staging.json
+client_secret*.json
+*.pem
+*.key
+*.pfx
+secrets.json
+
+# === Node.js ===
+node_modules/
+.pnpm-store/
+dist/
+build/
+frontend/build/
+.next/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+.cache/
+coverage/
+.nyc_output/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# === Java / Maven ===
+target/
+*.class
+.mvn/wrapper/maven-wrapper.jar
+
+# === Rust (fase 3) ===
+# target/ ya está cubierto arriba
+Cargo.lock
+!rust/Cargo.lock
+
+# === C++ (fase 3) ===
+cpp/build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Nota: benchmarks/results/*.csv SÍ se versiona a propósito — es la línea base
+# medida contra la que se compara la arquitectura nueva.
+
+# === .NET / C# ===
+bin/
+obj/
+.vs/
+*.user
+*.suo
+packages/
+*.nupkg
+
+# === Ejecutables / binarios grandes descargados (no son código fuente) ===
+*.exe
+*.msi
+*.zip
+*.7z
+
+# === Logs y temporales ===
+*.log
+logs/
+*.tmp
+*.bak
+
+# === Runtime generado ===
+QRCodes/
+FaceData/
+Photos/
+Uploads/
+uploads/
+Backups/
+minio-data/
+minio/data/
+
+# === Editores / SO ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
