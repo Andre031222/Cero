@@ -7,19 +7,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class Url {
+public final class Url {
 
     private Url() {
     }
 
-    static String decodePath(String path) {
+    public static String decodePath(String path) {
         if (path.indexOf('%') < 0) {
             return path;
         }
         return decode(path, false);
     }
 
-    static Map<String, List<String>> parseQuery(String raw) {
+    public static Map<String, List<String>> parseQuery(String raw) {
         Map<String, List<String>> params = new LinkedHashMap<>();
         if (raw == null || raw.isEmpty()) {
             return params;

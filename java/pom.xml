@@ -13,6 +13,7 @@
         <module>lux-core</module>
         <module>lux-view</module>
         <module>lux-data</module>
+        <module>lux-adapter-servlet</module>
         <module>ejemplo</module>
     </modules>
 
