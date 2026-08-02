@@ -25,37 +25,63 @@ Cambiar lo que envuelven es un trabajo acotado a 14 archivos, no una reescritura
 
 ## Estructura destino
 
+Todo en minúscula, incluidos los módulos y los directorios que genere el framework para una
+aplicación nueva.
+
 ```text
-SPEC/                     Contrato del kernel, versionado, neutral respecto al lenguaje
+spec/                     Contrato del kernel, versionado, neutral respecto al lenguaje
 java/
-  lux-http/               Servidor HTTP/1.1 propio (NIO + hilos virtuales). Cero deps.
+  lux-http/               Servidor HTTP/1.1 propio (hilos virtuales). Cero deps.
   lux-core/               Router, pipeline, DI, configuración, resultados. Cero deps.
   lux-view/               Motor de plantillas propio (sustituye a JSP)
   lux-data/               JxDB, JxRepository, JxPool, JxTransaction — se mudan casi tal cual
   lux-adapter-servlet/    Compatibilidad Jakarta/Tomcat para las apps AUR ya desplegadas
   lux-launcher/           Fat-jar: java -jar app.jar
+legacy/
+  jxmvc-core/             Núcleo heredado — origen de la migración
+  jxmvc2x/                Web de referencia en JSP — banco de pruebas de lux-view
 rust/                     Segunda implementación
 cpp/                      Tercera implementación
 benchmarks/               Harness comparativo (heredado, + LuxCore)
 ```
 
+## Estilo del código
+
+- **Sin comentarios.** Ni javadoc decorativo, ni cabeceras de autoría, ni bloques que repiten lo
+  que dice el código. Si un fragmento necesita explicación, el problema es el fragmento.
+- **Nombres completos.** `readChunkSize`, no `rcs`. `maxKeepAliveRequests`, no `mkar`.
+- **Métodos cortos.** Uno hace una cosa. `MainLxServlet` con 1046 líneas es el contraejemplo que
+  motiva esta regla.
+- **Todo en minúscula** en rutas, módulos y directorios generados.
+- Identificadores en inglés, mensajes de error y documentación en español.
+
 ## Fase 1 — El núcleo que se levanta solo
 
-### 1.1 `lux-http` — el servidor
+### 1.1 `lux-http` — el servidor · **hecho**
 
-HTTP/1.1 sobre `java.nio`, un hilo virtual por conexión (Java 21+). Cubre: parseo de request line
-y cabeceras, keep-alive, `Content-Length` y chunked, gzip (reusando la lógica de `JxGzip`),
-multipart (sustituye a `jakarta.servlet.http.Part`), cookies y sesiones propias (sustituyen a
-`HttpSession`).
+HTTP/1.1 con un hilo virtual por conexión (Java 21+). 16 clases, cero dependencias, 28 pruebas.
 
-Es el único módulo verdaderamente nuevo, y donde hay que poner el cuidado: parseo defensivo de
-cabeceras, límites de tamaño explícitos, timeouts de lectura y escritura, backpressure. Un
-servidor HTTP escrito a mano es también la superficie de ataque del proyecto entero.
+Cubre: parseo de línea de petición y cabeceras, keep-alive con reutilización de conexión,
+`Content-Length` y `Transfer-Encoding: chunked` en ambos sentidos, `Expect: 100-continue`,
+decodificación porcentual de path y query, HEAD, redirecciones y respuestas en streaming.
+
+Los límites son explícitos y están en `ServerOptions`: tamaño de línea de petición, tamaño y
+número de cabeceras, tamaño de cuerpo, timeout de inactividad y peticiones por conexión. Rechaza
+cabeceras plegadas, `Content-Length` duplicado y la combinación `Content-Length` +
+`Transfer-Encoding` — los tres vectores clásicos de *request smuggling*.
+
+**Cambio respecto al plan: hilos virtuales sobre IO bloqueante, no selectores NIO.** El plan decía
+`java.nio`. Con hilos virtuales, el IO bloqueante ya no bloquea un hilo del sistema operativo:
+un `ServerSocket` con un hilo virtual por conexión rinde igual que un selector y se lee de corrido.
+El selector NIO era la respuesta correcta antes de Java 21; hoy sería complejidad sin beneficio, y
+contradice el principio de que el núcleo se pueda leer entero.
 
 **Sobre `com.sun.net.httpserver`:** el JDK ya trae un servidor HTTP y es tentador por gratis. No
-sirve aquí — es un servidor de juguete, sin keep-alive decente ni control de backpressure, y
-dejaría a LuxCore por debajo de Javalin en el benchmark. Escribir el nuestro es el punto entero
-del proyecto.
+sirve aquí — es un servidor de juguete, sin keep-alive decente ni control de backpressure.
+Escribir el nuestro es el punto entero del proyecto.
+
+Pendiente en este módulo: gzip (portando `JxGzip`), multipart (sustituye a
+`jakarta.servlet.http.Part`), cookies y sesiones propias (sustituyen a `HttpSession`), y TLS.
 
 ### 1.2 La costura
 
@@ -119,6 +145,10 @@ Migrar las 41 clases puras a los módulos nuevos. Portar las 347 pruebas al runn
 paridad es real y no una lista de casillas marcadas.
 
 ## Fase 3 — El framework de frameworks
+
+**Java se termina primero.** Ni el spec ni Rust ni C++ se empiezan hasta que la fase 2 esté
+cerrada. Un spec escrito antes de tener una implementación completa describe lo que uno imagina,
+no lo que el framework necesita.
 
 Aquí LuxCore deja de ser «JxMVC v4».
 
