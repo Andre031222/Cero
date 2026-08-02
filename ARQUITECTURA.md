@@ -8,7 +8,7 @@ Este documento describe hacia dónde va el código. El estado actual del reposit
 Antes de diseñar nada se midió el acoplamiento real del núcleo heredado al contenedor de servlets.
 El resultado es mejor de lo que sugiere el README de JxMVC:
 
-- De **55 clases** en `JxMVC.Core/src/main/java/jxmvc/core/`, **41 no importan nada de `jakarta.*`**.
+- De **54 clases** en `legacy/jxmvc-core/src/main/java/jxmvc/core/`, **40 no importan nada de `jakarta.*`**.
   `JxDB`, `JxJson`, `JxRepository`, `JxValidation`, `JxOAuth`, `JxCache`, `JxScheduler`, `JxPool`,
   `JxMetrics`, `JxOpenApi`, `JxServiceRegistry`, `JxTransaction`… todo eso es Java puro.
 - Las **14 clases restantes** tocan Jakarta con 1–4 referencias cada una, salvo dos:

@@ -46,6 +46,7 @@ final class OutgoingResponse implements Response {
         if (committed) {
             throw new IllegalStateException("respuesta ya enviada");
         }
+        rejectControlCharacters(name, value);
         headers.set(name, value);
         return this;
     }
@@ -166,11 +167,31 @@ final class OutgoingResponse implements Response {
         head.append("Connection: ").append(keepAlive ? "keep-alive" : "close").append("\r\n");
 
         for (int i = 0; i < headers.size(); i++) {
+            rejectControlCharacters(headers.name(i), headers.value(i));
             head.append(headers.name(i)).append(": ").append(headers.value(i)).append("\r\n");
         }
         head.append("\r\n");
 
         target.write(head.toString().getBytes(StandardCharsets.ISO_8859_1));
+    }
+
+    private static void rejectControlCharacters(String name, String value) {
+        if (hasControlCharacter(name) || hasControlCharacter(value)) {
+            throw new HttpException(500, "cabecera con caracteres de control: " + name);
+        }
+    }
+
+    private static boolean hasControlCharacter(String text) {
+        if (text == null) {
+            return false;
+        }
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c < 0x20 || c == 0x7F) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static final class UncheckedHttpException extends RuntimeException {
