@@ -1,11 +1,12 @@
 # Auditoría: JxMVC 3.4.0 frente a LuxCore
 
-1 de agosto de 2026. Estado tras completar `lux-http` (fases A–D).
+Iniciada el 1 de agosto de 2026, al día tras cerrar los cuatro módulos y los transversales de
+seguridad.
 
 ## Resumen en una línea
 
-LuxCore reemplazó **Tomcat** por completo. La capa de transporte está cerrada; las otras tres
-capas del framework siguen enteras en `legacy/`.
+LuxCore ya sustituye a Tomcat, a JSP y al núcleo de JxMVC. Del heredado solo quedan transversales,
+ninguno acoplado a Jakarta.
 
 ## Dónde estamos
 
@@ -42,9 +43,9 @@ autenticar → middleware → autorizar → vincular → invocar → renderizar,
 
 ## En qué mejoramos (medido, no opinión)
 
-- **Arranque: 1392 ms → 17 ms.** 82× más rápido. La casi totalidad del arranque de JxMVC era
-  Tomcat, y Tomcat ya no está.
-- **Artefacto: 253 KB + ~15 MB de Tomcat → 36 KB.** Se despliega copiando un archivo.
+- **Arranque: 1392 ms → 51 ms.** 27× más rápido con el framework entero levantado. La casi
+  totalidad del arranque de JxMVC era Tomcat, y Tomcat ya no está.
+- **Artefacto: 253 KB + ~15 MB de Tomcat → 215 KB en cuatro JAR.** Se despliega copiando archivos.
 - **Dependencias: de 0 declaradas a 0 reales.** JxMVC decía «cero dependencias» pero necesitaba
   `jakarta.jakartaee-api` en compilación y un contenedor Jakarta EE completo en ejecución.
   LuxCore no necesita nada fuera del JDK. Esa afirmación ahora es literal.
@@ -87,17 +88,6 @@ nombre y valor, con verificación también al escribir para que no se pueda esqu
 | Rangos (`Range`) en estáticos | baja | vídeo y descargas reanudables |
 | Sesiones distribuidas | baja | el almacén es por proceso; con varias instancias hace falta backend externo |
 
-### Capas 1–3 — el trabajo grande
-
-- `MainLxServlet` (1041 L) → `LuxDispatcher`, partido en piezas legibles.
-- `JxRequest`/`JxResponse` (367 L) → envolver `lux.http.Request`/`Response` en vez de Jakarta.
-- 12 clases más con Jakarta: `BaseDispatcher`, `BaseCorsResolver`, `JxController`, `JxCsrf`,
-  `JxFilterContext`, `JxGzip`, `JxAuthProvider`, `JxWebSocket`, `JxWsRegistrar`.
-- `JxTagFor`, `JxTagIf` → se eliminan, los sustituye `lux-view`.
-- 40 clases puras → mudanza mecánica a `lux-core` y `lux-data`.
-- `lux-adapter-servlet` → para que Academia, Intranet y NFC Intranet no se rompan.
-- Portar las 347 pruebas.
-
 ### Transversales — 14 clases, 2 566 líneas
 
 Ninguna toca Jakarta, así que es trabajo de reescritura limpia, no de desacople.
@@ -120,7 +110,7 @@ Ninguna toca Jakarta, así que es trabajo de reescritura limpia, no de desacople
 
 ## Riesgos
 
-**El grande sigue siendo la madurez.** El parser HTTP de LuxCore tiene dos días y 297 pruebas. El
+**El grande sigue siendo la madurez.** El parser HTTP de LuxCore tiene dos días y 144 pruebas. El
 de Tomcat tiene 25 años, miles de pruebas y un historial de CVEs ya corregidos que nosotros vamos a
 tener que descubrir por nuestra cuenta. Los 51 ms de arranque son reales; la robustez todavía no
 está demostrada. Que la auditoría encontrara una inyección CRLF a las pocas horas de escribir el
