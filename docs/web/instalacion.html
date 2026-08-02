@@ -1,0 +1,490 @@
+<title>LuxCore — instalación / installation</title>
+
+<style>
+  :root {
+    color-scheme: light dark;
+
+    --papel: #faf9f7;
+    --tinta: #191c21;
+    --apagado: #6d7178;
+    --linea: rgba(25, 28, 33, .14);
+    --laton: #8a6216;
+
+    --term-fondo: #f4f2ee;
+    --term-barra: #e8e5df;
+    --term-texto: #24282e;
+    --term-tenue: #7c8189;
+    --term-prompt: #8a6216;
+    --term-ok: #2f6f4e;
+    --term-dato: #1f5f8b;
+    --term-borde: rgba(25, 28, 33, .13);
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --papel: #000;
+      --tinta: #e9e7e2;
+      --apagado: #8d9299;
+      --linea: rgba(233, 231, 226, .18);
+      --laton: #c79637;
+
+      --term-fondo: #000;
+      --term-barra: #0c0d0f;
+      --term-texto: #d8d6d1;
+      --term-tenue: #6c7178;
+      --term-prompt: #c79637;
+      --term-ok: #5fb98a;
+      --term-dato: #5aa9d6;
+      --term-borde: rgba(233, 231, 226, .16);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --papel: #000; --tinta: #e9e7e2; --apagado: #8d9299;
+    --linea: rgba(233, 231, 226, .18); --laton: #c79637;
+    --term-fondo: #000; --term-barra: #0c0d0f; --term-texto: #d8d6d1;
+    --term-tenue: #6c7178; --term-prompt: #c79637; --term-ok: #5fb98a;
+    --term-dato: #5aa9d6; --term-borde: rgba(233, 231, 226, .16);
+  }
+
+  :root[data-theme="light"] {
+    --papel: #faf9f7; --tinta: #191c21; --apagado: #6d7178;
+    --linea: rgba(25, 28, 33, .14); --laton: #8a6216;
+    --term-fondo: #f4f2ee; --term-barra: #e8e5df; --term-texto: #24282e;
+    --term-tenue: #7c8189; --term-prompt: #8a6216; --term-ok: #2f6f4e;
+    --term-dato: #1f5f8b; --term-borde: rgba(25, 28, 33, .13);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 3rem;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .envoltura { max-width: 46rem; margin: 0 auto; }
+
+  /* ── cabecera ── */
+
+  .cabecera {
+    display: flex; flex-wrap: wrap; align-items: flex-end;
+    justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-family: var(--mono); font-size: 1.05rem; font-weight: 700;
+    letter-spacing: .13em; text-transform: uppercase; margin: 0 0 .3rem;
+  }
+  h1 span { color: var(--laton); }
+
+  .subtitulo { color: var(--apagado); font-size: .875rem; margin: 0; max-width: 30rem; }
+
+  .mandos { display: flex; gap: .4rem; align-items: center; }
+
+  .conmutador {
+    display: inline-flex; border: 1px solid var(--linea); border-radius: 5px; overflow: hidden;
+  }
+
+  .conmutador button {
+    font-family: var(--mono); font-size: .6875rem; font-weight: 600; letter-spacing: .1em;
+    padding: .32rem .6rem; border: 0; background: transparent; color: var(--apagado);
+    cursor: pointer; transition: background .15s, color .15s;
+  }
+  .conmutador button + button { border-left: 1px solid var(--linea); }
+  .conmutador button[aria-pressed="true"] { background: var(--laton); color: var(--papel); }
+  .conmutador button:hover:not([aria-pressed="true"]) { color: var(--tinta); }
+
+  .accion {
+    font-family: var(--mono); font-size: .6875rem; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; padding: .38rem .7rem; border: 1px solid var(--linea);
+    border-radius: 5px; background: transparent; color: var(--apagado); cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .accion:hover { color: var(--laton); border-color: var(--laton); }
+
+  button:focus-visible { outline: 2px solid var(--laton); outline-offset: 2px; }
+
+  /* ── terminal ── */
+
+  .terminal {
+    background: var(--term-fondo);
+    border: 1px solid var(--term-borde);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 8px 24px rgba(0, 0, 0, .07);
+  }
+
+  @media (prefers-color-scheme: dark) { .terminal { box-shadow: none; } }
+  :root[data-theme="dark"] .terminal { box-shadow: none; }
+
+  .barra {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .55rem .8rem; background: var(--term-barra);
+    border-bottom: 1px solid var(--term-borde);
+  }
+
+  .luces { display: flex; gap: .38rem; }
+  .luz { width: 11px; height: 11px; border-radius: 50%; background: var(--term-tenue); opacity: .4; }
+  .luz:nth-child(1) { background: #ff5f57; opacity: 1; }
+  .luz:nth-child(2) { background: #febc2e; opacity: 1; }
+  .luz:nth-child(3) { background: #28c840; opacity: 1; }
+
+  .barra .ruta {
+    flex: 1; text-align: center; font-family: var(--mono);
+    font-size: .6875rem; color: var(--term-tenue); letter-spacing: .04em;
+  }
+
+  .pantalla {
+    font-family: var(--mono);
+    font-size: .78rem;
+    line-height: 1.75;
+    padding: .9rem 1rem 1.1rem;
+    min-height: 21rem;
+    max-height: 21rem;
+    overflow-y: auto;
+    color: var(--term-texto);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .pantalla::-webkit-scrollbar { width: 8px; }
+  .pantalla::-webkit-scrollbar-thumb { background: var(--term-borde); border-radius: 4px; }
+
+  .linea { display: block; }
+  .prompt { color: var(--term-prompt); font-weight: 600; }
+  .tenue { color: var(--term-tenue); }
+  .ok { color: var(--term-ok); }
+  .dato { color: var(--term-dato); }
+  .destacado { color: var(--term-texto); font-weight: 600; }
+
+  .cursor {
+    display: inline-block; width: .55em; height: 1.05em;
+    background: var(--term-prompt); vertical-align: text-bottom;
+    margin-left: 1px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .cursor { animation: latir 1.05s step-end infinite; }
+    @keyframes latir { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+  }
+
+  /* ── pasos ── */
+
+  .pasos {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0; margin-top: 1.5rem;
+    border-top: 1px solid var(--linea); border-left: 1px solid var(--linea);
+  }
+
+  .paso {
+    border-right: 1px solid var(--linea); border-bottom: 1px solid var(--linea);
+    padding: .7rem .8rem .8rem; transition: background .2s;
+  }
+  .paso[data-activo="si"] { background: var(--laton); }
+  .paso[data-activo="si"] * { color: var(--papel) !important; }
+
+  .paso .n {
+    font-family: var(--mono); font-size: .625rem; font-weight: 700;
+    letter-spacing: .14em; color: var(--laton);
+  }
+  .paso .que { font-size: .8125rem; margin-top: .12rem; }
+  .paso .cuanto { font-family: var(--mono); font-size: .6875rem; color: var(--apagado); margin-top: .1rem; }
+
+  .nota {
+    margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--linea);
+    font-size: .8125rem; color: var(--apagado); max-width: 38rem;
+  }
+  .nota code {
+    font-family: var(--mono); font-size: .9em;
+    background: var(--linea); padding: .08em .3em; border-radius: 3px; color: var(--tinta);
+  }
+</style>
+
+<div class="envoltura">
+
+  <div class="cabecera">
+    <div>
+      <h1>Lux<span>Core</span> · <span id="tituloGuia">Instalación</span></h1>
+      <p class="subtitulo" id="subtitulo">De cero a un servidor respondiendo, en cuatro órdenes.</p>
+    </div>
+    <div class="mandos">
+      <div class="conmutador" role="group" aria-label="Idioma / Language">
+        <button type="button" id="btnEs" aria-pressed="true">ES</button>
+        <button type="button" id="btnEn" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="accion" id="btnRepetir">Repetir</button>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="barra">
+      <div class="luces" aria-hidden="true"><i class="luz"></i><i class="luz"></i><i class="luz"></i></div>
+      <div class="ruta" id="rutaBarra">~/proyectos</div>
+      <div style="width:44px"></div>
+    </div>
+    <div class="pantalla" id="pantalla" role="log" aria-live="polite" aria-label="Terminal"></div>
+  </div>
+
+  <div class="pasos" id="pasos"></div>
+
+  <p class="nota" id="nota">
+    Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 21</code> o superior. Nada más —
+    LuxCore no tiene dependencias externas.
+  </p>
+
+</div>
+
+<script>
+(function () {
+  var textos = {
+    es: {
+      titulo: 'Instalación',
+      subtitulo: 'De cero a un servidor respondiendo, en cuatro órdenes.',
+      repetir: 'Repetir',
+      nota: 'Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 21</code> o superior. Nada más — LuxCore no tiene dependencias externas.',
+      pasos: [
+        { n: '01', que: 'Clonar', cuanto: '~2 s' },
+        { n: '02', que: 'Compilar y probar', cuanto: '~90 s' },
+        { n: '03', que: 'Arrancar', cuanto: '70 ms' },
+        { n: '04', que: 'Comprobar', cuanto: 'al instante' }
+      ]
+    },
+    en: {
+      titulo: 'Installation',
+      subtitulo: 'From nothing to a running server, in four commands.',
+      repetir: 'Replay',
+      nota: 'You need <code>git</code>, <code>Maven</code> and a <code>JDK 21</code> or newer. That is all — LuxCore has no external dependencies.',
+      pasos: [
+        { n: '01', que: 'Clone', cuanto: '~2 s' },
+        { n: '02', que: 'Build and test', cuanto: '~90 s' },
+        { n: '03', que: 'Start', cuanto: '70 ms' },
+        { n: '04', que: 'Check', cuanto: 'instant' }
+      ]
+    }
+  };
+
+  // Las órdenes y la salida del programa van tal cual salen en una terminal real.
+  // Solo se traducen los comentarios, que son los que guían.
+  function guion(idioma) {
+    var es = idioma === 'es';
+    return [
+      { t: 'cm', v: es ? '# 1 — traer el código' : '# 1 — get the source', paso: 0 },
+      { t: 'cmd', v: 'git clone https://github.com/Andre031222/45.Soft_LuxCore.git' },
+      { t: 'out', v: "Cloning into '45.Soft_LuxCore'...", cls: 'tenue' },
+      { t: 'out', v: 'remote: Enumerating objects: 486, done.', cls: 'tenue' },
+      { t: 'out', v: 'Receiving objects: 100% (486/486), 1.31 MiB | 4.2 MiB/s, done.', cls: 'tenue' },
+      { t: 'blank' },
+
+      { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
+      { t: 'blank' },
+
+      { t: 'cm', v: es ? '# 2 — compilar los cuatro módulos' : '# 2 — build the four modules', paso: 1 },
+      { t: 'cmd', v: 'mvn install' },
+      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.1.0:', cls: 'tenue' },
+      { t: 'out', v: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   144 ✓' },
+      { t: 'out', v: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   229 ✓' },
+      { t: 'out', v: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
+      { t: 'out', v: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   145 ✓' },
+      { t: 'out', v: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
+      { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
+      { t: 'out', v: es ? '        642 pruebas · 0 fallos · 0 dependencias · 223 KB'
+                        : '        642 tests · 0 failures · 0 dependencies · 223 KB', cls: 'ok' },
+      { t: 'blank' },
+
+      { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
+      { t: 'cmd', v: 'java -cp ejemplo/target/classes:$CP ejemplo.App' },
+      { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 9 ms', cls: 'destacado' },
+      { t: 'blank' },
+
+      { t: 'cm', v: es ? '# 4 — comprobar que responde' : '# 4 — check that it answers', paso: 3 },
+      { t: 'cmd', v: 'curl localhost:8080/api/tareas' },
+      { t: 'out', v: '{"data":[],"page":1,"size":20,"total":0}', cls: 'dato' },
+      { t: 'blank' },
+      { t: 'cmd', v: "curl -X POST -H 'Content-Type: application/json' \\" },
+      { t: 'cmd2', v: '     -d \'{"titulo":"Probar LuxCore","prioridad":"alta"}\' \\' },
+      { t: 'cmd2', v: '     localhost:8080/api/tareas' },
+      { t: 'out', v: '{"id":1,"titulo":"Probar LuxCore","prioridad":"alta","completada":false}', cls: 'dato' },
+      { t: 'blank' },
+      { t: 'out', v: es ? '# listo. sin contenedor, sin web.xml, sin dependencias.'
+                        : '# done. no container, no web.xml, no dependencies.', cls: 'ok' }
+    ];
+  }
+
+  var pantalla = document.getElementById('pantalla');
+  var rutaBarra = document.getElementById('rutaBarra');
+  var contenedorPasos = document.getElementById('pasos');
+  var btnEs = document.getElementById('btnEs');
+  var btnEn = document.getElementById('btnEn');
+  var btnRepetir = document.getElementById('btnRepetir');
+
+  var idioma = 'es';
+  var tiempos = [];
+  var reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function limpiar() {
+    tiempos.forEach(clearTimeout);
+    tiempos = [];
+    pantalla.textContent = '';
+  }
+
+  function esperar(ms, fn) { tiempos.push(setTimeout(fn, ms)); }
+
+  function nuevaLinea(clase) {
+    var linea = document.createElement('span');
+    linea.className = 'linea' + (clase ? ' ' + clase : '');
+    pantalla.appendChild(linea);
+    return linea;
+  }
+
+  function abajo() { pantalla.scrollTop = pantalla.scrollHeight; }
+
+  function pintarPasos() {
+    contenedorPasos.innerHTML = '';
+    textos[idioma].pasos.forEach(function (p, i) {
+      var caja = document.createElement('div');
+      caja.className = 'paso';
+      caja.dataset.indice = String(i);
+      caja.innerHTML = '<div class="n">' + p.n + '</div>' +
+                       '<div class="que">' + p.que + '</div>' +
+                       '<div class="cuanto">' + p.cuanto + '</div>';
+      contenedorPasos.appendChild(caja);
+    });
+  }
+
+  function marcarPaso(indice) {
+    Array.prototype.forEach.call(contenedorPasos.children, function (caja, i) {
+      caja.dataset.activo = i === indice ? 'si' : 'no';
+    });
+  }
+
+  function aplicarIdioma() {
+    var t = textos[idioma];
+    document.getElementById('tituloGuia').textContent = t.titulo;
+    document.getElementById('subtitulo').textContent = t.subtitulo;
+    document.getElementById('nota').innerHTML = t.nota;
+    btnRepetir.textContent = t.repetir;
+    btnEs.setAttribute('aria-pressed', String(idioma === 'es'));
+    btnEn.setAttribute('aria-pressed', String(idioma === 'en'));
+    document.documentElement.lang = idioma;
+    pintarPasos();
+  }
+
+  function reproducir() {
+    limpiar();
+    rutaBarra.textContent = '~/proyectos';
+    marcarPaso(-1);
+
+    var pasosGuion = guion(idioma);
+
+    if (reducido) {
+      pasosGuion.forEach(function (p) { pintarInstantaneo(p); });
+      marcarPaso(3);
+      abajo();
+      return;
+    }
+
+    var retraso = 300;
+
+    pasosGuion.forEach(function (p) {
+      if (p.paso !== undefined) {
+        (function (indice) { esperar(retraso, function () { marcarPaso(indice); }); })(p.paso);
+      }
+
+      if (p.t === 'blank') {
+        (function () { esperar(retraso, function () { nuevaLinea().textContent = ' '; abajo(); }); })();
+        retraso += 90;
+        return;
+      }
+
+      if (p.t === 'cm') {
+        (function (texto) {
+          esperar(retraso, function () { nuevaLinea('tenue').textContent = texto; abajo(); });
+        })(p.v);
+        retraso += 420;
+        return;
+      }
+
+      if (p.t === 'cmd' || p.t === 'cmd2') {
+        (function (texto, conPrompt, ruta) {
+          esperar(retraso, function () {
+            var linea = nuevaLinea();
+            if (conPrompt) {
+              var pr = document.createElement('span');
+              pr.className = 'prompt';
+              pr.textContent = '$ ';
+              linea.appendChild(pr);
+            }
+            var cuerpo = document.createElement('span');
+            linea.appendChild(cuerpo);
+            var cursor = document.createElement('i');
+            cursor.className = 'cursor';
+            linea.appendChild(cursor);
+            escribir(cuerpo, texto, function () {
+              cursor.remove();
+              if (ruta) rutaBarra.textContent = ruta;
+            });
+          });
+        })(p.v, p.t === 'cmd', p.ruta);
+        retraso += 260 + p.v.length * 22;
+        return;
+      }
+
+      (function (texto, cls) {
+        esperar(retraso, function () { nuevaLinea(cls).textContent = texto; abajo(); });
+      })(p.v, p.cls);
+      retraso += 130;
+    });
+  }
+
+  function pintarInstantaneo(p) {
+    if (p.t === 'blank') { nuevaLinea().textContent = ' '; return; }
+    if (p.t === 'cm') { nuevaLinea('tenue').textContent = p.v; return; }
+    if (p.t === 'cmd' || p.t === 'cmd2') {
+      var linea = nuevaLinea();
+      if (p.t === 'cmd') {
+        var pr = document.createElement('span');
+        pr.className = 'prompt';
+        pr.textContent = '$ ';
+        linea.appendChild(pr);
+      }
+      var cuerpo = document.createElement('span');
+      cuerpo.textContent = p.v;
+      linea.appendChild(cuerpo);
+      if (p.ruta) rutaBarra.textContent = p.ruta;
+      return;
+    }
+    nuevaLinea(p.cls).textContent = p.v;
+  }
+
+  function escribir(destino, texto, alTerminar) {
+    var i = 0;
+    (function paso() {
+      if (i >= texto.length) { abajo(); if (alTerminar) alTerminar(); return; }
+      destino.textContent += texto.charAt(i++);
+      abajo();
+      tiempos.push(setTimeout(paso, 20 + Math.round(i % 3) * 4));
+    })();
+  }
+
+  btnEs.addEventListener('click', function () {
+    if (idioma === 'es') return;
+    idioma = 'es'; aplicarIdioma(); reproducir();
+  });
+  btnEn.addEventListener('click', function () {
+    if (idioma === 'en') return;
+    idioma = 'en'; aplicarIdioma(); reproducir();
+  });
+  btnRepetir.addEventListener('click', reproducir);
+
+  aplicarIdioma();
+  reproducir();
+})();
+</script>

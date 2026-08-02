@@ -1,0 +1,457 @@
+<title>LuxCore — logo</title>
+
+<style>
+  :root {
+    color-scheme: light dark;
+    --papel: #faf9f7; --panel: #f2f0ec; --tinta: #191c21; --apagado: #6d7178;
+    --linea: rgba(25,28,33,.14); --laton: #8a6216;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --papel:#000; --panel:#0c0d0f; --tinta:#e9e7e2; --apagado:#8d9299;
+            --linea:rgba(233,231,226,.18); --laton:#c79637; }
+  }
+  :root[data-theme="dark"] { --papel:#000; --panel:#0c0d0f; --tinta:#e9e7e2; --apagado:#8d9299;
+            --linea:rgba(233,231,226,.18); --laton:#c79637; }
+  :root[data-theme="light"] { --papel:#faf9f7; --panel:#f2f0ec; --tinta:#191c21; --apagado:#6d7178;
+            --linea:rgba(25,28,33,.14); --laton:#8a6216; }
+
+  * { box-sizing: border-box; }
+  body { margin:0; padding:3rem 1.5rem 4rem; background:var(--papel); color:var(--tinta);
+         font-family:var(--sans); font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .marco { max-width: 48rem; margin: 0 auto; }
+
+  .etiqueta { font-family:var(--mono); font-size:.6875rem; font-weight:600;
+              letter-spacing:.17em; text-transform:uppercase; color:var(--apagado); }
+  h1 { font-family:var(--mono); font-size:1rem; font-weight:700; letter-spacing:.15em;
+       text-transform:uppercase; margin:0 0 .35rem; }
+  h2 { font-family:var(--mono); font-size:.75rem; font-weight:700; letter-spacing:.16em;
+       text-transform:uppercase; color:var(--apagado); margin:2.75rem 0 1rem;
+       border-bottom:1px solid var(--linea); padding-bottom:.45rem; }
+  p { max-width:34rem; color:var(--apagado); font-size:.9rem; margin:0 0 1rem; }
+  p.claro { color:var(--tinta); }
+
+  .cabecera { display:flex; align-items:center; gap:1.1rem; border-bottom:2px solid var(--tinta);
+              padding-bottom:1.25rem; margin-bottom:.5rem; }
+  .logo { color: var(--laton); flex:none; }
+  .cabecera .logo { width:3.5rem; height:3.5rem; }
+
+  .rejilla { display:grid; grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));
+             border-top:1px solid var(--linea); border-left:1px solid var(--linea); }
+  .celda { border-right:1px solid var(--linea); border-bottom:1px solid var(--linea);
+           padding:1.5rem 1rem; display:flex; flex-direction:column; align-items:center;
+           gap:.85rem; text-align:center; }
+  .celda .logo { color:var(--laton); }
+
+  .t16 .logo { width:16px; height:16px; }
+  .t24 .logo { width:24px; height:24px; }
+  .t32 .logo { width:32px; height:32px; }
+  .t48 .logo { width:48px; height:48px; }
+  .t96 .logo { width:96px; height:96px; }
+
+  .fondos { display:grid; grid-template-columns:repeat(auto-fit,minmax(11rem,1fr)); gap:1px;
+            background:var(--linea); border:1px solid var(--linea); }
+  .fondo { padding:2.25rem 1rem; display:flex; flex-direction:column; align-items:center; gap:.9rem; }
+  .fondo .logo { width:3.25rem; height:3.25rem; }
+  .f-papel { background:#faf9f7; } .f-papel .logo { color:#8a6216; } .f-papel .etiqueta { color:#6d7178; }
+  .f-negro { background:#000; } .f-negro .logo { color:#c79637; } .f-negro .etiqueta { color:#8d9299; }
+  .f-laton { background:#8a6216; } .f-laton .logo { color:#faf9f7; } .f-laton .etiqueta { color:rgba(250,249,247,.75); }
+  .f-tinta { background:#191c21; } .f-tinta .logo { color:#e9e7e2; } .f-tinta .etiqueta { color:#8d9299; }
+
+  .lockup { display:flex; align-items:center; gap:1rem; padding:1.75rem 1.25rem;
+            border:1px solid var(--linea); border-radius:5px; background:var(--panel); }
+  .lockup .logo { width:2.75rem; height:2.75rem; }
+  .palabra { font-family:var(--mono); font-size:2rem; font-weight:700; letter-spacing:-.035em; line-height:1; }
+  .palabra span { color:var(--laton); }
+
+  .aire { position:relative; display:inline-flex; padding:1.75rem; border:1px dashed var(--linea);
+          border-radius:4px; }
+  .aire .logo { width:3.5rem; height:3.5rem; color:var(--laton); }
+
+  .ficha { border-top:1px solid var(--linea); }
+  .campo { display:grid; grid-template-columns:9rem 1fr; gap:1.25rem; padding:.75rem 0;
+           border-bottom:1px solid var(--linea); align-items:start; }
+  .campo > div:last-child { color:var(--tinta); font-size:.875rem; }
+  @media (max-width:34rem) { .campo { grid-template-columns:1fr; gap:.2rem; } }
+</style>
+
+<div class="marco">
+
+  <div class="cabecera">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg>
+    <div>
+      <h1>LuxCore · Logo</h1>
+      <div class="etiqueta">Marca, versiones y uso</div>
+    </div>
+  </div>
+
+  <p class="claro" style="margin-top:1.5rem">
+    <em>Lux</em> es la unidad de iluminancia. La marca es un núcleo sólido rodeado de una escala
+    graduada: se lee a la vez como luz irradiando y como el dial de un instrumento de medida — que
+    es exactamente lo que el proyecto dice de sí mismo, <em>medido, no proclamado</em>.
+  </p>
+
+  <h2>Construcción</h2>
+  <div class="ficha">
+    <div class="campo"><div class="etiqueta">Lienzo</div><div>64 × 64, centro en 32,32</div></div>
+    <div class="campo"><div class="etiqueta">Núcleo</div><div>Círculo sólido, radio 6.5</div></div>
+    <div class="campo"><div class="etiqueta">Escala</div><div>24 marcas cada 15°, desde radio 13</div></div>
+    <div class="campo"><div class="etiqueta">Graduación</div><div>Cada tercera marca es larga (radio 23.5, grosor 2.4); el resto corta (18.5, grosor 1.6)</div></div>
+    <div class="campo"><div class="etiqueta">Color</div><div>Una sola tinta. Usa <code>currentColor</code>, así que hereda el color del texto</div></div>
+    <div class="campo"><div class="etiqueta">Peso</div><div>2 KB de SVG, sin trazados generados ni dependencias</div></div>
+  </div>
+
+  <h2>Tamaños</h2>
+  <p>La graduación aguanta hasta 16 px; por debajo, usa solo el núcleo.</p>
+  <div class="rejilla">
+    <div class="celda t16"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">16 px</div></div>
+    <div class="celda t24"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">24 px</div></div>
+    <div class="celda t32"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">32 px</div></div>
+    <div class="celda t48"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">48 px</div></div>
+    <div class="celda t96"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">96 px</div></div>
+  </div>
+
+  <h2>Sobre fondo</h2>
+  <div class="fondos">
+    <div class="fondo f-papel"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Papel</div></div>
+    <div class="fondo f-negro"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Negro</div></div>
+    <div class="fondo f-tinta"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Tinta</div></div>
+    <div class="fondo f-laton"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Latón</div></div>
+  </div>
+
+  <h2>Conjunto</h2>
+  <div class="lockup">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg>
+    <div class="palabra">Lux<span>Core</span></div>
+  </div>
+  <p style="margin-top:1rem">
+    La palabra va en la misma monoespaciada que los titulares de la documentación, con
+    <em>Core</em> en latón. Separación igual a la mitad del alto de la marca.
+  </p>
+
+  <h2>Aire</h2>
+  <p>Deja alrededor, como mínimo, el radio del núcleo. La línea discontinua marca ese margen.</p>
+  <div class="aire"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg></div>
+
+  <h2>Qué no hacer</h2>
+  <div class="ficha">
+    <div class="campo"><div class="etiqueta">No</div><div>Rellenar el fondo del círculo ni encerrar la marca en una caja</div></div>
+    <div class="campo"><div class="etiqueta">No</div><div>Usar degradados: la marca es de una sola tinta</div></div>
+    <div class="campo"><div class="etiqueta">No</div><div>Rotarla — la escala tiene una marca larga arriba, y ahí se queda</div></div>
+    <div class="campo"><div class="etiqueta">No</div><div>Cambiar el número de marcas para «simplificar» a tamaño pequeño</div></div>
+  </div>
+
+</div>
