@@ -139,6 +139,9 @@ cd legacy/jxmvc-core && mvn test    # 347 pruebas
 
 ## Documentos
 
+- [docs/produccion.md](docs/produccion.md) — **¿está listo para producción?** (respuesta corta: no
+  todavía, y ahí está la lista concreta de qué falta)
+- [docs/auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) — comparación con JxMVC, capa por capa
 - [ARQUITECTURA.md](ARQUITECTURA.md) — el diseño y las tres fases
 - [ORIGEN.md](ORIGEN.md) — de dónde viene el código y por qué el original no se toca
 - [AUTORES.md](AUTORES.md) — autoría y atribución del código heredado
