@@ -191,32 +191,32 @@ final class DispatcherTests {
     }
 
     private static void enrutado(String base) throws Exception {
-        Check.equal("índice del controlador", Http.get(base + "/api").body(), "raíz");
-        Check.equal("ruta lambda", Http.get(base + "/ping").body(), "pong");
-        Check.equal("ruta inexistente da 404", Http.get(base + "/nada").statusCode(), 404);
+        Check.equal("índice del controlador", Cliente.get(base + "/api").body(), "raíz");
+        Check.equal("ruta lambda", Cliente.get(base + "/ping").body(), "pong");
+        Check.equal("ruta inexistente da 404", Cliente.get(base + "/nada").statusCode(), 404);
 
-        HttpResponse<String> noPermitido = Http.method(base + "/api/texto", "DELETE");
+        HttpResponse<String> noPermitido = Cliente.method(base + "/api/texto", "DELETE");
         Check.equal("verbo no permitido da 405", noPermitido.statusCode(), 405);
         Check.that("405 incluye Allow",
                 noPermitido.headers().firstValue("allow").orElse("").contains("GET"));
 
         Check.equal("HEAD funciona sobre GET",
-                Http.method(base + "/api/texto", "HEAD").statusCode(), 200);
+                Cliente.method(base + "/api/texto", "HEAD").statusCode(), 200);
     }
 
     private static void binding(String base) throws Exception {
         Check.equal("variable de ruta convertida a int",
-                Http.get(base + "/api/articulos/3").body(),
+                Cliente.get(base + "/api/articulos/3").body(),
                 "{\"titulo\":\"artículo 3\",\"paginas\":30}");
         Check.equal("variable de ruta inválida da 400",
-                Http.get(base + "/api/articulos/abc").statusCode(), 400);
+                Cliente.get(base + "/api/articulos/abc").statusCode(), 400);
 
         Check.equal("parámetro de consulta",
-                Http.get(base + "/api/buscar?q=lux&pagina=4").body(), "{\"q\":\"lux\",\"pagina\":4}");
+                Cliente.get(base + "/api/buscar?q=lux&pagina=4").body(), "{\"q\":\"lux\",\"pagina\":4}");
         Check.equal("parámetro con valor por defecto",
-                Http.get(base + "/api/buscar?q=lux").body(), "{\"q\":\"lux\",\"pagina\":1}");
+                Cliente.get(base + "/api/buscar?q=lux").body(), "{\"q\":\"lux\",\"pagina\":1}");
 
-        HttpResponse<String> creado = Http.post(base + "/api/articulos",
+        HttpResponse<String> creado = Cliente.post(base + "/api/articulos",
                 "{\"titulo\":\"nuevo\",\"paginas\":7}");
         Check.equal("cuerpo JSON vinculado a record", creado.statusCode(), 201);
         Check.equal("y devuelto", creado.body(), "{\"titulo\":\"nuevo\",\"paginas\":7}");
@@ -224,82 +224,82 @@ final class DispatcherTests {
                 creado.headers().firstValue("x-creado").orElse(null), "nuevo");
 
         Check.equal("cabecera vinculada",
-                Http.get(base + "/api/cabecera", "X-Prueba", "valor").body(), "valor");
+                Cliente.get(base + "/api/cabecera", "X-Prueba", "valor").body(), "valor");
         Check.equal("cabecera ausente queda null",
-                Http.get(base + "/api/cabecera").body(), "sin cabecera");
+                Cliente.get(base + "/api/cabecera").body(), "sin cabecera");
         Check.equal("cookie vinculada",
-                Http.get(base + "/api/galleta", "Cookie", "sabor=vainilla").body(), "vainilla");
+                Cliente.get(base + "/api/galleta", "Cookie", "sabor=vainilla").body(), "vainilla");
 
         Check.equal("el contexto se inyecta",
-                Http.get(base + "/api/contexto").body(), "GET /api/contexto");
+                Cliente.get(base + "/api/contexto").body(), "GET /api/contexto");
         Check.equal("la dependencia del controlador se inyecta",
-                Http.get(base + "/api/articulos/5").body(),
+                Cliente.get(base + "/api/articulos/5").body(),
                 "{\"titulo\":\"artículo 5\",\"paginas\":50}");
     }
 
     private static void resultados(String base) throws Exception {
-        HttpResponse<String> texto = Http.get(base + "/api/texto");
+        HttpResponse<String> texto = Cliente.get(base + "/api/texto");
         Check.equal("String se sirve como texto plano",
                 texto.headers().firstValue("content-type").orElse(null), "text/plain; charset=utf-8");
 
-        HttpResponse<String> objeto = Http.get(base + "/api/objeto");
+        HttpResponse<String> objeto = Cliente.get(base + "/api/objeto");
         Check.equal("un objeto se serializa a JSON",
                 objeto.headers().firstValue("content-type").orElse(null), "application/json");
         Check.equal("con el contenido correcto", objeto.body(), "{\"titulo\":\"uno\",\"paginas\":10}");
 
-        Check.equal("noContent da 204", Http.get(base + "/api/vacio").statusCode(), 204);
-        Check.equal("devolver null da 204", Http.get(base + "/api/nulo").statusCode(), 204);
+        Check.equal("noContent da 204", Cliente.get(base + "/api/vacio").statusCode(), 204);
+        Check.equal("devolver null da 204", Cliente.get(base + "/api/nulo").statusCode(), 204);
 
-        HttpResponse<String> redirigido = Http.get(base + "/api/mudanza");
+        HttpResponse<String> redirigido = Cliente.get(base + "/api/mudanza");
         Check.equal("redirect da 302", redirigido.statusCode(), 302);
         Check.equal("con Location",
                 redirigido.headers().firstValue("location").orElse(null), "/api/texto");
 
         Check.equal("html se sirve como html",
-                Http.get(base + "/api/html").headers().firstValue("content-type").orElse(null),
+                Cliente.get(base + "/api/html").headers().firstValue("content-type").orElse(null),
                 "text/html; charset=utf-8");
     }
 
     private static void seguridad(String base) throws Exception {
         Check.equal("ruta abierta no exige nada",
-                Http.get(base + "/privado/abierto").statusCode(), 200);
+                Cliente.get(base + "/privado/abierto").statusCode(), 200);
 
         Check.equal("sin credenciales da 401",
-                Http.get(base + "/privado/perfil").statusCode(), 401);
+                Cliente.get(base + "/privado/perfil").statusCode(), 401);
         Check.equal("con credenciales devuelve el principal",
-                Http.get(base + "/privado/perfil", "Authorization", "Bearer admin").body(), "andre");
+                Cliente.get(base + "/privado/perfil", "Authorization", "Bearer admin").body(), "andre");
 
         Check.equal("rol insuficiente da 403",
-                Http.get(base + "/privado/admin", "Authorization", "Bearer otro").statusCode(), 403);
+                Cliente.get(base + "/privado/admin", "Authorization", "Bearer otro").statusCode(), 403);
         Check.equal("rol correcto pasa",
-                Http.get(base + "/privado/admin", "Authorization", "Bearer admin").body(), "panel");
+                Cliente.get(base + "/privado/admin", "Authorization", "Bearer admin").body(), "panel");
         Check.equal("sin autenticar el rol también da 401",
-                Http.get(base + "/privado/admin").statusCode(), 401);
+                Cliente.get(base + "/privado/admin").statusCode(), 401);
     }
 
     private static void errores(String base) throws Exception {
-        HttpResponse<String> roto = Http.get(base + "/api/estalla");
+        HttpResponse<String> roto = Cliente.get(base + "/api/estalla");
         Check.equal("una excepción no controlada da 500", roto.statusCode(), 500);
         Check.that("el 500 no filtra el mensaje interno", !roto.body().contains("algo se rompió"));
         Check.that("el 500 responde JSON con la ruta", roto.body().contains("/api/estalla"));
 
-        HttpResponse<String> negocio = Http.get(base + "/api/negocio");
+        HttpResponse<String> negocio = Cliente.get(base + "/api/negocio");
         Check.equal("@OnError fija el estado", negocio.statusCode(), 422);
         Check.equal("@OnError construye el cuerpo", negocio.body(), "{\"motivo\":\"saldo insuficiente\"}");
 
-        HttpResponse<String> ausente = Http.get(base + "/api/no-esta");
+        HttpResponse<String> ausente = Cliente.get(base + "/api/no-esta");
         Check.equal("HttpException conserva el estado", ausente.statusCode(), 404);
         Check.that("y el mensaje", ausente.body().contains("el artículo no existe"));
     }
 
     private static void middleware(String base, List<String> traza) throws Exception {
         traza.clear();
-        Http.get(base + "/api/texto");
+        Cliente.get(base + "/api/texto");
         Check.equal("el middleware envuelve la acción en orden",
                 String.join(",", traza), "entra,dentro,sale");
 
         traza.clear();
-        Http.get(base + "/nada");
+        Cliente.get(base + "/nada");
         Check.equal("el middleware también corre en un 404",
                 String.join(",", traza), "entra,dentro");
     }

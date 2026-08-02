@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# lux — órdenes de LuxCore. Sin dependencias más allá de Maven y un JDK 21.
+#
+#   ./lux correr        arranca la aplicación de ejemplo
+#   ./lux probar        corre las pruebas
+#   ./lux empaquetar    genera los JAR
+#   ./lux instalar      compila e instala en el repositorio local
+#   ./lux limpiar       borra lo generado
+#   ./lux cache         muestra qué ocupa la caché, y con --purgar la vacía
+#   ./lux web           sirve la documentación con el propio LuxCore
+#   ./lux sitio         regenera las páginas del sitio
+#   ./lux estado        resumen del proyecto
+set -euo pipefail
+
+AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JAVA_DIR="$AQUI/java"
+MVN=(mvn -B -q)
+
+azul()  { printf '\033[38;5;179m%s\033[0m\n' "$*"; }
+gris()  { printf '\033[38;5;245m%s\033[0m\n' "$*"; }
+malo()  { printf '\033[38;5;167m%s\033[0m\n' "$*" >&2; }
+
+requisitos() {
+  command -v mvn >/dev/null || { malo "falta Maven"; exit 1; }
+  command -v java >/dev/null || { malo "falta un JDK"; exit 1; }
+  local v
+  v=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
+  if [ "${v:-0}" -lt 21 ] 2>/dev/null; then
+    malo "LuxCore necesita Java 21 o superior (hilos virtuales); tienes $v"
+    exit 1
+  fi
+}
+
+modulos() { echo "lux-http lux-core lux-view lux-data lux-adapter-servlet"; }
+
+classpath_ejemplo() {
+  local destino="$JAVA_DIR/ejemplo/target/classpath.txt"
+  if [ ! -f "$destino" ] || [ "$JAVA_DIR/ejemplo/pom.xml" -nt "$destino" ]; then
+    (cd "$JAVA_DIR/ejemplo" && "${MVN[@]}" dependency:build-classpath \
+        -Dmdep.outputFile=target/classpath.txt >/dev/null)
+  fi
+  echo "$JAVA_DIR/ejemplo/target/classes:$(cat "$destino")"
+}
+
+case "${1:-ayuda}" in
+
+  correr|run)
+    requisitos
+    azul "compilando la aplicación de ejemplo…"
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
+    azul "arrancando en http://localhost:${2:-8080}"
+    java -cp "$(classpath_ejemplo)" ejemplo.App "${2:-8080}"
+    ;;
+
+  probar|test)
+    requisitos
+    if [ -n "${2:-}" ]; then
+      azul "probando $2"
+      (cd "$JAVA_DIR" && mvn -B -o -q -pl "$2" -am test)
+    else
+      azul "corriendo todas las pruebas"
+      (cd "$JAVA_DIR" && mvn -B -q test)
+    fi
+    ;;
+
+  empaquetar|package)
+    requisitos
+    azul "empaquetando…"
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests package)
+    echo
+    printf '  %-22s %10s\n' MÓDULO TAMAÑO
+    local_total=0
+    for m in $(modulos); do
+      jar=$(ls "$JAVA_DIR/$m/target/$m"-*.jar 2>/dev/null | head -1) || continue
+      [ -n "$jar" ] || continue
+      bytes=$(wc -c < "$jar" | tr -d ' ')
+      local_total=$((local_total + bytes))
+      printf '  %-22s %7s KB\n' "$m" "$((bytes / 1024))"
+    done
+    printf '  %-22s %7s KB\n' "total" "$((local_total / 1024))"
+    ;;
+
+  instalar|install)
+    requisitos
+    azul "compilando, probando e instalando en ~/.m2"
+    (cd "$JAVA_DIR" && mvn -B install)
+    ;;
+
+  limpiar|clean)
+    azul "borrando lo generado…"
+    (cd "$JAVA_DIR" && "${MVN[@]}" clean) || true
+    rm -rf "$JAVA_DIR"/*/target "$AQUI"/legacy/*/target 2>/dev/null || true
+    find "$AQUI" -name '*.class' -not -path '*/.git/*' -delete 2>/dev/null || true
+    gris "listo"
+    ;;
+
+  cache)
+    if [ "${2:-}" = "--purgar" ]; then
+      azul "vaciando la caché de LuxCore en ~/.m2…"
+      rm -rf "$HOME/.m2/repository/lux"
+      gris "artefactos de lux eliminados; la próxima compilación los rehace"
+    else
+      printf '  %-34s %10s\n' UBICACIÓN TAMAÑO
+      for d in "$HOME/.m2/repository/lux" "$JAVA_DIR"/*/target "$AQUI/legacy"/*/target; do
+        [ -d "$d" ] || continue
+        printf '  %-34s %10s\n' "${d/#$AQUI/.}" "$(du -sh "$d" 2>/dev/null | cut -f1)"
+      done
+      echo
+      gris "  ./lux cache --purgar   vacía los artefactos de lux en ~/.m2"
+      gris "  ./lux limpiar          borra los target/ del proyecto"
+    fi
+    ;;
+
+  web)
+    requisitos
+    puerto="${2:-8095}"
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
+    cp=$(ls -d "$JAVA_DIR"/lux-*/target/lux-*.jar | tr '\n' ':')
+    tmp=$(mktemp -d)
+    cat > "$tmp/Sitio.java" <<'JAVA'
+import lux.core.Lux;
+import lux.http.StaticFiles;
+import java.nio.file.Path;
+
+public class Sitio {
+    public static void main(String[] args) throws Exception {
+        Lux.app().port(Integer.parseInt(args[1]))
+           .fallback(StaticFiles.from(Path.of(args[0])))
+           .start().await();
+    }
+}
+JAVA
+    javac -cp "$cp" -d "$tmp" "$tmp/Sitio.java"
+    azul "sirviendo la documentación en http://localhost:$puerto"
+    java -cp "$cp:$tmp" Sitio "$AQUI/docs/web" "$puerto"
+    ;;
+
+  sitio)
+    azul "regenerando las páginas…"
+    python3 "$AQUI/docs/web/construir.py"
+    ;;
+
+  estado|status)
+    printf '  %-16s %s\n' versión "$(grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<.*/\1/')"
+    printf '  %-16s %s\n' java "$(java -version 2>&1 | head -1 | cut -d'"' -f2)"
+    printf '  %-16s %s clases, %s líneas\n' código \
+      "$(find "$JAVA_DIR" -path '*/src/main/*' -name '*.java' | wc -l | tr -d ' ')" \
+      "$(find "$JAVA_DIR" -path '*/src/main/*' -name '*.java' -exec cat {} + | wc -l | tr -d ' ')"
+    printf '  %-16s %s líneas\n' pruebas \
+      "$(find "$JAVA_DIR" -path '*/src/test/*' -name '*.java' -exec cat {} + | wc -l | tr -d ' ')"
+    printf '  %-16s %s\n' dependencias \
+      "$(grep -rl 'jakarta\|springframework' "$JAVA_DIR"/lux-http/src/main "$JAVA_DIR"/lux-core/src/main 2>/dev/null | wc -l | tr -d ' ') externas en el núcleo"
+    printf '  %-16s %s\n' repositorio "$(git -C "$AQUI" rev-parse --short HEAD 2>/dev/null || echo '—')"
+    ;;
+
+  *)
+    azul "lux — órdenes de LuxCore"
+    echo
+    printf '  %-22s %s\n' "./lux correr [puerto]"  "arranca la aplicación de ejemplo"
+    printf '  %-23s %s\n' "./lux probar [módulo]"  "corre las pruebas"
+    printf '  %-22s %s\n' "./lux empaquetar"       "genera los JAR y muestra sus tamaños"
+    printf '  %-22s %s\n' "./lux instalar"         "compila, prueba e instala en ~/.m2"
+    printf '  %-22s %s\n' "./lux limpiar"          "borra lo generado"
+    printf '  %-22s %s\n' "./lux cache [--purgar]" " qué ocupa la caché, o vaciarla"
+    printf '  %-22s %s\n' "./lux web [puerto]"     "sirve la documentación con LuxCore"
+    printf '  %-22s %s\n' "./lux sitio"            "regenera las páginas del sitio"
+    printf '  %-22s %s\n' "./lux estado"           "resumen del proyecto"
+    ;;
+esac
