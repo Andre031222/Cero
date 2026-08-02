@@ -139,9 +139,15 @@ cd legacy/jxmvc-core && mvn test    # 347 pruebas
 
 ## Web del proyecto
 
-La ficha técnica —módulos por separado, bases de datos, sistemas y estado real— está en
-[docs/web/index.html](docs/web/index.html). Es una página autocontenida, sin dependencias, que se
-puede servir con el propio LuxCore:
+Todo en `docs/web/`, autocontenido y sin dependencias:
+
+| Página | Qué es |
+|---|---|
+| [index.html](docs/web/index.html) | Documentación completa: 18 secciones con índice lateral, desde rutas hasta el estado real |
+| [instalacion.html](docs/web/instalacion.html) | Guía de instalación en terminal animada, bilingüe ES/EN |
+| [marca/](docs/web/marca/) | El logo: construcción, tamaños, uso y `logo.svg` suelto |
+
+Se puede servir con el propio LuxCore:
 
 ```java
 Lux.app().port(8080)
