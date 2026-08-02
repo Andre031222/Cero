@@ -1,0 +1,114 @@
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Referencia</h1>
+    <p class="entradilla">Motores de base de datos verificados, sistemas donde corre y comparación con su antecesor sobre Tomcat.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#bases"><span class="n">01</span> Bases de datos</a></li>
+        <li><a href="#sistemas"><span class="n">02</span> Dónde corre</a></li>
+        <li><a href="#comparacion"><span class="n">03</span> Frente a Tomcat</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="bases">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Bases de datos</h2></div>
+
+        <p>
+          <code>lux-data</code> habla JDBC y nada más. Sirve cualquier motor con driver JDBC — el
+          driver lo pone tu aplicación, que es la única dependencia externa que LuxCore admite.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Motor</th><th>Estado</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Probado</span></td><td>En memoria y en archivo. Motor de la app de ejemplo y sus 36 pruebas.</td></tr>
+              <tr><td class="mono">PostgreSQL</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada del código es específico de un motor, pero no se ha corrido.</td></tr>
+              <tr><td class="mono">MySQL / MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Igual.</td></tr>
+              <tr><td class="mono">SQL Server</td><td><span class="pastilla parcial">Sin verificar</span></td><td><code>LIMIT</code>/<code>OFFSET</code> tiene otra sintaxis; la paginación necesitará ajuste.</td></tr>
+              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve columnas en mayúsculas, que ya está contemplado.</td></tr>
+              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura; el pool debería ir a 1.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">«Sin verificar» quiere decir sin verificar</div>
+          <p>
+            Los tipos, las zonas horarias y la paginación cambian entre motores. La capa se prueba
+            contra un driver propio que registra el SQL generado — eso cubre su responsabilidad,
+            no las diferencias entre motores. Hasta correrla contra PostgreSQL y MySQL reales,
+            «debería andar» es una hipótesis.
+          </p>
+        </div>
+      </section>
+<section id="sistemas">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Dónde corre</h2></div>
+
+        <p>
+          No hay código nativo ni nada específico de una plataforma. Donde haya un JDK 21 o
+          superior, corre igual.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 642 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Es el destino previsto para producción, pero no se ha ejecutado allí.</td></tr>
+              <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
+              <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Requisito real</div>
+            <div>Java 21 por los hilos virtuales: el servidor asigna uno por conexión, y sin ellos
+              el modelo no se sostiene. Se desarrolló y midió con OpenJDK 25.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Sin código nativo</div>
+            <div>Ni JNI, ni bibliotecas del sistema, ni rutas absolutas. El JAR es el mismo en
+              todas partes.</div>
+          </div>
+        </div>
+      </section>
+<section id="comparacion">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Frente a Tomcat</h2></div>
+
+        <p>
+          LuxCore nace de JxMVC 3.4.0, un framework MVC que funciona y está en producción, pero
+          que necesita Tomcat para arrancar. La comparación es contra su propio antecesor.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <tbody>
+              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
+              <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
+              <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
+              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">8 019</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">642</td></tr>
+              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">49 %</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Sobre el rendimiento</div>
+          <p>
+            Los números de peticiones por segundo que se han medido hasta ahora no valen: cliente
+            y servidor compartían máquina, sin aislamiento de núcleos. Por eso no aparecen aquí.
+            El dato honesto saldrá del banco de pruebas comparativo contra Spring, Quarkus,
+            Micronaut y Javalin, en el mismo hardware aislado que se usó para medir JxMVC.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
