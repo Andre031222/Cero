@@ -98,3 +98,42 @@
     secciones.forEach(function (s) { observador.observe(s); });
   });
 })();
+
+// ── pestañas de código y copiar al portapapeles ──
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.pestanas').forEach(function (grupo) {
+    var botones = Array.prototype.slice.call(grupo.querySelectorAll('button[data-panel]'));
+    botones.forEach(function (boton) {
+      boton.addEventListener('click', function () {
+        botones.forEach(function (otro) {
+          var suyo = otro === boton;
+          otro.setAttribute('aria-selected', String(suyo));
+          var panel = document.getElementById(otro.dataset.panel);
+          if (panel) { panel.hidden = !suyo; }
+        });
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-copiar]').forEach(function (caja) {
+    var boton = caja.querySelector('.copiar');
+    if (!boton) { return; }
+    boton.addEventListener('click', function () {
+      var texto = caja.dataset.copiar;
+      var listo = function () {
+        boton.dataset.copiado = 'si';
+        setTimeout(function () { delete boton.dataset.copiado; }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(listo, function () {});
+      } else {
+        var campo = document.createElement('textarea');
+        campo.value = texto;
+        document.body.appendChild(campo);
+        campo.select();
+        try { document.execCommand('copy'); listo(); } catch (sinSoporte) {}
+        document.body.removeChild(campo);
+      }
+    });
+  });
+});
