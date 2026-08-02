@@ -11,18 +11,18 @@ capas del framework siguen enteras en `legacy/`.
 
 | | JxMVC 3.4.0 | LuxCore hoy |
 |---|---|---|
-| Clases de producción | 54 | 86 |
-| Líneas de producción | 10 379 | 7 037 |
-| Líneas de prueba | 2 248 | 3 421 |
-| Pruebas | 347 | **526** |
+| Clases de producción | 54 | 102 |
+| Líneas de producción | 10 379 | 7 836 |
+| Líneas de prueba | 2 248 | 3 850 |
+| Pruebas | 347 | **601** |
 | Dependencias en runtime | 0 (+ Jakarta *provided*) | **0, ninguna** |
 | Referencias a `jakarta.*` | 14 clases | **0** |
 | Necesita contenedor | Tomcat 10.1+ | **no** |
 | Arranque | 1392 ms | **51 ms** |
-| Artefacto | 253 KB + Tomcat (~15 MB) | **193 KB** |
+| Artefacto | 253 KB + Tomcat (~15 MB) | **215 KB** |
 
 LuxCore hace hoy más que JxMVC —porque incluye el servidor y el motor de vistas, que JxMVC
-delegaba en Tomcat y en JSP— con **el 68 % de las líneas**. Las pruebas pesan **el 49 % del código
+delegaba en Tomcat y en JSP— con **el 75 % de las líneas**. Las pruebas pesan **el 49 % del código
 de producción**, contra el 22 % del heredado.
 
 ## Por capas
@@ -33,7 +33,8 @@ de producción**, contra el 22 % del heredado.
 | **1. Núcleo MVC** — router, pipeline, controladores | `MainLxServlet` (1041 L), `BaseDispatcher` (443 L), `JxRequest`/`JxResponse` | `lux-core` reescrito | **cerrada** |
 | **2. Datos** | `JxDB`, `JxRepository`, `JxPool`, `JxTransaction`, `DBRow` | `lux-data` reescrito | **cerrada** |
 | **3. Vistas** | JSP + `JxTagFor`/`JxTagIf` | `lux-view` propio | **cerrada** |
-| **4. Transversales** — validación, cache, scheduler, métricas, eventos, rate limit, CORS, CSRF, OpenAPI, OAuth, WebSocket | 19 clases, 3 450 L | nada movido | **0 %, ninguna toca Jakarta** |
+| **4. Seguridad de petición y validación** — CORS, CSRF, rate limit, sanitizado, validación | 5 clases, 884 L | reescritas en `lux-core` | **cerrada** |
+| **5. Resto de transversales** — cache, scheduler, métricas, eventos, logger, OpenAPI, OAuth, WebSocket | 14 clases, 2 566 L | nada movido | **0 %, ninguna toca Jakarta** |
 
 `lux-core` no es una transliteración de `MainLxServlet`: las 1041 líneas del pipeline de 15 etapas
 se rehicieron como 11 clases con una responsabilidad cada una. El pipeline resultante es
@@ -97,20 +98,18 @@ nombre y valor, con verificación también al escribir para que no se pueda esqu
 - `lux-adapter-servlet` → para que Academia, Intranet y NFC Intranet no se rompan.
 - Portar las 347 pruebas.
 
-### Transversales — 19 clases, 3 450 líneas
+### Transversales — 14 clases, 2 566 líneas
 
 Ninguna toca Jakarta, así que es trabajo de reescritura limpia, no de desacople.
 
 | Grupo | Clases | Líneas |
 |---|---|---|
-| Seguridad de petición — `BaseCorsResolver`, `JxCsrf`, `JxRateLimiter`, `BaseSanitizer` | 4 | 468 |
-| Validación — `JxValidation` | 1 | 416 |
-| Cache — `JxCache`, `JxCacheBackend` | 2 | 334 |
-| Observabilidad — `JxMetrics`, `JxLogger`, `JxProfile`, `JxDevMode` | 4 | 446 |
 | Autenticación — `JxOAuth`, `JxPasswords` | 2 | 528 |
-| WebSocket — `JxWebSocket`, `JxWsRegistrar` | 2 | 338 |
-| Tareas y eventos — `JxScheduler`, `JxEventBus` | 2 | 430 |
 | Generación — `JxOpenApi`, `GenApi` | 2 | 490 |
+| Tareas y eventos — `JxScheduler`, `JxEventBus` | 2 | 430 |
+| Observabilidad — `JxMetrics`, `JxLogger`, `JxProfile`, `JxDevMode` | 4 | 446 |
+| WebSocket — `JxWebSocket`, `JxWsRegistrar` | 2 | 338 |
+| Cache — `JxCache`, `JxCacheBackend` | 2 | 334 |
 
 ### Y además
 
@@ -133,7 +132,7 @@ con `ab`, sin aislamiento. No es comparable con la tabla del paper y no debe cit
 honesto sale del harness de `benchmarks/docker` con LuxCore como sexto contendiente, en el mismo
 Arch bare-metal.
 
-**El tercero: qué prueban las pruebas.** 526 casos, pero funcionales. No hay pruebas de
+**El tercero: qué prueban las pruebas.** 601 casos, pero funcionales. No hay pruebas de
 concurrencia real, sockets lentos (slowloris), cuerpos parciales, clientes que abortan a media
 respuesta, ni entradas generadas por fuzzing. Las pruebas pesan el 49 % del código de producción;
 la cobertura por *modo de fallo* sigue siendo baja.
@@ -149,9 +148,19 @@ acción por reflexión en cada petición. Cuesta el 12 % de rps medido, y es exa
 decisión que **no** se puede llevar a Rust ni a C++ en la fase 3. Cuando se escriba el spec
 poliglota habrá que resolver el registro de rutas y la vinculación en tiempo de compilación.
 
+## Un cambio de diseño que conviene recordar
+
+El middleware ahora envuelve **también la resolución de ruta**. Antes el 404 se lanzaba antes de la
+cadena, y con eso un preflight `OPTIONS` de CORS —que por definición no coincide con ninguna ruta—
+nunca habría llegado al middleware que debía atenderlo. La ruta resuelta viaja en el `Context`, así
+que `Csrf` puede leer `@CsrfExempt` de la acción sin que el middleware tenga que resolverla él.
+
+El efecto lateral es que un middleware que quiera observar los fallos necesita `try/finally`: si
+`chain.proceed()` lanza, el código posterior no corre.
+
 ## Siguiente paso recomendado
 
-Los cuatro transversales que una app real necesita antes que el resto: **CORS, CSRF, rate limiting
-y validación** (5 clases, 884 líneas). Con eso, las apps AUR tienen todo lo que usan hoy salvo
-WebSocket, y `jxmvc2x` puede intentar correr entero en modo standalone — que es la prueba de que
-la paridad es real y no una lista de casillas.
+Intentar que **`jxmvc2x` corra entero en modo standalone**. Ya no falta ninguna pieza de
+infraestructura para lograrlo, y es la única prueba que convierte «paridad» en algo verificable en
+vez de una lista de casillas. Lo que aparezca ahí decide qué transversal de los 14 restantes se
+migra primero.
