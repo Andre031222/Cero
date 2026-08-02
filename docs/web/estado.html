@@ -69,64 +69,159 @@
 <div class="marco">
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Estado</h1>
-    <p class="entradilla">Qué está probado de verdad, qué no lo está, y qué falta antes de poner esto en producción.</p>
+    <p class="entradilla">
+      Qué está verificado de verdad, qué no lo está, y qué falta antes de poner esto delante de
+      tráfico real. Sin adornos: esta es la misma lista con la que decidimos en qué trabajar.
+    </p>
   </header>
 
   <div class="cuerpo">
     <nav class="indice" aria-label="En esta página">
       <ol>
-        <li><a href="#estado"><span class="n">01</span> Frente a producción</a></li>
+        <li><a href="#veredicto"><span class="n">01</span> Veredicto</a></li>
+        <li><a href="#verificado"><span class="n">02</span> Verificado</a></li>
+        <li><a href="#falta"><span class="n">03</span> Lo que falta</a></li>
+        <li><a href="#hallados"><span class="n">04</span> Fallos hallados</a></li>
+        <li><a href="#camino"><span class="n">05</span> El camino</a></li>
       </ol>
     </nav>
+
     <main>
-<section id="estado">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Estado</h2></div>
+
+      <section id="veredicto">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Veredicto</h2></div>
 
         <div class="aviso">
-          <div class="etiqueta">No usar en producción todavía</div>
+          <div class="etiqueta">No lo pongas todavía delante de tráfico de desconocidos</div>
           <p>
             El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
-            pocas horas de escribirlo, y construir la primera aplicación real destapó otros cuatro
-            fallos —entre ellos que la capa de datos devolvía todos los campos en null contra
-            cualquier motor que use mayúsculas en los nombres de columna—. Todos están corregidos
-            y cubiertos por pruebas. El punto es que aparecieron, y que ese proceso no ha terminado.
+            pocas horas de escribirlo, y la primera aplicación real destapó otros cuatro fallos.
+            Todos están corregidos y cubiertos por pruebas — el punto es que aparecieron, y que
+            ese proceso no ha terminado.
           </p>
         </div>
 
-        <ul class="lista-estado">
-          <li><span class="si">✓</span><div>642 pruebas en verde, cero dependencias verificadas</div></li>
-          <li><span class="si">✓</span><div>Una aplicación completa corriendo de punta a punta: vistas, formularios, base de datos y API REST</div></li>
-          <li><span class="si">✓</span><div>Endurecimiento explícito: request smuggling, path traversal, inyección de cabeceras, CSRF</div></li>
-          <li><span class="si">✓</span><div>TLS, techo de conexiones, timeout de handler y apagado ordenado</div></li>
-          <li><span class="no">✗</span><div>Sin fuzzing del parser ni banco de conformidad HTTP/1.1</div></li>
-          <li><span class="no">✗</span><div>Sin correr contra PostgreSQL o MySQL reales</div></li>
-          <li><span class="no">✗</span><div>Sin prueba de carga sostenida con conexiones hostiles</div></li>
-          <li><span class="no">✗</span><div>Sin ejecutar nunca en Linux ni en Windows</div></li>
-          <li><span class="no">✗</span><div>Sin log de acceso, métricas ni WebSocket</div></li>
-          <li><span class="no">✗</span><div>Sesiones por proceso: no escala a varias instancias</div></li>
-        </ul>
-
-        <h3>Para qué sirve hoy</h3>
-        <p>
-          Para un proyecto interno, un prototipo o una herramienta de equipo, detrás de una red de
-          confianza. No para algo que reciba tráfico de desconocidos.
-        </p>
-
-        <h3>Qué haría falta para cambiar eso</h3>
-        <p>
-          En orden, porque cada paso informa al siguiente: correr la capa de datos contra
-          PostgreSQL y MySQL reales; migrar métricas y log de acceso, porque sin observabilidad no
-          se opera nada; fuzzing del parser y conformidad HTTP/1.1; el banco de pruebas comparativo
-          en hardware aislado; una prueba de carga larga con conexiones hostiles; y por último una
-          aplicación pequeña y de bajo riesgo en producción, durante semanas, antes de mover nada
-          importante.
-        </p>
-        <p>
-          Aun cumplido todo eso, el primer despliegue debería ir detrás de nginx o Caddy. El proxy
-          absorbe TLS, slowloris, HTTP/2 y el log de acceso, que son justo los cinco puntos donde
-          LuxCore es más joven.
+        <p class="medida">
+          <b>Sirve hoy</b> para un proyecto interno, un prototipo o una herramienta de equipo,
+          detrás de una red de confianza. <b>No sirve todavía</b> para algo expuesto a internet
+          sin un proxy delante.
         </p>
       </section>
+
+      <section id="verificado">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Verificado</h2></div>
+
+        <ul class="lista-estado">
+          <li><span class="si">✓</span><div><b>992 pruebas en verde</b> y cero dependencias externas comprobadas en el núcleo</div></li>
+          <li><span class="si">✓</span><div><b>Bases de datos reales:</b> 47 casos idénticos contra H2 2.2, PostgreSQL 16 y MySQL 8 en contenedores — claves generadas, decimales, booleanos, fechas, paginación, transacciones y repositorios</div></li>
+          <li><span class="si">✓</span><div><b>Clientes hostiles:</b> conexiones a medias que caducan, 20 sockets mudos a la vez, <code>Content-Length</code> que miente, chunk de 4 GB declarado y 15 clientes cortando a media respuesta</div></li>
+          <li><span class="si">✓</span><div><b>Concurrencia:</b> 1000 peticiones simultáneas comprobando que ninguna respuesta se mezcla con otra</div></li>
+          <li><span class="si">✓</span><div><b>Entradas malformadas:</b> 24 casos — bytes nulos, <code>Content-Length</code> negativo y de 20 dígitos, 500 cabeceras, ruta de 20 KB, <code>Host</code> de 50 KB — sin una sola excepción ni 5xx inesperado</div></li>
+          <li><span class="si">✓</span><div><b>Endurecimiento explícito:</b> request smuggling, path traversal, inyección de cabeceras, CSRF y cabeceras de seguridad</div></li>
+          <li><span class="si">✓</span><div><b>Operación:</b> TLS, techo de conexiones, timeout de handler, apagado ordenado, métricas por ruta con percentiles y log de acceso</div></li>
+          <li><span class="si">✓</span><div><b>Una aplicación completa</b> corriendo de punta a punta: vistas, formularios, base de datos y API REST, con 36 pruebas propias</div></li>
+          <li><span class="si">✓</span><div><b>Salida sin cerrar puertas:</b> <code>lux-adapter-servlet</code> despliega la misma aplicación en Tomcat, así que migrar es reversible</div></li>
+        </ul>
+      </section>
+
+      <section id="falta">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Lo que falta</h2></div>
+
+        <ul class="lista-estado">
+          <li><span class="no">✗</span><div><b>No se ha ejecutado nunca en Linux ni en Windows.</b> Es el destino previsto para producción y sigue sin pisarlo</div></li>
+          <li><span class="no">✗</span><div><b>Sin cifras de rendimiento válidas.</b> Lo medido hasta ahora tenía cliente y servidor en la misma máquina; el banco comparativo está montado pero pendiente de correr en hardware aislado</div></li>
+          <li><span class="no">✗</span><div><b>Sin banco de conformidad HTTP/1.1.</b> Hay fuzzing dirigido, pero no una suite de conformidad reconocida</div></li>
+          <li><span class="no">✗</span><div><b>Sin carga sostenida de horas.</b> Las pruebas hostiles son ráfagas; falta vigilar memoria y descriptores durante mucho rato</div></li>
+          <li><span class="no">✗</span><div><b>Sin WebSocket.</b> Las aplicaciones que lo usen no pueden migrar todavía</div></li>
+          <li><span class="no">✗</span><div><b>Sesiones por proceso.</b> No escala a varias instancias sin sesión pegajosa o un almacén compartido</div></li>
+          <li><span class="no">✗</span><div><b>Sin recarga de certificado TLS.</b> Renovarlo obliga a reiniciar</div></li>
+          <li><span class="no">✗</span><div><b>Sin auditoría de accesos.</b> Hay log de acceso, pero no un rastro inmutable de quién hizo qué — lo pediría cualquier entorno regulado</div></li>
+        </ul>
+      </section>
+
+      <section id="hallados">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Fallos hallados</h2></div>
+
+        <p class="medida">
+          Se listan porque dicen más sobre la madurez del proyecto que cualquier promesa. Los cinco
+          aparecieron durante el desarrollo, no en producción, y cada uno dejó una prueba detrás.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Qué</th><th>Cómo apareció</th><th>Gravedad</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><b>Inyección CRLF en cabeceras</b><span class="detalle">Un valor con retorno de carro venido del usuario permitía partir la respuesta</span></td>
+                <td>Auditoría, a las pocas horas de escribir el módulo</td>
+                <td><span class="pastilla pend">Alta</span></td>
+              </tr>
+              <tr>
+                <td><b>Campos en null contra motores reales</b><span class="detalle"><code>Row.as()</code> ignoraba <code>@Column</code>; H2 y Oracle devuelven las columnas en mayúsculas</span></td>
+                <td>Primera consulta contra PostgreSQL y MySQL</td>
+                <td><span class="pastilla pend">Alta</span></td>
+              </tr>
+              <tr>
+                <td><b>Sin soporte de formularios HTML</b><span class="detalle">No se parseaba <code>x-www-form-urlencoded</code>: ninguna aplicación con un formulario funcionaba</span></td>
+                <td>Al construir la aplicación de ejemplo</td>
+                <td><span class="pastilla parcial">Media</span></td>
+              </tr>
+              <tr>
+                <td><b>La convención de rutas rompía REST</b><span class="detalle"><code>@Post</code> sin valor mapeaba a <code>/base/nombreDelMétodo</code>, así que <code>POST /api/tareas</code> daba 405</span></td>
+                <td>Al construir la aplicación de ejemplo</td>
+                <td><span class="pastilla parcial">Media</span></td>
+              </tr>
+              <tr>
+                <td><b>Off-by-one en el limitador de peticiones</b><span class="detalle">Rechazaba con «usado mayor que máximo», pero al llegar al máximo ya no queda cupo</span></td>
+                <td>Su propia prueba</td>
+                <td><span class="pastilla parcial">Media</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="camino">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>El camino</h2></div>
+
+        <p class="medida">
+          En orden, porque cada paso informa al siguiente y ninguno tiene sentido sin el anterior:
+        </p>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">01 · Linux</div>
+            <div>Ejecutar la suite entera en el sistema donde va a vivir. Hasta entonces,
+              «multiplataforma» es una suposición razonable, no un hecho.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">02 · Rendimiento</div>
+            <div>Correr el banco comparativo en hardware aislado, contra Spring, Quarkus,
+              Micronaut y Javalin. Está montado y la imagen verificada; falta la máquina.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">03 · Carga larga</div>
+            <div>Horas de tráfico con conexiones hostiles, vigilando memoria y descriptores. Las
+              fugas no aparecen en ráfagas de segundos.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">04 · Una aplicación pequeña</div>
+            <div>Elegir algo real y de bajo riesgo, ponerlo en producción y dejarlo semanas antes
+              de mover nada importante.</div>
+          </div>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Y aun así, un proxy delante</div>
+          <p>
+            Aunque se cumpla todo lo anterior, el primer despliegue debería ir detrás de nginx o
+            Caddy. El proxy absorbe TLS, slowloris, HTTP/2 y el log de acceso — que son justo los
+            puntos donde LuxCore es más joven. Cuando lleve meses de tráfico real, se discute
+            quitarlo.
+          </p>
+        </div>
+      </section>
+
     </main>
   </div>
 

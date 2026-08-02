@@ -85,7 +85,7 @@
     </nav>
     <main>
 <section id="piezas">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cuatro módulos</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cinco módulos</h2></div>
 
         <p>
           Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>lux-http</code>
@@ -100,11 +100,11 @@
             <tbody>
               <tr>
                 <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
-                <td>—</td><td class="cifra">31</td><td class="cifra">2833</td><td class="cifra">144</td><td class="cifra">64 KB</td>
+                <td>—</td><td class="cifra">31</td><td class="cifra">2833</td><td class="cifra">162</td><td class="cifra">64 KB</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, CORS, CSRF, rate limit, configuración</span></td>
-                <td>lux-http</td><td class="cifra">49</td><td class="cifra">2954</td><td class="cifra">229</td><td class="cifra">80 KB</td>
+                <td>lux-http</td><td class="cifra">56</td><td class="cifra">4059</td><td class="cifra">333</td><td class="cifra">114 KB</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
@@ -112,18 +112,22 @@
               </tr>
               <tr>
                 <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1258</td><td class="cifra">145</td><td class="cifra">35 KB</td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1362</td><td class="cifra">286</td><td class="cifra">34 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">414</td><td class="cifra">35</td><td class="cifra">12 KB</td>
               </tr>
               <tr class="total">
-                <td>Los cuatro</td><td>—</td><td class="cifra">103</td><td class="cifra">8019</td><td class="cifra">606</td><td class="cifra">218 KB</td>
+                <td>Los cinco</td><td>—</td><td class="cifra">114</td><td class="cifra">9918</td><td class="cifra">904</td><td class="cifra">264 KB</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <p>
-          Las 36 pruebas restantes hasta 642 son de la aplicación de ejemplo, que ejercita los
-          cuatro módulos de punta a punta.
+          Las 36 pruebas restantes hasta 940 son de la aplicación de ejemplo, que ejercita los
+          cinco módulos de punta a punta.
         </p>
       </section>
 <section id="servidor">

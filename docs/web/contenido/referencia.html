@@ -24,23 +24,26 @@
           <table>
             <thead><tr><th>Motor</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Probado</span></td><td>En memoria y en archivo. Motor de la app de ejemplo y sus 36 pruebas.</td></tr>
-              <tr><td class="mono">PostgreSQL</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada del código es específico de un motor, pero no se ha corrido.</td></tr>
-              <tr><td class="mono">MySQL / MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Igual.</td></tr>
-              <tr><td class="mono">SQL Server</td><td><span class="pastilla parcial">Sin verificar</span></td><td><code>LIMIT</code>/<code>OFFSET</code> tiene otra sintaxis; la paginación necesitará ajuste.</td></tr>
-              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve columnas en mayúsculas, que ya está contemplado.</td></tr>
-              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura; el pool debería ir a 1.</td></tr>
+              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Verificado</span></td><td>En memoria y en archivo. Motor de la aplicación de ejemplo y de sus 36 pruebas de punta a punta.</td></tr>
+              <tr><td class="mono">PostgreSQL 16</td><td><span class="pastilla ok">Verificado</span></td><td>47 casos en contenedor: <code>BIGSERIAL</code>, decimales exactos, booleanos nativos, fechas y <code>LIMIT/OFFSET</code>.</td></tr>
+              <tr><td class="mono">MySQL 8</td><td><span class="pastilla ok">Verificado</span></td><td>Los mismos 47 casos: <code>AUTO_INCREMENT</code>, booleanos sobre <code>TINYINT</code> y claves generadas.</td></tr>
+              <tr><td class="mono">MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Comparte protocolo y dialecto con MySQL, así que debería comportarse igual.</td></tr>
+              <tr><td class="mono">SQL Server</td><td><span class="pastilla pend">Necesita trabajo</span></td><td>No admite <code>LIMIT/OFFSET</code>: usa <code>OFFSET … FETCH</code>. La paginación requiere un ajuste.</td></tr>
+              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve las columnas en mayúsculas, que ya está contemplado desde que se corrigió ese fallo.</td></tr>
+              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura: el pool debería configurarse a 1.</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="aviso">
-          <div class="etiqueta">«Sin verificar» quiere decir sin verificar</div>
+        <div class="aviso nota">
+          <div class="etiqueta">Qué significa «verificado» aquí</div>
           <p>
-            Los tipos, las zonas horarias y la paginación cambian entre motores. La capa se prueba
-            contra un driver propio que registra el SQL generado — eso cubre su responsabilidad,
-            no las diferencias entre motores. Hasta correrla contra PostgreSQL y MySQL reales,
-            «debería andar» es una hipótesis.
+            Los tres motores marcados pasan <b>la misma batería de 47 casos</b>, levantados en
+            contenedores: claves generadas, decimales exactos, booleanos, fechas, paginación,
+            alias en mayúsculas, transacciones confirmadas y deshechas, repositorios e inserción
+            por lotes. Esa batería encontró un fallo real —<code>Row.as()</code> ignoraba
+            <code>@Column</code> y devolvía los campos en null— que ninguna prueba con driver
+            simulado había detectado.
           </p>
         </div>
       </section>
@@ -56,7 +59,7 @@
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 642 pruebas.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 992 pruebas.</td></tr>
               <tr><td class="mono">Linux</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Es el destino previsto para producción, pero no se ha ejecutado allí.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
@@ -90,12 +93,12 @@
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">264 KB</td></tr>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
-              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">8 019</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">642</td></tr>
-              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">49 %</td></tr>
+              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">9 918</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">992</td></tr>
+              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">56 %</td></tr>
             </tbody>
           </table>
         </div>

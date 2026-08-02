@@ -15,6 +15,7 @@ public final class TestSuite {
         GuardTests.run();
         ObservabilidadTests.run();
         AsincronoTests.run();
+        AutenticacionTests.run();
 
         Check.report();
         if (Check.failures() > 0) {
