@@ -106,7 +106,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.1.0 · Licencia MIT<br>
+      LuxCore 0.2.0 · Licencia MIT<br>
       Medido el 2 de agosto de 2026
     </div>
   </footer>
@@ -115,6 +115,136 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 </body>
 </html>
 """
+
+
+PAGINAS_UNICO = [
+    ("index.html", "Portada"),
+    ("empezar.html", "Empezar"),
+    ("guia.html", "Guía"),
+    ("modulos.html", "Módulos"),
+    ("referencia.html", "Referencia"),
+    ("estado.html", "Estado"),
+    ("marca/index.html", "Logo"),
+]
+
+
+def unico() -> int:
+    """Agrupa el sitio entero en un archivo, para leerlo sin servidor ni conexión."""
+    estilo = (AQUI / "assets" / "lux.css").read_text(encoding="utf-8")
+    guion = (AQUI / "assets" / "lux.js").read_text(encoding="utf-8")
+    terminal = (AQUI / "assets" / "terminal.js").read_text(encoding="utf-8")
+    icono = favicon_incrustado()
+
+    hojas = []
+    pestanas = []
+    for archivo, menu in PAGINAS_UNICO:
+        clave = "p-" + archivo.replace("/index.html", "").replace(".html", "")
+        fuente = AQUI / "contenido" / archivo.replace("/", "-")
+        if not fuente.is_file():
+            continue
+        cuerpo = fuente.read_text(encoding="utf-8")
+        # los enlaces entre páginas pasan a ser cambios de pestaña
+        for otro, _ in PAGINAS_UNICO:
+            destino = "p-" + otro.replace("/index.html", "").replace(".html", "")
+            cuerpo = cuerpo.replace(f'href="./{otro}"', f'href="#{destino}" data-hoja="{destino}"')
+        hojas.append(f'<div class="hoja" id="{clave}" hidden>\n{cuerpo}\n</div>')
+        pestanas.append(f'<a href="#{clave}" data-hoja="{clave}">{menu}</a>')
+
+    cambio = """
+(function () {
+  'use strict';
+  var hojas = Array.prototype.slice.call(document.querySelectorAll('.hoja'));
+  var pestanas = Array.prototype.slice.call(document.querySelectorAll('[data-hoja]'));
+  if (!hojas.length) { return; }
+
+  function mostrar(clave, mover) {
+    var encontrada = false;
+    hojas.forEach(function (h) {
+      var suya = h.id === clave;
+      h.hidden = !suya;
+      if (suya) { encontrada = true; }
+    });
+    if (!encontrada) { hojas[0].hidden = false; clave = hojas[0].id; }
+    document.querySelectorAll('.nav-sitio a').forEach(function (a) {
+      if (a.dataset.hoja === clave) { a.setAttribute('aria-current', 'page'); }
+      else { a.removeAttribute('aria-current'); }
+    });
+    if (mover) { window.scrollTo({ top: 0, behavior: 'auto' }); }
+  }
+
+  pestanas.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var clave = a.dataset.hoja;
+      history.replaceState(null, '', '#' + clave);
+      mostrar(clave, true);
+    });
+  });
+
+  mostrar((location.hash || '#p-index').slice(1), false);
+})();
+"""
+
+    documento = f"""<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LuxCore — framework web para Java sin dependencias</title>
+<meta name="description" content="LuxCore: framework web para Java que arranca solo, sin contenedor y sin dependencias externas.">
+<link rel="icon" href="data:image/svg+xml;base64,{icono}">
+<style>
+{estilo}
+.hoja[hidden] {{ display: none; }}
+</style>
+</head>
+<body>
+
+<header class="barra-sitio">
+  <div class="marco">
+    <a class="marca-sitio" href="#p-index" data-hoja="p-index">
+      {logo_svg()}
+      <span class="palabra">Lux<em>Core</em></span>
+    </a>
+    <nav class="nav-sitio" aria-label="Secciones del sitio">
+        {chr(10).join("        " + t for t in pestanas).strip()}
+    </nav>
+    {BOTON_TEMA}
+  </div>
+</header>
+
+<div class="marco">
+{chr(10).join(hojas)}
+
+  <footer class="pie">
+    <div class="etiqueta">
+      Richar Andre Vilca-Solorzano<br>
+      Universidad Nacional del Altiplano · Puno, Perú
+    </div>
+    <div class="etiqueta" style="text-align:right">
+      LuxCore 0.2.0 · Licencia MIT<br>
+      Medido el 2 de agosto de 2026
+    </div>
+  </footer>
+</div>
+
+<script>
+{guion}
+</script>
+<script>
+{terminal}
+</script>
+<script>
+{cambio}
+</script>
+
+</body>
+</html>
+"""
+    destino = AQUI / "completo.html"
+    destino.write_text(documento, encoding="utf-8")
+    print(f"  completo.html          {destino.stat().st_size:6d} B  ({len(hojas)} páginas en un archivo)")
+    return 0
 
 
 def construir() -> int:
@@ -141,4 +271,7 @@ def construir() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(construir())
+    if "--unico" in sys.argv:
+        raise SystemExit(unico())
+    codigo = construir()
+    raise SystemExit(codigo or unico())

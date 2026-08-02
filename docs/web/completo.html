@@ -1,0 +1,2437 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LuxCore — framework web para Java sin dependencias</title>
+<meta name="description" content="LuxCore: framework web para Java que arranca solo, sin contenedor y sin dependencias externas.">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYzc5NjM3IiBzdHJva2UtbGluZWNhcD0icm91bmQiPgogICAgPGxpbmUgeDE9IjMyLjAwIiB5MT0iMTkuMDAiIHgyPSIzMi4wMCIgeTI9IjguNTAiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMzUuMzYiIHkxPSIxOS40NCIgeDI9IjM2Ljc5IiB5Mj0iMTQuMTMiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMzguNTAiIHkxPSIyMC43NCIgeDI9IjQxLjI1IiB5Mj0iMTUuOTgiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDEuMTkiIHkxPSIyMi44MSIgeDI9IjQ4LjYyIiB5Mj0iMTUuMzgiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iNDMuMjYiIHkxPSIyNS41MCIgeDI9IjQ4LjAyIiB5Mj0iMjIuNzUiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDQuNTYiIHkxPSIyOC42NCIgeDI9IjQ5Ljg3IiB5Mj0iMjcuMjEiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDUuMDAiIHkxPSIzMi4wMCIgeDI9IjU1LjUwIiB5Mj0iMzIuMDAiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iNDQuNTYiIHkxPSIzNS4zNiIgeDI9IjQ5Ljg3IiB5Mj0iMzYuNzkiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDMuMjYiIHkxPSIzOC41MCIgeDI9IjQ4LjAyIiB5Mj0iNDEuMjUiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDEuMTkiIHkxPSI0MS4xOSIgeDI9IjQ4LjYyIiB5Mj0iNDguNjIiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMzguNTAiIHkxPSI0My4yNiIgeDI9IjQxLjI1IiB5Mj0iNDguMDIiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMzUuMzYiIHkxPSI0NC41NiIgeDI9IjM2Ljc5IiB5Mj0iNDkuODciIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMzIuMDAiIHkxPSI0NS4wMCIgeDI9IjMyLjAwIiB5Mj0iNTUuNTAiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMjguNjQiIHkxPSI0NC41NiIgeDI9IjI3LjIxIiB5Mj0iNDkuODciIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMjUuNTAiIHkxPSI0My4yNiIgeDI9IjIyLjc1IiB5Mj0iNDguMDIiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMjIuODEiIHkxPSI0MS4xOSIgeDI9IjE1LjM4IiB5Mj0iNDguNjIiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMjAuNzQiIHkxPSIzOC41MCIgeDI9IjE1Ljk4IiB5Mj0iNDEuMjUiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMTkuNDQiIHkxPSIzNS4zNiIgeDI9IjE0LjEzIiB5Mj0iMzYuNzkiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMTkuMDAiIHkxPSIzMi4wMCIgeDI9IjguNTAiIHkyPSIzMi4wMCIgc3Ryb2tlLXdpZHRoPSIyLjQiLz4KICAgIDxsaW5lIHgxPSIxOS40NCIgeTE9IjI4LjY0IiB4Mj0iMTQuMTMiIHkyPSIyNy4yMSIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxsaW5lIHgxPSIyMC43NCIgeTE9IjI1LjUwIiB4Mj0iMTUuOTgiIHkyPSIyMi43NSIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxsaW5lIHgxPSIyMi44MSIgeTE9IjIyLjgxIiB4Mj0iMTUuMzgiIHkyPSIxNS4zOCIgc3Ryb2tlLXdpZHRoPSIyLjQiLz4KICAgIDxsaW5lIHgxPSIyNS41MCIgeTE9IjIwLjc0IiB4Mj0iMjIuNzUiIHkyPSIxNS45OCIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxsaW5lIHgxPSIyOC42NCIgeTE9IjE5LjQ0IiB4Mj0iMjcuMjEiIHkyPSIxNC4xMyIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICA8L2c+CiAgPGNpcmNsZSBjeD0iMzIuMCIgY3k9IjMyLjAiIHI9IjYuNSIgZmlsbD0iI2M3OTYzNyIvPjwvc3ZnPg==">
+<style>
+/* LuxCore — sistema visual. Ficha técnica de instrumento: grafito y latón,
+   titulares en monoespaciada versaleada, cifras tabulares, reglas finas. */
+
+:root {
+  color-scheme: light dark;
+
+  --papel: #faf9f7;
+  --panel: #f2f0ec;
+  --panel2: #eae7e1;
+  --tinta: #191c21;
+  --apagado: #6d7178;
+  --tenue: #91959c;
+  --laton: #8a6216;
+  --laton-suave: rgba(138, 98, 22, .1);
+  --linea: rgba(25, 28, 33, .14);
+  --fina: rgba(25, 28, 33, .07);
+  --verde: #2f6f4e;
+  --rojo: #a33b33;
+
+  --term-fondo: #f4f2ee;
+  --term-barra: #e8e5df;
+  --term-texto: #24282e;
+  --term-tenue: #7c8189;
+  --term-prompt: #8a6216;
+  --term-ok: #2f6f4e;
+  --term-dato: #1f5f8b;
+  --term-borde: rgba(25, 28, 33, .13);
+  --term-brillo: none;
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papel: #000; --panel: #0e1013; --panel2: #16191d;
+    --tinta: #e9e7e2; --apagado: #8d9299; --tenue: #71767d;
+    --laton: #c79637; --laton-suave: rgba(199, 150, 55, .13);
+    --linea: rgba(233, 231, 226, .17); --fina: rgba(233, 231, 226, .08);
+    --verde: #56a87b; --rojo: #d4756b;
+    --term-fondo: #000; --term-barra: #0b0c0e; --term-texto: #d8d6d1;
+    --term-tenue: #6c7178; --term-prompt: #c79637; --term-ok: #5fb98a;
+    --term-dato: #5aa9d6; --term-borde: rgba(233, 231, 226, .16);
+    --term-brillo: 0 0 26px rgba(199, 150, 55, .07) inset;
+  }
+}
+
+:root[data-theme="dark"] {
+  --papel: #000; --panel: #0e1013; --panel2: #16191d;
+  --tinta: #e9e7e2; --apagado: #8d9299; --tenue: #71767d;
+  --laton: #c79637; --laton-suave: rgba(199, 150, 55, .13);
+  --linea: rgba(233, 231, 226, .17); --fina: rgba(233, 231, 226, .08);
+  --verde: #56a87b; --rojo: #d4756b;
+  --term-fondo: #000; --term-barra: #0b0c0e; --term-texto: #d8d6d1;
+  --term-tenue: #6c7178; --term-prompt: #c79637; --term-ok: #5fb98a;
+  --term-dato: #5aa9d6; --term-borde: rgba(233, 231, 226, .16);
+  --term-brillo: 0 0 26px rgba(199, 150, 55, .07) inset;
+}
+
+:root[data-theme="light"] {
+  --papel: #faf9f7; --panel: #f2f0ec; --panel2: #eae7e1;
+  --tinta: #191c21; --apagado: #6d7178; --tenue: #91959c;
+  --laton: #8a6216; --laton-suave: rgba(138, 98, 22, .1);
+  --linea: rgba(25, 28, 33, .14); --fina: rgba(25, 28, 33, .07);
+  --verde: #2f6f4e; --rojo: #a33b33;
+  --term-fondo: #f4f2ee; --term-barra: #e8e5df; --term-texto: #24282e;
+  --term-tenue: #7c8189; --term-prompt: #8a6216; --term-ok: #2f6f4e;
+  --term-dato: #1f5f8b; --term-borde: rgba(25, 28, 33, .13); --term-brillo: none;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.marco { max-width: 78rem; margin: 0 auto; padding: 0 1.5rem; }
+.medida { max-width: 40rem; }
+
+/* ─── tipografía ─── */
+
+.etiqueta {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  letter-spacing: .17em; text-transform: uppercase; color: var(--apagado);
+}
+h1.titulo-pagina {
+  font-family: var(--mono); font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 700;
+  letter-spacing: -.03em; margin: 0 0 .5rem;
+}
+h2 {
+  font-family: var(--mono); font-size: .875rem; font-weight: 700;
+  letter-spacing: .19em; text-transform: uppercase; margin: 0;
+}
+h3 {
+  font-family: var(--mono); font-size: .75rem; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--apagado);
+  margin: 2rem 0 .75rem;
+}
+h3:first-of-type { margin-top: 0; }
+
+p { margin: 0 0 1rem; max-width: 40rem; }
+p:last-child { margin-bottom: 0; }
+ul.prosa { margin: 0 0 1rem; padding-left: 1.15rem; max-width: 40rem; }
+ul.prosa li { margin-bottom: .3rem; }
+
+a { color: var(--laton); text-decoration-thickness: 1px; text-underline-offset: .2em; }
+a:focus-visible { outline: 2px solid var(--laton); outline-offset: 3px; border-radius: 2px; }
+button:focus-visible { outline: 2px solid var(--laton); outline-offset: 2px; }
+
+code {
+  font-family: var(--mono); font-size: .875em;
+  background: var(--laton-suave); padding: .1em .35em; border-radius: 3px;
+}
+.num, .cifra { font-variant-numeric: tabular-nums; }
+
+/* ─── barra superior ─── */
+
+.barra-sitio {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--papel) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--linea);
+}
+.barra-sitio .marco {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.5rem;
+}
+.marca-sitio { display: flex; align-items: center; gap: .6rem; text-decoration: none; color: inherit; flex: none; }
+.marca-sitio .logo { width: 1.65rem; height: 1.65rem; color: var(--laton); }
+.marca-sitio .palabra {
+  font-family: var(--mono); font-size: .95rem; font-weight: 700; letter-spacing: -.02em;
+}
+.marca-sitio .palabra em { font-style: normal; color: var(--laton); }
+
+.nav-sitio { display: flex; gap: .15rem; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.nav-sitio::-webkit-scrollbar { display: none; }
+.nav-sitio a {
+  font-family: var(--mono); font-size: .75rem; letter-spacing: .04em;
+  padding: .35rem .6rem; border-radius: 5px; text-decoration: none;
+  color: var(--apagado); white-space: nowrap; transition: color .15s, background .15s;
+}
+.nav-sitio a:hover { color: var(--tinta); background: var(--panel); }
+.nav-sitio a[aria-current="page"] { color: var(--laton); background: var(--laton-suave); font-weight: 600; }
+
+.tema {
+  flex: none; width: 2rem; height: 2rem; display: grid; place-items: center;
+  border: 1px solid var(--linea); border-radius: 6px; background: transparent;
+  color: var(--apagado); cursor: pointer; transition: color .15s, border-color .15s;
+}
+.tema:hover { color: var(--laton); border-color: var(--laton); }
+.tema svg { width: 15px; height: 15px; }
+.tema .luna { display: none; }
+:root[data-theme="dark"] .tema .sol, .tema[data-oscuro="si"] .sol { display: none; }
+:root[data-theme="dark"] .tema .luna, .tema[data-oscuro="si"] .luna { display: block; }
+
+/* ─── cabecera de página ─── */
+
+.cabecera-pagina { padding: 2.75rem 0 1.5rem; border-bottom: 2px solid var(--tinta); }
+.cabecera-pagina .entradilla { color: var(--apagado); font-size: 1.0625rem; max-width: 42rem; margin: 0; text-wrap: balance; }
+
+/* ─── disposición con índice ─── */
+
+.cuerpo { display: grid; grid-template-columns: 13.5rem 1fr; gap: 3.5rem; margin-top: 2.5rem; }
+.cuerpo.sin-indice { display: block; margin-top: 2.5rem; }
+
+nav.indice { position: sticky; top: 5rem; align-self: start; max-height: calc(100vh - 7rem); overflow-y: auto; }
+nav.indice ol { list-style: none; margin: 0; padding: 0; }
+nav.indice a {
+  display: flex; gap: .55rem; padding: .22rem 0 .22rem .6rem;
+  font-family: var(--mono); font-size: .75rem; color: var(--apagado);
+  text-decoration: none; border-left: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+nav.indice a:hover { color: var(--tinta); }
+nav.indice a.activo { color: var(--laton); border-left-color: var(--laton); font-weight: 600; }
+nav.indice a .n { color: var(--tenue); font-variant-numeric: tabular-nums; }
+nav.indice a.activo .n { color: var(--laton); }
+
+@media (max-width: 60rem) {
+  .cuerpo { grid-template-columns: 1fr; gap: 1.5rem; }
+  nav.indice { position: static; max-height: none; border-bottom: 1px solid var(--linea); padding-bottom: 1rem; }
+  nav.indice ol { display: flex; flex-wrap: wrap; gap: .15rem .9rem; }
+}
+
+section { padding-top: 3rem; scroll-margin-top: 5rem; }
+section:first-child { padding-top: 0; }
+
+.titulo-seccion {
+  display: flex; align-items: baseline; gap: .9rem;
+  border-bottom: 1px solid var(--tinta); padding-bottom: .5rem; margin-bottom: 1.5rem;
+}
+.titulo-seccion .indice-num {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  color: var(--laton); letter-spacing: .1em;
+}
+
+/* ─── medidas ─── */
+
+.medidas {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  border-top: 1px solid var(--linea); border-left: 1px solid var(--linea);
+  margin: 2rem 0 0;
+}
+.medidas .celda {
+  border-right: 1px solid var(--linea); border-bottom: 1px solid var(--linea);
+  padding: 1rem 1.05rem 1.1rem;
+}
+.medidas .cifra-grande {
+  font-family: var(--mono); font-size: 1.8rem; font-weight: 700;
+  letter-spacing: -.04em; line-height: 1.05; font-variant-numeric: tabular-nums;
+  display: block; margin-bottom: .28rem;
+}
+.medidas .unidad { font-size: .875rem; font-weight: 500; color: var(--apagado); }
+.medidas .contra { font-size: .75rem; color: var(--apagado); margin-top: .28rem; }
+.medidas .contra s { text-decoration-color: var(--rojo); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .medidas .celda { animation: subir .5s cubic-bezier(.16,1,.3,1) backwards; }
+  .medidas .celda:nth-child(2) { animation-delay: .05s; }
+  .medidas .celda:nth-child(3) { animation-delay: .1s; }
+  .medidas .celda:nth-child(4) { animation-delay: .15s; }
+  .medidas .celda:nth-child(5) { animation-delay: .2s; }
+  @keyframes subir { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+
+/* ─── ficha campo/valor ─── */
+
+.ficha { border-top: 1px solid var(--fina); margin-bottom: 1.25rem; }
+.campo {
+  display: grid; grid-template-columns: 12rem 1fr; gap: 1.25rem;
+  padding: .8rem 0; border-bottom: 1px solid var(--fina); align-items: start;
+}
+.campo > div:last-child { max-width: 40rem; }
+@media (max-width: 40rem) { .campo { grid-template-columns: 1fr; gap: .25rem; } }
+
+/* ─── código ─── */
+
+.codigo {
+  background: var(--panel); border: 1px solid var(--fina);
+  border-radius: 4px; overflow-x: auto; margin: 0 0 1.25rem;
+}
+.codigo .barra {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: .48rem .9rem; border-bottom: 1px solid var(--fina); position: sticky; left: 0;
+}
+.codigo pre {
+  margin: 0; padding: .95rem 1.1rem 1.1rem;
+  font-family: var(--mono); font-size: .8125rem; line-height: 1.72; tab-size: 4;
+}
+.cm { color: var(--tenue); }
+.an { color: var(--laton); }
+.kw { color: var(--tinta); font-weight: 600; }
+.st { color: var(--verde); }
+
+/* ─── tablas ─── */
+
+.envoltura { overflow-x: auto; margin-bottom: 1.25rem; }
+table { width: 100%; border-collapse: collapse; font-size: .8438rem; min-width: 32rem; }
+th {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--apagado);
+  text-align: left; padding: 0 1rem .5rem 0; border-bottom: 1px solid var(--linea); white-space: nowrap;
+}
+td { padding: .62rem 1rem .62rem 0; border-bottom: 1px solid var(--fina); vertical-align: top; }
+td.cifra, th.cifra { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); padding-right: 0; }
+td .mono, .mono { font-family: var(--mono); }
+td .detalle { color: var(--apagado); font-size: .8125rem; display: block; margin-top: .12rem; }
+tbody tr:last-child td { border-bottom: none; }
+tr.total td { border-top: 1px solid var(--linea); border-bottom: none; font-weight: 600; padding-top: .75rem; }
+td.mono-clave { font-family: var(--mono); color: var(--laton); white-space: nowrap; }
+
+/* ─── avisos y estado ─── */
+
+.aviso {
+  border: 1px solid var(--linea); border-left: 3px solid var(--rojo);
+  border-radius: 3px; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem; background: var(--panel);
+}
+.aviso.nota { border-left-color: var(--laton); }
+.aviso .etiqueta { color: var(--rojo); }
+.aviso.nota .etiqueta { color: var(--laton); }
+.aviso p { margin-top: .4rem; }
+
+.lista-estado { list-style: none; margin: 0; padding: 0; }
+.lista-estado li {
+  display: grid; grid-template-columns: 1.4rem 1fr; gap: .55rem;
+  padding: .48rem 0; border-bottom: 1px solid var(--fina); max-width: 44rem;
+}
+.lista-estado li:last-child { border-bottom: none; }
+.si { color: var(--verde); font-family: var(--mono); font-weight: 700; }
+.no { color: var(--rojo); font-family: var(--mono); font-weight: 700; }
+
+.pastilla {
+  display: inline-block; font-family: var(--mono); font-size: .625rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; padding: .12rem .45rem;
+  border-radius: 3px; border: 1px solid currentColor; white-space: nowrap;
+}
+.pastilla.ok { color: var(--verde); }
+.pastilla.pend { color: var(--rojo); }
+.pastilla.parcial { color: var(--laton); }
+
+/* ─── tarjetas de la portada ─── */
+
+.tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1px;
+            background: var(--linea); border: 1px solid var(--linea); border-radius: 4px; overflow: hidden; }
+.tarjeta { background: var(--papel); padding: 1.25rem 1.25rem 1.4rem; text-decoration: none; color: inherit;
+           display: block; transition: background .15s; }
+.tarjeta:hover { background: var(--panel); }
+.tarjeta .etiqueta { color: var(--laton); }
+.tarjeta h3 { margin: .35rem 0 .3rem; color: var(--tinta); font-family: var(--sans);
+              font-size: 1rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.tarjeta p { color: var(--apagado); font-size: .875rem; margin: 0; }
+
+/* ─── terminal ─── */
+
+.mandos { display: flex; gap: .4rem; align-items: center; margin-bottom: .9rem; }
+.conmutador { display: inline-flex; border: 1px solid var(--linea); border-radius: 5px; overflow: hidden; }
+.conmutador button {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600; letter-spacing: .1em;
+  padding: .32rem .6rem; border: 0; background: transparent; color: var(--apagado);
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.conmutador button + button { border-left: 1px solid var(--linea); }
+.conmutador button[aria-pressed="true"] { background: var(--laton); color: var(--papel); }
+.conmutador button:hover:not([aria-pressed="true"]) { color: var(--tinta); }
+.accion {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; padding: .38rem .7rem; border: 1px solid var(--linea);
+  border-radius: 5px; background: transparent; color: var(--apagado); cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.accion:hover { color: var(--laton); border-color: var(--laton); }
+
+.terminal {
+  background: var(--term-fondo); border: 1px solid var(--term-borde);
+  border-radius: 8px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.07), var(--term-brillo);
+}
+@media (prefers-color-scheme: dark) { .terminal { box-shadow: var(--term-brillo); } }
+:root[data-theme="dark"] .terminal { box-shadow: var(--term-brillo); }
+
+.terminal .barra {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .55rem .8rem; background: var(--term-barra); border-bottom: 1px solid var(--term-borde);
+}
+.luces { display: flex; gap: .38rem; }
+.luz { width: 11px; height: 11px; border-radius: 50%; }
+.luz:nth-child(1) { background: #ff5f57; }
+.luz:nth-child(2) { background: #febc2e; }
+.luz:nth-child(3) { background: #28c840; }
+.terminal .ruta {
+  flex: 1; text-align: center; font-family: var(--mono);
+  font-size: .6875rem; color: var(--term-tenue); letter-spacing: .04em;
+}
+
+.pantalla {
+  font-family: var(--mono); font-size: .78rem; line-height: 1.72;
+  padding: .9rem 1rem 1.1rem; min-height: 24rem; max-height: 24rem; overflow-y: auto;
+  color: var(--term-texto); white-space: pre-wrap; word-break: break-word;
+}
+.pantalla::-webkit-scrollbar { width: 8px; }
+.pantalla::-webkit-scrollbar-thumb { background: var(--term-borde); border-radius: 4px; }
+
+.linea { display: block; }
+.prompt { color: var(--term-prompt); font-weight: 600; }
+.tenue { color: var(--term-tenue); }
+.ok { color: var(--term-ok); }
+.dato { color: var(--term-dato); }
+.destacado { color: var(--term-texto); font-weight: 600; }
+.marca-ascii { color: var(--term-prompt); }
+
+.cursor {
+  display: inline-block; width: .55em; height: 1.05em;
+  background: var(--term-prompt); vertical-align: text-bottom; margin-left: 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cursor { animation: latir 1.05s step-end infinite; }
+  @keyframes latir { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+}
+
+.pasos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin-top: 1.5rem; border-top: 1px solid var(--linea); border-left: 1px solid var(--linea);
+}
+.paso {
+  border-right: 1px solid var(--linea); border-bottom: 1px solid var(--linea);
+  padding: .7rem .8rem .8rem; transition: background .25s;
+}
+.paso[data-activo="si"] { background: var(--laton); }
+.paso[data-activo="si"] * { color: var(--papel) !important; }
+.paso[data-activo="hecho"] .n { color: var(--verde); }
+.paso .n { font-family: var(--mono); font-size: .625rem; font-weight: 700; letter-spacing: .14em; color: var(--laton); }
+.paso .que { font-size: .8125rem; margin-top: .12rem; }
+.paso .cuanto { font-family: var(--mono); font-size: .6875rem; color: var(--apagado); margin-top: .1rem; }
+
+/* ─── pie ─── */
+
+footer.pie {
+  margin-top: 4rem; padding: 1.25rem 0 3rem; border-top: 2px solid var(--tinta);
+  display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: baseline;
+}
+
+.hoja[hidden] { display: none; }
+</style>
+</head>
+<body>
+
+<header class="barra-sitio">
+  <div class="marco">
+    <a class="marca-sitio" href="#p-index" data-hoja="p-index">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg>
+      <span class="palabra">Lux<em>Core</em></span>
+    </a>
+    <nav class="nav-sitio" aria-label="Secciones del sitio">
+        <a href="#p-index" data-hoja="p-index">Portada</a>
+        <a href="#p-empezar" data-hoja="p-empezar">Empezar</a>
+        <a href="#p-guia" data-hoja="p-guia">Guía</a>
+        <a href="#p-modulos" data-hoja="p-modulos">Módulos</a>
+        <a href="#p-referencia" data-hoja="p-referencia">Referencia</a>
+        <a href="#p-estado" data-hoja="p-estado">Estado</a>
+        <a href="#p-marca" data-hoja="p-marca">Logo</a>
+    </nav>
+    <button type="button" class="tema" aria-label="Cambiar de tema">
+        <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </svg>
+        <svg class="luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+        </svg>
+      </button>
+  </div>
+</header>
+
+<div class="marco">
+<div class="hoja" id="p-index" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Un framework web que no arrastra nada</h1>
+    <p class="entradilla">
+      LuxCore atiende HTTP, enruta, inyecta, valida, renderiza y habla con la base de datos
+      usando solo el JDK. Sin contenedor de servlets, sin <code>web.xml</code>, sin despliegue:
+      <code>java -jar</code> y está corriendo.
+    </p>
+  </header>
+
+  <div class="medidas">
+    <div class="celda">
+      <span class="cifra-grande">70<span class="unidad"> ms</span></span>
+      <div class="etiqueta">Arranque</div>
+      <div class="contra">JVM incluida · <s>1392 ms</s> sobre Tomcat</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">223<span class="unidad"> KB</span></span>
+      <div class="etiqueta">Artefacto</div>
+      <div class="contra">los cuatro módulos juntos</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">0</span>
+      <div class="etiqueta">Dependencias</div>
+      <div class="contra">solo el JDK</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">889</span>
+      <div class="etiqueta">Pruebas</div>
+      <div class="contra">runner propio, sin JUnit</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">8019</span>
+      <div class="etiqueta">Líneas</div>
+      <div class="contra">103 clases de producción</div>
+    </div>
+  </div>
+
+  <div class="cuerpo sin-indice">
+    <main>
+
+      <section id="vistazo">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Un vistazo</h2></div>
+
+        <p>
+          Un controlador es una clase corriente. Lo que devuelve decide el formato: un objeto se
+          serializa a JSON, un <code>String</code> sale como texto plano, <code>null</code> es un
+          204. Sin anotación de por medio.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">TareaController.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Route</span>(<span class="st">"/api/tareas"</span>)
+<span class="kw">public class</span> TareaController {
+
+    <span class="an">@Inject</span> Tareas tareas;
+
+    <span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+    <span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+        <span class="kw">return</span> tareas.findById(id);
+    }
+
+    <span class="an">@Post</span>
+    <span class="kw">public</span> Object crear(<span class="an">@Body @Valid</span> Tarea tarea) {
+        <span class="kw">return</span> Result.created(tareas.insert(tarea));
+    }
+}
+
+Lux.run(<span class="st">8080</span>, TareaController.class);</pre>
+        </div>
+
+        <p>
+          Si un campo no pasa la validación, la respuesta es un 422 con el mapa de campos y su
+          motivo, sin que haya que escribirlo.
+        </p>
+      </section>
+
+      <section id="por-donde">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Por dónde seguir</h2></div>
+
+        <div class="tarjetas">
+          <a class="tarjeta" href="#p-empezar" data-hoja="p-empezar">
+            <div class="etiqueta">01</div>
+            <h3>Empezar</h3>
+            <p>Clonar, compilar y tener un servidor respondiendo, con la guía en terminal paso a paso.</p>
+          </a>
+          <a class="tarjeta" href="#p-guia" data-hoja="p-guia">
+            <div class="etiqueta">02</div>
+            <h3>Guía</h3>
+            <p>Rutas, vinculación de parámetros, respuestas, inyección, validación y manejo de errores.</p>
+          </a>
+          <a class="tarjeta" href="#p-modulos" data-hoja="p-modulos">
+            <div class="etiqueta">03</div>
+            <h3>Módulos</h3>
+            <p>Servidor, vistas, datos y seguridad. Qué trae cada uno y cómo tomarlos por separado.</p>
+          </a>
+          <a class="tarjeta" href="#p-referencia" data-hoja="p-referencia">
+            <div class="etiqueta">04</div>
+            <h3>Referencia</h3>
+            <p>Motores de base de datos verificados, sistemas donde corre y comparación con Tomcat.</p>
+          </a>
+          <a class="tarjeta" href="#p-estado" data-hoja="p-estado">
+            <div class="etiqueta">05</div>
+            <h3>Estado</h3>
+            <p>Qué está probado de verdad y qué falta antes de poner esto delante de tráfico real.</p>
+          </a>
+          <a class="tarjeta" href="#p-marca" data-hoja="p-marca">
+            <div class="etiqueta">06</div>
+            <h3>Logo</h3>
+            <p>Construcción de la marca, tamaños, uso sobre fondos y el SVG suelto.</p>
+          </a>
+        </div>
+      </section>
+
+      <section id="principios">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Principios</h2></div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Cero dependencias</div>
+            <div>Solo el JDK. El driver JDBC de tu base de datos es la única excepción, y la pone
+              la aplicación. Esta misma página se sirve con LuxCore y tampoco necesita nada.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Legible antes que ingenioso</div>
+            <div>Si una clase no se puede leer de corrido, se parte. Las 1041 líneas del despachador
+              heredado se rehicieron como once clases con una responsabilidad cada una.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Medido, no proclamado</div>
+            <div>Toda afirmación de rendimiento sale del banco de pruebas. Los números que no se
+              pudieron medir en condiciones no aparecen — ni siquiera con letra pequeña.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Honesto sobre lo que falta</div>
+            <div>La página de <a href="#p-estado" data-hoja="p-estado">estado</a> dice que no está listo para
+              producción y enumera por qué. Prometer madurez que no existe es la forma más rápida
+              de quemar el proyecto con el primer usuario.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="de-donde">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>De dónde viene</h2></div>
+
+        <p>
+          LuxCore nace de JxMVC 3.4.0, un framework MVC con cero dependencias que funciona y está
+          en producción — pero que necesita Tomcat para arrancar. La comparación no es contra un
+          rival cualquiera: es contra su propio antecesor.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <tbody>
+              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
+              <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td></tr>
+              <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
+              <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">889</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Y no hay que saltar de golpe: <code>lux-adapter-servlet</code> permite desplegar una
+          aplicación LuxCore dentro de Tomcat, así que la migración es reversible.
+        </p>
+      </section>
+
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-empezar" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Empezar</h1>
+    <p class="entradilla">De cero a un servidor respondiendo, en cuatro órdenes. No hace falta nada más que git, Maven y un JDK 21.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#instalar"><span class="n">01</span> Instalación</a></li>
+        <li><a href="#empezar"><span class="n">02</span> Primeros pasos</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="instalar">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Instalación</h2></div>
+
+        <p>
+          LuxCore no está publicado en Maven Central y su repositorio es privado por ahora. Se
+          instala compilándolo, que deja los artefactos en tu repositorio local de Maven.
+        </p>
+
+        <div class="mandos">
+          <div class="conmutador" role="group" aria-label="Idioma / Language">
+            <button type="button" id="btnEs" aria-pressed="true">ES</button>
+            <button type="button" id="btnEn" aria-pressed="false">EN</button>
+          </div>
+          <button type="button" class="accion" id="btnRepetir">Repetir</button>
+        </div>
+
+        <div class="terminal">
+          <div class="barra">
+            <div class="luces" aria-hidden="true"><i class="luz"></i><i class="luz"></i><i class="luz"></i></div>
+            <div class="ruta" id="rutaBarra">~/proyectos</div>
+            <div style="width:44px"></div>
+          </div>
+          <div class="pantalla" id="pantalla" role="log" aria-live="polite" aria-label="Terminal"></div>
+        </div>
+
+        <div class="pasos" id="pasos"></div>
+
+        <p style="margin-top:1.5rem" id="nota">
+          Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 21</code> o superior. Nada
+          más — LuxCore no tiene dependencias externas.
+        </p>
+
+        <p>Después, en tu <code>pom.xml</code>, toma solo lo que uses:</p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">pom.xml</span><span class="etiqueta">XML</span></div>
+<pre>&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;   <span class="cm">&lt;!-- arrastra lux-http --&gt;</span>
+    &lt;version&gt;<span class="st">0.1.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- opcionales --&gt;</span>
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.1.0</span>&lt;/version&gt;&lt;/dependency&gt;
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.1.0</span>&lt;/version&gt;&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- el driver JDBC lo pone tu aplicación --&gt;</span>
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">42.7.3</span>&lt;/version&gt;&lt;/dependency&gt;</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Aplicación de ejemplo</div>
+          <p>
+            <code>java/ejemplo</code> es un gestor de tareas completo —vistas, formularios, H2 y
+            API REST— con 36 pruebas de punta a punta. Es el mejor sitio por donde empezar a leer.
+          </p>
+        </div>
+      </section>
+<section id="empezar">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>En cinco minutos</h2></div>
+
+        <p>
+          Un controlador es una clase corriente. Lo que devuelve decide el formato: un objeto se
+          serializa a JSON, un <code>String</code> sale como texto plano, <code>null</code> es un
+          204. Sin anotación de por medio.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Hola.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="kw">import</span> lux.core.*;
+
+<span class="an">@Route</span>(<span class="st">"/api/tareas"</span>)
+<span class="kw">public class</span> TareaController {
+
+    <span class="an">@Inject</span> Tareas tareas;
+
+    <span class="an">@Get</span>
+    <span class="kw">public</span> Object listar(<span class="an">@Query</span>(value = <span class="st">"pagina"</span>, orElse = <span class="st">"1"</span>) <span class="kw">int</span> pagina) {
+        <span class="kw">return</span> tareas.findPage(pagina, <span class="st">20</span>);
+    }
+
+    <span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+    <span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+        <span class="kw">return</span> tareas.findById(id);
+    }
+
+    <span class="an">@Post</span>
+    <span class="kw">public</span> Object crear(<span class="an">@Body @Valid</span> Tarea tarea) {
+        <span class="kw">return</span> Result.created(tareas.insert(tarea));
+    }
+}
+
+<span class="kw">public static void</span> main(String[] args) {
+    Lux.run(<span class="st">8080</span>, TareaController.class);
+}</pre>
+        </div>
+
+        <p>
+          Eso es todo. <code>Lux.run</code> registra las rutas, levanta el servidor e imprime el
+          puerto y el tiempo de arranque. No hay <code>web.xml</code>, ni contenedor, ni despliegue.
+        </p>
+
+        <h3>Con todo declarado</h3>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">App.java</span><span class="etiqueta">Java</span></div>
+<pre>Server servidor = Lux.app()
+    .port(<span class="st">8080</span>)
+    .loadConfig()
+    .views(Templates.fromClasspath(<span class="st">"plantillas"</span>))
+    .fallback(StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">"/estaticos"</span>))
+    .service(<span class="kw">new</span> Catalogo())
+    .authenticator(ctx -&gt; sesiones.verificar(ctx.header(<span class="st">"Authorization"</span>)))
+    .use(Cors.allowing(<span class="st">"https://app.pe"</span>))
+    .use(Csrf.enabled().exempt(<span class="st">"/api/"</span>))
+    .use(RateLimit.perMinute(<span class="st">300</span>))
+    .controllers(TareaController.class, AdminController.class)
+    .routes(r -&gt; r.get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>))
+    .start();
+
+servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-guia" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Guía</h1>
+    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación y errores.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#rutas"><span class="n">01</span> Rutas</a></li>
+        <li><a href="#parametros"><span class="n">02</span> Parámetros</a></li>
+        <li><a href="#respuestas"><span class="n">03</span> Respuestas</a></li>
+        <li><a href="#inyeccion"><span class="n">04</span> Inyección</a></li>
+        <li><a href="#validacion"><span class="n">05</span> Validación</a></li>
+        <li><a href="#errores"><span class="n">06</span> Errores</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="rutas">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Rutas</h2></div>
+
+        <p>
+          <code>@Route</code> sobre la clase fija la base; los verbos sobre los métodos añaden el
+          resto. Una regla, sin excepciones: <strong>un valor vacío mapea a la ruta base.</strong>
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>Ruta resultante</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Route("/api/tareas")</td><td class="mono">/api/tareas</td><td>Base de la clase</td></tr>
+              <tr><td class="mono-clave">@Get</td><td class="mono">/api/tareas</td><td>Valor vacío = la base</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}")</td><td class="mono">/api/tareas/{id}</td><td>Variable de ruta</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}/notas/{n}")</td><td class="mono">…/{id}/notas/{n}</td><td>Varias variables</td></tr>
+              <tr><td class="mono-clave">@Get("/archivos/*")</td><td class="mono">/api/tareas/archivos/*</td><td>Comodín, solo al final</td></tr>
+              <tr><td class="mono-clave">@Post @Put @Patch @Delete</td><td class="mono">—</td><td>Mismo criterio</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="prosa">
+          <li><strong>Lo literal gana a lo variable.</strong> <code>/tareas/nueva</code> se resuelve antes que <code>/tareas/{id}</code>, sin importar el orden en que se declaren.</li>
+          <li><strong>Sin <code>@Route</code></strong>, la base sale del nombre de la clase: <code>ReporteController</code> → <code>/reporte</code>.</li>
+          <li><strong>Las rutas duplicadas fallan al arrancar</strong>, no en la primera petición.</li>
+          <li><strong>405 con <code>Allow</code>.</strong> Si la ruta existe pero el verbo no, la respuesta enumera los verbos válidos.</li>
+          <li><strong>HEAD se resuelve contra GET</strong> automáticamente, sin cuerpo.</li>
+        </ul>
+
+        <h3>Rutas sueltas, sin controlador</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Lambdas</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r
+    .get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
+    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.1.0"</span>))
+    .post(<span class="st">"/eco"</span>, ctx -&gt; ctx.bodyText()))</pre>
+        </div>
+      </section>
+<section id="parametros">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Parámetros</h2></div>
+
+        <p>
+          Los argumentos del método se resuelven por anotación o por tipo. La conversión a
+          <code>int</code>, <code>long</code>, <code>boolean</code>, enumeraciones o fechas es
+          automática; si el valor no convierte, la respuesta es un 400.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>De dónde sale</th><th>Ejemplo</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Path("id")</td><td>Variable de la ruta</td><td class="mono">@Path("id") long id</td></tr>
+              <tr><td class="mono-clave">@Query("q")</td><td>Cadena de consulta</td><td class="mono">@Query(value="p", orElse="1") int p</td></tr>
+              <tr><td class="mono-clave">@Form("titulo")</td><td>Formulario HTML</td><td class="mono">@Form("titulo") String t</td></tr>
+              <tr><td class="mono-clave">@Body</td><td>Cuerpo JSON</td><td class="mono">@Body Tarea tarea</td></tr>
+              <tr><td class="mono-clave">@Body @Valid</td><td>JSON + validación</td><td class="mono">responde 422 si falla</td></tr>
+              <tr><td class="mono-clave">@Header("X-Traza")</td><td>Cabecera</td><td class="mono">@Header("X-Traza") String t</td></tr>
+              <tr><td class="mono-clave">@CookieValue("sesion")</td><td>Cookie</td><td class="mono">@CookieValue("s") String s</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Por tipo, sin anotación</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Tipo</th><th>Qué recibe</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">Context</td><td>Todo el contexto de la petición</td></tr>
+              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de lux-http</td></tr>
+              <tr><td class="mono-clave">Session</td><td>La sesión, creándola si no existe</td></tr>
+              <tr><td class="mono-clave">Principal</td><td>Quien haya autenticado el <code>Authenticator</code></td></tr>
+              <tr><td class="mono-clave">Part</td><td>Un archivo del multipart, por nombre del parámetro</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>El contexto, si lo prefieres a mano</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Context</span><span class="etiqueta">Java</span></div>
+<pre>ctx.pathVariable(<span class="st">"id"</span>)      ctx.query(<span class="st">"q"</span>, <span class="st">"por-defecto"</span>)   ctx.queryAll(<span class="st">"tag"</span>)
+ctx.form(<span class="st">"titulo"</span>)         ctx.header(<span class="st">"Accept"</span>)             ctx.cookie(<span class="st">"sesion"</span>)
+ctx.body(Tarea.class)      ctx.bodyText()                  ctx.bodyBytes()
+ctx.part(<span class="st">"archivo"</span>)        ctx.field(<span class="st">"nota"</span>)               ctx.parts()
+ctx.session()              ctx.principal()                 ctx.authenticated()
+ctx.attribute(<span class="st">"clave"</span>, valor)                                 ctx.route()</pre>
+        </div>
+      </section>
+<section id="respuestas">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Respuestas</h2></div>
+
+        <p>Lo que devuelve una acción decide el formato, sin anotaciones:</p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Devuelves</th><th>Sale</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">String</td><td>text/plain</td><td class="mono">200</td></tr>
+              <tr><td class="mono">null</td><td>sin cuerpo</td><td class="mono">204</td></tr>
+              <tr><td class="mono">cualquier objeto</td><td>application/json</td><td class="mono">200</td></tr>
+              <tr><td class="mono">Result</td><td>lo que declare</td><td class="mono">el que fijes</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Result</span><span class="etiqueta">Java</span></div>
+<pre>Result.text(<span class="st">"hola"</span>)                     Result.html(<span class="st">"&lt;h1&gt;hola&lt;/h1&gt;"</span>)
+Result.json(objeto)                    Result.raw(<span class="st">"{\"ya\":\"serializado\"}"</span>)
+Result.view(<span class="st">"lista.html"</span>, modelo)    Result.redirect(<span class="st">"/"</span>)
+Result.created(objeto)                 Result.noContent()
+Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
+
+<span class="cm">// encadenable</span>
+<span class="kw">return</span> Result.json(tarea)
+             .status(<span class="st">201</span>)
+             .header(<span class="st">"Location"</span>, <span class="st">"/api/tareas/"</span> + tarea.id());</pre>
+        </div>
+      </section>
+<section id="inyeccion">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Inyección</h2></div>
+
+        <p>
+          Marca un servicio con <code>@Service</code> y se construye la primera vez que alguien lo
+          pide. Los controladores lo reciben con <code>@Inject</code>, por campo o por constructor.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Servicios</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Service</span>
+<span class="kw">public class</span> Catalogo {
+    <span class="an">@Inject</span> Repositorio repositorio;      <span class="cm">// por campo</span>
+}
+
+<span class="an">@Service</span>
+<span class="kw">public class</span> Facturas {
+    <span class="kw">private final</span> Catalogo catalogo;
+    <span class="an">@Inject</span> Facturas(Catalogo catalogo) {   <span class="cm">// por constructor</span>
+        <span class="kw">this</span>.catalogo = catalogo;
+    }
+}
+
+<span class="cm">// o a mano, útil para sustituir en pruebas</span>
+Lux.app().service(Reloj.class, () -&gt; Instant.now())</pre>
+        </div>
+
+        <ul class="prosa">
+          <li>Los servicios son <strong>singleton</strong>: una instancia por aplicación.</li>
+          <li>Se registran también <strong>por sus interfaces</strong>, así que puedes pedir el contrato.</li>
+          <li>Las <strong>dependencias circulares</strong> se detectan y el error nombra la cadena completa.</li>
+        </ul>
+      </section>
+<section id="validacion">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Validación</h2></div>
+
+        <p>
+          Las anotaciones van sobre los componentes de un <code>record</code> o los campos de una
+          clase. <code>@Valid</code> junto a <code>@Body</code> valida antes de entrar al método.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>Comprueba</th><th>Mensaje por defecto</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Required</td><td>No nulo, no vacío, no en blanco</td><td>es obligatorio</td></tr>
+              <tr><td class="mono-clave">@Length(min, max)</td><td>Longitud del texto</td><td>debe tener entre N y M caracteres</td></tr>
+              <tr><td class="mono-clave">@Range(min, max)</td><td>Rango numérico</td><td>debe estar entre N y M</td></tr>
+              <tr><td class="mono-clave">@Email</td><td>Formato de correo</td><td>no es un correo válido</td></tr>
+              <tr><td class="mono-clave">@Match("regex")</td><td>Expresión regular</td><td>no tiene el formato esperado</td></tr>
+              <tr><td class="mono-clave">@OneOf({"a","b"})</td><td>Valor de una lista</td><td>debe ser uno de: a, b</td></tr>
+              <tr><td class="mono-clave">@Satisfies(Regla.class)</td><td>Tu propia regla</td><td>el de la regla</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tarea.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="kw">public record</span> Tarea(
+        <span class="an">@Id</span> <span class="kw">long</span> id,
+        <span class="an">@Required @Length</span>(min = <span class="st">3</span>, max = <span class="st">120</span>) String titulo,
+        <span class="an">@OneOf</span>({<span class="st">"baja"</span>, <span class="st">"media"</span>, <span class="st">"alta"</span>}) String prioridad) {}
+
+<span class="cm">// una regla propia</span>
+<span class="kw">public class</span> Ruc <span class="kw">implements</span> Rule&lt;String&gt; {
+    <span class="kw">public boolean</span> test(String v) { <span class="kw">return</span> v.length() == <span class="st">11</span> &amp;&amp; v.startsWith(<span class="st">"20"</span>); }
+    <span class="kw">public</span> String message()    { <span class="kw">return</span> <span class="st">"no es un RUC válido"</span>; }
+}</pre>
+        </div>
+
+        <p>Cuando algo falla, la respuesta es un 422 con el mapa de campos, sin escribirlo:</p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">422 Unprocessable Content</span><span class="etiqueta">JSON</span></div>
+<pre>{
+  <span class="st">"error"</span>: <span class="st">"Unprocessable Content"</span>,
+  <span class="st">"message"</span>: <span class="st">"hay 2 campo(s) inválido(s)"</span>,
+  <span class="st">"path"</span>: <span class="st">"/api/tareas"</span>,
+  <span class="st">"fields"</span>: {
+    <span class="st">"titulo"</span>: <span class="st">"debe tener entre 3 y 120 caracteres"</span>,
+    <span class="st">"prioridad"</span>: <span class="st">"debe ser uno de: baja, media, alta"</span>
+  }
+}</pre>
+        </div>
+
+        <p>Fuera de una ruta, la misma comprobación a mano:</p>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Validation</span><span class="etiqueta">Java</span></div>
+<pre>Validation.check(tarea);                <span class="cm">// lanza ValidationException (422)</span>
+Validation.valid(tarea);                <span class="cm">// true / false</span>
+Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
+        </div>
+      </section>
+<section id="errores">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Errores</h2></div>
+
+        <p>
+          Lanza <code>HttpException</code> con el estado que quieras, o registra un manejador con
+          <code>@OnError</code> para una excepción de tu dominio.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Manejo de errores</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+<span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+    Tarea t = tareas.findById(id);
+    <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">throw new</span> HttpException(<span class="st">404</span>, <span class="st">"no existe la tarea "</span> + id);
+    <span class="kw">return</span> t;
+}
+
+<span class="an">@OnError</span>(SaldoInsuficiente.class)
+<span class="kw">public</span> Object saldo(SaldoInsuficiente fallo) {
+    <span class="kw">return</span> Result.json(Map.of(<span class="st">"motivo"</span>, fallo.getMessage())).status(<span class="st">422</span>);
+}</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Las excepciones no controladas nunca filtran detalles</div>
+          <p>
+            Cualquier excepción que no sea <code>HttpException</code> devuelve un 500 con el
+            mensaje genérico «error interno». La traza va al <code>ErrorReporter</code>, no a la
+            respuesta.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-modulos" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Módulos</h1>
+    <p class="entradilla">Cuatro piezas que se toman por separado. Si solo necesitas atender HTTP, lux-http basta y son 64 KB.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#piezas"><span class="n">01</span> Los cuatro</a></li>
+        <li><a href="#servidor"><span class="n">02</span> Servidor</a></li>
+        <li><a href="#vistas"><span class="n">03</span> Vistas</a></li>
+        <li><a href="#datos"><span class="n">04</span> Datos</a></li>
+        <li><a href="#seguridad"><span class="n">05</span> Seguridad</a></li>
+        <li><a href="#configuracion"><span class="n">06</span> Configuración</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="piezas">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cuatro módulos</h2></div>
+
+        <p>
+          Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>lux-http</code>
+          basta y son 64 KB.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead>
+              <tr><th>Módulo</th><th>Necesita</th><th class="cifra">Clases</th><th class="cifra">Líneas</th><th class="cifra">Pruebas</th><th class="cifra">Tamaño</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
+                <td>—</td><td class="cifra">31</td><td class="cifra">2833</td><td class="cifra">144</td><td class="cifra">64 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, CORS, CSRF, rate limit, configuración</span></td>
+                <td>lux-http</td><td class="cifra">49</td><td class="cifra">2954</td><td class="cifra">229</td><td class="cifra">80 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
+                <td>lux-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1258</td><td class="cifra">145</td><td class="cifra">35 KB</td>
+              </tr>
+              <tr class="total">
+                <td>Los cuatro</td><td>—</td><td class="cifra">103</td><td class="cifra">8019</td><td class="cifra">606</td><td class="cifra">218 KB</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Las 36 pruebas restantes hasta 642 son de la aplicación de ejemplo, que ejercita los
+          cuatro módulos de punta a punta.
+        </p>
+      </section>
+<section id="servidor">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Servidor · lux-http</h2></div>
+
+        <p>
+          HTTP/1.1 con un hilo virtual por conexión. Se puede usar suelto, sin
+          <code>lux-core</code>, si lo único que quieres es atender peticiones.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Sin framework</span><span class="etiqueta">Java</span></div>
+<pre>Server.start(<span class="st">8080</span>, (req, res) -&gt; res.text(<span class="st">"Hola"</span>));</pre>
+        </div>
+
+        <h3>Opciones</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Opción</th><th class="cifra">Por defecto</th><th>Para qué</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">port</td><td class="cifra">8080</td><td>0 asigna uno libre</td></tr>
+              <tr><td class="mono-clave">host</td><td class="cifra">0.0.0.0</td><td>Interfaz de escucha</td></tr>
+              <tr><td class="mono-clave">maxConnections</td><td class="cifra">10 000</td><td>Techo de conexiones concurrentes</td></tr>
+              <tr><td class="mono-clave">idleTimeoutMillis</td><td class="cifra">30 000</td><td>Corta conexiones ociosas</td></tr>
+              <tr><td class="mono-clave">handlerTimeoutMillis</td><td class="cifra">30 000</td><td>Libera la conexión si el handler se cuelga</td></tr>
+              <tr><td class="mono-clave">shutdownGraceMillis</td><td class="cifra">10 000</td><td>Espera a las peticiones en vuelo al apagar</td></tr>
+              <tr><td class="mono-clave">maxBodyBytes</td><td class="cifra">10 MB</td><td>Tamaño máximo del cuerpo</td></tr>
+              <tr><td class="mono-clave">maxHeaderBytes</td><td class="cifra">32 768</td><td>Tamaño máximo de cabeceras</td></tr>
+              <tr><td class="mono-clave">maxHeaderCount</td><td class="cifra">100</td><td>Número máximo de cabeceras</td></tr>
+              <tr><td class="mono-clave">maxKeepAliveRequests</td><td class="cifra">1 000</td><td>Peticiones por conexión</td></tr>
+              <tr><td class="mono-clave">sessionTimeoutMillis</td><td class="cifra">30 min</td><td>Caducidad de sesión por inactividad</td></tr>
+              <tr><td class="mono-clave">gzipMinBytes</td><td class="cifra">1 024</td><td>Umbral de compresión; 0 la desactiva</td></tr>
+              <tr><td class="mono-clave">requireHost</td><td class="cifra">true</td><td>Exige <code>Host</code> en HTTP/1.1</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">TLS y estáticos</span><span class="etiqueta">Java</span></div>
+<pre>ServerOptions opciones = ServerOptions.builder()
+    .port(<span class="st">8443</span>)
+    .tls(Tls.fromKeystore(Path.of(<span class="st">"certificado.p12"</span>), <span class="st">"clave"</span>.toCharArray()))
+    .maxBodyBytes(<span class="st">50L</span> &lt;&lt; <span class="st">20</span>)
+    .build();
+
+StaticFiles.from(Path.of(<span class="st">"publico"</span>))                   <span class="cm">// desde disco</span>
+StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">"/estaticos"</span>)  <span class="cm">// desde el JAR</span></pre>
+        </div>
+
+        <p>
+          Los estáticos emiten <code>ETag</code> y <code>Last-Modified</code>, responden 304 ante
+          <code>If-None-Match</code>, y bloquean cualquier intento de salir del directorio raíz.
+        </p>
+      </section>
+<section id="vistas">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Vistas · lux-view</h2></div>
+
+        <p>
+          Plantillas compiladas y cacheadas, con herencia. El escapado HTML es el comportamiento
+          por defecto: hay que pedir explícitamente el crudo.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Sintaxis</th><th>Qué hace</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">{{ expr }}</td><td>Interpola, escapando el HTML</td></tr>
+              <tr><td class="mono-clave">{{&amp; expr }}</td><td>Interpola sin escapar</td></tr>
+              <tr><td class="mono-clave">{% if c %} … {% end %}</td><td>Condicional, con <code>{% elseif %}</code> y <code>{% else %}</code></td></tr>
+              <tr><td class="mono-clave">{% for x in lista %}</td><td>Bucle, con <code>{% else %}</code> si va vacía</td></tr>
+              <tr><td class="mono-clave">{% include "parcial.html" %}</td><td>Inserta otra plantilla</td></tr>
+              <tr><td class="mono-clave">{% extends "base.html" %}</td><td>Hereda de un layout</td></tr>
+              <tr><td class="mono-clave">{% block nombre %}</td><td>Define o sobrescribe un bloque</td></tr>
+              <tr><td class="mono-clave">{# nota #}</td><td>Comentario, no sale al HTML</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Dentro de un bucle</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Variable</th><th>Valor</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">loop.index</td><td>Posición desde 0</td></tr>
+              <tr><td class="mono-clave">loop.number</td><td>Posición desde 1</td></tr>
+              <tr><td class="mono-clave">loop.first / loop.last</td><td>Si es el primero o el último</td></tr>
+              <tr><td class="mono-clave">loop.size</td><td>Cuántos elementos hay</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">lista.html</span><span class="etiqueta">Plantilla</span></div>
+<pre>{% extends <span class="st">"base.html"</span> %}
+
+{% block titulo %}Tareas · {{ pendientes }} pendientes{% end %}
+
+{% block contenido %}
+{% if tareas %}
+  &lt;ul&gt;
+  {% for t in tareas %}
+    &lt;li class=<span class="st">"{{ t.etiqueta }}"</span>&gt;
+      {{ loop.number }}. {{ t.titulo }}
+      {% if !loop.last %}&lt;hr&gt;{% end %}
+    &lt;/li&gt;
+  {% end %}
+  &lt;/ul&gt;
+{% else %}
+  &lt;p&gt;No hay ninguna tarea.&lt;/p&gt;
+{% end %}
+{% end %}</pre>
+        </div>
+
+        <p>
+          Las expresiones admiten rutas con punto (<code>autor.nombre</code>), índices de lista
+          (<code>items.0</code>), <code>.size</code>, literales, y los operadores
+          <code>== != &lt; &gt; &lt;= &gt;=</code>, <code>and</code>, <code>or</code>,
+          <code>!</code> y paréntesis. Nada más: es deliberadamente pequeño.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Configurar el motor</span><span class="etiqueta">Java</span></div>
+<pre>Templates.fromClasspath(<span class="st">"plantillas"</span>)          <span class="cm">// dentro del JAR</span>
+Templates.from(Path.of(<span class="st">"plantillas"</span>))          <span class="cm">// desde disco</span>
+    .suffix(<span class="st">".html"</span>)                          <span class="cm">// para escribir view("lista")</span>
+    .reload(<span class="kw">true</span>)                             <span class="cm">// recompila al editar, en desarrollo</span></pre>
+        </div>
+      </section>
+<section id="datos">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Datos · lux-data</h2></div>
+
+        <p>
+          JDBC directo, sin ORM. Todo pasa por sentencias preparadas; los nombres de tabla y
+          columna se validan carácter a carácter antes de tocar la base de datos.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Conectar</span><span class="etiqueta">Java</span></div>
+<pre>DataSources.registerDefault(
+    Pool.to(<span class="st">"jdbc:postgresql://localhost/tareas"</span>)
+        .credentials(<span class="st">"usuario"</span>, <span class="st">"clave"</span>)
+        .maxSize(<span class="st">10</span>)
+        .build());</pre>
+        </div>
+
+        <h3>Consultas</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Db</span><span class="etiqueta">Java</span></div>
+<pre>Db db = Db.open();
+
+Rows filas = db.select(<span class="st">"tareas"</span>, <span class="st">"hecha = ?"</span>, <span class="kw">false</span>);
+Row  una   = db.selectOne(<span class="st">"tareas"</span>, <span class="st">"id = ?"</span>, <span class="st">7</span>);
+<span class="kw">long</span> total = db.count(<span class="st">"tareas"</span>, <span class="kw">null</span>);
+
+List&lt;Tarea&gt; t = db.query(Tarea.class, <span class="st">"SELECT * FROM tareas WHERE prioridad = ?"</span>, <span class="st">"alta"</span>);
+Page&lt;Row&gt; pag = db.page(<span class="st">"tareas"</span>, <span class="st">"hecha = ?"</span>, <span class="st">1</span>, <span class="st">20</span>, <span class="kw">false</span>);
+
+db.insert(<span class="st">"tareas"</span>, Row.of(<span class="st">"titulo"</span>, <span class="st">"Escribir"</span>, <span class="st">"prioridad"</span>, <span class="st">"alta"</span>));
+db.update(<span class="st">"tareas"</span>, Row.of(<span class="st">"hecha"</span>, <span class="kw">true</span>), <span class="st">"id = ?"</span>, <span class="st">7</span>);
+db.delete(<span class="st">"tareas"</span>, <span class="st">"id = ?"</span>, <span class="st">7</span>);
+
+<span class="cm">// parámetros con nombre</span>
+db.queryNamed(<span class="st">"SELECT * FROM tareas WHERE prioridad = :p"</span>, Map.of(<span class="st">"p"</span>, <span class="st">"alta"</span>));</pre>
+        </div>
+
+        <h3>Repositorios</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Repository</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Table</span>(<span class="st">"tareas"</span>)
+<span class="kw">public record</span> Tarea(<span class="an">@Id</span> <span class="kw">long</span> id, String titulo,
+                   <span class="an">@Column</span>(<span class="st">"hecha"</span>) <span class="kw">boolean</span> completada) {}
+
+<span class="an">@Service</span>
+<span class="kw">public class</span> Tareas <span class="kw">extends</span> Repository&lt;Tarea, Long&gt; {
+    <span class="kw">public</span> Tareas() { <span class="kw">super</span>(Tarea.class); }
+
+    <span class="kw">public</span> List&lt;Tarea&gt; pendientes() { <span class="kw">return</span> findBy(<span class="st">"hecha = ?"</span>, <span class="kw">false</span>); }
+}
+
+tareas.findById(<span class="st">7L</span>)     tareas.findAll()      tareas.findPage(<span class="st">1</span>, <span class="st">20</span>)
+tareas.insert(tarea)     tareas.update(tarea)  tareas.deleteById(<span class="st">7L</span>)
+tareas.count()           tareas.existsById(<span class="st">7L</span>)</pre>
+        </div>
+
+        <h3>Transacciones</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tx</span><span class="etiqueta">Java</span></div>
+<pre>Tx.run(() -&gt; {
+    cuentas.debitar(origen, monto);
+    cuentas.acreditar(destino, monto);      <span class="cm">// si esto lanza, se deshace todo</span>
+});
+
+<span class="kw">long</span> id = Tx.call(() -&gt; pedidos.insert(pedido));</pre>
+        </div>
+
+        <ul class="prosa">
+          <li>Las consultas dentro de una transacción <strong>comparten conexión</strong> automáticamente.</li>
+          <li>Las <strong>transacciones anidadas se unen</strong> a la externa; no hay puntos de guardado.</li>
+          <li>Los nombres de columna se buscan <strong>sin distinguir mayúsculas</strong>: H2 y Oracle devuelven <code>TITULO</code>, PostgreSQL <code>titulo</code>, y los dos funcionan.</li>
+        </ul>
+      </section>
+<section id="seguridad">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Seguridad</h2></div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Middleware</span><span class="etiqueta">Java</span></div>
+<pre>.use(Cors.allowing(<span class="st">"https://app.pe"</span>).credentials(<span class="kw">true</span>))
+.use(Csrf.enabled().exempt(<span class="st">"/api/"</span>))
+.use(RateLimit.perMinute(<span class="st">300</span>).keyBy(ctx -&gt; ctx.header(<span class="st">"X-Cliente"</span>)))
+.use((ctx, cadena) -&gt; {                    <span class="cm">// el tuyo propio</span>
+    <span class="kw">long</span> t0 = System.nanoTime();
+    <span class="kw">try</span> { <span class="kw">return</span> cadena.proceed(ctx); }
+    <span class="kw">finally</span> { registrar(ctx, System.nanoTime() - t0); }
+})</pre>
+        </div>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Pieza</th><th>Qué cubre</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">Cors</td><td>Preflight <code>OPTIONS</code>, credenciales, <code>Vary: Origin</code>. Con credenciales nunca responde <code>*</code>: devuelve el origen concreto.</td></tr>
+              <tr><td class="mono-clave">Csrf</td><td>Token en sesión, comparación en tiempo constante. Lee <code>_csrf</code> de la cabecera, del formulario o de la consulta. Exención por prefijo o con <code>@CsrfExempt</code>.</td></tr>
+              <tr><td class="mono-clave">RateLimit</td><td>Ventana deslizante ponderada, cabeceras <code>X-RateLimit-*</code> y <code>Retry-After</code>, clave configurable.</td></tr>
+              <tr><td class="mono-clave">Sanitize</td><td><code>html()</code> quita script, estilos, iframes y manejadores de evento; <code>text()</code> deja solo texto; <code>filename()</code> neutraliza rutas.</td></tr>
+              <tr><td class="mono-clave">@RequireAuth</td><td>401 si no hay principal.</td></tr>
+              <tr><td class="mono-clave">@RequireRole("admin")</td><td>401 sin autenticar, 403 con rol insuficiente.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Autenticación</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Authenticator</span><span class="etiqueta">Java</span></div>
+<pre>.authenticator(ctx -&gt; {
+    String token = ctx.header(<span class="st">"Authorization"</span>);
+    <span class="kw">if</span> (token == <span class="kw">null</span>) <span class="kw">return null</span>;         <span class="cm">// anónimo</span>
+    <span class="kw">return</span> Principal.of(<span class="st">"andre"</span>, <span class="st">"admin"</span>);   <span class="cm">// id + roles</span>
+})</pre>
+        </div>
+
+        <p>
+          El orden del pipeline es <strong>autenticar → middleware → autorizar → vincular →
+          invocar → renderizar</strong>. Así el middleware ve el principal y a la vez puede
+          envolver los 401 y 403 para registrarlos.
+        </p>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Lo que el servidor rechaza de oficio</div>
+          <p>
+            Cabeceras plegadas, <code>Content-Length</code> duplicado, <code>Content-Length</code>
+            junto a <code>Transfer-Encoding</code>, <code>Host</code> ausente o duplicado,
+            caracteres de control en las cabeceras de respuesta, y salidas del directorio raíz en
+            los archivos estáticos.
+          </p>
+        </div>
+      </section>
+<section id="configuracion">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Configuración</h2></div>
+
+        <p>
+          <code>loadConfig()</code> lee <code>application.properties</code> del classpath y del
+          directorio actual, y encima aplica las variables de entorno con prefijo
+          <code>LUX_</code> y las propiedades del sistema con prefijo <code>lux.</code>
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">application.properties</span><span class="etiqueta">Properties</span></div>
+<pre>server.port=8080
+server.maxConnections=5000
+server.gzipMinBytes=512
+
+db.url=jdbc:postgresql://localhost/tareas
+db.usuario=lux
+db.pool=10</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Leerla</span><span class="etiqueta">Java</span></div>
+<pre>Config config = Config.load();
+
+config.get(<span class="st">"db.url"</span>)                    config.getInt(<span class="st">"db.pool"</span>, <span class="st">5</span>)
+config.getBoolean(<span class="st">"app.debug"</span>, <span class="kw">false</span>)   config.under(<span class="st">"db"</span>)
+
+<span class="cm">// o vincularla a un record</span>
+<span class="kw">record</span> Datos(String url, String usuario, <span class="kw">int</span> pool) {}
+Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
+        </div>
+
+        <p>
+          Las claves <code>server.*</code> configuran el servidor sin escribir código:
+          <code>LUX_SERVER_PORT=9000</code> en el entorno cambia el puerto.
+        </p>
+      </section>
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-referencia" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Referencia</h1>
+    <p class="entradilla">Motores de base de datos verificados, sistemas donde corre y comparación con su antecesor sobre Tomcat.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#bases"><span class="n">01</span> Bases de datos</a></li>
+        <li><a href="#sistemas"><span class="n">02</span> Dónde corre</a></li>
+        <li><a href="#comparacion"><span class="n">03</span> Frente a Tomcat</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="bases">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Bases de datos</h2></div>
+
+        <p>
+          <code>lux-data</code> habla JDBC y nada más. Sirve cualquier motor con driver JDBC — el
+          driver lo pone tu aplicación, que es la única dependencia externa que LuxCore admite.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Motor</th><th>Estado</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Probado</span></td><td>En memoria y en archivo. Motor de la app de ejemplo y sus 36 pruebas.</td></tr>
+              <tr><td class="mono">PostgreSQL</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada del código es específico de un motor, pero no se ha corrido.</td></tr>
+              <tr><td class="mono">MySQL / MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Igual.</td></tr>
+              <tr><td class="mono">SQL Server</td><td><span class="pastilla parcial">Sin verificar</span></td><td><code>LIMIT</code>/<code>OFFSET</code> tiene otra sintaxis; la paginación necesitará ajuste.</td></tr>
+              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve columnas en mayúsculas, que ya está contemplado.</td></tr>
+              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura; el pool debería ir a 1.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">«Sin verificar» quiere decir sin verificar</div>
+          <p>
+            Los tipos, las zonas horarias y la paginación cambian entre motores. La capa se prueba
+            contra un driver propio que registra el SQL generado — eso cubre su responsabilidad,
+            no las diferencias entre motores. Hasta correrla contra PostgreSQL y MySQL reales,
+            «debería andar» es una hipótesis.
+          </p>
+        </div>
+      </section>
+<section id="sistemas">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Dónde corre</h2></div>
+
+        <p>
+          No hay código nativo ni nada específico de una plataforma. Donde haya un JDK 21 o
+          superior, corre igual.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 642 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Es el destino previsto para producción, pero no se ha ejecutado allí.</td></tr>
+              <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
+              <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Requisito real</div>
+            <div>Java 21 por los hilos virtuales: el servidor asigna uno por conexión, y sin ellos
+              el modelo no se sostiene. Se desarrolló y midió con OpenJDK 25.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Sin código nativo</div>
+            <div>Ni JNI, ni bibliotecas del sistema, ni rutas absolutas. El JAR es el mismo en
+              todas partes.</div>
+          </div>
+        </div>
+      </section>
+<section id="comparacion">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Frente a Tomcat</h2></div>
+
+        <p>
+          LuxCore nace de JxMVC 3.4.0, un framework MVC que funciona y está en producción, pero
+          que necesita Tomcat para arrancar. La comparación es contra su propio antecesor.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <tbody>
+              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
+              <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
+              <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
+              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">8 019</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">642</td></tr>
+              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">49 %</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Sobre el rendimiento</div>
+          <p>
+            Los números de peticiones por segundo que se han medido hasta ahora no valen: cliente
+            y servidor compartían máquina, sin aislamiento de núcleos. Por eso no aparecen aquí.
+            El dato honesto saldrá del banco de pruebas comparativo contra Spring, Quarkus,
+            Micronaut y Javalin, en el mismo hardware aislado que se usó para medir JxMVC.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-estado" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Estado</h1>
+    <p class="entradilla">Qué está probado de verdad, qué no lo está, y qué falta antes de poner esto en producción.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#estado"><span class="n">01</span> Frente a producción</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="estado">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Estado</h2></div>
+
+        <div class="aviso">
+          <div class="etiqueta">No usar en producción todavía</div>
+          <p>
+            El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
+            pocas horas de escribirlo, y construir la primera aplicación real destapó otros cuatro
+            fallos —entre ellos que la capa de datos devolvía todos los campos en null contra
+            cualquier motor que use mayúsculas en los nombres de columna—. Todos están corregidos
+            y cubiertos por pruebas. El punto es que aparecieron, y que ese proceso no ha terminado.
+          </p>
+        </div>
+
+        <ul class="lista-estado">
+          <li><span class="si">✓</span><div>642 pruebas en verde, cero dependencias verificadas</div></li>
+          <li><span class="si">✓</span><div>Una aplicación completa corriendo de punta a punta: vistas, formularios, base de datos y API REST</div></li>
+          <li><span class="si">✓</span><div>Endurecimiento explícito: request smuggling, path traversal, inyección de cabeceras, CSRF</div></li>
+          <li><span class="si">✓</span><div>TLS, techo de conexiones, timeout de handler y apagado ordenado</div></li>
+          <li><span class="no">✗</span><div>Sin fuzzing del parser ni banco de conformidad HTTP/1.1</div></li>
+          <li><span class="no">✗</span><div>Sin correr contra PostgreSQL o MySQL reales</div></li>
+          <li><span class="no">✗</span><div>Sin prueba de carga sostenida con conexiones hostiles</div></li>
+          <li><span class="no">✗</span><div>Sin ejecutar nunca en Linux ni en Windows</div></li>
+          <li><span class="no">✗</span><div>Sin log de acceso, métricas ni WebSocket</div></li>
+          <li><span class="no">✗</span><div>Sesiones por proceso: no escala a varias instancias</div></li>
+        </ul>
+
+        <h3>Para qué sirve hoy</h3>
+        <p>
+          Para un proyecto interno, un prototipo o una herramienta de equipo, detrás de una red de
+          confianza. No para algo que reciba tráfico de desconocidos.
+        </p>
+
+        <h3>Qué haría falta para cambiar eso</h3>
+        <p>
+          En orden, porque cada paso informa al siguiente: correr la capa de datos contra
+          PostgreSQL y MySQL reales; migrar métricas y log de acceso, porque sin observabilidad no
+          se opera nada; fuzzing del parser y conformidad HTTP/1.1; el banco de pruebas comparativo
+          en hardware aislado; una prueba de carga larga con conexiones hostiles; y por último una
+          aplicación pequeña y de bajo riesgo en producción, durante semanas, antes de mover nada
+          importante.
+        </p>
+        <p>
+          Aun cumplido todo eso, el primer despliegue debería ir detrás de nginx o Caddy. El proxy
+          absorbe TLS, slowloris, HTTP/2 y el log de acceso, que son justo los cinco puntos donde
+          LuxCore es más joven.
+        </p>
+      </section>
+    </main>
+  </div>
+
+</div>
+<div class="hoja" id="p-marca" hidden>
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Logo</h1>
+    <p class="entradilla">Lux es la unidad de iluminancia. La marca es un núcleo sólido rodeado de una escala graduada: se lee a la vez como luz irradiando y como el dial de un instrumento de medida.</p>
+  </header>
+
+  <div class="cuerpo sin-indice">
+    <main>
+
+
+  
+  <p class="claro" style="margin-top:1.5rem">
+    <em>Lux</em> es la unidad de iluminancia. La marca es un núcleo sólido rodeado de una escala
+    graduada: se lee a la vez como luz irradiando y como el dial de un instrumento de medida — que
+    es exactamente lo que el proyecto dice de sí mismo, <em>medido, no proclamado</em>.
+  </p>
+
+  <h2>Construcción</h2>
+  <div class="ficha">
+    <div class="campo"><div class="etiqueta">Lienzo</div><div>64 × 64, centro en 32,32</div></div>
+    <div class="campo"><div class="etiqueta">Núcleo</div><div>Círculo sólido, radio 6.5</div></div>
+    <div class="campo"><div class="etiqueta">Escala</div><div>24 marcas cada 15°, desde radio 13</div></div>
+    <div class="campo"><div class="etiqueta">Graduación</div><div>Cada tercera marca es larga (radio 23.5, grosor 2.4); el resto corta (18.5, grosor 1.6)</div></div>
+    <div class="campo"><div class="etiqueta">Color</div><div>Una sola tinta. Usa <code>currentColor</code>, así que hereda el color del texto</div></div>
+    <div class="campo"><div class="etiqueta">Peso</div><div>2 KB de SVG, sin trazados generados ni dependencias</div></div>
+  </div>
+
+  <h2>Tamaños</h2>
+  <p>La graduación aguanta hasta 16 px; por debajo, usa solo el núcleo.</p>
+  <div class="rejilla">
+    <div class="celda t16"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">16 px</div></div>
+    <div class="celda t24"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">24 px</div></div>
+    <div class="celda t32"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">32 px</div></div>
+    <div class="celda t48"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">48 px</div></div>
+    <div class="celda t96"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">96 px</div></div>
+  </div>
+
+  <h2>Sobre fondo</h2>
+  <div class="fondos">
+    <div class="fondo f-papel"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Papel</div></div>
+    <div class="fondo f-negro"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Negro</div></div>
+    <div class="fondo f-tinta"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Tinta</div></div>
+    <div class="fondo f-laton"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Latón</div></div>
+  </div>
+
+  <h2>Conjunto</h2>
+  <div class="lockup">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg>
+    <div class="palabra">Lux<span>Core</span></div>
+  </div>
+  <p style="margin-top:1rem">
+    La palabra va en la misma monoespaciada que los titulares de la documentación, con
+    <em>Core</em> en latón. Separación igual a la mitad del alto de la marca.
+  </p>
+
+  <h2>Aire</h2>
+  <p>Deja alrededor, como mínimo, el radio del núcleo. La línea discontinua marca ese margen.</p>
+  <div class="aire"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
+    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
+    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
+    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
+    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
+    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
+    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
+    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
+    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
+    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
+    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
+    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
+    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
+    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
+    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
+    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
+    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
+    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
+    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
+  </g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg></div>
+
+  <h2>Qué no hacer</h2>
+  <div class="ficha">
+    <div class="campo"><div class="etiqueta">No</div><div>Rellenar el fondo del círculo ni encerrar la marca en una caja</div></div>
+    <div class="campo"><div class="etiqueta">No</div><div>Usar degradados: la marca es de una sola tinta</div></div>
+    <div class="campo"><div class="etiqueta">No</div><div>Rotarla — la escala tiene una marca larga arriba, y ahí se queda</div></div>
+    <div class="campo"><div class="etiqueta">No</div><div>Cambiar el número de marcas para «simplificar» a tamaño pequeño</div></div>
+  </div>
+
+
+    </main>
+  </div>
+
+</div>
+
+  <footer class="pie">
+    <div class="etiqueta">
+      Richar Andre Vilca-Solorzano<br>
+      Universidad Nacional del Altiplano · Puno, Perú
+    </div>
+    <div class="etiqueta" style="text-align:right">
+      LuxCore 0.2.0 · Licencia MIT<br>
+      Medido el 2 de agosto de 2026
+    </div>
+  </footer>
+</div>
+
+<script>
+// LuxCore — tema y seguimiento de lectura. Sin dependencias, como el framework.
+(function () {
+  'use strict';
+
+  // ── tema: recuerda la elección, y si no hay ninguna sigue al sistema ──
+  var CLAVE = 'lux-tema';
+  var raiz = document.documentElement;
+
+  function aplicar(tema) {
+    if (tema === 'claro' || tema === 'oscuro') {
+      raiz.setAttribute('data-theme', tema === 'oscuro' ? 'dark' : 'light');
+    } else {
+      raiz.removeAttribute('data-theme');
+    }
+  }
+
+  function oscuroAhora() {
+    var declarado = raiz.getAttribute('data-theme');
+    if (declarado) {
+      return declarado === 'dark';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  try {
+    aplicar(localStorage.getItem(CLAVE));
+  } catch (sinAlmacen) {
+    // navegación privada: se queda con la preferencia del sistema
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var boton = document.querySelector('.tema');
+    if (boton) {
+      var sincronizar = function () {
+        boton.dataset.oscuro = oscuroAhora() ? 'si' : 'no';
+        boton.setAttribute('aria-label',
+          oscuroAhora() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+      };
+      sincronizar();
+      boton.addEventListener('click', function () {
+        var siguiente = oscuroAhora() ? 'claro' : 'oscuro';
+        aplicar(siguiente);
+        try {
+          localStorage.setItem(CLAVE, siguiente);
+        } catch (sinAlmacen) {
+          // sin persistencia, pero el cambio se aplica igual
+        }
+        sincronizar();
+      });
+    }
+
+    // ── índice lateral: marca la sección que se está leyendo ──
+    var enlaces = Array.prototype.slice.call(document.querySelectorAll('nav.indice a'));
+    if (!enlaces.length || !('IntersectionObserver' in window)) {
+      return;
+    }
+
+    var porId = {};
+    enlaces.forEach(function (a) {
+      var destino = a.getAttribute('href');
+      if (destino && destino.charAt(0) === '#') {
+        porId[destino.slice(1)] = a;
+      }
+    });
+
+    var secciones = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+    if (!secciones.length) {
+      return;
+    }
+
+    var visibles = Object.create(null);
+
+    function marcar() {
+      var actual = null;
+      for (var i = 0; i < secciones.length; i++) {
+        if (visibles[secciones[i].id]) {
+          actual = secciones[i].id;
+          break;
+        }
+      }
+      enlaces.forEach(function (a) { a.classList.remove('activo'); });
+      if (actual && porId[actual]) {
+        porId[actual].classList.add('activo');
+      }
+    }
+
+    var observador = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (e) {
+        if (e.isIntersecting) {
+          visibles[e.target.id] = true;
+        } else {
+          delete visibles[e.target.id];
+        }
+      });
+      marcar();
+    }, { rootMargin: '-12% 0px -70% 0px' });
+
+    secciones.forEach(function (s) { observador.observe(s); });
+  });
+})();
+
+</script>
+<script>
+// LuxCore — guía de instalación animada. Se activa solo si la página tiene terminal.
+(function () {
+  'use strict';
+  if (!document.getElementById('pantalla')) { return; }
+
+  var GIRO = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+
+  var ASCII = [
+    '        ·  |  ·',
+    '   \\    ·     ·    /',
+    ' —    ·   ███   ·    —',
+    '   /    ·     ·    \\',
+    '        ·  |  ·'
+  ];
+
+  var textos = {
+    es: {
+      titulo: 'Instalación',
+      subtitulo: 'De cero a un servidor respondiendo, en cuatro órdenes.',
+      repetir: 'Repetir',
+      nota: 'Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 21</code> o superior. Nada más — LuxCore no tiene dependencias externas.',
+      pasos: [
+        { n: '01', que: 'Clonar', cuanto: '~2 s' },
+        { n: '02', que: 'Compilar y probar', cuanto: '~90 s' },
+        { n: '03', que: 'Arrancar', cuanto: '70 ms' },
+        { n: '04', que: 'Comprobar', cuanto: 'al instante' }
+      ]
+    },
+    en: {
+      titulo: 'Installation',
+      subtitulo: 'From nothing to a running server, in four commands.',
+      repetir: 'Replay',
+      nota: 'You need <code>git</code>, <code>Maven</code> and a <code>JDK 21</code> or newer. That is all — LuxCore has no external dependencies.',
+      pasos: [
+        { n: '01', que: 'Clone', cuanto: '~2 s' },
+        { n: '02', que: 'Build and test', cuanto: '~90 s' },
+        { n: '03', que: 'Start', cuanto: '70 ms' },
+        { n: '04', que: 'Check', cuanto: 'instant' }
+      ]
+    }
+  };
+
+  // Las órdenes y la salida del programa van tal cual salen en una terminal real.
+  // Solo se traducen los comentarios, que son los que guían.
+  function guion(idioma) {
+    var es = idioma === 'es';
+    return [
+      { t: 'cm', v: es ? '# 1 — traer el código' : '# 1 — get the source', paso: 0 },
+      { t: 'cmd', v: 'git clone https://github.com/Andre031222/45.Soft_LuxCore.git' },
+      { t: 'out', v: "Cloning into '45.Soft_LuxCore'...", cls: 'tenue' },
+      { t: 'giro', v: es ? 'Recibiendo objetos' : 'Receiving objects', dur: 900,
+        fin: 'remote: Enumerating objects: 486, done.', cls: 'tenue' },
+      { t: 'barra', etiqueta: 'Receiving objects', dur: 1100, cola: '486/486, 1.31 MiB | 4.2 MiB/s' },
+      { t: 'blank' },
+
+      { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
+      { t: 'blank' },
+
+      { t: 'cm', v: es ? '# 2 — compilar los cuatro módulos y correr las pruebas'
+                       : '# 2 — build the four modules and run the tests', paso: 1 },
+      { t: 'cmd', v: 'mvn install' },
+      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.1.0:', cls: 'tenue' },
+      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   144 ✓' },
+      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   229 ✓' },
+      { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
+      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   145 ✓' },
+      { t: 'giro', v: 'ejemplo',  dur: 500,  fin: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
+      { t: 'blank' },
+      { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
+      { t: 'contar', hasta: 642, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 223 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 223 KB', cls: 'ok' },
+      { t: 'blank' },
+
+      { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
+      { t: 'cmd', v: 'java -cp ejemplo/target/classes:$CP ejemplo.App' },
+      { t: 'ascii' },
+      { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 9 ms', cls: 'destacado' },
+      { t: 'blank' },
+
+      { t: 'cm', v: es ? '# 4 — comprobar que responde' : '# 4 — check that it answers', paso: 3 },
+      { t: 'cmd', v: 'curl localhost:8080/api/tareas' },
+      { t: 'out', v: '{"data":[],"page":1,"size":20,"total":0}', cls: 'dato' },
+      { t: 'blank' },
+      { t: 'cmd', v: "curl -X POST -H 'Content-Type: application/json' \\" },
+      { t: 'cmd2', v: '     -d \'{"titulo":"Probar LuxCore","prioridad":"alta"}\' \\' },
+      { t: 'cmd2', v: '     localhost:8080/api/tareas' },
+      { t: 'out', v: '{"id":1,"titulo":"Probar LuxCore","prioridad":"alta","completada":false}', cls: 'dato' },
+      { t: 'blank' },
+      { t: 'out', v: es ? '# listo. sin contenedor, sin web.xml, sin dependencias.'
+                        : '# done. no container, no web.xml, no dependencies.', cls: 'ok' }
+    ];
+  }
+
+  var pantalla = document.getElementById('pantalla');
+  var rutaBarra = document.getElementById('rutaBarra');
+  var contenedorPasos = document.getElementById('pasos');
+  var btnEs = document.getElementById('btnEs');
+  var btnEn = document.getElementById('btnEn');
+  var btnRepetir = document.getElementById('btnRepetir');
+
+  var idioma = 'es';
+  var tiempos = [];
+  var intervalos = [];
+  var reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function limpiar() {
+    tiempos.forEach(clearTimeout); tiempos = [];
+    intervalos.forEach(clearInterval); intervalos = [];
+    pantalla.textContent = '';
+  }
+  function esperar(ms, fn) { tiempos.push(setTimeout(fn, ms)); }
+  function abajo() { pantalla.scrollTop = pantalla.scrollHeight; }
+
+  function nuevaLinea(clase) {
+    var l = document.createElement('span');
+    l.className = 'linea' + (clase ? ' ' + clase : '');
+    pantalla.appendChild(l);
+    return l;
+  }
+
+  function pintarPasos() {
+    contenedorPasos.innerHTML = '';
+    textos[idioma].pasos.forEach(function (p) {
+      var caja = document.createElement('div');
+      caja.className = 'paso';
+      caja.innerHTML = '<div class="n">' + p.n + '</div><div class="que">' + p.que +
+                       '</div><div class="cuanto">' + p.cuanto + '</div>';
+      contenedorPasos.appendChild(caja);
+    });
+  }
+
+  function marcarPaso(indice) {
+    Array.prototype.forEach.call(contenedorPasos.children, function (caja, i) {
+      caja.dataset.activo = i === indice ? 'si' : (i < indice ? 'hecho' : 'no');
+    });
+  }
+
+  function aplicarIdioma() {
+    var t = textos[idioma];
+    document.getElementById('nota').innerHTML = t.nota;
+    btnRepetir.textContent = t.repetir;
+    btnEs.setAttribute('aria-pressed', String(idioma === 'es'));
+    btnEn.setAttribute('aria-pressed', String(idioma === 'en'));
+    pintarPasos();
+  }
+
+  function escribir(destino, texto, alTerminar) {
+    var i = 0;
+    (function paso() {
+      if (i >= texto.length) { abajo(); if (alTerminar) alTerminar(); return; }
+      destino.textContent += texto.charAt(i++);
+      abajo();
+      tiempos.push(setTimeout(paso, 19 + (i % 3) * 4));
+    })();
+  }
+
+  function girar(linea, etiqueta, dur, fin, cls) {
+    var f = 0;
+    var id = setInterval(function () {
+      linea.textContent = ' ' + GIRO[f++ % GIRO.length] + '  ' + etiqueta;
+      abajo();
+    }, 70);
+    intervalos.push(id);
+    esperar(dur, function () {
+      clearInterval(id);
+      linea.className = 'linea' + (cls ? ' ' + cls : '');
+      linea.textContent = fin;
+      abajo();
+    });
+  }
+
+  function barrear(linea, etiqueta, dur, cola) {
+    var ANCHO = 22, t0 = Date.now();
+    var id = setInterval(function () {
+      var p = Math.min(1, (Date.now() - t0) / dur);
+      var lleno = Math.round(p * ANCHO);
+      linea.textContent = ' ' + etiqueta + ': ' +
+        '█'.repeat(lleno) + '░'.repeat(ANCHO - lleno) +
+        ' ' + String(Math.round(p * 100)).padStart(3) + '%';
+      abajo();
+      if (p >= 1) {
+        clearInterval(id);
+        linea.textContent = ' ' + etiqueta + ': 100% (' + cola + '), done.';
+      }
+    }, 45);
+    intervalos.push(id);
+  }
+
+  function contar(linea, hasta, dur, plantilla) {
+    var t0 = Date.now();
+    var id = setInterval(function () {
+      var p = Math.min(1, (Date.now() - t0) / dur);
+      var n = Math.round(p * p * (3 - 2 * p) * hasta);
+      linea.textContent = plantilla.replace('{n}', n);
+      abajo();
+      if (p >= 1) { clearInterval(id); linea.textContent = plantilla.replace('{n}', hasta); }
+    }, 45);
+    intervalos.push(id);
+  }
+
+  function pintarAscii(stagger) {
+    ASCII.forEach(function (fila, i) {
+      esperar(stagger ? i * 65 : 0, function () {
+        nuevaLinea('marca-ascii').textContent = fila;
+        abajo();
+      });
+    });
+  }
+
+  function reproducir() {
+    limpiar();
+    rutaBarra.textContent = '~/proyectos';
+    marcarPaso(-1);
+
+    var pasos = guion(idioma);
+
+    if (reducido) {
+      pasos.forEach(function (p) {
+        if (p.t === 'blank') { nuevaLinea().textContent = ' '; return; }
+        if (p.t === 'ascii') { ASCII.forEach(function (f) { nuevaLinea('marca-ascii').textContent = f; }); return; }
+        if (p.t === 'giro') { nuevaLinea(p.cls).textContent = p.fin; return; }
+        if (p.t === 'barra') { nuevaLinea('tenue').textContent = ' ' + p.etiqueta + ': 100% (' + p.cola + '), done.'; return; }
+        if (p.t === 'contar') { nuevaLinea(p.cls).textContent = p.plantilla.replace('{n}', p.hasta); return; }
+        if (p.t === 'cm') { nuevaLinea('tenue').textContent = p.v; return; }
+        if (p.t === 'cmd' || p.t === 'cmd2') {
+          var l = nuevaLinea();
+          if (p.t === 'cmd') { var pr = document.createElement('span'); pr.className = 'prompt'; pr.textContent = '$ '; l.appendChild(pr); }
+          var c = document.createElement('span'); c.textContent = p.v; l.appendChild(c);
+          if (p.ruta) rutaBarra.textContent = p.ruta;
+          return;
+        }
+        nuevaLinea(p.cls).textContent = p.v;
+      });
+      marcarPaso(3);
+      abajo();
+      return;
+    }
+
+    var retraso = 300;
+
+    pasos.forEach(function (p) {
+      if (p.paso !== undefined) {
+        (function (i) { esperar(retraso, function () { marcarPaso(i); }); })(p.paso);
+      }
+
+      switch (p.t) {
+        case 'blank':
+          esperar(retraso, function () { nuevaLinea().textContent = ' '; abajo(); });
+          retraso += 85;
+          break;
+
+        case 'cm':
+          (function (v) { esperar(retraso, function () { nuevaLinea('tenue').textContent = v; abajo(); }); })(p.v);
+          retraso += 400;
+          break;
+
+        case 'cmd':
+        case 'cmd2':
+          (function (v, conPrompt, ruta) {
+            esperar(retraso, function () {
+              var l = nuevaLinea();
+              if (conPrompt) {
+                var pr = document.createElement('span');
+                pr.className = 'prompt'; pr.textContent = '$ ';
+                l.appendChild(pr);
+              }
+              var cuerpo = document.createElement('span');
+              l.appendChild(cuerpo);
+              var cur = document.createElement('i');
+              cur.className = 'cursor';
+              l.appendChild(cur);
+              escribir(cuerpo, v, function () {
+                cur.remove();
+                if (ruta) rutaBarra.textContent = ruta;
+              });
+            });
+          })(p.v, p.t === 'cmd', p.ruta);
+          retraso += 240 + p.v.length * 21;
+          break;
+
+        case 'giro':
+          (function (etiqueta, dur, fin, cls) {
+            esperar(retraso, function () { girar(nuevaLinea('tenue'), etiqueta, dur, fin, cls); });
+          })(p.v, p.dur, p.fin, p.cls);
+          retraso += p.dur + 110;
+          break;
+
+        case 'barra':
+          (function (etiqueta, dur, cola) {
+            esperar(retraso, function () { barrear(nuevaLinea('tenue'), etiqueta, dur, cola); });
+          })(p.etiqueta, p.dur, p.cola);
+          retraso += p.dur + 140;
+          break;
+
+        case 'contar':
+          (function (hasta, dur, plantilla, cls) {
+            esperar(retraso, function () { contar(nuevaLinea(cls), hasta, dur, plantilla); });
+          })(p.hasta, p.dur, p.plantilla, p.cls);
+          retraso += p.dur + 160;
+          break;
+
+        case 'ascii':
+          (function () { esperar(retraso, function () { pintarAscii(true); }); })();
+          retraso += ASCII.length * 65 + 180;
+          break;
+
+        default:
+          (function (v, cls) {
+            esperar(retraso, function () { nuevaLinea(cls).textContent = v; abajo(); });
+          })(p.v, p.cls);
+          retraso += 125;
+      }
+    });
+  }
+
+  btnEs.addEventListener('click', function () { if (idioma !== 'es') { idioma = 'es'; aplicarIdioma(); reproducir(); } });
+  btnEn.addEventListener('click', function () { if (idioma !== 'en') { idioma = 'en'; aplicarIdioma(); reproducir(); } });
+  btnRepetir.addEventListener('click', reproducir);
+
+  aplicarIdioma();
+  reproducir();
+})();
+
+</script>
+<script>
+
+(function () {
+  'use strict';
+  var hojas = Array.prototype.slice.call(document.querySelectorAll('.hoja'));
+  var pestanas = Array.prototype.slice.call(document.querySelectorAll('[data-hoja]'));
+  if (!hojas.length) { return; }
+
+  function mostrar(clave, mover) {
+    var encontrada = false;
+    hojas.forEach(function (h) {
+      var suya = h.id === clave;
+      h.hidden = !suya;
+      if (suya) { encontrada = true; }
+    });
+    if (!encontrada) { hojas[0].hidden = false; clave = hojas[0].id; }
+    document.querySelectorAll('.nav-sitio a').forEach(function (a) {
+      if (a.dataset.hoja === clave) { a.setAttribute('aria-current', 'page'); }
+      else { a.removeAttribute('aria-current'); }
+    });
+    if (mover) { window.scrollTo({ top: 0, behavior: 'auto' }); }
+  }
+
+  pestanas.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var clave = a.dataset.hoja;
+      history.replaceState(null, '', '#' + clave);
+      mostrar(clave, true);
+    });
+  });
+
+  mostrar((location.hash || '#p-index').slice(1), false);
+})();
+
+</script>
+
+</body>
+</html>
