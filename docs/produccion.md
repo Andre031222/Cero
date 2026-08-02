@@ -34,13 +34,18 @@ las pocas horas de escribir el módulo dice que el riesgo es real, no teórico.
 **Criterio:** fuzzing del parser (líneas de petición, cabeceras, chunked, multipart) y una corrida
 de un banco de conformidad HTTP/1.1.
 
-### 3. `lux-data` nunca ha hablado con una base de datos
+### 3. `lux-data` contra motores reales · **hecho**
 
-Sus 141 pruebas verifican el SQL generado contra un driver propio. Eso cubre su responsabilidad,
-pero no cubre lo que hace cada motor: tipos de PostgreSQL frente a MySQL, `LIMIT`/`OFFSET` en SQL
-Server, claves generadas, zonas horarias, reconexión tras caída.
+Los 47 casos de `MotorTests` corren contra **H2, PostgreSQL 16 y MySQL 8** en Docker: claves
+generadas, decimales exactos, booleanos, fechas, paginación con `LIMIT`/`OFFSET`, alias en
+mayúsculas, transacciones confirmadas y deshechas, repositorios e inserción por lotes. Los tres
+motores pasan la misma batería.
 
-**Criterio:** la misma suite corriendo contra PostgreSQL y MySQL reales.
+Encontró un fallo real: `Row.as()` ignoraba `@Column`, así que un record anotado devolvía ese
+campo en `null` — mientras que `Repository`, que sí lo respetaba, funcionaba. Dos caminos que
+debían coincidir y no coincidían. Corregido haciendo que ambos usen el mismo resolutor de nombres.
+
+**Pendiente aquí:** SQL Server y Oracle, y el comportamiento ante caída y reconexión del motor.
 
 ### 4. Los números de rendimiento no valen
 

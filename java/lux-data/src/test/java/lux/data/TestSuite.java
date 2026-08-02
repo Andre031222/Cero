@@ -10,6 +10,7 @@ public final class TestSuite {
         DbTests.run();
         PoolTests.run();
         RepositoryTests.run();
+        MotorTests.run();
 
         Check.report();
         if (Check.failures() > 0) {

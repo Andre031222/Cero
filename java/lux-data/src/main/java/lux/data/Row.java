@@ -137,33 +137,8 @@ public final class Row {
     }
 
     public <T> T as(Class<T> type) {
-        Map<String, Object> byMemberName = new LinkedHashMap<>();
-        for (String member : membersOf(type)) {
-            if (has(member)) {
-                byMemberName.put(member, get(member));
-            }
-        }
-        return Json.bind(byMemberName.isEmpty() ? toMap() : byMemberName, type);
-    }
-
-    private static java.util.List<String> membersOf(Class<?> type) {
-        java.util.List<String> names = new java.util.ArrayList<>();
-        if (type.isRecord()) {
-            for (java.lang.reflect.RecordComponent component : type.getRecordComponents()) {
-                names.add(component.getName());
-            }
-            return names;
-        }
-        for (Class<?> current = type; current != null && current != Object.class;
-             current = current.getSuperclass()) {
-            for (java.lang.reflect.Field field : current.getDeclaredFields()) {
-                if (!field.isSynthetic()
-                        && !java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                    names.add(field.getName());
-                }
-            }
-        }
-        return names;
+        Map<String, Object> porNombre = Mapping.of(type).rename(this);
+        return Json.bind(porNombre.isEmpty() ? toMap() : porNombre, type);
     }
 
     public String toJson() {
