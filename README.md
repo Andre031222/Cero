@@ -38,43 +38,59 @@ que un desarrollador puede leer entero.
 
 ## Estado
 
-**Fase 0 — línea base heredada.** El árbol es todavía el de JxMVC 3.4.0: `JxMVC.Core/` (el
-framework), `JxMVC2x/` (web de referencia en JSP) y `benchmarks/` (harness dockerizado). La
-arquitectura nueva está descrita en [ARQUITECTURA.md](ARQUITECTURA.md) y aún no implementada.
+**Fase 1 en curso — `lux-http` ya arranca.** El servidor HTTP/1.1 propio está escrito y en verde:
+28 pruebas, cero dependencias, ni una línea de Jakarta. El resto del núcleo sigue en `legacy/`,
+pendiente de migrar.
 
-Punto de partida, medido en Docker con 4 cpus y 2 GB:
+```java
+Server.start(8080, (req, res) -> res.text("Hello, World!"));
+```
 
-| | JxMVC hoy | Meta LuxCore | A batir |
+Primera medición local ([detalle y salvedades](docs/mediciones-locales.md)):
+
+| | JxMVC sobre Tomcat | lux-http | Meta de fase 1 |
 |---|---|---|---|
-| Arranque | 1392 ms | < 150 ms | javalin 466 ms |
-| RSS | 471.8 MB | < 120 MB | micronaut 331.7 MB |
-| rps `/json` | 43 315 | ≥ 48 000 | javalin 47 667 |
-| JAR runtime | 253 KB | ≤ 400 KB | — |
+| Arranque | 1392 ms | **17 ms** | < 150 ms |
+| JAR | 253 KB | **36 KB** | ≤ 400 KB |
+| rps `/plaintext` | 43 691 | 107 779 ⚠ | ≥ 48 000 |
+| Dependencias | 0 | **0** | 0 |
 
-De los 1392 ms de arranque, la mayor parte es Tomcat levantándose. Ese es el primer objetivo.
+⚠ El rps se midió con cliente y servidor en la misma máquina, y **no es comparable** con la tabla
+del paper. El número que cuenta sale del harness de `benchmarks/docker` en Arch bare-metal.
+Arranque y tamaño del JAR sí son sólidos.
 
 ## Estructura
 
 ```text
-SPEC/          Contrato del kernel, neutral respecto al lenguaje  (fase 3)
-java/          Implementación de referencia en Java               (fase 1)
-rust/  cpp/    Implementaciones adicionales                       (fase 3)
-benchmarks/    Harness comparativo con Spring, Quarkus, Micronaut, Javalin
-docs/          Documentación
-JxMVC.Core/    Núcleo heredado — origen de la migración
-JxMVC2x/       Web de referencia heredada (JSP) — banco de pruebas del motor de vistas
+java/
+  lux-http/      Servidor HTTP/1.1 propio — hecho
+  lux-core/      Router, pipeline, DI, configuración                  (siguiente)
+  lux-view/      Motor de plantillas, sustituye JSP                   (fase 2)
+  lux-data/      Acceso a datos, migrado desde legacy                 (fase 2)
+  lux-launcher/  Fat-jar, java -jar app.jar                           (fase 1)
+legacy/
+  jxmvc-core/    Núcleo heredado — origen de la migración
+  jxmvc2x/       Web de referencia en JSP — banco de pruebas de lux-view
+spec/            Contrato del kernel, neutral respecto al lenguaje    (fase 3)
+rust/  cpp/      Implementaciones adicionales                         (fase 3)
+benchmarks/      Harness comparativo con Spring, Quarkus, Micronaut, Javalin
+docs/            Documentación
 ```
 
-## Compilar (estado heredado)
+## Compilar
 
-Requisitos actuales: Java 17+ y Maven. Tomcat 10.1+ solo para desplegar `JxMVC2x`.
+LuxCore necesita Java 21+ (hilos virtuales) y Maven. Nada más.
 
 ```bash
-cd JxMVC.Core && mvn install    # framework
-cd JxMVC.Core && mvn test       # 347 pruebas, runner propio (sin JUnit)
+cd java && mvn test          # lux-http: 28 pruebas, runner propio
+cd java && mvn package       # lux-http/target/lux-http-0.1.0.jar
 ```
 
-A partir de la fase 1 el requisito pasa a Java 21+ (hilos virtuales) y Tomcat deja de hacer falta.
+El núcleo heredado sigue compilando aparte, y todavía necesita Tomcat para `jxmvc2x`:
+
+```bash
+cd legacy/jxmvc-core && mvn test    # 347 pruebas
+```
 
 ## Documentos
 

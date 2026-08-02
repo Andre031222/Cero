@@ -1,10 +1,3 @@
-/// JxMVC benchmarks — generador de carga HTTP en JDK puro (sin dependencias).
-/// Compilar: javac LoadClient.java
-/// Ejecutar: java LoadClient <url> <conexiones> <segundos> [warmupSegs]
-///   ej: java LoadClient http://localhost:8080/plaintext 64 30 5
-/// Reporta: throughput (req/s), latencia media y percentiles p50/p90/p95/p99,
-/// errores y no-2xx, en una línea CSV apta para agregación.
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
