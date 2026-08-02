@@ -104,14 +104,7 @@ public final class Router {
 
     private static RouteEntry entry(HttpMethod verb, String base, String declared,
                                     Class<?> controller, Method action) {
-        return new RouteEntry(verb, RoutePattern.of(join(base, path(declared, action))), controller, action);
-    }
-
-    private static String path(String declared, Method action) {
-        if (!declared.isEmpty()) {
-            return declared;
-        }
-        return action.getName().equals("index") ? "" : "/" + action.getName();
+        return new RouteEntry(verb, RoutePattern.of(join(base, declared)), controller, action);
     }
 
     private void add(RouteEntry route) {

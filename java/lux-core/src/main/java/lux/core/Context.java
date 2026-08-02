@@ -72,6 +72,23 @@ public final class Context {
         return request.queryAll(name);
     }
 
+    public String form(String name) {
+        return request.form(name);
+    }
+
+    public String form(String name, String fallback) {
+        String found = request.form(name);
+        return found == null ? fallback : found;
+    }
+
+    public List<String> formAll(String name) {
+        return request.formAll(name);
+    }
+
+    public Map<String, List<String>> forms() {
+        return request.forms();
+    }
+
     public String header(String name) {
         return request.header(name);
     }

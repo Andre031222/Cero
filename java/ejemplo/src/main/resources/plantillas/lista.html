@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block titulo %}Tareas · {{ pendientes }} pendientes{% end %}
+
+{% block contenido %}
+{% if error %}
+<p class="error">{{ error }}</p>
+{% end %}
+
+<form method="post" action="/tareas" class="alta">
+    <input type="hidden" name="_csrf" value="{{ csrf }}">
+    <input type="text" name="titulo" value="{{ titulo }}" placeholder="¿Qué hay que hacer?" autofocus>
+    <select name="prioridad">
+        <option value="baja">baja</option>
+        <option value="media" selected>media</option>
+        <option value="alta">alta</option>
+    </select>
+    <button type="submit">Agregar</button>
+</form>
+
+{% if tareas %}
+<ul class="tareas">
+    {% for t in tareas %}
+    <li class="{{ t.etiqueta }} prioridad-{{ t.prioridad }}">
+        <span class="titulo">{{ t.titulo }}</span>
+        <span class="chip">{{ t.prioridad }}</span>
+        <form method="post" action="/tareas/{{ t.id }}/completar">
+            <input type="hidden" name="_csrf" value="{{ csrf }}">
+            <button type="submit" {% if t.completada %}disabled{% end %}>hecha</button>
+        </form>
+        <form method="post" action="/tareas/{{ t.id }}/borrar">
+            <input type="hidden" name="_csrf" value="{{ csrf }}">
+            <button type="submit" class="borrar">borrar</button>
+        </form>
+    </li>
+    {% end %}
+</ul>
+<p class="pie">{{ pendientes }} pendientes de {{ tareas.size }}</p>
+{% else %}
+<p class="vacio">No hay ninguna tarea. Agrega la primera.</p>
+{% end %}
+{% end %}

@@ -50,6 +50,14 @@ final class ValueTests {
         Check.equal("date de columna ausente es null", row.date("nada"), null);
 
         Check.equal("toJson", Row.of("a", 1, "b", "x").toJson(), "{\"a\":1,\"b\":\"x\"}");
+
+        Row mayusculas = Row.of("ID", 7L, "TITULO", "Lux", "PAGINAS", 10);
+        Check.equal("busca sin distinguir mayúsculas", mayusculas.text("titulo"), "Lux");
+        Check.that("has tampoco distingue", mayusculas.has("id") && mayusculas.has("Id"));
+        Check.equal("y vincula igual a un record",
+                mayusculas.as(Articulo.class), new Articulo(7L, "Lux", 10));
+        Check.that("conserva el nombre original en las columnas",
+                mayusculas.columns().contains("TITULO"));
         Check.equal("as vincula a un record",
                 Row.of("id", 1L, "titulo", "Lux", "paginas", 10).as(Articulo.class),
                 new Articulo(1L, "Lux", 10));

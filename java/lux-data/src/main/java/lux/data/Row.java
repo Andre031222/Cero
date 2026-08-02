@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +14,7 @@ import java.util.Set;
 public final class Row {
 
     private final Map<String, Object> values = new LinkedHashMap<>();
+    private final Map<String, String> byLowercase = new HashMap<>();
 
     public Row() {
     }
@@ -36,15 +38,20 @@ public final class Row {
 
     public Row put(String column, Object value) {
         values.put(column, value);
+        byLowercase.put(column.toLowerCase(), column);
         return this;
     }
 
     public Object get(String column) {
-        return values.get(column);
+        if (values.containsKey(column)) {
+            return values.get(column);
+        }
+        String actual = byLowercase.get(column.toLowerCase());
+        return actual == null ? null : values.get(actual);
     }
 
     public boolean has(String column) {
-        return values.containsKey(column);
+        return values.containsKey(column) || byLowercase.containsKey(column.toLowerCase());
     }
 
     public boolean isEmpty() {
@@ -130,7 +137,33 @@ public final class Row {
     }
 
     public <T> T as(Class<T> type) {
-        return Json.bind(toMap(), type);
+        Map<String, Object> byMemberName = new LinkedHashMap<>();
+        for (String member : membersOf(type)) {
+            if (has(member)) {
+                byMemberName.put(member, get(member));
+            }
+        }
+        return Json.bind(byMemberName.isEmpty() ? toMap() : byMemberName, type);
+    }
+
+    private static java.util.List<String> membersOf(Class<?> type) {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        if (type.isRecord()) {
+            for (java.lang.reflect.RecordComponent component : type.getRecordComponents()) {
+                names.add(component.getName());
+            }
+            return names;
+        }
+        for (Class<?> current = type; current != null && current != Object.class;
+             current = current.getSuperclass()) {
+            for (java.lang.reflect.Field field : current.getDeclaredFields()) {
+                if (!field.isSynthetic()
+                        && !java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                    names.add(field.getName());
+                }
+            }
+        }
+        return names;
     }
 
     public String toJson() {

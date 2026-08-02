@@ -25,6 +25,7 @@ final class IncomingRequest implements Request {
     private final ServerContext context;
 
     private Map<String, List<String>> params;
+    private Map<String, List<String>> fields;
     private Map<String, String> cookies;
     private List<Part> parts;
     private byte[] cachedBody;
@@ -67,6 +68,30 @@ final class IncomingRequest implements Request {
     @Override
     public List<String> queryAll(String name) {
         return params().getOrDefault(name, List.of());
+    }
+
+    @Override
+    public String form(String name) {
+        List<String> found = forms().get(name);
+        return found == null || found.isEmpty() ? null : found.get(0);
+    }
+
+    @Override
+    public List<String> formAll(String name) {
+        return forms().getOrDefault(name, List.of());
+    }
+
+    @Override
+    public Map<String, List<String>> forms() {
+        if (fields == null) {
+            fields = isFormEncoded() ? Url.parseQuery(bodyText()) : Map.of();
+        }
+        return fields;
+    }
+
+    private boolean isFormEncoded() {
+        String type = headers.get("Content-Type");
+        return type != null && type.toLowerCase().startsWith("application/x-www-form-urlencoded");
     }
 
     @Override
