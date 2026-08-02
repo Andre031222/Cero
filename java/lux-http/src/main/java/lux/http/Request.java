@@ -16,6 +16,12 @@ public interface Request {
 
     List<String> queryAll(String name);
 
+    String form(String name);
+
+    List<String> formAll(String name);
+
+    Map<String, List<String>> forms();
+
     Headers headers();
 
     String header(String name);

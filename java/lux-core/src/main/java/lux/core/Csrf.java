@@ -62,6 +62,9 @@ public final class Csrf implements Middleware {
 
         String presented = context.header(HEADER);
         if (presented == null) {
+            presented = context.form(FIELD);
+        }
+        if (presented == null) {
             presented = context.query(FIELD);
         }
         if (presented == null || !constantTimeEquals(token, presented)) {

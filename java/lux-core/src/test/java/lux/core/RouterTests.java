@@ -43,7 +43,7 @@ final class RouterTests {
 
     static final class ReporteController {
 
-        @Get
+        @Get("/mensual")
         public Object mensual() {
             return "mensual";
         }
@@ -115,6 +115,9 @@ final class RouterTests {
         Router router = new Router().register(ReporteController.class);
         Check.that("deriva la base del nombre de la clase",
                 router.resolve(HttpMethod.GET, "/reporte/mensual") != null);
+        Check.that("un valor vacío mapea a la ruta base",
+                new Router().register(UsuarioController.class)
+                        .resolve(HttpMethod.POST, "/usuarios") != null);
 
         Router lambdas = new Router()
                 .get("/ping", ctx -> "pong")

@@ -56,6 +56,15 @@ final class Binder {
             return convert(raw, type, query.value(), false);
         }
 
+        Form form = parameter.getAnnotation(Form.class);
+        if (form != null) {
+            String raw = context.form(form.value());
+            if (raw == null && !form.orElse().isEmpty()) {
+                raw = form.orElse();
+            }
+            return convert(raw, type, form.value(), false);
+        }
+
         Header header = parameter.getAnnotation(Header.class);
         if (header != null) {
             return convert(context.header(header.value()), type, header.value(), false);
