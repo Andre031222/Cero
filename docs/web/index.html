@@ -1,5 +1,14 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LuxCore — framework web para Java sin dependencias</title>
-
+<meta name="description" content="LuxCore: framework web para Java que arranca solo, sin contenedor y sin dependencias externas.">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYzc5NjM3IiBzdHJva2UtbGluZWNhcD0icm91bmQiPgogICAgPGxpbmUgeDE9IjMyLjAwIiB5MT0iMTkuMDAiIHgyPSIzMi4wMCIgeTI9IjguNTAiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMzUuMzYiIHkxPSIxOS40NCIgeDI9IjM2Ljc5IiB5Mj0iMTQuMTMiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMzguNTAiIHkxPSIyMC43NCIgeDI9IjQxLjI1IiB5Mj0iMTUuOTgiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDEuMTkiIHkxPSIyMi44MSIgeDI9IjQ4LjYyIiB5Mj0iMTUuMzgiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iNDMuMjYiIHkxPSIyNS41MCIgeDI9IjQ4LjAyIiB5Mj0iMjIuNzUiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDQuNTYiIHkxPSIyOC42NCIgeDI9IjQ5Ljg3IiB5Mj0iMjcuMjEiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDUuMDAiIHkxPSIzMi4wMCIgeDI9IjU1LjUwIiB5Mj0iMzIuMDAiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iNDQuNTYiIHkxPSIzNS4zNiIgeDI9IjQ5Ljg3IiB5Mj0iMzYuNzkiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDMuMjYiIHkxPSIzOC41MCIgeDI9IjQ4LjAyIiB5Mj0iNDEuMjUiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iNDEuMTkiIHkxPSI0MS4xOSIgeDI9IjQ4LjYyIiB5Mj0iNDguNjIiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMzguNTAiIHkxPSI0My4yNiIgeDI9IjQxLjI1IiB5Mj0iNDguMDIiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMzUuMzYiIHkxPSI0NC41NiIgeDI9IjM2Ljc5IiB5Mj0iNDkuODciIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMzIuMDAiIHkxPSI0NS4wMCIgeDI9IjMyLjAwIiB5Mj0iNTUuNTAiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMjguNjQiIHkxPSI0NC41NiIgeDI9IjI3LjIxIiB5Mj0iNDkuODciIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMjUuNTAiIHkxPSI0My4yNiIgeDI9IjIyLjc1IiB5Mj0iNDguMDIiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMjIuODEiIHkxPSI0MS4xOSIgeDI9IjE1LjM4IiB5Mj0iNDguNjIiIHN0cm9rZS13aWR0aD0iMi40Ii8+CiAgICA8bGluZSB4MT0iMjAuNzQiIHkxPSIzOC41MCIgeDI9IjE1Ljk4IiB5Mj0iNDEuMjUiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMTkuNDQiIHkxPSIzNS4zNiIgeDI9IjE0LjEzIiB5Mj0iMzYuNzkiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgICA8bGluZSB4MT0iMTkuMDAiIHkxPSIzMi4wMCIgeDI9IjguNTAiIHkyPSIzMi4wMCIgc3Ryb2tlLXdpZHRoPSIyLjQiLz4KICAgIDxsaW5lIHgxPSIxOS40NCIgeTE9IjI4LjY0IiB4Mj0iMTQuMTMiIHkyPSIyNy4yMSIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxsaW5lIHgxPSIyMC43NCIgeTE9IjI1LjUwIiB4Mj0iMTUuOTgiIHkyPSIyMi43NSIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxsaW5lIHgxPSIyMi44MSIgeTE9IjIyLjgxIiB4Mj0iMTUuMzgiIHkyPSIxNS4zOCIgc3Ryb2tlLXdpZHRoPSIyLjQiLz4KICAgIDxsaW5lIHgxPSIyNS41MCIgeTE9IjIwLjc0IiB4Mj0iMjIuNzUiIHkyPSIxNS45OCIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxsaW5lIHgxPSIyOC42NCIgeTE9IjE5LjQ0IiB4Mj0iMjcuMjEiIHkyPSIxNC4xMyIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICA8L2c+CiAgPGNpcmNsZSBjeD0iMzIuMCIgY3k9IjMyLjAiIHI9IjYuNSIgZmlsbD0iI2M3OTYzNyIvPjwvc3ZnPg==">
+<link rel="icon" type="image/svg+xml" href="./marca/favicon.svg">
+</head>
+<body>
 <style>
   :root {
     color-scheme: light dark;
@@ -274,18 +283,23 @@
     --term-fondo: #f4f2ee; --term-barra: #e8e5df; --term-texto: #24282e;
     --term-tenue: #7c8189; --term-prompt: #8a6216; --term-ok: #2f6f4e;
     --term-dato: #1f5f8b; --term-borde: rgba(25, 28, 33, .13);
+    --term-relleno: rgba(138, 98, 22, .18); --term-brillo: none;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --term-fondo: #000; --term-barra: #0c0d0f; --term-texto: #d8d6d1;
       --term-tenue: #6c7178; --term-prompt: #c79637; --term-ok: #5fb98a;
       --term-dato: #5aa9d6; --term-borde: rgba(233, 231, 226, .16);
+      --term-relleno: rgba(199, 150, 55, .3);
+      --term-brillo: 0 0 26px rgba(199, 150, 55, .07) inset;
     }
   }
   :root[data-theme="dark"] {
     --term-fondo: #000; --term-barra: #0c0d0f; --term-texto: #d8d6d1;
     --term-tenue: #6c7178; --term-prompt: #c79637; --term-ok: #5fb98a;
     --term-dato: #5aa9d6; --term-borde: rgba(233, 231, 226, .16);
+      --term-relleno: rgba(199, 150, 55, .3);
+      --term-brillo: 0 0 26px rgba(199, 150, 55, .07) inset;
   }
   :root[data-theme="light"] {
     --term-fondo: #f4f2ee; --term-barra: #e8e5df; --term-texto: #24282e;
@@ -345,8 +359,8 @@
     font-size: .78rem;
     line-height: 1.75;
     padding: .9rem 1rem 1.1rem;
-    min-height: 21rem;
-    max-height: 21rem;
+    min-height: 24rem;
+    max-height: 24rem;
     overflow-y: auto;
     color: var(--term-texto);
     white-space: pre-wrap;
@@ -362,6 +376,7 @@
   .ok { color: var(--term-ok); }
   .dato { color: var(--term-dato); }
   .destacado { color: var(--term-texto); font-weight: 600; }
+  .marca-ascii { color: var(--term-prompt); }
 
   .cursor {
     display: inline-block; width: .55em; height: 1.05em;
@@ -387,6 +402,7 @@
   }
   .paso[data-activo="si"] { background: var(--laton); }
   .paso[data-activo="si"] * { color: var(--papel) !important; }
+  .paso[data-activo="hecho"] .n { color: var(--term-ok); }
 
   .paso .n {
     font-family: var(--mono); font-size: .625rem; font-weight: 700;
@@ -1408,6 +1424,16 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 
 <script>
 (function () {
+  var GIRO = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+
+  var ASCII = [
+    '        ·  |  ·',
+    '   \\    ·     ·    /',
+    ' —    ·   ███   ·    —',
+    '   /    ·     ·    \\',
+    '        ·  |  ·'
+  ];
+
   var textos = {
     es: {
       titulo: 'Instalación',
@@ -1443,28 +1469,33 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
       { t: 'cm', v: es ? '# 1 — traer el código' : '# 1 — get the source', paso: 0 },
       { t: 'cmd', v: 'git clone https://github.com/Andre031222/45.Soft_LuxCore.git' },
       { t: 'out', v: "Cloning into '45.Soft_LuxCore'...", cls: 'tenue' },
-      { t: 'out', v: 'remote: Enumerating objects: 486, done.', cls: 'tenue' },
-      { t: 'out', v: 'Receiving objects: 100% (486/486), 1.31 MiB | 4.2 MiB/s, done.', cls: 'tenue' },
+      { t: 'giro', v: es ? 'Recibiendo objetos' : 'Receiving objects', dur: 900,
+        fin: 'remote: Enumerating objects: 486, done.', cls: 'tenue' },
+      { t: 'barra', etiqueta: 'Receiving objects', dur: 1100, cola: '486/486, 1.31 MiB | 4.2 MiB/s' },
       { t: 'blank' },
 
       { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
       { t: 'blank' },
 
-      { t: 'cm', v: es ? '# 2 — compilar los cuatro módulos' : '# 2 — build the four modules', paso: 1 },
+      { t: 'cm', v: es ? '# 2 — compilar los cuatro módulos y correr las pruebas'
+                       : '# 2 — build the four modules and run the tests', paso: 1 },
       { t: 'cmd', v: 'mvn install' },
       { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.1.0:', cls: 'tenue' },
-      { t: 'out', v: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   144 ✓' },
-      { t: 'out', v: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   229 ✓' },
-      { t: 'out', v: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
-      { t: 'out', v: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   145 ✓' },
-      { t: 'out', v: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
+      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   144 ✓' },
+      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   229 ✓' },
+      { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
+      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   145 ✓' },
+      { t: 'giro', v: 'ejemplo',  dur: 500,  fin: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
+      { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'out', v: es ? '        642 pruebas · 0 fallos · 0 dependencias · 223 KB'
-                        : '        642 tests · 0 failures · 0 dependencies · 223 KB', cls: 'ok' },
+      { t: 'contar', hasta: 642, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 223 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 223 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
       { t: 'cmd', v: 'java -cp ejemplo/target/classes:$CP ejemplo.App' },
+      { t: 'ascii' },
       { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 9 ms', cls: 'destacado' },
       { t: 'blank' },
 
@@ -1491,41 +1522,38 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 
   var idioma = 'es';
   var tiempos = [];
+  var intervalos = [];
   var reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function limpiar() {
-    tiempos.forEach(clearTimeout);
-    tiempos = [];
+    tiempos.forEach(clearTimeout); tiempos = [];
+    intervalos.forEach(clearInterval); intervalos = [];
     pantalla.textContent = '';
   }
-
   function esperar(ms, fn) { tiempos.push(setTimeout(fn, ms)); }
+  function abajo() { pantalla.scrollTop = pantalla.scrollHeight; }
 
   function nuevaLinea(clase) {
-    var linea = document.createElement('span');
-    linea.className = 'linea' + (clase ? ' ' + clase : '');
-    pantalla.appendChild(linea);
-    return linea;
+    var l = document.createElement('span');
+    l.className = 'linea' + (clase ? ' ' + clase : '');
+    pantalla.appendChild(l);
+    return l;
   }
-
-  function abajo() { pantalla.scrollTop = pantalla.scrollHeight; }
 
   function pintarPasos() {
     contenedorPasos.innerHTML = '';
-    textos[idioma].pasos.forEach(function (p, i) {
+    textos[idioma].pasos.forEach(function (p) {
       var caja = document.createElement('div');
       caja.className = 'paso';
-      caja.dataset.indice = String(i);
-      caja.innerHTML = '<div class="n">' + p.n + '</div>' +
-                       '<div class="que">' + p.que + '</div>' +
-                       '<div class="cuanto">' + p.cuanto + '</div>';
+      caja.innerHTML = '<div class="n">' + p.n + '</div><div class="que">' + p.que +
+                       '</div><div class="cuanto">' + p.cuanto + '</div>';
       contenedorPasos.appendChild(caja);
     });
   }
 
   function marcarPaso(indice) {
     Array.prototype.forEach.call(contenedorPasos.children, function (caja, i) {
-      caja.dataset.activo = i === indice ? 'si' : 'no';
+      caja.dataset.activo = i === indice ? 'si' : (i < indice ? 'hecho' : 'no');
     });
   }
 
@@ -1538,15 +1566,93 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
     pintarPasos();
   }
 
+  function escribir(destino, texto, alTerminar) {
+    var i = 0;
+    (function paso() {
+      if (i >= texto.length) { abajo(); if (alTerminar) alTerminar(); return; }
+      destino.textContent += texto.charAt(i++);
+      abajo();
+      tiempos.push(setTimeout(paso, 19 + (i % 3) * 4));
+    })();
+  }
+
+  function girar(linea, etiqueta, dur, fin, cls) {
+    var f = 0;
+    var id = setInterval(function () {
+      linea.textContent = ' ' + GIRO[f++ % GIRO.length] + '  ' + etiqueta;
+      abajo();
+    }, 70);
+    intervalos.push(id);
+    esperar(dur, function () {
+      clearInterval(id);
+      linea.className = 'linea' + (cls ? ' ' + cls : '');
+      linea.textContent = fin;
+      abajo();
+    });
+  }
+
+  function barrear(linea, etiqueta, dur, cola) {
+    var ANCHO = 22, t0 = Date.now();
+    var id = setInterval(function () {
+      var p = Math.min(1, (Date.now() - t0) / dur);
+      var lleno = Math.round(p * ANCHO);
+      linea.textContent = ' ' + etiqueta + ': ' +
+        '█'.repeat(lleno) + '░'.repeat(ANCHO - lleno) +
+        ' ' + String(Math.round(p * 100)).padStart(3) + '%';
+      abajo();
+      if (p >= 1) {
+        clearInterval(id);
+        linea.textContent = ' ' + etiqueta + ': 100% (' + cola + '), done.';
+      }
+    }, 45);
+    intervalos.push(id);
+  }
+
+  function contar(linea, hasta, dur, plantilla) {
+    var t0 = Date.now();
+    var id = setInterval(function () {
+      var p = Math.min(1, (Date.now() - t0) / dur);
+      var n = Math.round(p * p * (3 - 2 * p) * hasta);
+      linea.textContent = plantilla.replace('{n}', n);
+      abajo();
+      if (p >= 1) { clearInterval(id); linea.textContent = plantilla.replace('{n}', hasta); }
+    }, 45);
+    intervalos.push(id);
+  }
+
+  function pintarAscii(stagger) {
+    ASCII.forEach(function (fila, i) {
+      esperar(stagger ? i * 65 : 0, function () {
+        nuevaLinea('marca-ascii').textContent = fila;
+        abajo();
+      });
+    });
+  }
+
   function reproducir() {
     limpiar();
     rutaBarra.textContent = '~/proyectos';
     marcarPaso(-1);
 
-    var pasosGuion = guion(idioma);
+    var pasos = guion(idioma);
 
     if (reducido) {
-      pasosGuion.forEach(function (p) { pintarInstantaneo(p); });
+      pasos.forEach(function (p) {
+        if (p.t === 'blank') { nuevaLinea().textContent = ' '; return; }
+        if (p.t === 'ascii') { ASCII.forEach(function (f) { nuevaLinea('marca-ascii').textContent = f; }); return; }
+        if (p.t === 'giro') { nuevaLinea(p.cls).textContent = p.fin; return; }
+        if (p.t === 'barra') { nuevaLinea('tenue').textContent = ' ' + p.etiqueta + ': 100% (' + p.cola + '), done.'; return; }
+        if (p.t === 'contar') { nuevaLinea(p.cls).textContent = p.plantilla.replace('{n}', p.hasta); return; }
+        if (p.t === 'cm') { nuevaLinea('tenue').textContent = p.v; return; }
+        if (p.t === 'cmd' || p.t === 'cmd2') {
+          var l = nuevaLinea();
+          if (p.t === 'cmd') { var pr = document.createElement('span'); pr.className = 'prompt'; pr.textContent = '$ '; l.appendChild(pr); }
+          var c = document.createElement('span'); c.textContent = p.v; l.appendChild(c);
+          if (p.ruta) rutaBarra.textContent = p.ruta;
+          return;
+        }
+        nuevaLinea(p.cls).textContent = p.v;
+      });
       marcarPaso(3);
       abajo();
       return;
@@ -1554,95 +1660,83 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 
     var retraso = 300;
 
-    pasosGuion.forEach(function (p) {
+    pasos.forEach(function (p) {
       if (p.paso !== undefined) {
-        (function (indice) { esperar(retraso, function () { marcarPaso(indice); }); })(p.paso);
+        (function (i) { esperar(retraso, function () { marcarPaso(i); }); })(p.paso);
       }
 
-      if (p.t === 'blank') {
-        (function () { esperar(retraso, function () { nuevaLinea().textContent = ' '; abajo(); }); })();
-        retraso += 90;
-        return;
-      }
+      switch (p.t) {
+        case 'blank':
+          esperar(retraso, function () { nuevaLinea().textContent = ' '; abajo(); });
+          retraso += 85;
+          break;
 
-      if (p.t === 'cm') {
-        (function (texto) {
-          esperar(retraso, function () { nuevaLinea('tenue').textContent = texto; abajo(); });
-        })(p.v);
-        retraso += 420;
-        return;
-      }
+        case 'cm':
+          (function (v) { esperar(retraso, function () { nuevaLinea('tenue').textContent = v; abajo(); }); })(p.v);
+          retraso += 400;
+          break;
 
-      if (p.t === 'cmd' || p.t === 'cmd2') {
-        (function (texto, conPrompt, ruta) {
-          esperar(retraso, function () {
-            var linea = nuevaLinea();
-            if (conPrompt) {
-              var pr = document.createElement('span');
-              pr.className = 'prompt';
-              pr.textContent = '$ ';
-              linea.appendChild(pr);
-            }
-            var cuerpo = document.createElement('span');
-            linea.appendChild(cuerpo);
-            var cursor = document.createElement('i');
-            cursor.className = 'cursor';
-            linea.appendChild(cursor);
-            escribir(cuerpo, texto, function () {
-              cursor.remove();
-              if (ruta) rutaBarra.textContent = ruta;
+        case 'cmd':
+        case 'cmd2':
+          (function (v, conPrompt, ruta) {
+            esperar(retraso, function () {
+              var l = nuevaLinea();
+              if (conPrompt) {
+                var pr = document.createElement('span');
+                pr.className = 'prompt'; pr.textContent = '$ ';
+                l.appendChild(pr);
+              }
+              var cuerpo = document.createElement('span');
+              l.appendChild(cuerpo);
+              var cur = document.createElement('i');
+              cur.className = 'cursor';
+              l.appendChild(cur);
+              escribir(cuerpo, v, function () {
+                cur.remove();
+                if (ruta) rutaBarra.textContent = ruta;
+              });
             });
-          });
-        })(p.v, p.t === 'cmd', p.ruta);
-        retraso += 260 + p.v.length * 22;
-        return;
-      }
+          })(p.v, p.t === 'cmd', p.ruta);
+          retraso += 240 + p.v.length * 21;
+          break;
 
-      (function (texto, cls) {
-        esperar(retraso, function () { nuevaLinea(cls).textContent = texto; abajo(); });
-      })(p.v, p.cls);
-      retraso += 130;
+        case 'giro':
+          (function (etiqueta, dur, fin, cls) {
+            esperar(retraso, function () { girar(nuevaLinea('tenue'), etiqueta, dur, fin, cls); });
+          })(p.v, p.dur, p.fin, p.cls);
+          retraso += p.dur + 110;
+          break;
+
+        case 'barra':
+          (function (etiqueta, dur, cola) {
+            esperar(retraso, function () { barrear(nuevaLinea('tenue'), etiqueta, dur, cola); });
+          })(p.etiqueta, p.dur, p.cola);
+          retraso += p.dur + 140;
+          break;
+
+        case 'contar':
+          (function (hasta, dur, plantilla, cls) {
+            esperar(retraso, function () { contar(nuevaLinea(cls), hasta, dur, plantilla); });
+          })(p.hasta, p.dur, p.plantilla, p.cls);
+          retraso += p.dur + 160;
+          break;
+
+        case 'ascii':
+          (function () { esperar(retraso, function () { pintarAscii(true); }); })();
+          retraso += ASCII.length * 65 + 180;
+          break;
+
+        default:
+          (function (v, cls) {
+            esperar(retraso, function () { nuevaLinea(cls).textContent = v; abajo(); });
+          })(p.v, p.cls);
+          retraso += 125;
+      }
     });
   }
 
-  function pintarInstantaneo(p) {
-    if (p.t === 'blank') { nuevaLinea().textContent = ' '; return; }
-    if (p.t === 'cm') { nuevaLinea('tenue').textContent = p.v; return; }
-    if (p.t === 'cmd' || p.t === 'cmd2') {
-      var linea = nuevaLinea();
-      if (p.t === 'cmd') {
-        var pr = document.createElement('span');
-        pr.className = 'prompt';
-        pr.textContent = '$ ';
-        linea.appendChild(pr);
-      }
-      var cuerpo = document.createElement('span');
-      cuerpo.textContent = p.v;
-      linea.appendChild(cuerpo);
-      if (p.ruta) rutaBarra.textContent = p.ruta;
-      return;
-    }
-    nuevaLinea(p.cls).textContent = p.v;
-  }
-
-  function escribir(destino, texto, alTerminar) {
-    var i = 0;
-    (function paso() {
-      if (i >= texto.length) { abajo(); if (alTerminar) alTerminar(); return; }
-      destino.textContent += texto.charAt(i++);
-      abajo();
-      tiempos.push(setTimeout(paso, 20 + Math.round(i % 3) * 4));
-    })();
-  }
-
-  btnEs.addEventListener('click', function () {
-    if (idioma === 'es') return;
-    idioma = 'es'; aplicarIdioma(); reproducir();
-  });
-  btnEn.addEventListener('click', function () {
-    if (idioma === 'en') return;
-    idioma = 'en'; aplicarIdioma(); reproducir();
-  });
+  btnEs.addEventListener('click', function () { if (idioma !== 'es') { idioma = 'es'; aplicarIdioma(); reproducir(); } });
+  btnEn.addEventListener('click', function () { if (idioma !== 'en') { idioma = 'en'; aplicarIdioma(); reproducir(); } });
   btnRepetir.addEventListener('click', reproducir);
 
   aplicarIdioma();
@@ -1680,3 +1774,5 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
     secciones.forEach(function (s) { observador.observe(s); });
   })();
 </script>
+</body>
+</html>
