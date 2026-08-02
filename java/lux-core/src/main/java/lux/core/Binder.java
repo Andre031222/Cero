@@ -73,7 +73,11 @@ final class Binder {
             if (type == byte[].class) {
                 return context.bodyBytes();
             }
-            return context.body(type);
+            Object body = context.body(type);
+            if (parameter.isAnnotationPresent(Valid.class)) {
+                Validation.check(body);
+            }
+            return body;
         }
 
         if (type == Part.class) {

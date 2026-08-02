@@ -15,14 +15,24 @@ public final class Context {
     private final Request request;
     private final Response response;
     private final Map<String, String> pathVariables;
+    private final RouteEntry route;
     private final Map<String, Object> attributes = new HashMap<>(4);
 
     private Principal principal;
 
-    Context(Request request, Response response, Map<String, String> pathVariables) {
+    Context(Request request, Response response, Map<String, String> pathVariables, RouteEntry route) {
         this.request = request;
         this.response = response;
         this.pathVariables = pathVariables;
+        this.route = route;
+    }
+
+    public RouteEntry route() {
+        return route;
+    }
+
+    public boolean routed() {
+        return route != null;
     }
 
     public Request request() {

@@ -300,6 +300,7 @@ final class DispatcherTests {
 
         traza.clear();
         Http.get(base + "/nada");
-        Check.that("el middleware no corre en un 404", traza.isEmpty());
+        Check.equal("el middleware también corre en un 404",
+                String.join(",", traza), "entra,dentro");
     }
 }
