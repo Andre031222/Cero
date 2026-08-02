@@ -137,6 +137,18 @@ El núcleo heredado sigue compilando aparte, y todavía necesita Tomcat para `jx
 cd legacy/jxmvc-core && mvn test    # 347 pruebas
 ```
 
+## Web del proyecto
+
+La ficha técnica —módulos por separado, bases de datos, sistemas y estado real— está en
+[docs/web/index.html](docs/web/index.html). Es una página autocontenida, sin dependencias, que se
+puede servir con el propio LuxCore:
+
+```java
+Lux.app().port(8080)
+   .fallback(StaticFiles.from(Path.of("docs/web")))
+   .start();
+```
+
 ## Documentos
 
 - [docs/produccion.md](docs/produccion.md) — **¿está listo para producción?** (respuesta corta: no
