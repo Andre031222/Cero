@@ -56,20 +56,20 @@
       { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
       { t: 'blank' },
 
-      { t: 'cm', v: es ? '# 2 — compilar los cuatro módulos y correr las pruebas'
-                       : '# 2 — build the four modules and run the tests', paso: 1 },
+      { t: 'cm', v: es ? '# 2 — compilar los cinco módulos y correr las pruebas'
+                       : '# 2 — build the five modules and run the tests', paso: 1 },
       { t: 'cmd', v: 'mvn install' },
-      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.1.0:', cls: 'tenue' },
-      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   144 ✓' },
-      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   229 ✓' },
+      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.2.0:', cls: 'tenue' },
+      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   162 ✓' },
+      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   333 ✓' },
       { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
-      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   145 ✓' },
+      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   286 ✓' },
       { t: 'giro', v: 'ejemplo',  dur: 500,  fin: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 642, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 223 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 223 KB', cls: 'ok' },
+      { t: 'contar', hasta: 992, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 264 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 264 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },

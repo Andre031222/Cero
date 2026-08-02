@@ -651,7 +651,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>114</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>70</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>940</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>992</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="./lux correr">
@@ -780,7 +780,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">264 KB</td><td class="cifra">58×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">940</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">992</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -829,6 +829,11 @@ Lux.app()
             <div class="etiqueta">Integración</div>
             <p>Cliente HTTP con reintentos y eventos servidos — que es como transmiten las APIs
               de IA, así que consumirlas es una línea.</p>
+          </div>
+          <div class="rasgo">
+            <div class="etiqueta">Identidad</div>
+            <p>Entrar con Google, Microsoft o GitHub, con PKCE y verificación de firma del
+              <code>id_token</code>. Contraseñas con PBKDF2 y coste embebido.</p>
           </div>
           <div class="rasgo">
             <div class="etiqueta">Observabilidad</div>
@@ -1055,7 +1060,7 @@ Lux.app()
 
 ./lux instalar       <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux empaquetar     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux probar         <span class="cm"># las 940 pruebas</span>
+./lux probar         <span class="cm"># las 992 pruebas</span>
 ./lux correr         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux web            <span class="cm"># esta documentación, servida por LuxCore</span>
 ./lux cache          <span class="cm"># qué ocupa, y --purgar para vaciarla</span>
@@ -1181,12 +1186,12 @@ Lux.app()
 <pre>&lt;dependency&gt;
     &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
     &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;   <span class="cm">&lt;!-- arrastra lux-http --&gt;</span>
-    &lt;version&gt;<span class="st">0.1.0</span>&lt;/version&gt;
+    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
 &lt;/dependency&gt;
 
 <span class="cm">&lt;!-- opcionales --&gt;</span>
-&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.1.0</span>&lt;/version&gt;&lt;/dependency&gt;
-&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.1.0</span>&lt;/version&gt;&lt;/dependency&gt;
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;&lt;/dependency&gt;
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;&lt;/dependency&gt;
 
 <span class="cm">&lt;!-- el driver JDBC lo pone tu aplicación --&gt;</span>
 &lt;dependency&gt;&lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">42.7.3</span>&lt;/version&gt;&lt;/dependency&gt;</pre>
@@ -1322,7 +1327,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
           <div class="barra"><span class="etiqueta">Lambdas</span><span class="etiqueta">Java</span></div>
 <pre>.routes(r -&gt; r
     .get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
-    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.1.0"</span>))
+    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.2.0"</span>))
     .post(<span class="st">"/eco"</span>, ctx -&gt; ctx.bodyText()))</pre>
         </div>
       </section>
@@ -1554,7 +1559,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
     </nav>
     <main>
 <section id="piezas">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cuatro módulos</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cinco módulos</h2></div>
 
         <p>
           Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>lux-http</code>
@@ -1569,11 +1574,11 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
             <tbody>
               <tr>
                 <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
-                <td>—</td><td class="cifra">31</td><td class="cifra">2833</td><td class="cifra">144</td><td class="cifra">64 KB</td>
+                <td>—</td><td class="cifra">31</td><td class="cifra">2833</td><td class="cifra">162</td><td class="cifra">64 KB</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, CORS, CSRF, rate limit, configuración</span></td>
-                <td>lux-http</td><td class="cifra">49</td><td class="cifra">2954</td><td class="cifra">229</td><td class="cifra">80 KB</td>
+                <td>lux-http</td><td class="cifra">56</td><td class="cifra">4059</td><td class="cifra">333</td><td class="cifra">114 KB</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
@@ -1581,18 +1586,22 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
               </tr>
               <tr>
                 <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1258</td><td class="cifra">145</td><td class="cifra">35 KB</td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1362</td><td class="cifra">286</td><td class="cifra">34 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">414</td><td class="cifra">35</td><td class="cifra">12 KB</td>
               </tr>
               <tr class="total">
-                <td>Los cuatro</td><td>—</td><td class="cifra">103</td><td class="cifra">8019</td><td class="cifra">606</td><td class="cifra">218 KB</td>
+                <td>Los cinco</td><td>—</td><td class="cifra">114</td><td class="cifra">9918</td><td class="cifra">904</td><td class="cifra">264 KB</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <p>
-          Las 36 pruebas restantes hasta 642 son de la aplicación de ejemplo, que ejercita los
-          cuatro módulos de punta a punta.
+          Las 36 pruebas restantes hasta 940 son de la aplicación de ejemplo, que ejercita los
+          cinco módulos de punta a punta.
         </p>
       </section>
 <section id="servidor">
@@ -1917,23 +1926,26 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Motor</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Probado</span></td><td>En memoria y en archivo. Motor de la app de ejemplo y sus 36 pruebas.</td></tr>
-              <tr><td class="mono">PostgreSQL</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada del código es específico de un motor, pero no se ha corrido.</td></tr>
-              <tr><td class="mono">MySQL / MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Igual.</td></tr>
-              <tr><td class="mono">SQL Server</td><td><span class="pastilla parcial">Sin verificar</span></td><td><code>LIMIT</code>/<code>OFFSET</code> tiene otra sintaxis; la paginación necesitará ajuste.</td></tr>
-              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve columnas en mayúsculas, que ya está contemplado.</td></tr>
-              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura; el pool debería ir a 1.</td></tr>
+              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Verificado</span></td><td>En memoria y en archivo. Motor de la aplicación de ejemplo y de sus 36 pruebas de punta a punta.</td></tr>
+              <tr><td class="mono">PostgreSQL 16</td><td><span class="pastilla ok">Verificado</span></td><td>47 casos en contenedor: <code>BIGSERIAL</code>, decimales exactos, booleanos nativos, fechas y <code>LIMIT/OFFSET</code>.</td></tr>
+              <tr><td class="mono">MySQL 8</td><td><span class="pastilla ok">Verificado</span></td><td>Los mismos 47 casos: <code>AUTO_INCREMENT</code>, booleanos sobre <code>TINYINT</code> y claves generadas.</td></tr>
+              <tr><td class="mono">MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Comparte protocolo y dialecto con MySQL, así que debería comportarse igual.</td></tr>
+              <tr><td class="mono">SQL Server</td><td><span class="pastilla pend">Necesita trabajo</span></td><td>No admite <code>LIMIT/OFFSET</code>: usa <code>OFFSET … FETCH</code>. La paginación requiere un ajuste.</td></tr>
+              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve las columnas en mayúsculas, que ya está contemplado desde que se corrigió ese fallo.</td></tr>
+              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura: el pool debería configurarse a 1.</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="aviso">
-          <div class="etiqueta">«Sin verificar» quiere decir sin verificar</div>
+        <div class="aviso nota">
+          <div class="etiqueta">Qué significa «verificado» aquí</div>
           <p>
-            Los tipos, las zonas horarias y la paginación cambian entre motores. La capa se prueba
-            contra un driver propio que registra el SQL generado — eso cubre su responsabilidad,
-            no las diferencias entre motores. Hasta correrla contra PostgreSQL y MySQL reales,
-            «debería andar» es una hipótesis.
+            Los tres motores marcados pasan <b>la misma batería de 47 casos</b>, levantados en
+            contenedores: claves generadas, decimales exactos, booleanos, fechas, paginación,
+            alias en mayúsculas, transacciones confirmadas y deshechas, repositorios e inserción
+            por lotes. Esa batería encontró un fallo real —<code>Row.as()</code> ignoraba
+            <code>@Column</code> y devolvía los campos en null— que ninguna prueba con driver
+            simulado había detectado.
           </p>
         </div>
       </section>
@@ -1949,7 +1961,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 642 pruebas.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 992 pruebas.</td></tr>
               <tr><td class="mono">Linux</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Es el destino previsto para producción, pero no se ha ejecutado allí.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
@@ -1983,12 +1995,12 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">264 KB</td></tr>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
-              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">8 019</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">642</td></tr>
-              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">49 %</td></tr>
+              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">9 918</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">992</td></tr>
+              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">56 %</td></tr>
             </tbody>
           </table>
         </div>
@@ -2010,64 +2022,159 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 <div class="hoja" id="p-estado" hidden>
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Estado</h1>
-    <p class="entradilla">Qué está probado de verdad, qué no lo está, y qué falta antes de poner esto en producción.</p>
+    <p class="entradilla">
+      Qué está verificado de verdad, qué no lo está, y qué falta antes de poner esto delante de
+      tráfico real. Sin adornos: esta es la misma lista con la que decidimos en qué trabajar.
+    </p>
   </header>
 
   <div class="cuerpo">
     <nav class="indice" aria-label="En esta página">
       <ol>
-        <li><a href="#estado"><span class="n">01</span> Frente a producción</a></li>
+        <li><a href="#veredicto"><span class="n">01</span> Veredicto</a></li>
+        <li><a href="#verificado"><span class="n">02</span> Verificado</a></li>
+        <li><a href="#falta"><span class="n">03</span> Lo que falta</a></li>
+        <li><a href="#hallados"><span class="n">04</span> Fallos hallados</a></li>
+        <li><a href="#camino"><span class="n">05</span> El camino</a></li>
       </ol>
     </nav>
+
     <main>
-<section id="estado">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Estado</h2></div>
+
+      <section id="veredicto">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Veredicto</h2></div>
 
         <div class="aviso">
-          <div class="etiqueta">No usar en producción todavía</div>
+          <div class="etiqueta">No lo pongas todavía delante de tráfico de desconocidos</div>
           <p>
             El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
-            pocas horas de escribirlo, y construir la primera aplicación real destapó otros cuatro
-            fallos —entre ellos que la capa de datos devolvía todos los campos en null contra
-            cualquier motor que use mayúsculas en los nombres de columna—. Todos están corregidos
-            y cubiertos por pruebas. El punto es que aparecieron, y que ese proceso no ha terminado.
+            pocas horas de escribirlo, y la primera aplicación real destapó otros cuatro fallos.
+            Todos están corregidos y cubiertos por pruebas — el punto es que aparecieron, y que
+            ese proceso no ha terminado.
           </p>
         </div>
 
-        <ul class="lista-estado">
-          <li><span class="si">✓</span><div>642 pruebas en verde, cero dependencias verificadas</div></li>
-          <li><span class="si">✓</span><div>Una aplicación completa corriendo de punta a punta: vistas, formularios, base de datos y API REST</div></li>
-          <li><span class="si">✓</span><div>Endurecimiento explícito: request smuggling, path traversal, inyección de cabeceras, CSRF</div></li>
-          <li><span class="si">✓</span><div>TLS, techo de conexiones, timeout de handler y apagado ordenado</div></li>
-          <li><span class="no">✗</span><div>Sin fuzzing del parser ni banco de conformidad HTTP/1.1</div></li>
-          <li><span class="no">✗</span><div>Sin correr contra PostgreSQL o MySQL reales</div></li>
-          <li><span class="no">✗</span><div>Sin prueba de carga sostenida con conexiones hostiles</div></li>
-          <li><span class="no">✗</span><div>Sin ejecutar nunca en Linux ni en Windows</div></li>
-          <li><span class="no">✗</span><div>Sin log de acceso, métricas ni WebSocket</div></li>
-          <li><span class="no">✗</span><div>Sesiones por proceso: no escala a varias instancias</div></li>
-        </ul>
-
-        <h3>Para qué sirve hoy</h3>
-        <p>
-          Para un proyecto interno, un prototipo o una herramienta de equipo, detrás de una red de
-          confianza. No para algo que reciba tráfico de desconocidos.
-        </p>
-
-        <h3>Qué haría falta para cambiar eso</h3>
-        <p>
-          En orden, porque cada paso informa al siguiente: correr la capa de datos contra
-          PostgreSQL y MySQL reales; migrar métricas y log de acceso, porque sin observabilidad no
-          se opera nada; fuzzing del parser y conformidad HTTP/1.1; el banco de pruebas comparativo
-          en hardware aislado; una prueba de carga larga con conexiones hostiles; y por último una
-          aplicación pequeña y de bajo riesgo en producción, durante semanas, antes de mover nada
-          importante.
-        </p>
-        <p>
-          Aun cumplido todo eso, el primer despliegue debería ir detrás de nginx o Caddy. El proxy
-          absorbe TLS, slowloris, HTTP/2 y el log de acceso, que son justo los cinco puntos donde
-          LuxCore es más joven.
+        <p class="medida">
+          <b>Sirve hoy</b> para un proyecto interno, un prototipo o una herramienta de equipo,
+          detrás de una red de confianza. <b>No sirve todavía</b> para algo expuesto a internet
+          sin un proxy delante.
         </p>
       </section>
+
+      <section id="verificado">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Verificado</h2></div>
+
+        <ul class="lista-estado">
+          <li><span class="si">✓</span><div><b>992 pruebas en verde</b> y cero dependencias externas comprobadas en el núcleo</div></li>
+          <li><span class="si">✓</span><div><b>Bases de datos reales:</b> 47 casos idénticos contra H2 2.2, PostgreSQL 16 y MySQL 8 en contenedores — claves generadas, decimales, booleanos, fechas, paginación, transacciones y repositorios</div></li>
+          <li><span class="si">✓</span><div><b>Clientes hostiles:</b> conexiones a medias que caducan, 20 sockets mudos a la vez, <code>Content-Length</code> que miente, chunk de 4 GB declarado y 15 clientes cortando a media respuesta</div></li>
+          <li><span class="si">✓</span><div><b>Concurrencia:</b> 1000 peticiones simultáneas comprobando que ninguna respuesta se mezcla con otra</div></li>
+          <li><span class="si">✓</span><div><b>Entradas malformadas:</b> 24 casos — bytes nulos, <code>Content-Length</code> negativo y de 20 dígitos, 500 cabeceras, ruta de 20 KB, <code>Host</code> de 50 KB — sin una sola excepción ni 5xx inesperado</div></li>
+          <li><span class="si">✓</span><div><b>Endurecimiento explícito:</b> request smuggling, path traversal, inyección de cabeceras, CSRF y cabeceras de seguridad</div></li>
+          <li><span class="si">✓</span><div><b>Operación:</b> TLS, techo de conexiones, timeout de handler, apagado ordenado, métricas por ruta con percentiles y log de acceso</div></li>
+          <li><span class="si">✓</span><div><b>Una aplicación completa</b> corriendo de punta a punta: vistas, formularios, base de datos y API REST, con 36 pruebas propias</div></li>
+          <li><span class="si">✓</span><div><b>Salida sin cerrar puertas:</b> <code>lux-adapter-servlet</code> despliega la misma aplicación en Tomcat, así que migrar es reversible</div></li>
+        </ul>
+      </section>
+
+      <section id="falta">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Lo que falta</h2></div>
+
+        <ul class="lista-estado">
+          <li><span class="no">✗</span><div><b>No se ha ejecutado nunca en Linux ni en Windows.</b> Es el destino previsto para producción y sigue sin pisarlo</div></li>
+          <li><span class="no">✗</span><div><b>Sin cifras de rendimiento válidas.</b> Lo medido hasta ahora tenía cliente y servidor en la misma máquina; el banco comparativo está montado pero pendiente de correr en hardware aislado</div></li>
+          <li><span class="no">✗</span><div><b>Sin banco de conformidad HTTP/1.1.</b> Hay fuzzing dirigido, pero no una suite de conformidad reconocida</div></li>
+          <li><span class="no">✗</span><div><b>Sin carga sostenida de horas.</b> Las pruebas hostiles son ráfagas; falta vigilar memoria y descriptores durante mucho rato</div></li>
+          <li><span class="no">✗</span><div><b>Sin WebSocket.</b> Las aplicaciones que lo usen no pueden migrar todavía</div></li>
+          <li><span class="no">✗</span><div><b>Sesiones por proceso.</b> No escala a varias instancias sin sesión pegajosa o un almacén compartido</div></li>
+          <li><span class="no">✗</span><div><b>Sin recarga de certificado TLS.</b> Renovarlo obliga a reiniciar</div></li>
+          <li><span class="no">✗</span><div><b>Sin auditoría de accesos.</b> Hay log de acceso, pero no un rastro inmutable de quién hizo qué — lo pediría cualquier entorno regulado</div></li>
+        </ul>
+      </section>
+
+      <section id="hallados">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Fallos hallados</h2></div>
+
+        <p class="medida">
+          Se listan porque dicen más sobre la madurez del proyecto que cualquier promesa. Los cinco
+          aparecieron durante el desarrollo, no en producción, y cada uno dejó una prueba detrás.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Qué</th><th>Cómo apareció</th><th>Gravedad</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><b>Inyección CRLF en cabeceras</b><span class="detalle">Un valor con retorno de carro venido del usuario permitía partir la respuesta</span></td>
+                <td>Auditoría, a las pocas horas de escribir el módulo</td>
+                <td><span class="pastilla pend">Alta</span></td>
+              </tr>
+              <tr>
+                <td><b>Campos en null contra motores reales</b><span class="detalle"><code>Row.as()</code> ignoraba <code>@Column</code>; H2 y Oracle devuelven las columnas en mayúsculas</span></td>
+                <td>Primera consulta contra PostgreSQL y MySQL</td>
+                <td><span class="pastilla pend">Alta</span></td>
+              </tr>
+              <tr>
+                <td><b>Sin soporte de formularios HTML</b><span class="detalle">No se parseaba <code>x-www-form-urlencoded</code>: ninguna aplicación con un formulario funcionaba</span></td>
+                <td>Al construir la aplicación de ejemplo</td>
+                <td><span class="pastilla parcial">Media</span></td>
+              </tr>
+              <tr>
+                <td><b>La convención de rutas rompía REST</b><span class="detalle"><code>@Post</code> sin valor mapeaba a <code>/base/nombreDelMétodo</code>, así que <code>POST /api/tareas</code> daba 405</span></td>
+                <td>Al construir la aplicación de ejemplo</td>
+                <td><span class="pastilla parcial">Media</span></td>
+              </tr>
+              <tr>
+                <td><b>Off-by-one en el limitador de peticiones</b><span class="detalle">Rechazaba con «usado mayor que máximo», pero al llegar al máximo ya no queda cupo</span></td>
+                <td>Su propia prueba</td>
+                <td><span class="pastilla parcial">Media</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="camino">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>El camino</h2></div>
+
+        <p class="medida">
+          En orden, porque cada paso informa al siguiente y ninguno tiene sentido sin el anterior:
+        </p>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">01 · Linux</div>
+            <div>Ejecutar la suite entera en el sistema donde va a vivir. Hasta entonces,
+              «multiplataforma» es una suposición razonable, no un hecho.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">02 · Rendimiento</div>
+            <div>Correr el banco comparativo en hardware aislado, contra Spring, Quarkus,
+              Micronaut y Javalin. Está montado y la imagen verificada; falta la máquina.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">03 · Carga larga</div>
+            <div>Horas de tráfico con conexiones hostiles, vigilando memoria y descriptores. Las
+              fugas no aparecen en ráfagas de segundos.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">04 · Una aplicación pequeña</div>
+            <div>Elegir algo real y de bajo riesgo, ponerlo en producción y dejarlo semanas antes
+              de mover nada importante.</div>
+          </div>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Y aun así, un proxy delante</div>
+          <p>
+            Aunque se cumpla todo lo anterior, el primer despliegue debería ir detrás de nginx o
+            Caddy. El proxy absorbe TLS, slowloris, HTTP/2 y el log de acceso — que son justo los
+            puntos donde LuxCore es más joven. Cuando lleve meses de tráfico real, se discute
+            quitarlo.
+          </p>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -2644,20 +2751,20 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
       { t: 'blank' },
 
-      { t: 'cm', v: es ? '# 2 — compilar los cuatro módulos y correr las pruebas'
-                       : '# 2 — build the four modules and run the tests', paso: 1 },
+      { t: 'cm', v: es ? '# 2 — compilar los cinco módulos y correr las pruebas'
+                       : '# 2 — build the five modules and run the tests', paso: 1 },
       { t: 'cmd', v: 'mvn install' },
-      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.1.0:', cls: 'tenue' },
-      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   144 ✓' },
-      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   229 ✓' },
+      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.2.0:', cls: 'tenue' },
+      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   162 ✓' },
+      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   333 ✓' },
       { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
-      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   145 ✓' },
+      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   286 ✓' },
       { t: 'giro', v: 'ejemplo',  dur: 500,  fin: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 642, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 223 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 223 KB', cls: 'ok' },
+      { t: 'contar', hasta: 992, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 264 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 264 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
