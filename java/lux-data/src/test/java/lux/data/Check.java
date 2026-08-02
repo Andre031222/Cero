@@ -53,6 +53,10 @@ final class Check {
         }
     }
 
+    static void omitido(String motivo) {
+        System.out.println("  --  omitido: " + motivo);
+    }
+
     static int failures() {
         return failed;
     }
