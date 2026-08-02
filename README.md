@@ -139,13 +139,22 @@ cd legacy/jxmvc-core && mvn test    # 347 pruebas
 
 ## Web del proyecto
 
-Todo en `docs/web/`, autocontenido y sin dependencias:
+Sitio de siete páginas en `docs/web/`, sin dependencias ni paso de compilación de terceros:
+HTML, una hoja de estilo y dos guiones. Nada de npm.
 
 | Página | Qué es |
 |---|---|
-| [index.html](docs/web/index.html) | Documentación completa: 18 secciones con índice lateral, desde rutas hasta el estado real |
-| [instalacion.html](docs/web/instalacion.html) | Guía de instalación en terminal animada, bilingüe ES/EN |
+| [index.html](docs/web/index.html) | Portada: qué es, un vistazo al código y por dónde seguir |
+| [empezar.html](docs/web/empezar.html) | Instalación con guía en terminal animada, bilingüe ES/EN |
+| [guia.html](docs/web/guia.html) | Rutas, parámetros, respuestas, inyección, validación y errores |
+| [modulos.html](docs/web/modulos.html) | Servidor, vistas, datos, seguridad y configuración |
+| [referencia.html](docs/web/referencia.html) | Motores verificados, sistemas y comparación con Tomcat |
+| [estado.html](docs/web/estado.html) | Qué está probado y qué falta para producción |
 | [marca/](docs/web/marca/) | El logo: construcción, tamaños, uso y `logo.svg` suelto |
+
+Las páginas se generan con `python3 docs/web/construir.py`, que envuelve los fragmentos de
+`docs/web/contenido/` con la cabecera, la navegación y el pie. Así la navegación se escribe una
+sola vez.
 
 Se puede servir con el propio LuxCore:
 

@@ -1,0 +1,172 @@
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Un framework web que no arrastra nada</h1>
+    <p class="entradilla">
+      LuxCore atiende HTTP, enruta, inyecta, valida, renderiza y habla con la base de datos
+      usando solo el JDK. Sin contenedor de servlets, sin <code>web.xml</code>, sin despliegue:
+      <code>java -jar</code> y está corriendo.
+    </p>
+  </header>
+
+  <div class="medidas">
+    <div class="celda">
+      <span class="cifra-grande">70<span class="unidad"> ms</span></span>
+      <div class="etiqueta">Arranque</div>
+      <div class="contra">JVM incluida · <s>1392 ms</s> sobre Tomcat</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">223<span class="unidad"> KB</span></span>
+      <div class="etiqueta">Artefacto</div>
+      <div class="contra">los cuatro módulos juntos</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">0</span>
+      <div class="etiqueta">Dependencias</div>
+      <div class="contra">solo el JDK</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">889</span>
+      <div class="etiqueta">Pruebas</div>
+      <div class="contra">runner propio, sin JUnit</div>
+    </div>
+    <div class="celda">
+      <span class="cifra-grande">8019</span>
+      <div class="etiqueta">Líneas</div>
+      <div class="contra">103 clases de producción</div>
+    </div>
+  </div>
+
+  <div class="cuerpo sin-indice">
+    <main>
+
+      <section id="vistazo">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Un vistazo</h2></div>
+
+        <p>
+          Un controlador es una clase corriente. Lo que devuelve decide el formato: un objeto se
+          serializa a JSON, un <code>String</code> sale como texto plano, <code>null</code> es un
+          204. Sin anotación de por medio.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">TareaController.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Route</span>(<span class="st">"/api/tareas"</span>)
+<span class="kw">public class</span> TareaController {
+
+    <span class="an">@Inject</span> Tareas tareas;
+
+    <span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+    <span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+        <span class="kw">return</span> tareas.findById(id);
+    }
+
+    <span class="an">@Post</span>
+    <span class="kw">public</span> Object crear(<span class="an">@Body @Valid</span> Tarea tarea) {
+        <span class="kw">return</span> Result.created(tareas.insert(tarea));
+    }
+}
+
+Lux.run(<span class="st">8080</span>, TareaController.class);</pre>
+        </div>
+
+        <p>
+          Si un campo no pasa la validación, la respuesta es un 422 con el mapa de campos y su
+          motivo, sin que haya que escribirlo.
+        </p>
+      </section>
+
+      <section id="por-donde">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Por dónde seguir</h2></div>
+
+        <div class="tarjetas">
+          <a class="tarjeta" href="./empezar.html">
+            <div class="etiqueta">01</div>
+            <h3>Empezar</h3>
+            <p>Clonar, compilar y tener un servidor respondiendo, con la guía en terminal paso a paso.</p>
+          </a>
+          <a class="tarjeta" href="./guia.html">
+            <div class="etiqueta">02</div>
+            <h3>Guía</h3>
+            <p>Rutas, vinculación de parámetros, respuestas, inyección, validación y manejo de errores.</p>
+          </a>
+          <a class="tarjeta" href="./modulos.html">
+            <div class="etiqueta">03</div>
+            <h3>Módulos</h3>
+            <p>Servidor, vistas, datos y seguridad. Qué trae cada uno y cómo tomarlos por separado.</p>
+          </a>
+          <a class="tarjeta" href="./referencia.html">
+            <div class="etiqueta">04</div>
+            <h3>Referencia</h3>
+            <p>Motores de base de datos verificados, sistemas donde corre y comparación con Tomcat.</p>
+          </a>
+          <a class="tarjeta" href="./estado.html">
+            <div class="etiqueta">05</div>
+            <h3>Estado</h3>
+            <p>Qué está probado de verdad y qué falta antes de poner esto delante de tráfico real.</p>
+          </a>
+          <a class="tarjeta" href="./marca/index.html">
+            <div class="etiqueta">06</div>
+            <h3>Logo</h3>
+            <p>Construcción de la marca, tamaños, uso sobre fondos y el SVG suelto.</p>
+          </a>
+        </div>
+      </section>
+
+      <section id="principios">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Principios</h2></div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Cero dependencias</div>
+            <div>Solo el JDK. El driver JDBC de tu base de datos es la única excepción, y la pone
+              la aplicación. Esta misma página se sirve con LuxCore y tampoco necesita nada.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Legible antes que ingenioso</div>
+            <div>Si una clase no se puede leer de corrido, se parte. Las 1041 líneas del despachador
+              heredado se rehicieron como once clases con una responsabilidad cada una.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Medido, no proclamado</div>
+            <div>Toda afirmación de rendimiento sale del banco de pruebas. Los números que no se
+              pudieron medir en condiciones no aparecen — ni siquiera con letra pequeña.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Honesto sobre lo que falta</div>
+            <div>La página de <a href="./estado.html">estado</a> dice que no está listo para
+              producción y enumera por qué. Prometer madurez que no existe es la forma más rápida
+              de quemar el proyecto con el primer usuario.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="de-donde">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>De dónde viene</h2></div>
+
+        <p>
+          LuxCore nace de JxMVC 3.4.0, un framework MVC con cero dependencias que funciona y está
+          en producción — pero que necesita Tomcat para arrancar. La comparación no es contra un
+          rival cualquiera: es contra su propio antecesor.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <tbody>
+              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">223 KB</td></tr>
+              <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td></tr>
+              <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
+              <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">889</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Y no hay que saltar de golpe: <code>lux-adapter-servlet</code> permite desplegar una
+          aplicación LuxCore dentro de Tomcat, así que la migración es reversible.
+        </p>
+      </section>
+
+    </main>
+  </div>

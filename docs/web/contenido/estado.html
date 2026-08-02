@@ -1,0 +1,62 @@
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Estado</h1>
+    <p class="entradilla">Qué está probado de verdad, qué no lo está, y qué falta antes de poner esto en producción.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#estado"><span class="n">01</span> Frente a producción</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="estado">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Estado</h2></div>
+
+        <div class="aviso">
+          <div class="etiqueta">No usar en producción todavía</div>
+          <p>
+            El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
+            pocas horas de escribirlo, y construir la primera aplicación real destapó otros cuatro
+            fallos —entre ellos que la capa de datos devolvía todos los campos en null contra
+            cualquier motor que use mayúsculas en los nombres de columna—. Todos están corregidos
+            y cubiertos por pruebas. El punto es que aparecieron, y que ese proceso no ha terminado.
+          </p>
+        </div>
+
+        <ul class="lista-estado">
+          <li><span class="si">✓</span><div>642 pruebas en verde, cero dependencias verificadas</div></li>
+          <li><span class="si">✓</span><div>Una aplicación completa corriendo de punta a punta: vistas, formularios, base de datos y API REST</div></li>
+          <li><span class="si">✓</span><div>Endurecimiento explícito: request smuggling, path traversal, inyección de cabeceras, CSRF</div></li>
+          <li><span class="si">✓</span><div>TLS, techo de conexiones, timeout de handler y apagado ordenado</div></li>
+          <li><span class="no">✗</span><div>Sin fuzzing del parser ni banco de conformidad HTTP/1.1</div></li>
+          <li><span class="no">✗</span><div>Sin correr contra PostgreSQL o MySQL reales</div></li>
+          <li><span class="no">✗</span><div>Sin prueba de carga sostenida con conexiones hostiles</div></li>
+          <li><span class="no">✗</span><div>Sin ejecutar nunca en Linux ni en Windows</div></li>
+          <li><span class="no">✗</span><div>Sin log de acceso, métricas ni WebSocket</div></li>
+          <li><span class="no">✗</span><div>Sesiones por proceso: no escala a varias instancias</div></li>
+        </ul>
+
+        <h3>Para qué sirve hoy</h3>
+        <p>
+          Para un proyecto interno, un prototipo o una herramienta de equipo, detrás de una red de
+          confianza. No para algo que reciba tráfico de desconocidos.
+        </p>
+
+        <h3>Qué haría falta para cambiar eso</h3>
+        <p>
+          En orden, porque cada paso informa al siguiente: correr la capa de datos contra
+          PostgreSQL y MySQL reales; migrar métricas y log de acceso, porque sin observabilidad no
+          se opera nada; fuzzing del parser y conformidad HTTP/1.1; el banco de pruebas comparativo
+          en hardware aislado; una prueba de carga larga con conexiones hostiles; y por último una
+          aplicación pequeña y de bajo riesgo en producción, durante semanas, antes de mover nada
+          importante.
+        </p>
+        <p>
+          Aun cumplido todo eso, el primer despliegue debería ir detrás de nginx o Caddy. El proxy
+          absorbe TLS, slowloris, HTTP/2 y el log de acceso, que son justo los cinco puntos donde
+          LuxCore es más joven.
+        </p>
+      </section>
+    </main>
+  </div>
