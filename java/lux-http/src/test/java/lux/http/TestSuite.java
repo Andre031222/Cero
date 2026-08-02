@@ -14,6 +14,7 @@ public final class TestSuite {
         MultipartTests.run();
         GzipTests.run();
         StaticFilesTests.run();
+        HostileTests.run();
 
         Check.report();
         if (Check.failures() > 0) {
