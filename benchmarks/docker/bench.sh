@@ -13,7 +13,7 @@ DUR="${2:-20}"
 REPS="${3:-3}"
 CPUS="${BENCH_CPUS:-2}"
 MEM="${BENCH_MEM:-1g}"
-PORT=8080
+PORT="${BENCH_PORT:-8080}"
 # Reproducibilidad avanzada (opcional):
 #   BENCH_CPUSET="0,1"      -> fija el contenedor a esos núcleos (docker --cpuset-cpus)
 #   BENCH_CLIENT_CPUS="2,3" -> fija el LoadClient a OTROS núcleos (taskset) para no competir
@@ -29,7 +29,7 @@ CSV="$HERE/../results/raw-docker.csv"
 
 # Orden: jxmvc primero, luego los rivales. El contexto de build de jxmvc es el REPO
 # (necesita compilar JxMVC.Core); el de los demás es su propia carpeta.
-APPS=(jxmvc spring quarkus micronaut javalin)
+APPS=(luxcore jxmvc spring quarkus micronaut javalin)
 # BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 
@@ -39,12 +39,22 @@ docker info >/dev/null 2>&1 || { echo "Docker no está corriendo. Inicia Docker 
 
 echo "framework,image_mb,startup_ms,rss_mb,endpoint,conns,dur,requests,errors,non2xx,rps,meanMs,p50,p90,p95,p99" > "$CSV"
 
+# Milisegundos desde época. GNU date admite %3N; BSD (macOS) no, así que se cae a python3.
+ahora_ms() {
+  local t
+  t=$(date +%s%3N 2>/dev/null)
+  case "$t" in
+    *N|"") python3 -c 'import time;print(int(time.time()*1000))' ;;
+    *) echo "$t" ;;
+  esac
+}
+
 wait_up() {  # espera 200 en /plaintext, imprime ms de arranque
   local start now code
-  start=$(date +%s%3N)
+  start=$(ahora_ms)
   for _ in $(seq 1 600); do
     code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/plaintext" 2>/dev/null || echo 000)
-    [ "$code" = "200" ] && { now=$(date +%s%3N); echo $((now-start)); return 0; }
+    [ "$code" = "200" ] && { now=$(ahora_ms); echo $((now-start)); return 0; }
     sleep 0.1
   done
   echo "-1"; return 1
@@ -55,8 +65,8 @@ for fw in "${APPS[@]}"; do
   img="bench-$fw"
   blog="/tmp/bench-build-$fw.log"
   bok=1
-  if [ "$fw" = "jxmvc" ]; then
-    docker build -t "$img" -f "$HERE/apps/jxmvc/Dockerfile" "$REPO" >"$blog" 2>&1 || bok=0
+  if [ "$fw" = "jxmvc" ] || [ "$fw" = "luxcore" ]; then
+    docker build -t "$img" -f "$HERE/apps/$fw/Dockerfile" "$REPO" >"$blog" 2>&1 || bok=0
   elif [ "$fw" = "quarkus-native" ]; then
     docker build -t "$img" -f "$HERE/apps/quarkus/Dockerfile.native" "$HERE/apps/quarkus" >"$blog" 2>&1 || bok=0
   else

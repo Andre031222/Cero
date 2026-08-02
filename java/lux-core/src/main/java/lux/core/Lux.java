@@ -123,10 +123,14 @@ public final class Lux {
         return config;
     }
 
+    public Handler handler() {
+        Handler dispatcher = new Dispatcher(router, registry, middleware, authenticator, views);
+        return fallback == null ? dispatcher : withFallback(dispatcher);
+    }
+
     public Server start() {
         long began = System.nanoTime();
-        Handler dispatcher = new Dispatcher(router, registry, middleware, authenticator, views);
-        Handler handler = fallback == null ? dispatcher : withFallback(dispatcher);
+        Handler handler = handler();
 
         Server server = Server.start(options, handler, reporter);
         if (banner) {
