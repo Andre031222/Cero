@@ -6,9 +6,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-final class Http {
+final class Cliente {
 
-    private Http() {
+    private Cliente() {
     }
 
     static HttpResponse<String> get(String url) throws Exception {

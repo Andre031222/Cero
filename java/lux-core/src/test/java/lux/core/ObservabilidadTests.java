@@ -113,12 +113,12 @@ final class ObservabilidadTests {
         try {
             String base = "http://127.0.0.1:" + servidor.port();
 
-            Http.get(base + "/tienda");
-            Http.get(base + "/tienda");
-            Http.get(base + "/tienda/7");
-            Http.get(base + "/tienda/999");
-            Http.get(base + "/tienda/lento");
-            Http.get(base + "/tienda/roto");
+            Cliente.get(base + "/tienda");
+            Cliente.get(base + "/tienda");
+            Cliente.get(base + "/tienda/7");
+            Cliente.get(base + "/tienda/999");
+            Cliente.get(base + "/tienda/lento");
+            Cliente.get(base + "/tienda/roto");
 
             Metrics.Resumen resumen = metricas.snapshot();
             Check.equal("cuenta todas las peticiones", resumen.peticiones(), 6L);
@@ -146,14 +146,14 @@ final class ObservabilidadTests {
             Check.that("las rutas ignoradas no se cuentan",
                     resumen.rutas().stream().noneMatch(r -> r.ruta().contains("/lux/")));
 
-            String json = Http.get(base + "/lux/metrics").body();
+            String json = Cliente.get(base + "/lux/metrics").body();
             Check.that("el endpoint JSON expone el total", json.contains("\"peticiones\":"));
             Check.that("y el detalle por ruta", json.contains("GET /tienda"));
             Check.equal("con tipo JSON",
-                    Http.get(base + "/lux/metrics").headers().firstValue("content-type").orElse(null),
+                    Cliente.get(base + "/lux/metrics").headers().firstValue("content-type").orElse(null),
                     "application/json");
 
-            String prometheus = Http.get(base + "/lux/metrics/prometheus").body();
+            String prometheus = Cliente.get(base + "/lux/metrics/prometheus").body();
             Check.that("Prometheus declara el tipo de métrica",
                     prometheus.contains("# TYPE lux_requests_total counter"));
             Check.that("expone el contador por ruta",
@@ -179,26 +179,26 @@ final class ObservabilidadTests {
         try {
             String base = "http://127.0.0.1:" + servidor.port();
 
-            Http.get(base + "/tienda");
+            Cliente.get(base + "/tienda");
             Check.equal("registra una línea por petición", lineas.size(), 1);
             Check.that("con el verbo y la ruta", lineas.get(0).contains("\"GET /tienda HTTP/1.1\""));
             Check.that("y el estado", lineas.get(0).contains("\" 200 "));
             Check.that("y el usuario anónimo como guion", lineas.get(0).contains(" - - ["));
 
             lineas.clear();
-            Http.get(base + "/tienda/999");
+            Cliente.get(base + "/tienda/999");
             Check.that("registra también los errores", lineas.get(0).contains("\" 404 "));
 
             lineas.clear();
-            Http.get(base + "/tienda/roto");
+            Cliente.get(base + "/tienda/roto");
             Check.that("y las excepciones no controladas", lineas.get(0).contains("\" 500 "));
 
             lineas.clear();
-            Http.get(base + "/salud");
+            Cliente.get(base + "/salud");
             Check.equal("las rutas ignoradas no se registran", lineas.size(), 0);
 
             lineas.clear();
-            Http.get(base + "/tienda?buscar=zapato");
+            Cliente.get(base + "/tienda?buscar=zapato");
             Check.that("conserva la cadena de consulta",
                     lineas.get(0).contains("/tienda?buscar=zapato"));
         } finally {
@@ -211,7 +211,7 @@ final class ObservabilidadTests {
                 .controllers(TiendaController.class)
                 .start();
         try {
-            Http.get("http://127.0.0.1:" + compacto.port() + "/tienda");
+            Cliente.get("http://127.0.0.1:" + compacto.port() + "/tienda");
             Check.that("el formato compacto lleva el tiempo", compactas.get(0).contains(" ms"));
             Check.that("y la ruta", compactas.get(0).endsWith("/tienda"));
         } finally {
