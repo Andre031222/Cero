@@ -57,7 +57,9 @@ final class ResponseOverServlet implements Response {
     @Override
     public Response cookie(Cookie galleta) {
         requerirAbierta();
-        cabeceras.add("Set-Cookie", galleta.toString().isEmpty() ? "" : encode(galleta));
+        String codificada = encode(galleta);
+        rechazarControl("Set-Cookie", codificada);
+        cabeceras.add("Set-Cookie", codificada);
         return this;
     }
 

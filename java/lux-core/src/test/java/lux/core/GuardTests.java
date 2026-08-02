@@ -59,6 +59,54 @@ final class GuardTests {
 
         Check.group("@Valid sobre el cuerpo");
         validacionEnRuta();
+
+        Check.group("cabeceras de seguridad");
+        cabecerasDeSeguridad();
+    }
+
+    private static void cabecerasDeSeguridad() throws Exception {
+        Server servidor = Lux.app().port(0).quiet().reporter(ErrorReporter.silent())
+                .use(SecurityHeaders.standard())
+                .controllers(ApiController.class)
+                .start();
+        try {
+            HttpResponse<String> r = send("http://127.0.0.1:" + servidor.port() + "/api", "GET");
+
+            Check.equal("nosniff siempre",
+                    r.headers().firstValue("x-content-type-options").orElse(null), "nosniff");
+            Check.equal("no permite enmarcado",
+                    r.headers().firstValue("x-frame-options").orElse(null), "DENY");
+            Check.equal("política de referente",
+                    r.headers().firstValue("referrer-policy").orElse(null),
+                    "strict-origin-when-cross-origin");
+            Check.that("cierra cámara, micrófono y ubicación",
+                    r.headers().firstValue("permissions-policy").orElse("").contains("camera=()"));
+            Check.that("sin TLS no manda HSTS",
+                    r.headers().firstValue("strict-transport-security").isEmpty());
+            Check.that("sin CSP declarada no la inventa",
+                    r.headers().firstValue("content-security-policy").isEmpty());
+            Check.equal("y la petición sigue su curso", r.body(), "ok");
+        } finally {
+            servidor.stop();
+        }
+
+        Server aMedida = Lux.app().port(0).quiet().reporter(ErrorReporter.silent())
+                .use(SecurityHeaders.standard()
+                        .frameOptions("SAMEORIGIN")
+                        .csp("default-src 'self'")
+                        .hsts(false))
+                .controllers(ApiController.class)
+                .start();
+        try {
+            HttpResponse<String> r = send("http://127.0.0.1:" + aMedida.port() + "/api", "GET");
+            Check.equal("frameOptions se puede aflojar",
+                    r.headers().firstValue("x-frame-options").orElse(null), "SAMEORIGIN");
+            Check.equal("y la CSP se declara",
+                    r.headers().firstValue("content-security-policy").orElse(null),
+                    "default-src 'self'");
+        } finally {
+            aMedida.stop();
+        }
     }
 
     private static void cors() throws Exception {
