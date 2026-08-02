@@ -57,18 +57,30 @@ benchmarks/               Harness comparativo (heredado, + LuxCore)
 
 ## Fase 1 — El núcleo que se levanta solo
 
-### 1.1 `lux-http` — el servidor · **hecho**
+### 1.1 `lux-http` — el servidor · **completo**
 
-HTTP/1.1 con un hilo virtual por conexión (Java 21+). 16 clases, cero dependencias, 28 pruebas.
+HTTP/1.1 con un hilo virtual por conexión (Java 21+). 31 clases, cero dependencias, 144 pruebas.
 
 Cubre: parseo de línea de petición y cabeceras, keep-alive con reutilización de conexión,
 `Content-Length` y `Transfer-Encoding: chunked` en ambos sentidos, `Expect: 100-continue`,
-decodificación porcentual de path y query, HEAD, redirecciones y respuestas en streaming.
+decodificación porcentual de path y query, HEAD, redirecciones, respuestas en streaming, **TLS**,
+**cookies**, **sesiones**, **multipart**, **gzip** y **archivos estáticos**.
 
 Los límites son explícitos y están en `ServerOptions`: tamaño de línea de petición, tamaño y
-número de cabeceras, tamaño de cuerpo, timeout de inactividad y peticiones por conexión. Rechaza
-cabeceras plegadas, `Content-Length` duplicado y la combinación `Content-Length` +
-`Transfer-Encoding` — los tres vectores clásicos de *request smuggling*.
+número de cabeceras, tamaño de cuerpo, conexiones concurrentes, timeout de inactividad, timeout de
+handler, peticiones por conexión y margen de apagado. Rechaza cabeceras plegadas,
+`Content-Length` duplicado, la combinación `Content-Length` + `Transfer-Encoding`, `Host` ausente
+o duplicado, y caracteres de control en las cabeceras de respuesta.
+
+Tres decisiones que conviene recordar:
+
+- **El watchdog es un solo hilo compartido**, no un `Future` por petición. Ninguno de los dos puede
+  matar un handler colgado —Java no permite matar hilos—, pero el watchdog cierra el socket y libera
+  la conexión sin cobrar nada en el camino rápido.
+- **Las sesiones se barren por muestreo**, cada 256 creaciones, en vez de con un hilo de limpieza.
+  Un hilo más para algo que puede ir a coste amortizado no se justifica.
+- **El techo de conexiones cierra en el accept**, sin leer la petición ni responder 503. Responder
+  exigiría leerla, que es justo el trabajo que el techo existe para no hacer.
 
 **Cambio respecto al plan: hilos virtuales sobre IO bloqueante, no selectores NIO.** El plan decía
 `java.nio`. Con hilos virtuales, el IO bloqueante ya no bloquea un hilo del sistema operativo:
@@ -80,8 +92,8 @@ contradice el principio de que el núcleo se pueda leer entero.
 sirve aquí — es un servidor de juguete, sin keep-alive decente ni control de backpressure.
 Escribir el nuestro es el punto entero del proyecto.
 
-Pendiente en este módulo: gzip (portando `JxGzip`), multipart (sustituye a
-`jakarta.servlet.http.Part`), cookies y sesiones propias (sustituyen a `HttpSession`), y TLS.
+Pendiente en este módulo, ya sin bloquear a nadie: WebSocket, HTTP/2, log de acceso, cabecera
+`Range` en estáticos y sesiones distribuidas.
 
 ### 1.2 La costura
 
@@ -127,13 +139,16 @@ Esto es lo que convierte la refundación en una migración y no en una ruptura.
 
 Mismo harness, mismas condiciones que la línea base:
 
-| Métrica | JxMVC hoy | Meta LuxCore | Referencia a batir |
-|---|---|---|---|
-| Arranque | 1392 ms | **< 150 ms** | javalin 466 |
-| RSS | 471.8 MB | **< 120 MB** | micronaut 331.7 |
-| rps `/json` | 43 315 | **≥ 48 000** | javalin 47 667 |
-| JAR runtime | 253 KB | **≤ 400 KB** | — |
-| Dependencias | 0 | **0** | spring: decenas |
+| Métrica | JxMVC hoy | Meta LuxCore | Medido en local | Referencia a batir |
+|---|---|---|---|---|
+| Arranque | 1392 ms | < 150 ms | **28 ms** | javalin 466 |
+| RSS | 471.8 MB | < 120 MB | sin medir en serio | micronaut 331.7 |
+| rps `/json` | 43 315 | ≥ 48 000 | 100 554 ⚠ no comparable | javalin 47 667 |
+| JAR runtime | 253 KB | ≤ 400 KB | **64 KB** | — |
+| Dependencias | 0 | 0 | **0** | spring: decenas |
+
+RSS y rps solo cuentan medidos en el harness de `benchmarks/docker`, en el mismo Arch bare-metal
+que usó el paper. Ver [docs/mediciones-locales.md](docs/mediciones-locales.md).
 
 ## Fase 2 — Paridad
 
