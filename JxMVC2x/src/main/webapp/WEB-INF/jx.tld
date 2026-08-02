@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<taglib xmlns="https://jakarta.ee/xml/ns/jakartaee"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-jsptaglibrary_3_0.xsd"
+        version="3.0">
+    <tlib-version>1.0</tlib-version>
+    <short-name>jx</short-name>
+    <uri>http://jxmvc/tags</uri>
+
+    <function>
+        <description>Escapa texto para salida HTML segura (previene XSS)</description>
+        <name>esc</name>
+        <function-class>jxmvc.core.JxHtml</function-class>
+        <function-signature>java.lang.String escape(java.lang.Object)</function-signature>
+    </function>
+
+    <function>
+        <description>Campo oculto _csrf listo para insertar en un form (protección CSRF)</description>
+        <name>csrf</name>
+        <function-class>jxmvc.core.JxCsrf</function-class>
+        <function-signature>java.lang.String field(jakarta.servlet.http.HttpServletRequest)</function-signature>
+    </function>
+
+    <function>
+        <description>Token CSRF de la sesión, para enviarlo en la cabecera X-CSRF-Token</description>
+        <name>csrfToken</name>
+        <function-class>jxmvc.core.JxCsrf</function-class>
+        <function-signature>java.lang.String token(jakarta.servlet.http.HttpServletRequest)</function-signature>
+    </function>
+
+    <tag>
+        <name>if</name>
+        <tag-class>jxmvc.core.JxTagIf</tag-class>
+        <body-content>JSP</body-content>
+        <attribute>
+            <name>test</name>
+            <required>true</required>
+            <rtexprvalue>true</rtexprvalue>
+            <type>boolean</type>
+        </attribute>
+    </tag>
+
+    <tag>
+        <name>for</name>
+        <tag-class>jxmvc.core.JxTagFor</tag-class>
+        <body-content>JSP</body-content>
+        <attribute>
+            <name>items</name>
+            <required>true</required>
+            <rtexprvalue>true</rtexprvalue>
+            <type>java.util.List</type>
+        </attribute>
+        <attribute>
+            <name>var</name>
+            <required>true</required>
+            <rtexprvalue>true</rtexprvalue>
+            <type>java.lang.String</type>
+        </attribute>
+        <attribute>
+            <name>maxCount</name>
+            <required>false</required>
+            <rtexprvalue>true</rtexprvalue>
+            <type>int</type>
+        </attribute>
+    </tag>
+</taglib>

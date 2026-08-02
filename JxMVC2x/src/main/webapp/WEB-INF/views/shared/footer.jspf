@@ -1,0 +1,125 @@
+<%@ page pageEncoding="UTF-8" %>
+    </main>
+
+    <style>
+        /* Padding propio (el Tailwind del sitio es precompilado: pt-14/pb-28 pueden no existir).
+           En móvil deja aire extra abajo para que la barra de navegación fija no tape el pie. */
+        .jx-foot-wrap { padding-top:56px; padding-bottom:56px; }
+        @media (max-width:767px) { .jx-foot-wrap { padding-bottom:116px; } }
+        /* Grid propio (el Tailwind del sitio es precompilado: las clases arbitrarias no existen). */
+        .jx-foot-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px 40px; }
+        .jx-foot-brand { grid-column:1 / -1; max-width:24rem; }
+        @media (min-width:768px)  { .jx-foot-grid { grid-template-columns:repeat(3,1fr); } }
+        @media (min-width:1024px) { .jx-foot-grid { grid-template-columns:1.7fr 1fr 1fr 1fr; }
+            .jx-foot-brand { grid-column:auto; } }
+        .jx-foot-link { color:#6E6E73; font-size:13px; transition:color .14s ease; display:inline-block; }
+        .dark .jx-foot-link { color:#8E8E93; }
+        .jx-foot-link:hover { color:#0071E3; }
+        .jx-foot-h { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+            color:#A0A0A6; margin-bottom:14px; }
+        .dark .jx-foot-h { color:#5A5A5F; }
+        .jx-foot-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px;
+            font-size:11px; font-weight:600; font-family:'SF Mono','Menlo','Consolas',monospace; }
+        .jx-foot-social { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+            border:1px solid rgba(0,0,0,.10); color:#6E6E73; transition:all .15s ease; }
+        .dark .jx-foot-social { border-color:rgba(255,255,255,.12); color:#8E8E93; }
+        .jx-foot-social:hover { border-color:#0071E3; color:#0071E3; transform:translateY(-2px); }
+    </style>
+
+    <footer class="bg-white dark:bg-[#000000] border-t border-black/[0.07] dark:border-white/[0.07]">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 jx-foot-wrap">
+            <div class="jx-foot-grid">
+
+                <%-- Marca --%>
+                <div class="jx-foot-brand">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <svg viewBox="0 0 256 256" class="w-7 h-7" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="fga" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0" stop-color="#FF6B00"/><stop offset=".3" stop-color="#FF2D55"/>
+                                    <stop offset=".66" stop-color="#0071E3"/><stop offset="1" stop-color="#5E5CE6"/>
+                                </linearGradient>
+                            </defs>
+                            <rect width="256" height="256" rx="58" fill="url(#fga)"/>
+                            <text x="128" y="128" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="82" font-weight="900" fill="white">Jx</text>
+                            <text x="128" y="172" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="26" font-weight="bold" fill="white" letter-spacing="3">MVC</text>
+                        </svg>
+                        <span class="font-semibold text-[16px] tracking-tight text-ink dark:text-[#F5F5F7]">JxMVC</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-muted dark:text-[#8E8E93] max-w-xs mb-5">
+                        Framework MVC para Jakarta EE. Un JAR de 253 KB, cero dependencias externas
+                        y arranque en 1.2 s. Simple, directo y en español.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="jx-foot-badge bg-apple/10 text-apple">v3.4.0</span>
+                        <span class="jx-foot-badge" style="background:rgba(48,209,88,.12);color:#1a9c3e">347 tests</span>
+                        <span class="jx-foot-badge bg-black/[0.05] dark:bg-white/[0.06] text-muted dark:text-[#8E8E93]">MIT</span>
+                    </div>
+                </div>
+
+                <%-- Producto --%>
+                <div>
+                    <p class="jx-foot-h">Producto</p>
+                    <ul class="space-y-2.5">
+                        <li><a href="${pageContext.request.contextPath}/"          class="jx-foot-link" data-i18n="nav.home">Inicio</a></li>
+                        <li><a href="${pageContext.request.contextPath}/about"     class="jx-foot-link" data-i18n="nav.about">Acerca de</a></li>
+                        <li><a href="${pageContext.request.contextPath}/docs"      class="jx-foot-link" data-i18n="nav.docs">Documentación</a></li>
+                        <li><a href="${pageContext.request.contextPath}/downloads" class="jx-foot-link" data-i18n="nav.downloads">Descargas</a></li>
+                        <li><a href="${pageContext.request.contextPath}/home/panel" class="jx-foot-link" data-i18n="nav.panel">Panel en vivo</a></li>
+                    </ul>
+                </div>
+
+                <%-- Endpoints --%>
+                <div>
+                    <p class="jx-foot-h">Endpoints</p>
+                    <ul class="space-y-2.5 font-mono">
+                        <li><a href="${pageContext.request.contextPath}/jx/health"  class="jx-foot-link" style="font-family:inherit">/jx/health</a></li>
+                        <li><a href="${pageContext.request.contextPath}/jx/info"    class="jx-foot-link" style="font-family:inherit">/jx/info</a></li>
+                        <li><a href="${pageContext.request.contextPath}/jx/metrics" class="jx-foot-link" style="font-family:inherit">/jx/metrics</a></li>
+                        <li><a href="${pageContext.request.contextPath}/jx/openapi" class="jx-foot-link" style="font-family:inherit">/jx/openapi</a></li>
+                    </ul>
+                </div>
+
+                <%-- Proyecto --%>
+                <div>
+                    <p class="jx-foot-h">Proyecto</p>
+                    <ul class="space-y-2.5">
+                        <li><a href="https://github.com/Andre031222/jxmvc" target="_blank" rel="noopener" class="jx-foot-link">GitHub</a></li>
+                        <li><a href="${pageContext.request.contextPath}/errors"    class="jx-foot-link" data-i18n="nav.errors">Pruebas de errores</a></li>
+                        <li><a href="https://andre.net.pe" target="_blank" rel="noopener" class="jx-foot-link">andre.net.pe</a></li>
+                        <li><a href="mailto:andrevilcasolorzano@gmail.com" class="jx-foot-link">Contacto</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <%-- Barra inferior --%>
+            <div class="mt-12 pt-7 border-t border-black/[0.06] dark:border-white/[0.06]
+                        flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                <div>
+                    <p class="text-[12.5px] text-muted dark:text-[#8E8E93]">
+                        © 2026 JxMVC · Distribuido bajo licencia <span class="text-ink dark:text-[#F5F5F7] font-medium">MIT</span>
+                    </p>
+                    <p class="text-[11px] text-muted/70 dark:text-[#5A5A5F] mt-1.5">
+                        Diseño y arquitectura: <span class="text-muted dark:text-[#8E8E93] font-medium">Dr. Ramiro Pedro Laura Murillo</span>
+                        &nbsp;·&nbsp; Contribuciones v3.x: <span class="text-muted dark:text-[#8E8E93] font-medium">R. Andre Vilca Solorzano</span>
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2.5">
+                    <span class="text-[11px] text-muted/70 dark:text-[#5A5A5F] mr-1">Servido por JxMVC</span>
+                    <a href="https://github.com/Andre031222/jxmvc" target="_blank" rel="noopener" class="jx-foot-social" aria-label="GitHub">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.7c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 016 0C17.3 4.6 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+                    </a>
+                    <a href="mailto:andrevilcasolorzano@gmail.com" class="jx-foot-social" aria-label="Email">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M3 6h18v12H3z"/></svg>
+                    </a>
+                    <a href="${pageContext.request.contextPath}/jx/openapi" class="jx-foot-social" aria-label="OpenAPI">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
