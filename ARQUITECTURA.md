@@ -101,31 +101,61 @@ Definir `lux.http.Request` y `lux.http.Response` como interfaces puras del JDK. 
 `JxResponse` pasan a envolver esas interfaces en lugar de las de Jakarta. Este es el cambio que
 desbloquea todo lo demás.
 
-### 1.3 `MainLxServlet` → `LuxDispatcher`
+### 1.3 `MainLxServlet` → `lux-core` · **hecho**
 
-Las 1046 líneas del pipeline de 15 etapas (endpoints internos, métricas, resolución de ruta, rate
-limit, auth *fail-closed*, CSRF, CORS, contexto, filtros, DI, interceptores, atributos de modelo,
-invocación con async/retry/cache/transacción, negociación de contenido y renderizado) son lógica
-de framework, no de servlet: se conserva entera. Lo único que cambia es de dónde entran el request
-y el response.
+Las 1041 líneas del pipeline de 15 etapas no se transliteraron: se rehicieron como 11 clases con
+una responsabilidad cada una. El pipeline quedó en seis pasos que se leen de corrido:
 
-Se aprovecha para partirla en piezas legibles. Mil líneas en una clase contradicen directamente el
-principio de que el núcleo se pueda leer entero.
+```text
+autenticar → middleware → autorizar → vincular → invocar → renderizar
+```
+
+- `Router` / `RoutePattern` / `RouteEntry` — rutas por anotación, plantillas `{var}`, comodín
+  final, y convención por nombre de clase. La ruta literal siempre gana a la variable.
+- `Dispatcher` — el pipeline. 404 y 405 (con cabecera `Allow`) se resuelven antes de construir
+  nada.
+- `Binder` — `@Path`, `@Query`, `@Body`, `@Header`, `@CookieValue`, más `Context`, `Request`,
+  `Response`, `Session` y `Principal` por tipo.
+- `Registry` — inyección por campo y por constructor, singletons, `@Service` bajo demanda,
+  detección de ciclos con la cadena completa en el mensaje.
+- `Json` — escritura, lectura y vinculación a records, beans, enums, `Optional` y tipos de
+  `java.time`. Detecta ciclos al serializar.
+- `Result` — `text`, `html`, `json`, `view`, `redirect`, `noContent`, con estado y cabeceras.
+- `Config` — properties del classpath y del disco, variables `LUX_*` y propiedades `lux.*`.
+
+**Autenticar va antes del middleware, autorizar después.** Así el middleware ve el `Principal`
+—que es lo que casi siempre necesita— y a la vez puede envolver los 401 y 403 para registrarlos.
+
+**Lo que devuelve una acción decide el formato:** `Result` se respeta tal cual, `String` sale como
+texto plano, `null` es un 204 y cualquier otra cosa se serializa a JSON. Sin anotación de por
+medio.
 
 ### 1.4 Adiós JSP
 
 `JxTagFor` y `JxTagIf` dependen de `jakarta.servlet.jsp` y se eliminan. Los sustituye `lux-view`:
 plantillas compiladas a Java en el arranque, cero dependencias, sin motor de JSP detrás.
 
-### 1.5 `lux-launcher`
+### 1.5 El lanzador · **hecho**
 
 ```java
-public static void main(String[] args) {
-    Lux.run(App.class, args);
-}
+Lux.run(8080, ApiController.class);
 ```
 
-Escanea rutas, levanta `lux-http`, imprime puerto y tiempo de arranque.
+o con todo declarado:
+
+```java
+Lux.app()
+   .loadConfig()
+   .controllers(ApiController.class, AdminController.class)
+   .routes(r -> r.get("/salud", ctx -> "ok"))
+   .service(new Catalogo())
+   .authenticator(ctx -> tokens.verify(ctx.header("Authorization")))
+   .use((ctx, chain) -> { log(ctx); return chain.proceed(ctx); })
+   .start();
+```
+
+Imprime host, puerto, número de rutas y tiempo de arranque. `lux-launcher` como módulo aparte
+—empaquetado fat-jar— queda para la fase 2; para arrancar ya no hace falta.
 
 ### 1.6 No romper lo que ya está en producción
 
