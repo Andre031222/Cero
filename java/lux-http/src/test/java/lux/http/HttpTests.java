@@ -35,6 +35,7 @@ public final class HttpTests {
             streamedResponse(base);
             redirectResponse(base);
             handlerErrors(base);
+            headerInjection(base);
             percentDecodedPath(base);
             keepAliveReuse(port);
             connectionClose(port);
@@ -67,6 +68,10 @@ public final class HttpTests {
             case "/revienta" -> throw new IllegalStateException("fallo del handler");
             case "/ruta con espacio" -> response.text("decodificado");
             case "/metodo" -> response.text(request.method().name());
+            case "/inyeccion" -> {
+                response.header("X-Eco", "valor\r\nX-Colado: si");
+                response.text("no debería llegar");
+            }
             default -> response.status(404).text("404");
         }
     }
@@ -137,6 +142,13 @@ public final class HttpTests {
         check("HttpException fija el estado", get(base + "/no-existe").statusCode() == 404);
         check("excepción no controlada da 500", get(base + "/revienta").statusCode() == 500);
         check("ruta desconocida da 404", get(base + "/ninguna").statusCode() == 404);
+    }
+
+    private static void headerInjection(String base) throws Exception {
+        String response = raw("127.0.0.1", portOf(base),
+                "GET /inyeccion HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+        check("CRLF en cabecera no se cuela", !response.contains("X-Colado"));
+        check("CRLF en cabecera da 500", response.startsWith("HTTP/1.1 500"));
     }
 
     private static void percentDecodedPath(String base) throws Exception {

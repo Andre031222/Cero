@@ -39,7 +39,7 @@ propaga hacia allá.
 
 ## Qué se hereda y qué cambia
 
-Se hereda el núcleo: 55 clases en `jxmvc/core/`, de las cuales **41 no importan nada de
+Se hereda el núcleo: 54 clases en `jxmvc/core/`, de las cuales **40 no importan nada de
 `jakarta.*`** y se mudan sin tocarse. Se hereda también el banco de pruebas de rendimiento
 (`benchmarks/`), con Spring, Quarkus, Micronaut y Javalin ya configurados en Docker — es la línea
 base contra la que se mide la arquitectura nueva.
