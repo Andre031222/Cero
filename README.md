@@ -38,32 +38,40 @@ que un desarrollador puede leer entero.
 
 ## Estado
 
-**Fase 1 en curso — `lux-http` ya arranca.** El servidor HTTP/1.1 propio está escrito y en verde:
-28 pruebas, cero dependencias, ni una línea de Jakarta. El resto del núcleo sigue en `legacy/`,
-pendiente de migrar.
+**`lux-http` completo.** El servidor HTTP/1.1 propio está terminado: 31 clases, 144 pruebas en
+verde, cero dependencias, ni una línea de Jakarta en todo el módulo. Ya no necesita nada de lo que
+antes ponía el contenedor de servlets.
 
 ```java
 Server.start(8080, (req, res) -> res.text("Hello, World!"));
 ```
 
-Primera medición local ([detalle y salvedades](docs/mediciones-locales.md)):
+Cubre: keep-alive, chunked en ambos sentidos, `Expect: 100-continue`, HEAD, streaming,
+**TLS**, **cookies**, **sesiones**, **multipart**, **gzip** y **archivos estáticos**, con techo de
+conexiones, watchdog de handler y apagado ordenado.
+
+Medición local ([detalle y salvedades](docs/mediciones-locales.md)):
 
 | | JxMVC sobre Tomcat | lux-http | Meta de fase 1 |
 |---|---|---|---|
-| Arranque | 1392 ms | **17 ms** | < 150 ms |
-| JAR | 253 KB | **36 KB** | ≤ 400 KB |
-| rps `/plaintext` | 43 691 | 107 779 ⚠ | ≥ 48 000 |
-| Dependencias | 0 | **0** | 0 |
+| Arranque | 1392 ms | **28 ms** | < 150 ms |
+| JAR | 253 KB + ~15 MB Tomcat | **64 KB** | ≤ 400 KB |
+| rps `/plaintext` | 43 691 | 100 554 ⚠ | ≥ 48 000 |
+| Pruebas | 347 | **144** | — |
+| Dependencias | 0 (+ Jakarta *provided*) | **0** | 0 |
 
 ⚠ El rps se midió con cliente y servidor en la misma máquina, y **no es comparable** con la tabla
 del paper. El número que cuenta sale del harness de `benchmarks/docker` en Arch bare-metal.
 Arranque y tamaño del JAR sí son sólidos.
 
+Lo siguiente es `lux-core`: desacoplar `JxRequest`/`JxResponse` de Jakarta y partir las 1041 líneas
+de `MainLxServlet` en un `LuxDispatcher` legible.
+
 ## Estructura
 
 ```text
 java/
-  lux-http/      Servidor HTTP/1.1 propio — hecho
+  lux-http/      Servidor HTTP/1.1 propio, TLS, sesiones, estáticos — hecho
   lux-core/      Router, pipeline, DI, configuración                  (siguiente)
   lux-view/      Motor de plantillas, sustituye JSP                   (fase 2)
   lux-data/      Acceso a datos, migrado desde legacy                 (fase 2)
@@ -82,7 +90,7 @@ docs/            Documentación
 LuxCore necesita Java 21+ (hilos virtuales) y Maven. Nada más.
 
 ```bash
-cd java && mvn test          # lux-http: 28 pruebas, runner propio
+cd java && mvn test          # lux-http: 144 pruebas, runner propio
 cd java && mvn package       # lux-http/target/lux-http-0.1.0.jar
 ```
 
