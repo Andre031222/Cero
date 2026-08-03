@@ -123,7 +123,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 
   <footer class="pie">
     <div class="etiqueta">
-      Vilca-Solorzano · Laura-Murillo<br>
+      Richar Andre Vilca-Solorzano · Ramiro Pedro Laura-Murillo<br>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
@@ -255,7 +255,7 @@ def unico() -> int:
 
   <footer class="pie">
     <div class="etiqueta">
-      Vilca-Solorzano · Laura-Murillo<br>
+      Richar Andre Vilca-Solorzano · Ramiro Pedro Laura-Murillo<br>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">

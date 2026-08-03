@@ -413,6 +413,12 @@ footer.pie {
   margin-top: 4rem; padding: 1.25rem 0 3rem; border-top: 2px solid var(--tinta);
   display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: baseline;
 }
+/* En un teléfono los dos bloques no caben en una fila: apilados y alineados a la izquierda,
+   porque un text-align:right suelto deja el segundo bloque colgando en mitad de la pantalla. */
+@media (max-width: 40rem) {
+  footer.pie { flex-direction: column; gap: .85rem; }
+  footer.pie .etiqueta { text-align: left !important; }
+}
 
 /* ═══ portada ═══ */
 
@@ -423,14 +429,14 @@ footer.pie {
   align-items: center;
   /* La barra superior es sticky y translúcida: sin este aire, la ventana de código queda
      debajo de ella al desplazarse y se lee a través del desenfoque. */
-  padding: 7rem 0 3.5rem;
+  padding: 8rem 0 3.5rem;
   border-bottom: 1px solid var(--linea);
 }
 
 @media (max-width: 64rem) {
   /* Se apila en una columna, pero el aire de arriba se mantiene: la barra es sticky
      y con 2.5rem la ventana de código se le metía debajo. */
-  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 5rem; }
+  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 6.5rem; }
 }
 
 .titular {
@@ -680,3 +686,30 @@ td.huella { color: var(--tenue); font-size: .75rem; }
   padding-right: 2.2rem;
 }
 .formulario .boton { margin-top: .3rem; }
+
+/* ─── teléfonos ───────────────────────────────────────────────────────────
+   Por debajo de 34rem (≈540 px) el sitio deja de ser una versión encogida del
+   de escritorio: menos aire, tipos más pequeños y las rejillas de dos en dos. */
+@media (max-width: 34rem) {
+  .marco { padding: 0 1rem; }
+
+  /* En una pantalla de mano, 6,5rem de aire son media pantalla vacía antes de
+     leer nada. La barra mide 3,5rem, así que 4,5rem ya despega el titular. */
+  .portada { padding: 4.5rem 0 2.5rem; gap: 1.75rem; }
+  .titular { font-size: clamp(2.5rem, 13vw, 3.25rem); }
+  .subtitular { font-size: .875rem; }
+
+  .chips { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .medidas { grid-template-columns: repeat(2, 1fr); }
+
+  .codigo pre, .ventana pre { font-size: .75rem; line-height: 1.6; padding: .8rem .9rem; }
+  .ventana .panel { max-height: 18rem; }
+  .pantalla { font-size: .75rem; }
+
+  .cabecera-pagina { padding: 1.75rem 0 1rem; }
+  section { padding-top: 2rem; }
+  .titulo-seccion { gap: .6rem; }
+
+  .botones { flex-wrap: wrap; }
+  .botones .boton { flex: 1 1 auto; text-align: center; }
+}
