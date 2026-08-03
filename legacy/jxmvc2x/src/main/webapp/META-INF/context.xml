@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Context path="/jxmvc">
-    <!-- SameSite=Lax en todas las cookies (JSESSIONID incluida): primera línea contra CSRF -->
-    <CookieProcessor sameSiteCookies="lax"/>
-</Context>
