@@ -14,7 +14,12 @@ cd benchmarks/docker
 ./bench.sh                 # conns=64, dur=20s, reps=3  (por defecto)
 ./bench.sh 128 30 5        # conns=128, dur=30s, reps=5
 BENCH_CPUS=4 BENCH_MEM=2g ./bench.sh
+BENCH_PORT=18080 ./bench.sh    # si el 8080 está ocupado en tu máquina
 ```
+
+Variables: `BENCH_CPUS`, `BENCH_MEM`, `BENCH_PORT`, `BENCH_CPUSET` (fija el contenedor a unos
+núcleos), `BENCH_CLIENT_CPUS` (fija el cliente a otros, **solo Linux**: usa `taskset`),
+`BENCH_DB=1` (añade `/db`) y `BENCH_NATIVE=1` (añade Quarkus nativo).
 Salida:
 - `../results/raw-docker.csv` — cada corrida (framework, imagen, arranque, RSS, endpoint, rps, percentiles).
 - `../results/RESULTS-docker.md` — tabla resumida (mediana de rps por framework/endpoint).
@@ -25,14 +30,18 @@ Salida:
 - **RSS** (MB) — memoria del contenedor en estado estacionario (`docker stats`).
 - **Throughput + latencia** — `LoadClient` desde el host contra el puerto publicado.
 
-## Apps (mismos dos endpoints: `/plaintext` y `/json`)
+## Apps (mismos endpoints: `/plaintext`, `/json` y, con `BENCH_DB=1`, `/db`)
 | Framework | Versión | Runtime |
 |---|---|---|
+| **LuxCore** | 0.2.0 | servidor propio, un hilo virtual por conexión |
 | JxMVC | 3.4.0 | Tomcat 10.1 (WAR, core compilado desde el repo) |
 | Spring Boot | 3.3.4 | Tomcat embebido |
 | Quarkus | 3.11.3 (JVM) | fast-jar |
 | Micronaut | 4.5.3 | Netty |
 | Javalin | 6.3.0 | Jetty |
+
+La app de LuxCore toma la versión del framework de `java/pom.xml` en tiempo de build, no de un
+número escrito a mano: fijarla fue justo lo que dejó a LuxCore fuera de la tabla durante días.
 
 `bench.sh` es **resiliente**: si una imagen no construye o no arranca, lo registra (con sus logs)
 y continúa con las demás.

@@ -1,0 +1,130 @@
+name: pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  # El núcleo, en Linux, con PostgreSQL y MySQL de verdad detrás. Sin las bases
+  # levantadas, MotorTests se omite en silencio y la corrida miente por omisión;
+  # por eso hay un paso que falla si algún motor no se pudo alcanzar.
+  nucleo:
+    name: java/ · JDK ${{ matrix.jdk }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: ['21', '25']
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: lux
+          POSTGRES_DB: luxpruebas
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: lux
+          MYSQL_DATABASE: luxpruebas
+        ports: ['53306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -plux"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.jdk }}
+          cache: maven
+
+      - name: Pruebas
+        working-directory: java
+        # pipefail explícito: el shell por defecto de Actions es `bash -e`, sin él un
+        # `mvn` en rojo quedaría tapado por el `tee` y el paso saldría en verde.
+        run: |
+          set -o pipefail
+          mvn -B test | tee ../pruebas.log
+
+      - name: Ningún motor quedó sin probar
+        run: |
+          if grep -q "no está accesible" pruebas.log; then
+            echo "::error::Un motor real no estaba accesible: MotorTests se omitió."
+            grep "no está accesible" pruebas.log
+            exit 1
+          fi
+          echo "H2, PostgreSQL y MySQL se probaron de verdad."
+
+      - name: Cero dependencias en runtime
+        working-directory: java
+        run: |
+          mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=lux \
+              -DoutputFile=target/deps.txt -pl lux-http,lux-core,lux-view,lux-data
+          fuera=$(grep -h ':jar:' lux-*/target/deps.txt || true)
+          if [ -n "$fuera" ]; then
+            echo "::error::El núcleo arrastra dependencias externas:"; echo "$fuera"; exit 1
+          fi
+          echo "El núcleo no depende de nada fuera del JDK."
+
+      - name: Empaquetar
+        working-directory: java
+        run: mvn -B -DskipTests package
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.jdk == '21'
+        with:
+          name: jars
+          path: java/*/target/*.jar
+          retention-days: 14
+
+  # El heredado sigue vivo mientras quede algo por migrar: si se rompe, nos enteramos.
+  heredado:
+    name: legacy/jxmvc-core
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Pruebas del núcleo heredado
+        working-directory: legacy/jxmvc-core
+        run: mvn -B test
+
+  # El sitio se genera. Que nadie edite el HTML publicado a mano y se desincronice.
+  sitio:
+    name: docs/web al día
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Regenerar y comprobar que no cambia nada
+        run: |
+          python3 docs/web/construir.py
+          if ! git diff --quiet -- docs/web; then
+            echo "::error::docs/web está desincronizado. Corre ./lux sitio y commitea el resultado."
+            git diff --stat -- docs/web
+            exit 1
+          fi
+          echo "El sitio publicado coincide con sus fuentes."
