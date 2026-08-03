@@ -502,12 +502,14 @@ footer.pie {
   display: flex; align-items: center; gap: .5rem;
   border: 1px solid var(--linea); border-radius: 7px;
   padding: .55rem .7rem .55rem .9rem;
-  background: var(--panel); max-width: 24rem;
+  background: var(--panel); max-width: 30rem;
 }
 .orden code {
-  flex: 1; background: none; padding: 0;
+  flex: 1; min-width: 0; background: none; padding: 0;
   font-family: var(--mono); font-size: .8125rem; color: var(--tinta);
+  overflow-wrap: anywhere;
 }
+.tras-orden { margin: .6rem 0 0; font-size: .8125rem; color: var(--apagado); }
 .orden .senal { color: var(--laton); font-weight: 700; margin-right: .35rem; }
 
 .copiar {
@@ -753,8 +755,8 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>1238</b><span></span><em>Pruebas</em></div>
       </div>
 
-      <div class="orden" data-copiar="./lux correr">
-        <code><span class="senal">$</span> ./lux correr</code>
+      <div class="orden" data-copiar="git clone https://github.com/Andre031222/LuxCore.git">
+        <code><span class="senal">$</span> git clone https://github.com/Andre031222/LuxCore.git</code>
         <button type="button" class="copiar" aria-label="Copiar la orden">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -763,6 +765,8 @@ td.huella { color: var(--tenue); font-size: .75rem; }
           </svg>
         </button>
       </div>
+      <p class="tras-orden">Y de ahí, <a href="#p-empezar" data-hoja="p-empezar">los cuatro pasos</a>: compilar,
+        arrancar y comprobar. Requiere git, Maven y un JDK 21.</p>
     </div>
 
     <div class="portada-codigo">
