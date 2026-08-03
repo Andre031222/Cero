@@ -1,0 +1,268 @@
+{% extends "base" %}
+
+{% block contenido %}
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Guía</h1>
+    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación y errores.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#rutas"><span class="n">01</span> Rutas</a></li>
+        <li><a href="#parametros"><span class="n">02</span> Parámetros</a></li>
+        <li><a href="#respuestas"><span class="n">03</span> Respuestas</a></li>
+        <li><a href="#inyeccion"><span class="n">04</span> Inyección</a></li>
+        <li><a href="#validacion"><span class="n">05</span> Validación</a></li>
+        <li><a href="#errores"><span class="n">06</span> Errores</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="rutas">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Rutas</h2></div>
+
+        <p>
+          <code>@Route</code> sobre la clase fija la base; los verbos sobre los métodos añaden el
+          resto. Una regla, sin excepciones: <strong>un valor vacío mapea a la ruta base.</strong>
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>Ruta resultante</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Route("/api/tareas")</td><td class="mono">/api/tareas</td><td>Base de la clase</td></tr>
+              <tr><td class="mono-clave">@Get</td><td class="mono">/api/tareas</td><td>Valor vacío = la base</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}")</td><td class="mono">/api/tareas/{id}</td><td>Variable de ruta</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}/notas/{n}")</td><td class="mono">…/{id}/notas/{n}</td><td>Varias variables</td></tr>
+              <tr><td class="mono-clave">@Get("/archivos/*")</td><td class="mono">/api/tareas/archivos/*</td><td>Comodín, solo al final</td></tr>
+              <tr><td class="mono-clave">@Post @Put @Patch @Delete</td><td class="mono">—</td><td>Mismo criterio</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="prosa">
+          <li><strong>Lo literal gana a lo variable.</strong> <code>/tareas/nueva</code> se resuelve antes que <code>/tareas/{id}</code>, sin importar el orden en que se declaren.</li>
+          <li><strong>Sin <code>@Route</code></strong>, la base sale del nombre de la clase: <code>ReporteController</code> → <code>/reporte</code>.</li>
+          <li><strong>Las rutas duplicadas fallan al arrancar</strong>, no en la primera petición.</li>
+          <li><strong>405 con <code>Allow</code>.</strong> Si la ruta existe pero el verbo no, la respuesta enumera los verbos válidos.</li>
+          <li><strong>HEAD se resuelve contra GET</strong> automáticamente, sin cuerpo.</li>
+        </ul>
+
+        <h3>Rutas sueltas, sin controlador</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Lambdas</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r
+    .get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
+    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.2.0"</span>))
+    .post(<span class="st">"/eco"</span>, ctx -&gt; ctx.bodyText()))</pre>
+        </div>
+      </section>
+<section id="parametros">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Parámetros</h2></div>
+
+        <p>
+          Los argumentos del método se resuelven por anotación o por tipo. La conversión a
+          <code>int</code>, <code>long</code>, <code>boolean</code>, enumeraciones o fechas es
+          automática; si el valor no convierte, la respuesta es un 400.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>De dónde sale</th><th>Ejemplo</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Path("id")</td><td>Variable de la ruta</td><td class="mono">@Path("id") long id</td></tr>
+              <tr><td class="mono-clave">@Query("q")</td><td>Cadena de consulta</td><td class="mono">@Query(value="p", orElse="1") int p</td></tr>
+              <tr><td class="mono-clave">@Form("titulo")</td><td>Formulario HTML</td><td class="mono">@Form("titulo") String t</td></tr>
+              <tr><td class="mono-clave">@Body</td><td>Cuerpo JSON</td><td class="mono">@Body Tarea tarea</td></tr>
+              <tr><td class="mono-clave">@Body @Valid</td><td>JSON + validación</td><td class="mono">responde 422 si falla</td></tr>
+              <tr><td class="mono-clave">@Header("X-Traza")</td><td>Cabecera</td><td class="mono">@Header("X-Traza") String t</td></tr>
+              <tr><td class="mono-clave">@CookieValue("sesion")</td><td>Cookie</td><td class="mono">@CookieValue("s") String s</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Por tipo, sin anotación</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Tipo</th><th>Qué recibe</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">Context</td><td>Todo el contexto de la petición</td></tr>
+              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de lux-http</td></tr>
+              <tr><td class="mono-clave">Session</td><td>La sesión, creándola si no existe</td></tr>
+              <tr><td class="mono-clave">Principal</td><td>Quien haya autenticado el <code>Authenticator</code></td></tr>
+              <tr><td class="mono-clave">Part</td><td>Un archivo del multipart, por nombre del parámetro</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>El contexto, si lo prefieres a mano</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Context</span><span class="etiqueta">Java</span></div>
+<pre>ctx.pathVariable(<span class="st">"id"</span>)      ctx.query(<span class="st">"q"</span>, <span class="st">"por-defecto"</span>)   ctx.queryAll(<span class="st">"tag"</span>)
+ctx.form(<span class="st">"titulo"</span>)         ctx.header(<span class="st">"Accept"</span>)             ctx.cookie(<span class="st">"sesion"</span>)
+ctx.body(Tarea.class)      ctx.bodyText()                  ctx.bodyBytes()
+ctx.part(<span class="st">"archivo"</span>)        ctx.field(<span class="st">"nota"</span>)               ctx.parts()
+ctx.session()              ctx.principal()                 ctx.authenticated()
+ctx.attribute(<span class="st">"clave"</span>, valor)                                 ctx.route()</pre>
+        </div>
+      </section>
+<section id="respuestas">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Respuestas</h2></div>
+
+        <p>Lo que devuelve una acción decide el formato, sin anotaciones:</p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Devuelves</th><th>Sale</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">String</td><td>text/plain</td><td class="mono">200</td></tr>
+              <tr><td class="mono">null</td><td>sin cuerpo</td><td class="mono">204</td></tr>
+              <tr><td class="mono">cualquier objeto</td><td>application/json</td><td class="mono">200</td></tr>
+              <tr><td class="mono">Result</td><td>lo que declare</td><td class="mono">el que fijes</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Result</span><span class="etiqueta">Java</span></div>
+<pre>Result.text(<span class="st">"hola"</span>)                     Result.html(<span class="st">"&lt;h1&gt;hola&lt;/h1&gt;"</span>)
+Result.json(objeto)                    Result.raw(<span class="st">"{\"ya\":\"serializado\"}"</span>)
+Result.view(<span class="st">"lista.html"</span>, modelo)    Result.redirect(<span class="st">"/"</span>)
+Result.created(objeto)                 Result.noContent()
+Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
+
+<span class="cm">// encadenable</span>
+<span class="kw">return</span> Result.json(tarea)
+             .status(<span class="st">201</span>)
+             .header(<span class="st">"Location"</span>, <span class="st">"/api/tareas/"</span> + tarea.id());</pre>
+        </div>
+      </section>
+<section id="inyeccion">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Inyección</h2></div>
+
+        <p>
+          Marca un servicio con <code>@Service</code> y se construye la primera vez que alguien lo
+          pide. Los controladores lo reciben con <code>@Inject</code>, por campo o por constructor.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Servicios</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Service</span>
+<span class="kw">public class</span> Catalogo {
+    <span class="an">@Inject</span> Repositorio repositorio;      <span class="cm">// por campo</span>
+}
+
+<span class="an">@Service</span>
+<span class="kw">public class</span> Facturas {
+    <span class="kw">private final</span> Catalogo catalogo;
+    <span class="an">@Inject</span> Facturas(Catalogo catalogo) {   <span class="cm">// por constructor</span>
+        <span class="kw">this</span>.catalogo = catalogo;
+    }
+}
+
+<span class="cm">// o a mano, útil para sustituir en pruebas</span>
+Lux.app().service(Reloj.class, () -&gt; Instant.now())</pre>
+        </div>
+
+        <ul class="prosa">
+          <li>Los servicios son <strong>singleton</strong>: una instancia por aplicación.</li>
+          <li>Se registran también <strong>por sus interfaces</strong>, así que puedes pedir el contrato.</li>
+          <li>Las <strong>dependencias circulares</strong> se detectan y el error nombra la cadena completa.</li>
+        </ul>
+      </section>
+<section id="validacion">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Validación</h2></div>
+
+        <p>
+          Las anotaciones van sobre los componentes de un <code>record</code> o los campos de una
+          clase. <code>@Valid</code> junto a <code>@Body</code> valida antes de entrar al método.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>Comprueba</th><th>Mensaje por defecto</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Required</td><td>No nulo, no vacío, no en blanco</td><td>es obligatorio</td></tr>
+              <tr><td class="mono-clave">@Length(min, max)</td><td>Longitud del texto</td><td>debe tener entre N y M caracteres</td></tr>
+              <tr><td class="mono-clave">@Range(min, max)</td><td>Rango numérico</td><td>debe estar entre N y M</td></tr>
+              <tr><td class="mono-clave">@Email</td><td>Formato de correo</td><td>no es un correo válido</td></tr>
+              <tr><td class="mono-clave">@Match("regex")</td><td>Expresión regular</td><td>no tiene el formato esperado</td></tr>
+              <tr><td class="mono-clave">@OneOf({"a","b"})</td><td>Valor de una lista</td><td>debe ser uno de: a, b</td></tr>
+              <tr><td class="mono-clave">@Satisfies(Regla.class)</td><td>Tu propia regla</td><td>el de la regla</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tarea.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="kw">public record</span> Tarea(
+        <span class="an">@Id</span> <span class="kw">long</span> id,
+        <span class="an">@Required @Length</span>(min = <span class="st">3</span>, max = <span class="st">120</span>) String titulo,
+        <span class="an">@OneOf</span>({<span class="st">"baja"</span>, <span class="st">"media"</span>, <span class="st">"alta"</span>}) String prioridad) {}
+
+<span class="cm">// una regla propia</span>
+<span class="kw">public class</span> Ruc <span class="kw">implements</span> Rule&lt;String&gt; {
+    <span class="kw">public boolean</span> test(String v) { <span class="kw">return</span> v.length() == <span class="st">11</span> &amp;&amp; v.startsWith(<span class="st">"20"</span>); }
+    <span class="kw">public</span> String message()    { <span class="kw">return</span> <span class="st">"no es un RUC válido"</span>; }
+}</pre>
+        </div>
+
+        <p>Cuando algo falla, la respuesta es un 422 con el mapa de campos, sin escribirlo:</p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">422 Unprocessable Content</span><span class="etiqueta">JSON</span></div>
+<pre>{
+  <span class="st">"error"</span>: <span class="st">"Unprocessable Content"</span>,
+  <span class="st">"message"</span>: <span class="st">"hay 2 campo(s) inválido(s)"</span>,
+  <span class="st">"path"</span>: <span class="st">"/api/tareas"</span>,
+  <span class="st">"fields"</span>: {
+    <span class="st">"titulo"</span>: <span class="st">"debe tener entre 3 y 120 caracteres"</span>,
+    <span class="st">"prioridad"</span>: <span class="st">"debe ser uno de: baja, media, alta"</span>
+  }
+}</pre>
+        </div>
+
+        <p>Fuera de una ruta, la misma comprobación a mano:</p>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Validation</span><span class="etiqueta">Java</span></div>
+<pre>Validation.check(tarea);                <span class="cm">// lanza ValidationException (422)</span>
+Validation.valid(tarea);                <span class="cm">// true / false</span>
+Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
+        </div>
+      </section>
+<section id="errores">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Errores</h2></div>
+
+        <p>
+          Lanza <code>HttpException</code> con el estado que quieras, o registra un manejador con
+          <code>@OnError</code> para una excepción de tu dominio.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Manejo de errores</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+<span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+    Tarea t = tareas.findById(id);
+    <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">throw new</span> HttpException(<span class="st">404</span>, <span class="st">"no existe la tarea "</span> + id);
+    <span class="kw">return</span> t;
+}
+
+<span class="an">@OnError</span>(SaldoInsuficiente.class)
+<span class="kw">public</span> Object saldo(SaldoInsuficiente fallo) {
+    <span class="kw">return</span> Result.json(Map.of(<span class="st">"motivo"</span>, fallo.getMessage())).status(<span class="st">422</span>);
+}</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Las excepciones no controladas nunca filtran detalles</div>
+          <p>
+            Cualquier excepción que no sea <code>HttpException</code> devuelve un 500 con el
+            mensaje genérico «error interno». La traza va al <code>ErrorReporter</code>, no a la
+            respuesta.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+{% end %}

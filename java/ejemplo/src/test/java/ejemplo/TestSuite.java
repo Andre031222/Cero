@@ -29,6 +29,7 @@ public final class TestSuite {
         String base = "http://127.0.0.1:" + server.port();
         try {
             paginaInicial(base);
+            cabecerasDeSeguridad(base);
             altaPorFormulario(base);
             csrf(base);
             validacionDeFormulario(base);
@@ -58,6 +59,29 @@ public final class TestSuite {
         check("emite el token CSRF en el formulario", token(portada.body()) != null);
         check("abre sesión", portada.headers().firstValue("set-cookie").isPresent());
         check("/salud responde", get(base + "/salud").body().equals("ok"));
+    }
+
+    private static void cabecerasDeSeguridad(String base) throws Exception {
+        HttpResponse<String> portada = get(base + "/");
+        check("la portada declara nosniff",
+                portada.headers().firstValue("x-content-type-options").orElse("").equals("nosniff"));
+        check("y prohíbe el enmarcado",
+                portada.headers().firstValue("x-frame-options").orElse("").equals("DENY"));
+        check("con política de referente",
+                portada.headers().firstValue("referrer-policy").orElse("")
+                        .equals("strict-origin-when-cross-origin"));
+        check("cámara, micrófono y ubicación cerradas",
+                portada.headers().firstValue("permissions-policy").orElse("").contains("camera=()"));
+        check("y una CSP que solo permite el propio origen",
+                portada.headers().firstValue("content-security-policy").orElse("")
+                        .equals("default-src 'self'"));
+        check("sin TLS no se manda HSTS",
+                portada.headers().firstValue("strict-transport-security").isEmpty());
+
+        HttpResponse<String> rechazo = form(base + "/tareas", null, "titulo=intruso");
+        check("y también viajan en una respuesta rechazada",
+                rechazo.statusCode() == 403
+                        && rechazo.headers().firstValue("x-content-type-options").isPresent());
     }
 
     private static void altaPorFormulario(String base) throws Exception {

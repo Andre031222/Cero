@@ -4,6 +4,7 @@ import lux.core.Cors;
 import lux.core.Csrf;
 import lux.core.Lux;
 import lux.core.RateLimit;
+import lux.core.SecurityHeaders;
 import lux.data.DataSources;
 import lux.data.Pool;
 import lux.http.Server;
@@ -28,6 +29,7 @@ public final class App {
                 .port(puerto)
                 .views(Templates.fromClasspath("plantillas"))
                 .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))
+                .use(SecurityHeaders.standard().csp("default-src 'self'"))
                 .use(Cors.allowing("https://tareas.local"))
                 .use(RateLimit.perMinute(300))
                 .use(Csrf.enabled().exempt("/api/"))

@@ -1,0 +1,19 @@
+{% extends "base" %}
+
+{% block contenido %}
+<header class="cabecera-pagina">
+  <h1 class="titulo-pagina">Argumentos de ruta</h1>
+  <p class="entradilla">Lo que el router extrajo del camino que pediste.</p>
+</header>
+
+<section>
+  <div class="ficha">
+    <div class="campo"><div class="etiqueta">Ruta</div><div class="mono">{{ ruta }}</div></div>
+    <div class="campo"><div class="etiqueta">Valor capturado</div><div class="mono">{{ valor }}</div></div>
+  </div>
+  <p class="medida">
+    El patrón es <code>/grabar/{valor}</code>. Prueba con
+    <a href="/grabar/otra-cosa">/grabar/otra-cosa</a>.
+  </p>
+</section>
+{% end %}
