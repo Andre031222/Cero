@@ -44,7 +44,8 @@ public final class Server implements AutoCloseable {
         this.socket = open(options);
         this.watchdog = new Watchdog(options.handlerTimeoutMillis());
         this.connections = Executors.newVirtualThreadPerTaskExecutor();
-        this.sessions = new Sessions(options.sessionTimeoutMillis(), options.sessionStore());
+        this.sessions = new Sessions(options.sessionTimeoutMillis(), options.sessionStore(),
+                options.sessionMaxLifetimeMillis());
         this.context = new ServerContext(options, handler, reporter, watchdog, sessions, () -> running);
         this.acceptor = Thread.ofPlatform().name("lux-accept").daemon(false).start(this::acceptLoop);
     }

@@ -18,14 +18,20 @@ final class Sessions {
     private final SecureRandom random = new SecureRandom();
     private final AtomicInteger sinceSweep = new AtomicInteger();
     private final long timeoutMillis;
+    private final long vidaMaximaMillis;
 
     Sessions(long timeoutMillis) {
-        this(timeoutMillis, SessionStore.inMemory());
+        this(timeoutMillis, SessionStore.inMemory(), 0);
     }
 
     Sessions(long timeoutMillis, SessionStore store) {
+        this(timeoutMillis, store, 0);
+    }
+
+    Sessions(long timeoutMillis, SessionStore store, long vidaMaximaMillis) {
         this.timeoutMillis = timeoutMillis;
         this.store = store == null ? SessionStore.inMemory() : store;
+        this.vidaMaximaMillis = vidaMaximaMillis;
     }
 
     Entry find(String id) {
@@ -36,7 +42,11 @@ final class Sessions {
         if (datos == null) {
             return null;
         }
-        if (System.currentTimeMillis() - datos.ultimoAcceso() > timeoutMillis) {
+        long ahora = System.currentTimeMillis();
+        // Dos topes: inactividad y vida total. Sin el segundo, una sesión que se toque de vez en
+        // cuando vive para siempre — y una robada dura lo mismo que la use quien la robó.
+        if (ahora - datos.ultimoAcceso() > timeoutMillis
+                || (vidaMaximaMillis > 0 && ahora - datos.creada() > vidaMaximaMillis)) {
             store.remove(id);
             return null;
         }
@@ -73,13 +83,14 @@ final class Sessions {
     static final class Entry implements Session {
 
         private final Sessions owner;
-        private final String id;
+        private volatile String id;          // deja de ser final: regenerateId() lo cambia
         private final Map<String, Object> values;
         private final long createdAt;
 
         private volatile long lastAccessAt;
         private volatile boolean valid = true;
         private volatile boolean created;
+        private volatile boolean idRotado;
 
         Entry(Sessions owner, String id, SessionStore.Datos datos) {
             this.owner = owner;
@@ -91,6 +102,15 @@ final class Sessions {
 
         void markCreated() {
             created = true;
+        }
+
+        /** {@code true} si hay que volver a emitir la cookie porque el identificador cambió. */
+        boolean idRotado() {
+            return idRotado;
+        }
+
+        void cookieEmitida() {
+            idRotado = false;
         }
 
         void tocar() {
@@ -146,6 +166,24 @@ final class Sessions {
             synchronized (values) {
                 return Set.copyOf(values.keySet());
             }
+        }
+
+        @Override
+        public void regenerateId() {
+            if (!valid) {
+                throw new IllegalStateException("la sesión ya no vale: no se puede rotar su id");
+            }
+            String anterior = id;
+            String nuevo = owner.newId();
+            synchronized (values) {
+                id = nuevo;
+                owner.store.save(nuevo,
+                        new SessionStore.Datos(new HashMap<>(values), createdAt, lastAccessAt));
+            }
+            // Se borra el viejo DESPUÉS de guardar el nuevo: si algo falla en medio, se queda la
+            // sesión duplicada un rato, que es mucho mejor que perderla.
+            owner.store.remove(anterior);
+            idRotado = true;
         }
 
         @Override

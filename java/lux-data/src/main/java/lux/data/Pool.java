@@ -78,7 +78,7 @@ public final class Pool implements AutoCloseable {
             return;
         }
         borrowed.decrementAndGet();
-        if (!open || !usable(connection) || !idle.offer(connection)) {
+        if (!open || !usable(connection) || !sanear(connection) || !idle.offer(connection)) {
             discard(connection);
         }
     }
@@ -140,6 +140,25 @@ public final class Pool implements AutoCloseable {
             created.decrementAndGet();
             borrowed.decrementAndGet();
             throw new DataException("no se pudo conectar a " + url, cause);
+        }
+    }
+
+    /**
+     * Devuelve la conexión al estado en que se presta. Sin esto, quien pida una conexión al pool
+     * directamente y la devuelva con una transacción abierta o con {@code autoCommit} en
+     * {@code false} se la pasa así al siguiente, que acaba escribiendo dentro de la transacción
+     * de otro. {@link Tx} ya lo hacía bien; esto es la red para quien no use {@code Tx}.
+     */
+    private boolean sanear(Connection connection) {
+        try {
+            if (!connection.getAutoCommit()) {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            }
+            connection.clearWarnings();
+            return true;
+        } catch (SQLException fallo) {
+            return false;   // no vuelve al pool
         }
     }
 

@@ -17,10 +17,12 @@ public record ServerOptions(
         int readBufferBytes,
         int maxKeepAliveRequests,
         int sessionTimeoutMillis,
+        long sessionMaxLifetimeMillis,
         SessionStore sessionStore,
         int gzipMinBytes,
         boolean requireHost,
         boolean behindProxy,
+        java.util.Set<String> trustedProxies,
         SSLContext tls) {
 
     public ServerOptions {
@@ -61,8 +63,9 @@ public record ServerOptions(
                 .maxHeaderBytes(maxHeaderBytes).maxHeaderCount(maxHeaderCount)
                 .maxBodyBytes(maxBodyBytes).readBufferBytes(readBufferBytes)
                 .maxKeepAliveRequests(maxKeepAliveRequests).sessionTimeoutMillis(sessionTimeoutMillis)
+                .sessionMaxLifetime(sessionMaxLifetimeMillis)
                 .sessionStore(sessionStore)
-                .gzipMinBytes(gzipMinBytes).requireHost(requireHost).behindProxy(behindProxy).tls(tls);
+                .gzipMinBytes(gzipMinBytes).requireHost(requireHost).behindProxy(behindProxy).trustProxy(trustedProxies).tls(tls);
     }
 
     public static final class Builder {
@@ -81,10 +84,12 @@ public record ServerOptions(
         private int readBufferBytes = 16_384;
         private int maxKeepAliveRequests = 1_000;
         private int sessionTimeoutMillis = 30 * 60_000;
+        private long sessionMaxLifetimeMillis;
         private SessionStore sessionStore;
         private int gzipMinBytes = 1_024;
         private boolean requireHost = true;
         private boolean behindProxy;
+        private java.util.Set<String> trustedProxies = java.util.Set.of();
         private SSLContext tls;
 
         public Builder host(String value) {
@@ -163,6 +168,21 @@ public record ServerOptions(
             return this;
         }
 
+        /**
+         * Tope de vida total de una sesión, se use o no. Apagado por defecto: solo cuenta la
+         * inactividad. Para un panel de administración conviene ponerlo — sin él, una sesión que
+         * se toque de vez en cuando no caduca nunca.
+         */
+        public Builder sessionMaxLifetime(java.time.Duration value) {
+            sessionMaxLifetimeMillis = value == null ? 0 : value.toMillis();
+            return this;
+        }
+
+        Builder sessionMaxLifetime(long millis) {
+            sessionMaxLifetimeMillis = millis;
+            return this;
+        }
+
         public Builder gzipMinBytes(int value) {
             gzipMinBytes = value;
             return this;
@@ -175,6 +195,27 @@ public record ServerOptions(
          */
         public Builder behindProxy(boolean value) {
             behindProxy = value;
+            return this;
+        }
+
+        /**
+         * Direcciones de los proxies en los que se confía. Solo si la petición viene de una de
+         * ellas se hace caso a {@code X-Forwarded-For} para saber la IP real del visitante.
+         *
+         * <p>Nunca está activa por defecto, y no puede estarlo: creerse esa cabecera venga de
+         * donde venga permite a cualquiera decir que es otra IP, y con eso se salta el limitador
+         * de peticiones y se ensucian los registros.
+         *
+         * <pre>{@code ServerOptions.builder().behindProxy(true).trustProxy("127.0.0.1", "::1")}</pre>
+         */
+        public Builder trustProxy(String... direcciones) {
+            trustedProxies = direcciones == null ? java.util.Set.of() : java.util.Set.of(direcciones);
+            behindProxy = behindProxy || trustedProxies.size() > 0;
+            return this;
+        }
+
+        Builder trustProxy(java.util.Set<String> direcciones) {
+            trustedProxies = direcciones == null ? java.util.Set.of() : direcciones;
             return this;
         }
 
@@ -192,7 +233,8 @@ public record ServerOptions(
             return new ServerOptions(host, port, backlog, maxConnections, idleTimeoutMillis,
                     handlerTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
                     maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests,
-                    sessionTimeoutMillis, sessionStore, gzipMinBytes, requireHost, behindProxy, tls);
+                    sessionTimeoutMillis, sessionMaxLifetimeMillis, sessionStore,
+                    gzipMinBytes, requireHost, behindProxy, trustedProxies, tls);
         }
     }
 }

@@ -15,6 +15,59 @@ final class SessionTests {
 
         overHttp();
         expiry();
+        rotacion();
+        vidaMaxima();
+    }
+
+    /**
+     * A1 · Fijación de sesión. El identificador de antes de identificarse no puede seguir siendo
+     * válido después: quien lo hubiera fijado en el navegador de la víctima se quedaría con una
+     * sesión autenticada.
+     */
+    private static void rotacion() throws Exception {
+        Sessions store = new Sessions(60_000);
+        Sessions.Entry entry = store.create();
+        entry.set("csrf", "abc123");
+        String antes = entry.id();
+
+        entry.regenerateId();
+        String despues = entry.id();
+
+        Check.that("rotar cambia el identificador", !antes.equals(despues));
+        Check.equal("el identificador viejo deja de valer", store.find(antes), null);
+        Check.equal("el nuevo encuentra la sesión", store.find(despues).id(), despues);
+        Check.equal("y conserva el contenido, incluido el token CSRF",
+                store.find(despues).get("csrf"), "abc123");
+        Check.that("hay que reemitir la cookie", entry.idRotado());
+
+        entry.cookieEmitida();
+        Check.that("y una vez emitida, no se repite", !entry.idRotado());
+
+        Sessions.Entry muerta = store.create();
+        muerta.invalidate();
+        boolean protesto = false;
+        try {
+            muerta.regenerateId();
+        } catch (IllegalStateException esperado) {
+            protesto = true;
+        }
+        Check.that("una sesión invalidada no se puede rotar", protesto);
+    }
+
+    /** B3 · Sin tope de vida, una sesión que se toque de vez en cuando no caduca nunca. */
+    private static void vidaMaxima() throws Exception {
+        Sessions conTope = new Sessions(60_000, SessionStore.inMemory(), 200);
+        Sessions.Entry entry = conTope.create();
+
+        Check.equal("dentro del tope se encuentra", conTope.find(entry.id()).id(), entry.id());
+
+        // Se toca a mitad: con solo caducidad por inactividad, esto la mantendría viva siempre.
+        Thread.sleep(120);
+        conTope.find(entry.id());
+        Thread.sleep(120);
+
+        Check.equal("pasada la vida máxima caduca aunque se esté usando",
+                conTope.find(entry.id()), null);
     }
 
     private static void overHttp() throws Exception {
