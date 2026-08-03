@@ -46,6 +46,17 @@
                 <directory>src/main/filtrado</directory>
                 <filtering>true</filtering>
             </resource>
+            <!-- Los guiones del instalador se sirven desde el classpath, pero viven en docs/ y
+                 son su único original. Copiarlos aquí a mano dejaba dos versiones y, peor, en un
+                 checkout limpio no existían y las pruebas de /instalar fallaban. -->
+            <resource>
+                <directory>${project.basedir}/../../docs</directory>
+                <targetPath>guiones</targetPath>
+                <includes>
+                    <include>instalar.sh</include>
+                    <include>instalar.ps1</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <plugin>
