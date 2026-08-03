@@ -67,6 +67,15 @@ case "${1:-ayuda}" in
     # Arma lo que se baja el instalador: el código fuente, sin target/ y sin la web.
     # Va dentro de los recursos de lux-web, así que se despliega con el propio sitio y no
     # hay un segundo sitio del que acordarse.
+    #
+    # Primero se compila DESDE CERO. Sin esto se publicó un paquete que no compilaba en una
+    # instalación limpia: la compilación incremental reutilizaba clases viejas que todavía
+    # cumplían la interfaz anterior, y aquí nadie lo notaba. Quien lo instalaba, sí.
+    requisitos
+    azul "compilando desde cero, que es como lo va a compilar quien lo instale…"
+    (cd "$JAVA_DIR" && "${MVN[@]}" clean install -DskipTests) || {
+      malo "no compila desde cero: no se empaqueta"; exit 1; }
+
     v=$(version)
     destino="$JAVA_DIR/lux-web/src/main/resources/estaticos"
     guiones="$JAVA_DIR/lux-web/src/main/resources/guiones"
