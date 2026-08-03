@@ -414,12 +414,16 @@ footer.pie {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   gap: 3rem;
   align-items: center;
-  padding: 3.5rem 0 3rem;
+  /* La barra superior es sticky y translúcida: sin este aire, la ventana de código queda
+     debajo de ella al desplazarse y se lee a través del desenfoque. */
+  padding: 7rem 0 3.5rem;
   border-bottom: 1px solid var(--linea);
 }
 
 @media (max-width: 64rem) {
-  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 2.5rem; }
+  /* Se apila en una columna, pero el aire de arriba se mantiene: la barra es sticky
+     y con 2.5rem la ventana de código se le metía debajo. */
+  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 5rem; }
 }
 
 .titular {
@@ -535,7 +539,7 @@ footer.pie {
   background: var(--laton-suave); color: var(--term-prompt);
 }
 
-.ventana .panel { max-height: 30rem; overflow: auto; }
+.ventana .panel { max-height: 26rem; overflow: auto; }
 .ventana .panel[hidden] { display: none; }
 .ventana pre {
   margin: 0; padding: 1rem 1.15rem 1.2rem;
@@ -559,3 +563,100 @@ footer.pie {
 .rasgo p { font-size: .875rem; color: var(--apagado); margin: .35rem 0 0; max-width: none; }
 
 td.huella { color: var(--tenue); font-size: .75rem; }
+
+
+/* ── Barra inferior en móvil ───────────────────────────────────────────────
+   En pantalla estrecha la navegación de arriba no cabe y se convierte en un
+   carrusel que nadie desplaza. Abajo, con iconos y al alcance del pulgar, sí. */
+.nav-movil {
+  display: none;
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  padding: .4rem .25rem calc(.4rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--papel) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--linea);
+}
+.nav-movil ul {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nav-movil a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .18rem;
+  padding: .35rem .5rem;
+  min-width: 3.25rem;
+  border-radius: 10px;
+  color: var(--apagado);
+  text-decoration: none;
+}
+.nav-movil a svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.nav-movil a span {
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.nav-movil a[aria-current="page"] { color: var(--laton); background: var(--laton-suave); }
+.nav-movil a:active { background: var(--laton-suave); }
+
+@media (max-width: 48rem) {
+  .nav-movil { display: block; }
+  .barra-sitio .nav-sitio { display: none; }
+  /* Para que el pie no quede tapado por la barra fija. */
+  .pie { padding-bottom: 4.75rem; }
+}
+
+/* ── Formularios ───────────────────────────────────────────────────────────
+   .ficha es una lista de definiciones para tablas de especificación; un
+   formulario necesita lo suyo: etiqueta encima, campo con borde y foco visible. */
+.formulario { max-width: 30rem; margin: 0 0 1.5rem; }
+.formulario .campo-form { margin-bottom: 1.1rem; }
+.formulario label {
+  display: block;
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--apagado); margin-bottom: .4rem;
+}
+.formulario input,
+.formulario select {
+  width: 100%;
+  padding: .6rem .75rem;
+  font-family: inherit; font-size: .9375rem;
+  color: var(--tinta);
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  transition: border-color .14s ease, box-shadow .14s ease;
+}
+.formulario input:focus,
+.formulario select:focus {
+  outline: none;
+  border-color: var(--laton);
+  box-shadow: 0 0 0 3px var(--laton-suave);
+}
+.formulario select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--apagado) 50%),
+                    linear-gradient(135deg, var(--apagado) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.2rem;
+}
+.formulario .boton { margin-top: .3rem; }

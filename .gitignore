@@ -46,6 +46,8 @@ env/
 target/
 *.class
 .mvn/wrapper/maven-wrapper.jar
+# jar que arma el guion de despliegue en la raíz
+/lux-web.jar
 
 # === Rust (fase 3) ===
 # target/ ya está cubierto arriba

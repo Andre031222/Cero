@@ -1,0 +1,31 @@
+# Autoría
+
+LuxCore es obra de tres autores de la **Universidad Nacional del Altiplano**, Puno, Perú.
+
+| Autor | ORCID |
+|---|---|
+| Richar Andre Vilca-Solorzano | [0009-0003-2385-5263](https://orcid.org/0009-0003-2385-5263) |
+| Torres Cruz Fred | [0000-0003-0834-6834](https://orcid.org/0000-0003-0834-6834) |
+| Laura Murillo Ramiro Pedro | [0000-0003-1837-4871](https://orcid.org/0000-0003-1837-4871) |
+
+No se reparte el trabajo por partes: los tres figuran como autores del proyecto.
+
+LuxCore se distribuye bajo licencia MIT. El aviso de copyright está en [LICENSE](../LICENSE); la
+procedencia del código heredado, en [origen.md](origen.md).
+
+## Sobre las cabeceras del código
+
+Los archivos fuente no llevan cabecera de autoría. La autoría vive en `LICENSE` y en este
+documento, una sola vez, y no repetida en cada archivo. Es coherente con el estilo del proyecto:
+el código se explica solo, sin comentarios decorativos.
+
+## Citación
+
+```bibtex
+@software{vilcasolorzano2026luxcore,
+  title  = {LuxCore: núcleo de framework web poliglota sin dependencias},
+  author = {Vilca-Solorzano, Richar Andre and Torres Cruz, Fred and Laura Murillo, Ramiro Pedro},
+  year   = {2026},
+  url    = {https://github.com/Andre031222/LuxCore}
+}
+```

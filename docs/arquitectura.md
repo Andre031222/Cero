@@ -1,7 +1,8 @@
 # Arquitectura de LuxCore
 
-Este documento describe hacia dónde va el código. El estado actual del repositorio es todavía el
-árbol heredado de JxMVC 3.4.0 (ver [ORIGEN.md](ORIGEN.md)); nada de lo que sigue está implementado.
+Este documento describe hacia dónde va el código. **Las fases 1 y 2 están cerradas**: siete
+módulos, el sitio de referencia sobre el propio framework y 1 227 pruebas. Lo que sigue es la
+fase 3. Ver [origen.md](origen.md) para de dónde viene todo.
 
 ## El hallazgo que define el plan
 
@@ -36,10 +37,11 @@ java/
   lux-view/               Motor de plantillas propio (sustituye a JSP)
   lux-data/               JxDB, JxRepository, JxPool, JxTransaction — se mudan casi tal cual
   lux-adapter-servlet/    Compatibilidad Jakarta/Tomcat para las apps AUR ya desplegadas
-  lux-launcher/           Fat-jar: java -jar app.jar
+  lux-web/                Sitio oficial: acceso, demos y generador de proyectos
+  ejemplo/                Aplicación pequeña de punta a punta
+  lux-launcher/           Fat-jar: java -jar app.jar   (pendiente)
 legacy/
   jxmvc-core/             Núcleo heredado — origen de la migración
-  jxmvc2x/                Web de referencia en JSP — banco de pruebas de lux-view
 rust/                     Segunda implementación
 cpp/                      Tercera implementación
 benchmarks/               Harness comparativo (heredado, + LuxCore)
@@ -92,8 +94,9 @@ contradice el principio de que el núcleo se pueda leer entero.
 sirve aquí — es un servidor de juguete, sin keep-alive decente ni control de backpressure.
 Escribir el nuestro es el punto entero del proyecto.
 
-Pendiente en este módulo, ya sin bloquear a nadie: WebSocket, HTTP/2, log de acceso, cabecera
-`Range` en estáticos y sesiones distribuidas.
+Después se le añadieron WebSocket (RFC 6455), rangos en estáticos, recarga de certificado TLS
+sin reiniciar y un almacén de sesiones enchufable para varias instancias. Queda **HTTP/2**, que
+es un proyecto aparte y que un proxy inverso resuelve mientras tanto.
 
 ### 1.2 La costura
 
@@ -167,27 +170,41 @@ Esto es lo que convierte la refundación en una migración y no en una ruptura.
 
 ### Metas de la fase
 
-Mismo harness, mismas condiciones que la línea base:
+Mismo harness, mismas condiciones para los seis contendientes. Medido el 2 de agosto de 2026
+([tabla](../benchmarks/results/RESULTS-docker.md)); comparaciones dentro de esa misma corrida,
+porque los absolutos dependen de la máquina.
 
-| Métrica | JxMVC hoy | Meta LuxCore | Medido en local | Referencia a batir |
+| Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
-| Arranque | 1392 ms | < 150 ms | **28 ms** | javalin 466 |
-| RSS | 471.8 MB | < 120 MB | sin medir en serio | micronaut 331.7 |
-| rps `/json` | 43 315 | ≥ 48 000 | 100 554 ⚠ no comparable | javalin 47 667 |
-| JAR runtime | 253 KB | ≤ 400 KB | **64 KB** | — |
-| Dependencias | 0 | 0 | **0** | spring: decenas |
+| Arranque | < 150 ms | **106 ms** | javalin 451 ms | **sí**, y por 4,3× |
+| JAR runtime | ≤ 400 KB | **297 KB** | — | **sí** |
+| Dependencias | 0 | **0** | spring: decenas | **sí** |
+| rps `/json` | batir al mejor rival | **25 431** | javalin 25 125 | **sí** |
+| RSS | < 120 MB | 136,4 MB | micronaut 201,2 MB | **no**, aunque es el más bajo |
 
-RSS y rps solo cuentan medidos en el harness de `benchmarks/docker`, en el mismo Arch bare-metal
-que usó el paper. Ver [docs/mediciones-locales.md](docs/mediciones-locales.md).
+Cuatro de cinco, y la que falla lo hace por poco: 136,4 MB contra una meta de 120. Esa métrica
+era el punto flojo del proyecto —298 MB esta mañana— hasta que se vio que no era peso sino un
+fallo: el vigilante programaba una tarea por petición y cancelarla no la sacaba de la cola.
+
+Falta repetir la corrida en el mismo Arch bare-metal que usó el paper: lo de arriba es Docker
+Desktop. Ver [docs/mediciones-locales.md](mediciones-locales.md).
 
 ## Fase 2 — Paridad
 
-Migrar las 41 clases puras a los módulos nuevos. Portar las 347 pruebas al runner propio
-(`JxTestSuite`, que ya existe y no usa JUnit). WebSockets propios sobre `lux-http`, sustituyendo
-`jakarta.websocket`. `lux-view` cubriendo todo lo que hoy hace JSP en `JxMVC2x`.
+Migrar las 41 clases puras a los módulos nuevos — hecho, las 14 transversales incluidas.
+WebSockets propios sobre `lux-http` sustituyendo `jakarta.websocket` — hecho. `lux-view`
+cubriendo todo lo que hacía JSP en el sitio de referencia — hecho.
 
-**Criterio de cierre:** `JxMVC2x` corre entero en modo standalone. Esa es la prueba de que la
-paridad es real y no una lista de casillas marcadas.
+De las 347 pruebas heredadas no se hizo un port literal: se compararon una a una contra las
+nuestras buscando comportamiento sin cubrir, que es lo que aportaban. Aparecieron dos fallos
+reales —una redirección abierta y una carrera que hacía al pool pasarse de su tope— y los dos
+están corregidos con prueba propia.
+
+**Criterio de cierre — cumplido el 2 de agosto de 2026.** El sitio de referencia corre entero en
+modo standalone: es `java/lux-web`, con 65 pruebas de punta a punta que lo comprueban. Sustituye
+al `jxmvc2x` heredado, que se ha retirado del repositorio.
+
+Queda por portar las 347 pruebas del núcleo heredado al runner propio.
 
 ## Fase 3 — El framework de frameworks
 

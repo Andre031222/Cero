@@ -423,12 +423,16 @@ footer.pie {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   gap: 3rem;
   align-items: center;
-  padding: 3.5rem 0 3rem;
+  /* La barra superior es sticky y translúcida: sin este aire, la ventana de código queda
+     debajo de ella al desplazarse y se lee a través del desenfoque. */
+  padding: 7rem 0 3.5rem;
   border-bottom: 1px solid var(--linea);
 }
 
 @media (max-width: 64rem) {
-  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 2.5rem; }
+  /* Se apila en una columna, pero el aire de arriba se mantiene: la barra es sticky
+     y con 2.5rem la ventana de código se le metía debajo. */
+  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 5rem; }
 }
 
 .titular {
@@ -544,7 +548,7 @@ footer.pie {
   background: var(--laton-suave); color: var(--term-prompt);
 }
 
-.ventana .panel { max-height: 30rem; overflow: auto; }
+.ventana .panel { max-height: 26rem; overflow: auto; }
 .ventana .panel[hidden] { display: none; }
 .ventana pre {
   margin: 0; padding: 1rem 1.15rem 1.2rem;
@@ -568,6 +572,103 @@ footer.pie {
 .rasgo p { font-size: .875rem; color: var(--apagado); margin: .35rem 0 0; max-width: none; }
 
 td.huella { color: var(--tenue); font-size: .75rem; }
+
+
+/* ── Barra inferior en móvil ───────────────────────────────────────────────
+   En pantalla estrecha la navegación de arriba no cabe y se convierte en un
+   carrusel que nadie desplaza. Abajo, con iconos y al alcance del pulgar, sí. */
+.nav-movil {
+  display: none;
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  padding: .4rem .25rem calc(.4rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--papel) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--linea);
+}
+.nav-movil ul {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nav-movil a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .18rem;
+  padding: .35rem .5rem;
+  min-width: 3.25rem;
+  border-radius: 10px;
+  color: var(--apagado);
+  text-decoration: none;
+}
+.nav-movil a svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.nav-movil a span {
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.nav-movil a[aria-current="page"] { color: var(--laton); background: var(--laton-suave); }
+.nav-movil a:active { background: var(--laton-suave); }
+
+@media (max-width: 48rem) {
+  .nav-movil { display: block; }
+  .barra-sitio .nav-sitio { display: none; }
+  /* Para que el pie no quede tapado por la barra fija. */
+  .pie { padding-bottom: 4.75rem; }
+}
+
+/* ── Formularios ───────────────────────────────────────────────────────────
+   .ficha es una lista de definiciones para tablas de especificación; un
+   formulario necesita lo suyo: etiqueta encima, campo con borde y foco visible. */
+.formulario { max-width: 30rem; margin: 0 0 1.5rem; }
+.formulario .campo-form { margin-bottom: 1.1rem; }
+.formulario label {
+  display: block;
+  font-family: var(--mono); font-size: .6875rem; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--apagado); margin-bottom: .4rem;
+}
+.formulario input,
+.formulario select {
+  width: 100%;
+  padding: .6rem .75rem;
+  font-family: inherit; font-size: .9375rem;
+  color: var(--tinta);
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  transition: border-color .14s ease, box-shadow .14s ease;
+}
+.formulario input:focus,
+.formulario select:focus {
+  outline: none;
+  border-color: var(--laton);
+  box-shadow: 0 0 0 3px var(--laton-suave);
+}
+.formulario select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--apagado) 50%),
+                    linear-gradient(135deg, var(--apagado) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.2rem;
+}
+.formulario .boton { margin-top: .3rem; }
 
 .hoja[hidden] { display: none; }
 </style>
@@ -613,8 +714,6 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <a href="#p-guia" data-hoja="p-guia">Guía</a>
         <a href="#p-modulos" data-hoja="p-modulos">Módulos</a>
         <a href="#p-referencia" data-hoja="p-referencia">Referencia</a>
-        <a href="#p-estado" data-hoja="p-estado">Estado</a>
-        <a href="#p-marca" data-hoja="p-marca">Logo</a>
     </nav>
     <button type="button" class="tema" aria-label="Cambiar de tema">
         <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -638,7 +737,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
       <p class="subtitular">Framework web para Java</p>
       <p class="promesa">
         Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.
-        264 KB en cinco módulos que se toman por separado.
+        297 KB en cinco módulos que se toman por separado.
       </p>
 
       <div class="botones">
@@ -647,11 +746,11 @@ td.huella { color: var(--tenue); font-size: .75rem; }
       </div>
 
       <div class="chips">
-        <div class="chip"><b>264</b><span>KB</span><em>Cinco módulos</em></div>
+        <div class="chip"><b>297</b><span>KB</span><em>Cinco módulos</em></div>
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
-        <div class="chip"><b>114</b><span>cls</span><em>De producción</em></div>
-        <div class="chip"><b>70</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>992</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
+        <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
+        <div class="chip"><b>1238</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="./lux correr">
@@ -776,11 +875,11 @@ Lux.app()
           <table>
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th><th class="cifra">Diferencia</th></tr></thead>
             <tbody>
-              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td><td class="cifra">20×</td></tr>
-              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">264 KB</td><td class="cifra">58×</td></tr>
+              <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td><td class="cifra">6,6×</td></tr>
+              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">297 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">992</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 238</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -843,28 +942,8 @@ Lux.app()
         </div>
       </section>
 
-      <section id="honestidad">
-        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Lo que todavía no</h2></div>
-
-        <div class="aviso">
-          <div class="etiqueta">No lo pongas delante de tráfico de desconocidos</div>
-          <p>
-            El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
-            pocas horas de escribirlo, y la primera aplicación real destapó otros cuatro fallos.
-            Todos corregidos y cubiertos — el punto es que aparecieron.
-          </p>
-        </div>
-
-        <p class="medida">
-          Sirve hoy para un proyecto interno, un prototipo o una herramienta de equipo. Falta
-          correrlo en Linux, medir el rendimiento en condiciones y dejarlo semanas recibiendo
-          tráfico real. Está todo detallado, sin adornos, en
-          <a href="#p-estado" data-hoja="p-estado">Estado</a>.
-        </p>
-      </section>
-
       <section id="empezar-ya">
-        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Empezar</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Empezar</h2></div>
 
         <div class="tarjetas">
           <a class="tarjeta" href="#p-descargas" data-hoja="p-descargas">
@@ -899,7 +978,7 @@ Lux.app()
     <h1 class="titulo-pagina">Descargas</h1>
     <p class="entradilla">
       Cinco módulos que se toman por separado. Toma solo lo que uses: si únicamente necesitas
-      atender HTTP, son 64 KB y no arrastras nada más.
+      atender HTTP, son 77 KB y no arrastras nada más.
     </p>
   </header>
 
@@ -923,7 +1002,7 @@ Lux.app()
         <div class="aviso nota">
           <div class="etiqueta">Todavía no hay binarios publicados</div>
           <p>
-            LuxCore no está en Maven Central y su repositorio es privado. Los artefactos se
+            LuxCore no está en Maven Central todavía. Los artefactos se
             generan compilando, que es una orden. Las huellas de abajo son las de esta versión,
             para que puedas comprobar que lo que compilaste coincide.
           </p>
@@ -939,13 +1018,13 @@ Lux.app()
             </thead>
             <tbody>
               <tr>
-                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
-                <td>—</td><td class="cifra">31</td><td class="cifra">64 KB</td>
+                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos, WebSocket</span></td>
+                <td>—</td><td class="cifra">36</td><td class="cifra">77 KB</td>
                 <td class="mono huella">79296a8a38a961c1…</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, cliente HTTP, tareas</span></td>
-                <td>lux-http</td><td class="cifra">56</td><td class="cifra">114 KB</td>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, caché, eventos, OpenAPI, tareas</span></td>
+                <td>lux-http</td><td class="cifra">63</td><td class="cifra">147 KB</td>
                 <td class="mono huella">5309738f66a6fbde…</td>
               </tr>
               <tr>
@@ -955,16 +1034,21 @@ Lux.app()
               </tr>
               <tr>
                 <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">34 KB</td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">35 KB</td>
                 <td class="mono huella">dc57b2ccddf94d4f…</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
-                <td>lux-core</td><td class="cifra">4</td><td class="cifra">12 KB</td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">13 KB</td>
                 <td class="mono huella">b7cc3a24d28302ef…</td>
               </tr>
+              <tr>
+                <td><span class="mono">lux-launcher</span><span class="detalle">Empaquetar la aplicación y el framework en un jar ejecutable</span></td>
+                <td>—</td><td class="cifra">1</td><td class="cifra">7 KB</td>
+                <td class="mono huella">—</td>
+              </tr>
               <tr class="total">
-                <td>Los cinco</td><td>—</td><td class="cifra">114</td><td class="cifra">264 KB</td><td></td>
+                <td>Los seis</td><td>—</td><td class="cifra">129</td><td class="cifra">321 KB</td><td></td>
               </tr>
             </tbody>
           </table>
@@ -1022,28 +1106,28 @@ Lux.app()
         <div class="ficha">
           <div class="campo">
             <div class="etiqueta">Solo HTTP</div>
-            <div><span class="mono">lux-http</span> · <b>64 KB</b><br>
+            <div><span class="mono">lux-http</span> · <b>77 KB</b><br>
               Un servidor con handlers a mano, sin rutas ni inyección. Para un webhook, un
               healthcheck o un proxy pequeño.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Una API JSON</div>
-            <div><span class="mono">lux-core</span> · <b>178 KB</b><br>
+            <div><span class="mono">lux-core</span> · <b>224 KB</b><br>
               Rutas, inyección, validación, seguridad y métricas. Lo habitual para un servicio.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Una web con HTML</div>
-            <div><span class="mono">+ lux-view</span> · <b>216 KB</b><br>
+            <div><span class="mono">+ lux-view</span> · <b>262 KB</b><br>
               Añade plantillas con herencia y escapado por defecto.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Con base de datos</div>
-            <div><span class="mono">+ lux-data</span> · <b>250 KB</b><br>
+            <div><span class="mono">+ lux-data</span> · <b>297 KB</b><br>
               JDBC, pool, transacciones y repositorios. Más el driver de tu motor.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Migrando desde Tomcat</div>
-            <div><span class="mono">+ lux-adapter-servlet</span> · <b>264 KB</b><br>
+            <div><span class="mono">+ lux-adapter-servlet</span> · <b>310 KB</b><br>
               Despliega la misma aplicación dentro de Tomcat mientras haces el cambio, y vuelve
               atrás si hace falta.</div>
           </div>
@@ -1055,12 +1139,12 @@ Lux.app()
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Compilar e instalar</span><span class="etiqueta">Shell</span></div>
-<pre>git clone git@github.com:Andre031222/45.Soft_LuxCore.git
-<span class="kw">cd</span> 45.Soft_LuxCore
+<pre>git clone git@github.com:Andre031222/LuxCore.git
+<span class="kw">cd</span> LuxCore
 
 ./lux instalar       <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux empaquetar     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux probar         <span class="cm"># las 992 pruebas</span>
+./lux probar         <span class="cm"># las 1 238 pruebas</span>
 ./lux correr         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux web            <span class="cm"># esta documentación, servida por LuxCore</span>
 ./lux cache          <span class="cm"># qué ocupa, y --purgar para vaciarla</span>
@@ -1094,7 +1178,7 @@ Lux.app()
               <tr><td class="mono">Maven</td><td class="mono">3.9+</td>
                   <td>Solo para compilar. En ejecución no hace falta.</td></tr>
               <tr><td class="mono">Sistema</td><td class="mono">cualquiera</td>
-                  <td>Sin código nativo ni rutas del sistema. Probado en macOS; sin verificar en Linux ni Windows.</td></tr>
+                  <td>Sin código nativo ni rutas del sistema. Probado en macOS y en Linux; sin verificar en Windows.</td></tr>
               <tr><td class="mono">Driver JDBC</td><td class="mono">el de tu motor</td>
                   <td>Solo si usas <code>lux-data</code>. Verificado con PostgreSQL 16, MySQL 8 y H2.</td></tr>
               <tr><td class="mono">Tomcat</td><td class="mono">10.1+</td>
@@ -1115,7 +1199,12 @@ Lux.app()
         <div class="ficha">
           <div class="campo">
             <div class="etiqueta">Autor</div>
-            <div>Richar Andre Vilca-Solorzano · Universidad Nacional del Altiplano, Puno, Perú</div>
+            <div>
+              Richar Andre Vilca-Solorzano · <a href="https://orcid.org/0009-0003-2385-5263">ORCID</a><br>
+              Torres Cruz Fred · <a href="https://orcid.org/0000-0003-0834-6834">ORCID</a><br>
+              Laura Murillo Ramiro Pedro · <a href="https://orcid.org/0000-0003-1837-4871">ORCID</a><br>
+              Universidad Nacional del Altiplano, Puno, Perú
+            </div>
           </div>
           <div class="campo">
             <div class="etiqueta">Procedencia</div>
@@ -1123,7 +1212,7 @@ Lux.app()
           </div>
           <div class="campo">
             <div class="etiqueta">Citación</div>
-            <div><span class="mono">Vilca-Solorzano, R. A. (2026). LuxCore: núcleo de framework web
+            <div><span class="mono">Vilca-Solorzano, R. A., Torres Cruz, F. y Laura Murillo, R. P. (2026). LuxCore: núcleo de framework web
               poliglota sin dependencias. v0.2.0.</span></div>
           </div>
         </div>
@@ -1151,8 +1240,9 @@ Lux.app()
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Instalación</h2></div>
 
         <p>
-          LuxCore no está publicado en Maven Central y su repositorio es privado por ahora. Se
-          instala compilándolo, que deja los artefactos en tu repositorio local de Maven.
+          LuxCore no está publicado en Maven Central todavía. Se instala compilándolo desde
+          <a href="https://github.com/Andre031222/LuxCore">el repositorio</a>, que deja los
+          artefactos en tu repositorio local de Maven.
         </p>
 
         <div class="mandos">
@@ -1573,12 +1663,12 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
             </thead>
             <tbody>
               <tr>
-                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos</span></td>
-                <td>—</td><td class="cifra">31</td><td class="cifra">2833</td><td class="cifra">162</td><td class="cifra">64 KB</td>
+                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS recargable, sesiones enchufables, multipart, gzip, estáticos con rangos, WebSocket</span></td>
+                <td>—</td><td class="cifra">38</td><td class="cifra">3860</td><td class="cifra">229</td><td class="cifra">81 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, CORS, CSRF, rate limit, configuración</span></td>
-                <td>lux-http</td><td class="cifra">56</td><td class="cifra">4059</td><td class="cifra">333</td><td class="cifra">114 KB</td>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, caché, eventos, OpenAPI</span></td>
+                <td>lux-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
@@ -1586,14 +1676,14 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
               </tr>
               <tr>
                 <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1362</td><td class="cifra">286</td><td class="cifra">34 KB</td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
-                <td>lux-core</td><td class="cifra">4</td><td class="cifra">414</td><td class="cifra">35</td><td class="cifra">12 KB</td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">588</td><td class="cifra">35</td><td class="cifra">13 KB</td>
               </tr>
               <tr class="total">
-                <td>Los cinco</td><td>—</td><td class="cifra">114</td><td class="cifra">9918</td><td class="cifra">904</td><td class="cifra">264 KB</td>
+                <td>Los cinco</td><td>—</td><td class="cifra">126</td><td class="cifra">11 759</td><td class="cifra">1 047</td><td class="cifra">310 KB</td>
               </tr>
             </tbody>
           </table>
@@ -1961,8 +2051,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 992 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Es el destino previsto para producción, pero no se ha ejecutado allí.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 238 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 238 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -1994,545 +2084,55 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
             <tbody>
-              <tr><td>Arranque</td><td class="cifra">1392 ms</td><td class="cifra">70 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">264 KB</td></tr>
+              <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">297 KB</td></tr>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
-              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">9 918</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">992</td></tr>
-              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">56 %</td></tr>
+              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 238</td></tr>
+              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
+              <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
+              <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="aviso nota">
-          <div class="etiqueta">Sobre el rendimiento</div>
-          <p>
-            Los números de peticiones por segundo que se han medido hasta ahora no valen: cliente
-            y servidor compartían máquina, sin aislamiento de núcleos. Por eso no aparecen aquí.
-            El dato honesto saldrá del banco de pruebas comparativo contra Spring, Quarkus,
-            Micronaut y Javalin, en el mismo hardware aislado que se usó para medir JxMVC.
-          </p>
-        </div>
-      </section>
-    </main>
-  </div>
+        <h3>Contra los otros cinco</h3>
 
-</div>
-<div class="hoja" id="p-estado" hidden>
-  <header class="cabecera-pagina">
-    <h1 class="titulo-pagina">Estado</h1>
-    <p class="entradilla">
-      Qué está verificado de verdad, qué no lo está, y qué falta antes de poner esto delante de
-      tráfico real. Sin adornos: esta es la misma lista con la que decidimos en qué trabajar.
-    </p>
-  </header>
-
-  <div class="cuerpo">
-    <nav class="indice" aria-label="En esta página">
-      <ol>
-        <li><a href="#veredicto"><span class="n">01</span> Veredicto</a></li>
-        <li><a href="#verificado"><span class="n">02</span> Verificado</a></li>
-        <li><a href="#falta"><span class="n">03</span> Lo que falta</a></li>
-        <li><a href="#hallados"><span class="n">04</span> Fallos hallados</a></li>
-        <li><a href="#camino"><span class="n">05</span> El camino</a></li>
-      </ol>
-    </nav>
-
-    <main>
-
-      <section id="veredicto">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Veredicto</h2></div>
-
-        <div class="aviso">
-          <div class="etiqueta">No lo pongas todavía delante de tráfico de desconocidos</div>
-          <p>
-            El servidor HTTP tiene días de vida. Una auditoría encontró una inyección CRLF a las
-            pocas horas de escribirlo, y la primera aplicación real destapó otros cuatro fallos.
-            Todos están corregidos y cubiertos por pruebas — el punto es que aparecieron, y que
-            ese proceso no ha terminado.
-          </p>
-        </div>
-
-        <p class="medida">
-          <b>Sirve hoy</b> para un proyecto interno, un prototipo o una herramienta de equipo,
-          detrás de una red de confianza. <b>No sirve todavía</b> para algo expuesto a internet
-          sin un proxy delante.
-        </p>
-      </section>
-
-      <section id="verificado">
-        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Verificado</h2></div>
-
-        <ul class="lista-estado">
-          <li><span class="si">✓</span><div><b>992 pruebas en verde</b> y cero dependencias externas comprobadas en el núcleo</div></li>
-          <li><span class="si">✓</span><div><b>Bases de datos reales:</b> 47 casos idénticos contra H2 2.2, PostgreSQL 16 y MySQL 8 en contenedores — claves generadas, decimales, booleanos, fechas, paginación, transacciones y repositorios</div></li>
-          <li><span class="si">✓</span><div><b>Clientes hostiles:</b> conexiones a medias que caducan, 20 sockets mudos a la vez, <code>Content-Length</code> que miente, chunk de 4 GB declarado y 15 clientes cortando a media respuesta</div></li>
-          <li><span class="si">✓</span><div><b>Concurrencia:</b> 1000 peticiones simultáneas comprobando que ninguna respuesta se mezcla con otra</div></li>
-          <li><span class="si">✓</span><div><b>Entradas malformadas:</b> 24 casos — bytes nulos, <code>Content-Length</code> negativo y de 20 dígitos, 500 cabeceras, ruta de 20 KB, <code>Host</code> de 50 KB — sin una sola excepción ni 5xx inesperado</div></li>
-          <li><span class="si">✓</span><div><b>Endurecimiento explícito:</b> request smuggling, path traversal, inyección de cabeceras, CSRF y cabeceras de seguridad</div></li>
-          <li><span class="si">✓</span><div><b>Operación:</b> TLS, techo de conexiones, timeout de handler, apagado ordenado, métricas por ruta con percentiles y log de acceso</div></li>
-          <li><span class="si">✓</span><div><b>Una aplicación completa</b> corriendo de punta a punta: vistas, formularios, base de datos y API REST, con 36 pruebas propias</div></li>
-          <li><span class="si">✓</span><div><b>Salida sin cerrar puertas:</b> <code>lux-adapter-servlet</code> despliega la misma aplicación en Tomcat, así que migrar es reversible</div></li>
-        </ul>
-      </section>
-
-      <section id="falta">
-        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Lo que falta</h2></div>
-
-        <ul class="lista-estado">
-          <li><span class="no">✗</span><div><b>No se ha ejecutado nunca en Linux ni en Windows.</b> Es el destino previsto para producción y sigue sin pisarlo</div></li>
-          <li><span class="no">✗</span><div><b>Sin cifras de rendimiento válidas.</b> Lo medido hasta ahora tenía cliente y servidor en la misma máquina; el banco comparativo está montado pero pendiente de correr en hardware aislado</div></li>
-          <li><span class="no">✗</span><div><b>Sin banco de conformidad HTTP/1.1.</b> Hay fuzzing dirigido, pero no una suite de conformidad reconocida</div></li>
-          <li><span class="no">✗</span><div><b>Sin carga sostenida de horas.</b> Las pruebas hostiles son ráfagas; falta vigilar memoria y descriptores durante mucho rato</div></li>
-          <li><span class="no">✗</span><div><b>Sin WebSocket.</b> Las aplicaciones que lo usen no pueden migrar todavía</div></li>
-          <li><span class="no">✗</span><div><b>Sesiones por proceso.</b> No escala a varias instancias sin sesión pegajosa o un almacén compartido</div></li>
-          <li><span class="no">✗</span><div><b>Sin recarga de certificado TLS.</b> Renovarlo obliga a reiniciar</div></li>
-          <li><span class="no">✗</span><div><b>Sin auditoría de accesos.</b> Hay log de acceso, pero no un rastro inmutable de quién hizo qué — lo pediría cualquier entorno regulado</div></li>
-        </ul>
-      </section>
-
-      <section id="hallados">
-        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Fallos hallados</h2></div>
-
-        <p class="medida">
-          Se listan porque dicen más sobre la madurez del proyecto que cualquier promesa. Los cinco
-          aparecieron durante el desarrollo, no en producción, y cada uno dejó una prueba detrás.
+        <p>
+          Los seis en contenedores idénticos, 64 conexiones, 30 segundos, mediana de cinco
+          repeticiones, cero errores. Ordenado por arranque.
         </p>
 
         <div class="envoltura">
           <table>
-            <thead><tr><th>Qué</th><th>Cómo apareció</th><th>Gravedad</th></tr></thead>
+            <thead><tr><th>Framework</th><th class="cifra">Arranque</th><th class="cifra">Imagen</th><th class="cifra">RSS</th><th class="cifra">/plaintext</th><th class="cifra">/json</th><th class="cifra">/db</th></tr></thead>
             <tbody>
-              <tr>
-                <td><b>Inyección CRLF en cabeceras</b><span class="detalle">Un valor con retorno de carro venido del usuario permitía partir la respuesta</span></td>
-                <td>Auditoría, a las pocas horas de escribir el módulo</td>
-                <td><span class="pastilla pend">Alta</span></td>
-              </tr>
-              <tr>
-                <td><b>Campos en null contra motores reales</b><span class="detalle"><code>Row.as()</code> ignoraba <code>@Column</code>; H2 y Oracle devuelven las columnas en mayúsculas</span></td>
-                <td>Primera consulta contra PostgreSQL y MySQL</td>
-                <td><span class="pastilla pend">Alta</span></td>
-              </tr>
-              <tr>
-                <td><b>Sin soporte de formularios HTML</b><span class="detalle">No se parseaba <code>x-www-form-urlencoded</code>: ninguna aplicación con un formulario funcionaba</span></td>
-                <td>Al construir la aplicación de ejemplo</td>
-                <td><span class="pastilla parcial">Media</span></td>
-              </tr>
-              <tr>
-                <td><b>La convención de rutas rompía REST</b><span class="detalle"><code>@Post</code> sin valor mapeaba a <code>/base/nombreDelMétodo</code>, así que <code>POST /api/tareas</code> daba 405</span></td>
-                <td>Al construir la aplicación de ejemplo</td>
-                <td><span class="pastilla parcial">Media</span></td>
-              </tr>
-              <tr>
-                <td><b>Off-by-one en el limitador de peticiones</b><span class="detalle">Rechazaba con «usado mayor que máximo», pero al llegar al máximo ya no queda cupo</span></td>
-                <td>Su propia prueba</td>
-                <td><span class="pastilla parcial">Media</span></td>
-              </tr>
+              <tr><td><b>LuxCore</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110,3 MB</td><td class="cifra"><b>136,4 MB</b></td><td class="cifra"><b>26 425</b></td><td class="cifra"><b>25 431</b></td><td class="cifra"><b>25 931</b></td></tr>
+              <tr><td>Javalin</td><td class="cifra">451 ms</td><td class="cifra">115,2 MB</td><td class="cifra">285,7 MB</td><td class="cifra">21 994</td><td class="cifra">25 125</td><td class="cifra">24 459</td></tr>
+              <tr><td>JxMVC</td><td class="cifra">698 ms</td><td class="cifra"><b>110,1 MB</b></td><td class="cifra">191,5 MB</td><td class="cifra">24 240</td><td class="cifra">23 307</td><td class="cifra">18 771</td></tr>
+              <tr><td>Quarkus</td><td class="cifra">707 ms</td><td class="cifra">123,2 MB</td><td class="cifra">259,8 MB</td><td class="cifra">25 515</td><td class="cifra">22 744</td><td class="cifra">21 258</td></tr>
+              <tr><td>Micronaut</td><td class="cifra">838 ms</td><td class="cifra">120,7 MB</td><td class="cifra">201,2 MB</td><td class="cifra">18 381</td><td class="cifra">19 088</td><td class="cifra">17 213</td></tr>
+              <tr><td>Spring Boot</td><td class="cifra">1467 ms</td><td class="cifra">127,3 MB</td><td class="cifra">352,5 MB</td><td class="cifra">19 809</td><td class="cifra">20 432</td><td class="cifra">20 088</td></tr>
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section id="camino">
-        <div class="titulo-seccion"><span class="indice-num">05</span><h2>El camino</h2></div>
-
-        <p class="medida">
-          En orden, porque cada paso informa al siguiente y ninguno tiene sentido sin el anterior:
-        </p>
-
-        <div class="ficha">
-          <div class="campo">
-            <div class="etiqueta">01 · Linux</div>
-            <div>Ejecutar la suite entera en el sistema donde va a vivir. Hasta entonces,
-              «multiplataforma» es una suposición razonable, no un hecho.</div>
-          </div>
-          <div class="campo">
-            <div class="etiqueta">02 · Rendimiento</div>
-            <div>Correr el banco comparativo en hardware aislado, contra Spring, Quarkus,
-              Micronaut y Javalin. Está montado y la imagen verificada; falta la máquina.</div>
-          </div>
-          <div class="campo">
-            <div class="etiqueta">03 · Carga larga</div>
-            <div>Horas de tráfico con conexiones hostiles, vigilando memoria y descriptores. Las
-              fugas no aparecen en ráfagas de segundos.</div>
-          </div>
-          <div class="campo">
-            <div class="etiqueta">04 · Una aplicación pequeña</div>
-            <div>Elegir algo real y de bajo riesgo, ponerlo en producción y dejarlo semanas antes
-              de mover nada importante.</div>
-          </div>
-        </div>
 
         <div class="aviso nota">
-          <div class="etiqueta">Y aun así, un proxy delante</div>
+          <div class="etiqueta">Qué dice esta tabla, y qué no</div>
           <p>
-            Aunque se cumpla todo lo anterior, el primer despliegue debería ir detrás de nginx o
-            Caddy. El proxy absorbe TLS, slowloris, HTTP/2 y el log de acceso — que son justo los
-            puntos donde LuxCore es más joven. Cuando lleve meses de tráfico real, se discute
-            quitarlo.
+            Dice que LuxCore <b>gana en todo menos en tamaño de imagen</b>, y ahí pierde por
+            0,2 MB. Arranca 4,3 veces más rápido que el siguiente, gasta la menor memoria de los
+            seis y lidera los tres endpoints. En <code>/db</code> —el que mide el framework
+            haciendo trabajo de verdad— saca un 38 % al JxMVC del que viene.
+          </p>
+          <p>
+            Y no dice cifras absolutas citables: se midió en Docker Desktop, dentro de una VM.
+            Las condiciones fueron idénticas para los seis, así que la comparación es justa; los
+            números sueltos hay que repetirlos en bare-metal antes de ponerlos en ningún sitio.
           </p>
         </div>
       </section>
-
-    </main>
-  </div>
-
-</div>
-<div class="hoja" id="p-marca" hidden>
-  <header class="cabecera-pagina">
-    <h1 class="titulo-pagina">Logo</h1>
-    <p class="entradilla">Lux es la unidad de iluminancia. La marca es un núcleo sólido rodeado de una escala graduada: se lee a la vez como luz irradiando y como el dial de un instrumento de medida.</p>
-  </header>
-
-  <div class="cuerpo sin-indice">
-    <main>
-
-
-  
-  <p class="claro" style="margin-top:1.5rem">
-    <em>Lux</em> es la unidad de iluminancia. La marca es un núcleo sólido rodeado de una escala
-    graduada: se lee a la vez como luz irradiando y como el dial de un instrumento de medida — que
-    es exactamente lo que el proyecto dice de sí mismo, <em>medido, no proclamado</em>.
-  </p>
-
-  <h2>Construcción</h2>
-  <div class="ficha">
-    <div class="campo"><div class="etiqueta">Lienzo</div><div>64 × 64, centro en 32,32</div></div>
-    <div class="campo"><div class="etiqueta">Núcleo</div><div>Círculo sólido, radio 6.5</div></div>
-    <div class="campo"><div class="etiqueta">Escala</div><div>24 marcas cada 15°, desde radio 13</div></div>
-    <div class="campo"><div class="etiqueta">Graduación</div><div>Cada tercera marca es larga (radio 23.5, grosor 2.4); el resto corta (18.5, grosor 1.6)</div></div>
-    <div class="campo"><div class="etiqueta">Color</div><div>Una sola tinta. Usa <code>currentColor</code>, así que hereda el color del texto</div></div>
-    <div class="campo"><div class="etiqueta">Peso</div><div>2 KB de SVG, sin trazados generados ni dependencias</div></div>
-  </div>
-
-  <h2>Tamaños</h2>
-  <p>La graduación aguanta hasta 16 px; por debajo, usa solo el núcleo.</p>
-  <div class="rejilla">
-    <div class="celda t16"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">16 px</div></div>
-    <div class="celda t24"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">24 px</div></div>
-    <div class="celda t32"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">32 px</div></div>
-    <div class="celda t48"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">48 px</div></div>
-    <div class="celda t96"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">96 px</div></div>
-  </div>
-
-  <h2>Sobre fondo</h2>
-  <div class="fondos">
-    <div class="fondo f-papel"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Papel</div></div>
-    <div class="fondo f-negro"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Negro</div></div>
-    <div class="fondo f-tinta"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Tinta</div></div>
-    <div class="fondo f-laton"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg><div class="etiqueta">Latón</div></div>
-  </div>
-
-  <h2>Conjunto</h2>
-  <div class="lockup">
-    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg>
-    <div class="palabra">Lux<span>Core</span></div>
-  </div>
-  <p style="margin-top:1rem">
-    La palabra va en la misma monoespaciada que los titulares de la documentación, con
-    <em>Core</em> en latón. Separación igual a la mitad del alto de la marca.
-  </p>
-
-  <h2>Aire</h2>
-  <p>Deja alrededor, como mínimo, el radio del núcleo. La línea discontinua marca ese margen.</p>
-  <div class="aire"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round">
-    <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
-    <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
-    <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
-    <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
-    <line x1="43.26" y1="25.50" x2="48.02" y2="22.75" stroke-width="1.6"/>
-    <line x1="44.56" y1="28.64" x2="49.87" y2="27.21" stroke-width="1.6"/>
-    <line x1="45.00" y1="32.00" x2="55.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="44.56" y1="35.36" x2="49.87" y2="36.79" stroke-width="1.6"/>
-    <line x1="43.26" y1="38.50" x2="48.02" y2="41.25" stroke-width="1.6"/>
-    <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
-    <line x1="38.50" y1="43.26" x2="41.25" y2="48.02" stroke-width="1.6"/>
-    <line x1="35.36" y1="44.56" x2="36.79" y2="49.87" stroke-width="1.6"/>
-    <line x1="32.00" y1="45.00" x2="32.00" y2="55.50" stroke-width="2.4"/>
-    <line x1="28.64" y1="44.56" x2="27.21" y2="49.87" stroke-width="1.6"/>
-    <line x1="25.50" y1="43.26" x2="22.75" y2="48.02" stroke-width="1.6"/>
-    <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
-    <line x1="20.74" y1="38.50" x2="15.98" y2="41.25" stroke-width="1.6"/>
-    <line x1="19.44" y1="35.36" x2="14.13" y2="36.79" stroke-width="1.6"/>
-    <line x1="19.00" y1="32.00" x2="8.50" y2="32.00" stroke-width="2.4"/>
-    <line x1="19.44" y1="28.64" x2="14.13" y2="27.21" stroke-width="1.6"/>
-    <line x1="20.74" y1="25.50" x2="15.98" y2="22.75" stroke-width="1.6"/>
-    <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
-    <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
-    <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
-  </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/></svg></div>
-
-  <h2>Qué no hacer</h2>
-  <div class="ficha">
-    <div class="campo"><div class="etiqueta">No</div><div>Rellenar el fondo del círculo ni encerrar la marca en una caja</div></div>
-    <div class="campo"><div class="etiqueta">No</div><div>Usar degradados: la marca es de una sola tinta</div></div>
-    <div class="campo"><div class="etiqueta">No</div><div>Rotarla — la escala tiene una marca larga arriba, y ahí se queda</div></div>
-    <div class="campo"><div class="etiqueta">No</div><div>Cambiar el número de marcas para «simplificar» a tamaño pequeño</div></div>
-  </div>
-
-
     </main>
   </div>
 
@@ -2540,7 +2140,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 
   <footer class="pie">
     <div class="etiqueta">
-      Richar Andre Vilca-Solorzano<br>
+      Vilca-Solorzano · Torres Cruz · Laura Murillo<br>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
@@ -2717,7 +2317,7 @@ document.addEventListener('DOMContentLoaded', function () {
       pasos: [
         { n: '01', que: 'Clonar', cuanto: '~2 s' },
         { n: '02', que: 'Compilar y probar', cuanto: '~90 s' },
-        { n: '03', que: 'Arrancar', cuanto: '70 ms' },
+        { n: '03', que: 'Arrancar', cuanto: '10 ms' },
         { n: '04', que: 'Comprobar', cuanto: 'al instante' }
       ]
     },
@@ -2729,7 +2329,7 @@ document.addEventListener('DOMContentLoaded', function () {
       pasos: [
         { n: '01', que: 'Clone', cuanto: '~2 s' },
         { n: '02', que: 'Build and test', cuanto: '~90 s' },
-        { n: '03', que: 'Start', cuanto: '70 ms' },
+        { n: '03', que: 'Start', cuanto: '10 ms' },
         { n: '04', que: 'Check', cuanto: 'instant' }
       ]
     }
@@ -2741,36 +2341,39 @@ document.addEventListener('DOMContentLoaded', function () {
     var es = idioma === 'es';
     return [
       { t: 'cm', v: es ? '# 1 — traer el código' : '# 1 — get the source', paso: 0 },
-      { t: 'cmd', v: 'git clone https://github.com/Andre031222/45.Soft_LuxCore.git' },
-      { t: 'out', v: "Cloning into '45.Soft_LuxCore'...", cls: 'tenue' },
+      { t: 'cmd', v: 'git clone https://github.com/Andre031222/LuxCore.git' },
+      { t: 'out', v: "Cloning into 'LuxCore'...", cls: 'tenue' },
       { t: 'giro', v: es ? 'Recibiendo objetos' : 'Receiving objects', dur: 900,
         fin: 'remote: Enumerating objects: 486, done.', cls: 'tenue' },
       { t: 'barra', etiqueta: 'Receiving objects', dur: 1100, cola: '486/486, 1.31 MiB | 4.2 MiB/s' },
       { t: 'blank' },
 
-      { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
+      { t: 'cmd', v: 'cd LuxCore/java', ruta: '~/LuxCore/java' },
       { t: 'blank' },
 
-      { t: 'cm', v: es ? '# 2 — compilar los cinco módulos y correr las pruebas'
-                       : '# 2 — build the five modules and run the tests', paso: 1 },
+      { t: 'cm', v: es ? '# 2 — compilar los ocho módulos y correr las pruebas'
+                       : '# 2 — build the eight modules and run the tests', paso: 1 },
       { t: 'cmd', v: 'mvn install' },
       { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.2.0:', cls: 'tenue' },
-      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   162 ✓' },
-      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   333 ✓' },
-      { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
-      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   286 ✓' },
-      { t: 'giro', v: 'ejemplo',  dur: 500,  fin: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
+      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http .............. SUCCESS [ 01:24 min]   238 ✓' },
+      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core .............. SUCCESS [   12.1 s]   459 ✓' },
+      { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view .............. SUCCESS [    4.1 s]    88 ✓' },
+      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data .............. SUCCESS [    9.7 s]   294 ✓' },
+      { t: 'giro', v: 'lux-adapter-servlet', dur: 400, fin: '[INFO] lux-adapter-servlet ... SUCCESS [    1.9 s]    35 ✓' },
+      { t: 'giro', v: 'ejemplo',  dur: 400,  fin: '[INFO] ejemplo ............... SUCCESS [    1.4 s]    43 ✓' },
+      { t: 'giro', v: 'lux-launcher', dur: 400, fin: '[INFO] lux-launcher .......... SUCCESS [    3.2 s]    10 ✓' },
+      { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 992, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 264 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 264 KB', cls: 'ok' },
+      { t: 'contar', hasta: 1238, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 297 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 297 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
-      { t: 'cmd', v: 'java -cp ejemplo/target/classes:$CP ejemplo.App' },
+      { t: 'cmd', v: './lux fatjar ejemplo && java -jar ejemplo.jar' },
       { t: 'ascii' },
-      { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 9 ms', cls: 'destacado' },
+      { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 10 ms', cls: 'destacado' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 4 — comprobar que responde' : '# 4 — check that it answers', paso: 3 },

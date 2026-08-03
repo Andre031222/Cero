@@ -2,10 +2,18 @@
 
 Última medición: 1 de agosto de 2026, tras cerrar las fases A–D.
 
+> **Este documento ya no es la fuente de los números de rendimiento.** El 2 de agosto de 2026 se
+> corrió el harness comparativo con LuxCore dentro, y lo que salió de ahí manda:
+> [`benchmarks/results/RESULTS-docker.md`](../benchmarks/results/RESULTS-docker.md). La corrida
+> **desmiente** el rps de esta página: en condiciones iguales para los seis contendientes, LuxCore
+> queda en mitad de tabla en throughput, no 2,2× por delante. Lo de abajo se conserva como
+> registro de cómo se llegó hasta aquí, y como recordatorio de lo fácil que es engañarse midiendo
+> en casa.
+
 **No son comparables con la tabla de `benchmarks/results/`** y no deben citarse como si lo fueran:
-aquella se midió en Arch bare-metal y en Docker con 4 cpus, 2 GB y cliente aislado en cores
-separados. Esto es un MacBook con el cliente en la misma máquina. Sirven como señal, no como
-resultado.
+aquella se midió en Docker con límites fijos e idénticos para todos los frameworks. Esto es un
+MacBook con el cliente en la misma máquina y sin rival contra el que comparar. Sirven como señal,
+no como resultado.
 
 ## Entorno
 

@@ -1,46 +1,94 @@
 # LuxCore
 
-Núcleo de framework web sin dependencias, que arranca solo y está pensado para vivir en más de
-un lenguaje.
+Framework web para Java que arranca solo, sin contenedor de servlets y sin una sola dependencia
+externa. Pensado desde el principio para vivir en más de un lenguaje.
 
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-601-15803d?style=flat-square)](#estado)
+[![Pruebas](https://img.shields.io/badge/Pruebas-1238-15803d?style=flat-square)](#estado)
+[![En vivo](https://img.shields.io/badge/En_vivo-luxcore.ginit.dev-0f2444?style=flat-square)](https://luxcore.ginit.dev)
+
+**En producción:** [luxcore.ginit.dev](https://luxcore.ginit.dev) — el sitio de este proyecto,
+servido por el propio framework, sin Tomcat detrás.
+
+![LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 297 KB](docs/imagenes/portada.png)
 
 * * *
 
 ## Qué es
 
-LuxCore nace de [JxMVC 3.4.0](ORIGEN.md), un framework MVC en Java con cero dependencias que
+LuxCore nace de [JxMVC 3.4.0](docs/origen.md), un framework MVC en Java con cero dependencias que
 funciona y está en producción — pero que necesita Tomcat para arrancar y solo existe para Java.
 
 LuxCore cambia esas dos cosas:
 
-1. **Arranca solo.** Servidor HTTP propio con un hilo virtual por conexión. `java -jar app.jar` y
-   está corriendo. Sin contenedor de servlets, sin `web.xml`, sin despliegue.
-2. **No es solo Java.** El objetivo final no es un framework más: es un contrato de framework
-   —rutas, pipeline, request/response, DI, configuración— definido de forma neutral e
-   **implementado en Java, Rust y C++**, con un mismo banco de pruebas de conformidad para los tres.
-
-Lo que no cambia es la identidad del proyecto: cero dependencias externas, poco peso, y un núcleo
-que un desarrollador puede leer entero.
+1. **Arranca solo.** Servidor HTTP/1.1 propio con un hilo virtual por conexión. `java -jar app.jar`
+   y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
+2. **No es solo Java.** El objetivo final es un *contrato* de framework —rutas, pipeline,
+   request/response, inyección, configuración— definido de forma neutral e implementado en
+   **Java, Rust y C++**, con un mismo banco de conformidad para los tres.
 
 ## Principios
 
-- **Cero dependencias en runtime.** Solo el JDK. El driver JDBC de tu base de datos es la única
-  excepción, y la pone la aplicación.
+- **Cero dependencias en ejecución.** Solo el JDK. El driver JDBC lo pone la aplicación, y es la
+  única excepción.
 - **Legible antes que ingenioso.** Si una clase no se puede leer de corrido, se parte.
-- **Medido, no proclamado.** Toda afirmación de rendimiento sale de `benchmarks/`, con el mismo
-  harness que ya compara contra Spring, Quarkus, Micronaut y Javalin.
-- **El spec manda.** Desde la fase 3, ninguna implementación es la de referencia: la referencia es
-  `SPEC/`, y las tres pasan las mismas pruebas.
+- **Medido, no proclamado.** Toda afirmación de rendimiento sale de [`benchmarks/`](benchmarks/),
+  con el mismo harness para todos los contendientes.
+- **El contrato manda.** Desde la fase 3 ninguna implementación es la de referencia: la referencia
+  es `spec/`, y las tres pasan las mismas pruebas.
 
-## Estado
+## Rendimiento
 
-**El framework ya corre solo.** Cuatro módulos terminados —servidor, núcleo, vistas y datos—:
-102 clases, **601 pruebas en verde**, cero dependencias, y ni una sola referencia a `jakarta.*`
-en todo `java/`.
+![Arranque en frío y memoria: LuxCore frente a Javalin, JxMVC, Quarkus, Micronaut y Spring Boot](docs/imagenes/banco.png)
+
+*Los seis en contenedores idénticos, misma corrida, 90 mediciones sin un solo error.
+[Tabla completa y salvedades](benchmarks/results/RESULTS-docker.md).*
+
+| Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
+|---|---|---|---|---|---|---|
+| **LuxCore** | **106 ms** | 110,3 MB | **136,4 MB** | **26 425** | **25 431** | **25 931** |
+| Javalin | 451 ms | 115,2 MB | 285,7 MB | 21 994 | 25 125 | 24 459 |
+| JxMVC | 698 ms | **110,1 MB** | 191,5 MB | 24 240 | 23 307 | 18 771 |
+| Quarkus | 707 ms | 123,2 MB | 259,8 MB | 25 515 | 22 744 | 21 258 |
+| Micronaut | 838 ms | 120,7 MB | 201,2 MB | 18 381 | 19 088 | 17 213 |
+| Spring Boot | 1467 ms | 127,3 MB | 352,5 MB | 19 809 | 20 432 | 20 088 |
+
+LuxCore gana en todo menos en tamaño de imagen, y ahí pierde por 0,2 MB. Arranca 4,3× más rápido
+que el siguiente, gasta la menor memoria de los seis y lidera los tres endpoints. En `/db` —el que
+mide el framework haciendo trabajo de aplicación— saca un 38 % al JxMVC del que viene.
+
+**Salvedad que importa:** se midió en Docker Desktop. Los valores **relativos** son justos porque
+las condiciones fueron idénticas para los seis; los **absolutos** requieren repetir la corrida en
+Linux sin virtualizar antes de citarse.
+
+## Instalar
+
+Java 21 o superior (hilos virtuales) y Maven. Nada más.
+
+![Clonar, compilar las 1 238 pruebas y arrancar en 10 ms](docs/imagenes/instalar.gif)
+
+```bash
+git clone https://github.com/Andre031222/LuxCore.git && cd LuxCore
+cd java && mvn install     # 1 238 pruebas, runner propio (sin JUnit)
+./lux fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
+```
+
+Las pruebas de `lux-data` contra motores reales necesitan PostgreSQL y MySQL escuchando; sin ellos
+se omiten esos grupos y el resto sigue corriendo:
+
+```bash
+docker run -d --name lux-pg -e POSTGRES_PASSWORD=lux -e POSTGRES_DB=luxpruebas \
+       -p 55432:5432 postgres:16-alpine
+docker run -d --name lux-my -e MYSQL_ROOT_PASSWORD=lux -e MYSQL_DATABASE=luxpruebas \
+       -p 53306:3306 mysql:8
+```
+
+En [integración continua](.github/workflows/pruebas.yml) se levantan siempre, y la corrida **falla
+si algún motor quedó sin probar** — para que la suite no pueda mentir por omisión.
+
+## Un vistazo
 
 ```java
 @Route("/api")
@@ -57,142 +105,86 @@ class ApiController {
 Lux.run(8080, ApiController.class);
 ```
 
-Eso arranca un servidor con ruteo, inyección de dependencias, serialización JSON y manejo de
-errores en **51 ms**, sin contenedor y sin una sola dependencia externa.
+Eso levanta ruteo, inyección de dependencias, serialización JSON y manejo de errores. De dónde sale
+cada argumento se decide **al registrar la ruta**, no en cada petición: el camino caliente no toca
+la reflexión.
 
-Medición local ([detalle y salvedades](docs/mediciones-locales.md)):
+## Los módulos
 
-| | JxMVC sobre Tomcat | LuxCore | Meta de fase 1 |
-|---|---|---|---|
-| Arranque | 1392 ms | **51 ms** | < 150 ms |
-| Artefacto | 253 KB + ~15 MB Tomcat | **215 KB** (4 JAR) | ≤ 400 KB |
-| rps | 43 691 | 94 610 ⚠ | ≥ 48 000 |
-| Pruebas | 347 | **601** | — |
-| Dependencias | 0 (+ Jakarta *provided*) | **0** | 0 |
+| Módulo | Pruebas | Qué trae |
+|---|---|---|
+| [`lux-http`](java/lux-http) | 238 | Servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con almacén enchufable, multipart, gzip, estáticos con `Range` y **WebSocket** (RFC 6455) |
+| [`lux-core`](java/lux-core) | 459 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, cron y OpenAPI |
+| [`lux-view`](java/lux-view) | 88 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
+| [`lux-data`](java/lux-data) | 294 | `Row`, `Db`, `Pool`, `Tx` y `Repository<T, ID>`. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
+| [`lux-adapter-servlet`](java/lux-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
+| [`lux-launcher`](java/lux-launcher) | 10 | Empaqueta aplicación y framework en un jar ejecutable, con `java.util.jar` y sin plugins de terceros |
+| [`lux-web`](java/lux-web) | 71 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
+| [`ejemplo`](java/ejemplo) | 43 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
 
-⚠ El rps se midió con cliente y servidor en la misma máquina, y **no es comparable** con la tabla
-del paper. El número que cuenta sale del harness de `benchmarks/docker` en Arch bare-metal.
-Arranque y tamaño del artefacto sí son sólidos.
+Los cuatro del núcleo —`lux-http`, `lux-core`, `lux-view` y `lux-data`— suman **297 KB** y no
+declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo el proyecto está en
+`lux-adapter-servlet`, en *scope* `provided`.
 
-## Qué trae cada módulo
+## Estado
 
-**`lux-http`** (144 pruebas) — servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive,
-chunked en ambos sentidos, `Expect: 100-continue`, HEAD, streaming, TLS, cookies, sesiones,
-multipart, gzip y archivos estáticos. Techo de conexiones, watchdog de handler y apagado ordenado.
+**Las fases 1 y 2 están cerradas.** Del núcleo heredado no queda código por migrar: las 14 clases
+transversales están reescritas y el sitio de referencia corre sobre el propio framework.
 
-**`lux-core`** (228 pruebas) — el framework: router con plantillas `{var}` y comodines, pipeline
-con middleware, inyección de dependencias con detección de ciclos, JSON propio (escritura, lectura
-y vinculación a records), vinculación de parámetros (`@Path`, `@Query`, `@Body`, `@Header`,
-`@CookieValue`), autenticación y roles (`@RequireAuth`, `@RequireRole`), manejo de errores
-(`@OnError`) y configuración por properties, entorno y propiedades del sistema.
+Lo verificado, y cómo:
 
-Trae además los transversales de una app real: **CORS** con preflight, **CSRF** con token en
-sesión y comparación en tiempo constante, **rate limiting** por ventana deslizante, **validación**
-declarativa (`@Required`, `@Length`, `@Range`, `@Email`, `@Match`, `@OneOf`, `@Satisfies`) que
-responde 422 con el mapa de campos, y **sanitizado** de HTML y nombres de archivo.
+- **1 238 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
+- **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
+- **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
+  24 entradas malformadas.
+- **23 vectores de conformidad** con RFC 9112, que al escribirse destaparon cuatro incumplimientos.
+- **Media hora de carga continua** sin fuga: el RSS acabó más bajo que al empezar y los
+  descriptores no se movieron.
 
-**`lux-view`** (88 pruebas) — motor de plantillas propio, sustituye a JSP. `{{ expr }}` escapado
-por defecto, `{% if %}`, `{% for %}` con `loop.index`/`first`/`last`, `{% include %}` y herencia
-con `{% extends %}` y `{% block %}`. Plantillas compiladas y cacheadas.
+Lo que falta está en [docs/produccion.md](docs/produccion.md), sin adornos. En una línea: **nadie
+lo ha usado en producción con tráfico real durante meses**, y eso no se arregla programando.
 
-**`lux-data`** (141 pruebas) — `Row`, `Db`, `Pool`, `Tx` y `Repository<T, ID>` sobre `@Table`,
-`@Id` y `@Column`. Todo por `PreparedStatement`; los identificadores se validan carácter a
-carácter y los valores nunca se concatenan.
-
-## Qué falta
-
-Del núcleo heredado quedan **14 clases y 2 566 líneas** por migrar, ninguna acoplada a Jakarta:
-cache, scheduler, métricas, eventos, logger, perfiles, OpenAPI, OAuth, contraseñas y WebSocket.
+Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaciones en Rust y C++.
 
 ## Estructura
 
 ```text
-java/
-  lux-http/      Servidor HTTP/1.1 propio, TLS, sesiones, estáticos — hecho
-  lux-core/      Router, pipeline, DI, JSON, configuración          — hecho
-  lux-view/      Motor de plantillas, sustituye JSP                 — hecho
-  lux-data/      Acceso a datos: Db, Pool, Tx, Repository           — hecho
-  lux-launcher/  Fat-jar, java -jar app.jar                           (pendiente)
-legacy/
-  jxmvc-core/    Núcleo heredado — origen de la migración
-  jxmvc2x/       Web de referencia en JSP — banco de pruebas de lux-view
-spec/            Contrato del kernel, neutral respecto al lenguaje    (fase 3)
-rust/  cpp/      Implementaciones adicionales                         (fase 3)
-benchmarks/      Harness comparativo con Spring, Quarkus, Micronaut, Javalin
-docs/            Documentación
+java/         Los ocho módulos
+legacy/       jxmvc-core — origen de la migración y línea base del banco
+benchmarks/   Harness comparativo y prueba de carga sostenida
+docs/         Documentación y el sitio estático
+spec/         Contrato del kernel, neutral respecto al lenguaje   (fase 3)
+rust/  cpp/   Implementaciones adicionales                        (fase 3)
+lux           Órdenes del proyecto: ./lux probar, portal, fatjar…
 ```
 
-## Compilar
+## Documentación
 
-LuxCore necesita Java 21+ (hilos virtuales) y Maven. Nada más.
-
-```bash
-cd java && mvn test          # 601 pruebas, runner propio (sin JUnit)
-cd java && mvn package       # cada módulo en su target/
-```
-
-El núcleo heredado sigue compilando aparte, y todavía necesita Tomcat para `jxmvc2x`:
-
-```bash
-cd legacy/jxmvc-core && mvn test    # 347 pruebas
-```
-
-## Web del proyecto
-
-Sitio de siete páginas en `docs/web/`, sin dependencias ni paso de compilación de terceros:
-HTML, una hoja de estilo y dos guiones. Nada de npm.
-
-| Página | Qué es |
+| Documento | Qué responde |
 |---|---|
-| [index.html](docs/web/index.html) | Portada: qué es, un vistazo al código y por dónde seguir |
-| [empezar.html](docs/web/empezar.html) | Instalación con guía en terminal animada, bilingüe ES/EN |
-| [guia.html](docs/web/guia.html) | Rutas, parámetros, respuestas, inyección, validación y errores |
-| [modulos.html](docs/web/modulos.html) | Servidor, vistas, datos, seguridad y configuración |
-| [referencia.html](docs/web/referencia.html) | Motores verificados, sistemas y comparación con Tomcat |
-| [estado.html](docs/web/estado.html) | Qué está probado y qué falta para producción |
-| [marca/](docs/web/marca/) | El logo: construcción, tamaños, uso y `logo.svg` suelto |
+| [produccion.md](docs/produccion.md) | ¿Está listo para producción? (respuesta corta: todavía no, y ahí está la lista) |
+| [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
+| [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Comparación con JxMVC, capa por capa |
+| [papers.md](docs/papers.md) | Plan de publicación: los tres artículos y qué bloquea cada uno |
+| [origen.md](docs/origen.md) | De dónde viene el código y por qué el original no se toca |
+| [autores.md](docs/autores.md) | Autoría y atribución |
 
-Las páginas se generan con `./lux sitio`, que envuelve los fragmentos de `docs/web/contenido/`
-con la cabecera, la navegación y el pie. Así la navegación se escribe una sola vez.
-
-El mismo generador produce `docs/web/completo.html`: el sitio entero en **un archivo de 126 KB**,
-sin recursos externos. Sirve para leerlo sin conexión, mandarlo por correo o abrirlo con doble
-clic — y es una demostración de lo que el proyecto defiende.
-
-Para verlo servido por el propio LuxCore:
-
-```bash
-./lux web        # http://localhost:8095
-```
-
-Se puede servir con el propio LuxCore:
-
-```java
-Lux.app().port(8080)
-   .fallback(StaticFiles.from(Path.of("docs/web")))
-   .start();
-```
-
-## Documentos
-
-- [docs/produccion.md](docs/produccion.md) — **¿está listo para producción?** (respuesta corta: no
-  todavía, y ahí está la lista concreta de qué falta)
-- [docs/auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) — comparación con JxMVC, capa por capa
-- [ARQUITECTURA.md](ARQUITECTURA.md) — el diseño y las tres fases
-- [ORIGEN.md](ORIGEN.md) — de dónde viene el código y por qué el original no se toca
-- [AUTORES.md](AUTORES.md) — autoría y atribución del código heredado
+El sitio del proyecto vive en [`docs/web/`](docs/web/) —ocho páginas, sin npm ni paso de
+compilación de terceros— y se regenera con `./lux sitio`. El mismo generador produce
+`completo.html`: el sitio entero en un archivo, sin recursos externos.
 
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
-Autor: **Richar Andre Vilca-Solorzano**. Universidad Nacional del Altiplano, Puno, Perú.
+Autores: **Richar Andre Vilca-Solorzano**, **Torres Cruz Fred** y **Laura Murillo Ramiro Pedro**.
+Universidad Nacional del Altiplano, Puno, Perú.
 
 ```bibtex
 @software{vilcasolorzano2026luxcore,
   title  = {LuxCore: núcleo de framework web poliglota sin dependencias},
-  author = {Vilca-Solorzano, Richar Andre},
+  author = {Vilca-Solorzano, Richar Andre and Torres Cruz, Fred and Laura Murillo, Ramiro Pedro},
   year   = {2026},
-  url    = {https://github.com/Andre031222/45.Soft_LuxCore}
+  url    = {https://github.com/Andre031222/LuxCore}
 }
 ```
