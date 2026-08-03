@@ -1,7 +1,15 @@
-# Resultados del benchmark — corrida OFICIAL (bare-metal)
+# Resultados del benchmark — corrida bare-metal de julio de 2026
 
-Cifras oficiales para el paper. Fuente auto-generada: [`RESULTS-docker.md`](RESULTS-docker.md)
-(tabla), [`STATS.md`](STATS.md) (mediana + [min–max]), [`ENV.md`](ENV.md) (entorno),
+> **Histórico, y sin LuxCore.** Esta es la corrida en Arch bare-metal que sirvió de línea base al
+> paper, hecha antes de que LuxCore existiera como contendiente. Se conserva porque es la única
+> medición en hardware sin virtualizar que tenemos.
+>
+> La corrida **actual**, con los seis frameworks incluido LuxCore, está en
+> [`RESULTS-docker.md`](RESULTS-docker.md) — pero es Docker Desktop sobre macOS: comparación
+> justa entre ellos, cifras absolutas no citables. Repetir *esta* corrida en bare-metal, ya con
+> LuxCore dentro, es lo que falta para tener números publicables.
+
+Acompañan: [`STATS.md`](STATS.md) (mediana + [min–max]), [`ENV.md`](ENV.md) (entorno),
 [`raw-docker.csv`](raw-docker.csv) (60 filas crudas). Metodología: [`../README.md`](../README.md).
 
 > Una corrida preliminar previa en Docker Desktop (WSL2, `--cpus=2`) quedó en el historial de git

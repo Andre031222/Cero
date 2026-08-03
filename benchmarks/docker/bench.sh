@@ -6,7 +6,11 @@
 #
 # Requisitos: Docker en marcha + un JDK en el host (para el LoadClient).
 # Uso: ./bench.sh [conexiones] [segundos] [repeticiones]
+#      ./bench.sh --tabla              rehace la tabla desde el CSV, sin volver a medir
 set -euo pipefail
+
+SOLO_TABLA=0
+if [ "${1:-}" = "--tabla" ]; then SOLO_TABLA=1; shift; fi
 
 CONNS="${1:-64}"
 DUR="${2:-20}"
@@ -33,11 +37,25 @@ APPS=(luxcore jxmvc spring quarkus micronaut javalin)
 # BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 
-command -v java >/dev/null || { echo "Falta java en el host (para LoadClient)"; exit 1; }
-docker info >/dev/null 2>&1 || { echo "Docker no está corriendo. Inicia Docker Desktop."; exit 1; }
-[ -f "$HERE/../load/LoadClient.class" ] || (cd "$HERE/../load" && javac LoadClient.java)
+if [ "$SOLO_TABLA" = 0 ]; then
+  command -v java >/dev/null || { echo "Falta java en el host (para LoadClient)"; exit 1; }
+  docker info >/dev/null 2>&1 || { echo "Docker no está corriendo. Inicia Docker Desktop."; exit 1; }
+  if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "El puerto $PORT ya está ocupado. Libéralo o usa BENCH_PORT=<otro> ./bench.sh"; exit 1
+  fi
+  [ -f "$HERE/../load/LoadClient.class" ] || (cd "$HERE/../load" && javac LoadClient.java)
 
-echo "framework,image_mb,startup_ms,rss_mb,endpoint,conns,dur,requests,errors,non2xx,rps,meanMs,p50,p90,p95,p99" > "$CSV"
+  echo "framework,image_mb,startup_ms,rss_mb,endpoint,conns,dur,requests,errors,non2xx,rps,meanMs,p50,p90,p95,p99" > "$CSV"
+else
+  # Los parámetros de la corrida salen del propio CSV, no de los argumentos: la tabla
+  # tiene que describir lo que se midió, no lo que se teclee al rehacerla.
+  [ -s "$CSV" ] || { echo "No hay $CSV que agregar."; exit 1; }
+  CONNS=$(awk -F, 'NR==2{print $6}' "$CSV")
+  DUR=$(awk -F, 'NR==2{print $7}' "$CSV")
+  REPS=$(awk -F, 'NR==2{f=$1; e=$5} NR>1 && $1==f && $5==e{n++} END{print n+0}' "$CSV")
+  PORT=$(awk -F, 'NR==2{split($5,a,":"); split(a[3],b,"/"); print b[1]}' "$CSV")
+  echo "Rehaciendo la tabla desde $CSV (conns=$CONNS dur=${DUR}s reps=$REPS)."
+fi
 
 # Milisegundos desde época. GNU date admite %3N; BSD (macOS) no, así que se cae a python3.
 ahora_ms() {
@@ -61,6 +79,7 @@ wait_up() {  # espera 200 en /plaintext, imprime ms de arranque
 }
 
 for fw in "${APPS[@]}"; do
+  [ "$SOLO_TABLA" = 1 ] && break
   echo "──────────── $fw ────────────"
   img="bench-$fw"
   blog="/tmp/bench-build-$fw.log"
@@ -80,7 +99,11 @@ for fw in "${APPS[@]}"; do
   docker rm -f "bench_$fw" >/dev/null 2>&1 || true
   runargs=(--cpus="$CPUS" --memory="$MEM")
   [ -n "$CPUSET" ] && runargs+=(--cpuset-cpus="$CPUSET")
-  docker run -d --name "bench_$fw" "${runargs[@]}" -p "$PORT:8080" "$img" >/dev/null
+  # `set -e` mataba el banco entero si un solo `docker run` fallaba (p. ej. puerto ocupado).
+  if ! docker run -d --name "bench_$fw" "${runargs[@]}" -p "$PORT:8080" "$img" >/dev/null 2>"/tmp/bench-run-$fw.log"; then
+    echo "  $fw: NO se pudo lanzar el contenedor —"; sed 's/^/    /' "/tmp/bench-run-$fw.log"
+    continue
+  fi
 
   startup_ms=$(wait_up) || startup_ms=-1
   if [ "$startup_ms" = "-1" ]; then
@@ -119,9 +142,26 @@ med() {
 {
   echo "# Resultados dockerizados"
   echo
-  echo "Entorno: \`docker --cpus=$CPUS --memory=$MEM\`, misma base JRE. conns=$CONNS, dur=${DUR}s, reps=$REPS."
-  echo "Generado por \`bench.sh\`. Números relativos comparables; ver README §8 (validez)."
-  echo "Arranque/RSS/rps son **mediana** de las $REPS repeticiones. \`⚠\` = el framework tuvo errores/no-2xx: cifra NO válida."
+  echo "Generado por \`bench.sh\` — no editar a mano; se rehace con \`./bench.sh --tabla\`."
+  echo
+  echo "| Parámetro | Valor |"
+  echo "|---|---|"
+  echo "| Límites del contenedor | \`--cpus=$CPUS --memory=$MEM\`${CPUSET:+ \`--cpuset-cpus=$CPUSET\`} |"
+  echo "| Carga | conns=$CONNS, dur=${DUR}s, reps=$REPS, warmup=5s |"
+  echo "| Cliente | \`LoadClient\` desde el host${CLIENT_CPUS:+, fijado a los núcleos $CLIENT_CPUS}${CLIENT_CPUS:+ (aislado)} |"
+  echo "| Host | $(uname -s) $(uname -r) $(uname -m) |"
+  echo "| Base JRE | idéntica para los seis |"
+  echo "| \`/db\` | \`SELECT\` sobre H2 in-memory (1000 filas) + JSON; \`Db.java\` byte-idéntico en todos |"
+  echo
+  echo "Arranque, RSS y rps son la **mediana** de las $REPS repeticiones. \`⚠\` = el framework tuvo"
+  echo "errores o respuestas no-2xx: esa fila NO es válida."
+  if [ "$(uname -s)" != "Linux" ]; then
+    echo
+    echo "> **Aviso.** Esto se midió en Docker Desktop, o sea dentro de una VM y con el cliente de"
+    echo "> carga compartiendo la misma máquina. Los números **relativos** son justos —condiciones"
+    echo "> idénticas para los seis—, los **absolutos** no son comparables con una corrida en Linux"
+    echo "> bare-metal y no deben citarse como tales."
+  fi
   echo
   echo "| Framework | Imagen (MB) | Arranque (ms) | RSS (MB) | rps /plaintext (mediana) | rps /json (mediana) | rps /db (mediana) |"
   echo "|---|---|---|---|---|---|---|"
@@ -129,9 +169,11 @@ med() {
     im=$(awk -F, -v f="$fw" '$1==f{print $2; exit}' "$CSV")   # imagen: valor constante por framework
     su=$(med "$fw" 3)                                          # arranque: mediana
     rs=$(med "$fw" 4)                                          # RSS: mediana
-    pt=$(med "$fw" 11 "http://localhost:8080/plaintext")
-    js=$(med "$fw" 11 "http://localhost:8080/json")
-    db=$(med "$fw" 11 "http://localhost:8080/db")             # "-" si no se corrió con BENCH_DB=1
+    # El filtro usa $PORT, no 8080 fijo: con BENCH_PORT distinto la tabla salía vacía
+    # aunque el CSV tuviera los datos.
+    pt=$(med "$fw" 11 "http://localhost:$PORT/plaintext")
+    js=$(med "$fw" 11 "http://localhost:$PORT/json")
+    db=$(med "$fw" 11 "http://localhost:$PORT/db")            # "-" si no se corrió con BENCH_DB=1
     err=$(awk -F, -v f="$fw" '$1==f{e+=$9+$10} END{print e+0}' "$CSV")
     flag=""; [ "${err:-0}" -gt 0 ] && flag=" ⚠"
     [ -n "$im" ] && echo "| ${fw}${flag} | $im | $su | $rs | $pt | $js | $db |" || echo "| $fw | (no arrancó) | | | | | |"

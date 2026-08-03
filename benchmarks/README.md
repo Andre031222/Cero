@@ -15,10 +15,10 @@ externas de carga (el generador está en JDK puro).
 
 | Métrica | Definición | Cómo |
 |---|---|---|
-| **Tamaño desplegable** | Bytes del artefacto que se despliega, **incluyendo el servidor** | `scripts/measure-size.sh` |
+| **Tamaño desplegable** | Bytes del artefacto que se despliega, **incluyendo el servidor** | `docker/bench.sh` |
 | **Dependencias runtime** | Nº de JARs de terceros en el classpath de ejecución | conteo del árbol de dependencias |
-| **Arranque en frío** | ms desde lanzar el proceso hasta la 1ª respuesta 200 | `scripts/measure-startup.sh` |
-| **Memoria (RSS)** | RSS tras warmup en estado estacionario | `scripts/measure-memory.sh` |
+| **Arranque en frío** | ms desde lanzar el proceso hasta la 1ª respuesta 200 | `docker/bench.sh` |
+| **Memoria (RSS)** | RSS tras warmup en estado estacionario | `docker/bench.sh` |
 | **Throughput** | req/s sostenidos, ventana de medición tras warmup | `load/LoadClient` |
 | **Latencia** | media y p50/p90/p95/p99 (ms) bajo la misma carga | `load/LoadClient` |
 
@@ -61,22 +61,28 @@ Imprime una línea CSV: `url,conns,durSecs,requests,errors,non2xx,rps,meanMs,p50
 
 ## 5. Apps de referencia
 
-Las apps mínimas equivalentes (mismos dos endpoints) y sus comandos exactos de build/run están
-en [`apps/APPS.md`](apps/APPS.md), con versiones fijadas. Todas exponen `/plaintext` y `/json`
-para que la comparación sea uno-a-uno.
+Las apps mínimas equivalentes, con sus versiones fijadas y sus Dockerfile, están en
+[`docker/apps/`](docker/apps/) y listadas en [`docker/README.md`](docker/README.md). Las seis
+exponen `/plaintext`, `/json` y `/db` para que la comparación sea uno-a-uno.
 
 ## 6. Protocolo de ejecución
 
+Un solo comando: construye las seis imágenes, las mide una por una y escribe la tabla.
+
 ```bash
-# 1) Levantar UNA app (en su propia terminal), esperar "listening"
-# 2) Medir arranque y memoria del proceso lanzado
-scripts/measure-startup.sh "<cmd de arranque>" http://localhost:PORT/plaintext
-scripts/measure-memory.sh  <pid>
-# 3) Medir throughput/latencia (repetir N=5, tomar mediana)
-scripts/run-load.sh http://localhost:PORT 64 30
-# 4) Medir tamaño desplegable
-scripts/measure-size.sh
-# 5) Repetir 1-4 por cada framework; agregar en results/RESULTS.md
+cd benchmarks/docker
+BENCH_DB=1 ./bench.sh 64 30 5        # 64 conexiones, 30 s, 5 repeticiones
+./bench.sh --tabla                   # rehacer la tabla sin volver a medir
+```
+
+Los guiones sueltos que había antes —medir arranque, memoria, tamaño y carga por separado, a
+mano y por framework— se retiraron: `bench.sh` hace las cuatro cosas en condiciones idénticas
+para todos, que era justo lo que a mano no se podía garantizar.
+
+Para la carga larga, que es otra pregunta distinta:
+
+```bash
+./carga-sostenida.sh 30 64           # 30 minutos vigilando RSS y descriptores
 ```
 
 Barridos recomendados de concurrencia: `1, 8, 32, 64, 128, 256` conexiones (curva de
