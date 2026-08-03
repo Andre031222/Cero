@@ -16,15 +16,23 @@ public final class Context {
     private final Response response;
     private final Map<String, String> pathVariables;
     private final RouteEntry route;
+    private final boolean methodNotAllowed;
     private final Map<String, Object> attributes = new HashMap<>(4);
 
     private Principal principal;
 
-    Context(Request request, Response response, Map<String, String> pathVariables, RouteEntry route) {
+    Context(Request request, Response response, Map<String, String> pathVariables, RouteEntry route,
+            boolean methodNotAllowed) {
         this.request = request;
         this.response = response;
         this.pathVariables = pathVariables;
         this.route = route;
+        this.methodNotAllowed = methodNotAllowed;
+    }
+
+    /** El camino existe pero no para este verbo. */
+    boolean methodNotAllowed() {
+        return methodNotAllowed;
     }
 
     public RouteEntry route() {

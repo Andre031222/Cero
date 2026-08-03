@@ -5,7 +5,8 @@ import java.util.Map;
 
 public final class Result {
 
-    public enum Kind { TEXT, HTML, JSON, VIEW, REDIRECT, EMPTY }
+    public enum Kind { TEXT, HTML, JSON, VIEW, REDIRECT,
+        REDIRECT_EXTERNAL, EMPTY }
 
     private final Kind kind;
     private final String payload;
@@ -42,8 +43,12 @@ public final class Result {
     }
 
     public static Result redirect(String location) {
-        Result result = new Result(Kind.REDIRECT, location, null, 302);
-        return result;
+        return new Result(Kind.REDIRECT, location, null, 302);
+    }
+
+    /** Redirección fuera del sitio, declarada a propósito. */
+    public static Result redirectExternal(String location) {
+        return new Result(Kind.REDIRECT_EXTERNAL, location, null, 302);
     }
 
     public static Result created(Object value) {

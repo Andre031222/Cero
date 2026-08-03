@@ -1,7 +1,7 @@
 package lux.core;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 final class RoutePattern implements Comparable<RoutePattern> {
@@ -12,18 +12,31 @@ final class RoutePattern implements Comparable<RoutePattern> {
     private final String[] segments;
     private final boolean trailingWildcard;
 
+    /** Nombre de la variable de cada segmento, o {@code null} si el segmento es literal. */
+    private final String[] variableNames;
+    private final boolean hasVariables;
+
     private RoutePattern(String raw, String[] segments, boolean trailingWildcard) {
         this.raw = raw;
         this.segments = segments;
         this.trailingWildcard = trailingWildcard;
+        this.variableNames = new String[segments.length];
+        boolean any = false;
+        for (int i = 0; i < segments.length; i++) {
+            if (isVariable(segments[i])) {
+                variableNames[i] = segments[i].substring(1, segments[i].length() - 1);
+                any = true;
+            }
+        }
+        this.hasVariables = any;
     }
 
     static RoutePattern of(String pattern) {
         String normalized = normalize(pattern);
-        List<String> parts = split(normalized);
-        boolean wildcard = !parts.isEmpty() && parts.get(parts.size() - 1).equals(WILDCARD);
+        String[] parts = split(normalized);
+        boolean wildcard = parts.length > 0 && parts[parts.length - 1].equals(WILDCARD);
         if (wildcard) {
-            parts = parts.subList(0, parts.size() - 1);
+            parts = Arrays.copyOf(parts, parts.length - 1);
         }
         for (String part : parts) {
             if (part.equals(WILDCARD)) {
@@ -33,26 +46,52 @@ final class RoutePattern implements Comparable<RoutePattern> {
                 throw new IllegalArgumentException("variable de ruta mal formada: " + part);
             }
         }
-        return new RoutePattern(normalized, parts.toArray(String[]::new), wildcard);
+        return new RoutePattern(normalized, parts, wildcard);
     }
 
+    /** Comodidad para quien tenga el camino sin partir. */
     Map<String, String> match(String path) {
-        List<String> parts = split(normalize(path));
-        if (trailingWildcard ? parts.size() < segments.length : parts.size() != segments.length) {
-            return null;
+        String[] parts = parts(path);
+        return matches(parts) ? variables(parts) : null;
+    }
+
+    static String[] parts(String path) {
+        return split(normalize(path));
+    }
+
+    /** No asigna nada. */
+    boolean matches(String[] parts) {
+        if (trailingWildcard ? parts.length < segments.length : parts.length != segments.length) {
+            return false;
+        }
+        for (int i = 0; i < segments.length; i++) {
+            if (variableNames[i] == null && !segments[i].equals(parts[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Solo se llama sobre la ruta que ganó. Sin variables devuelve el mapa vacío compartido. */
+    Map<String, String> variables(String[] parts) {
+        if (!hasVariables && !trailingWildcard) {
+            return Map.of();
         }
         Map<String, String> variables = new LinkedHashMap<>(4);
         for (int i = 0; i < segments.length; i++) {
-            String segment = segments[i];
-            String actual = parts.get(i);
-            if (isVariable(segment)) {
-                variables.put(segment.substring(1, segment.length() - 1), actual);
-            } else if (!segment.equals(actual)) {
-                return null;
+            if (variableNames[i] != null) {
+                variables.put(variableNames[i], parts[i]);
             }
         }
         if (trailingWildcard) {
-            variables.put(WILDCARD, String.join("/", parts.subList(segments.length, parts.size())));
+            StringBuilder resto = new StringBuilder();
+            for (int i = segments.length; i < parts.length; i++) {
+                if (i > segments.length) {
+                    resto.append('/');
+                }
+                resto.append(parts[i]);
+            }
+            variables.put(WILDCARD, resto.toString());
         }
         return variables;
     }
@@ -91,11 +130,13 @@ final class RoutePattern implements Comparable<RoutePattern> {
         return segment.length() > 1 && segment.charAt(0) == '{' && segment.endsWith("}");
     }
 
-    private static List<String> split(String path) {
+    private static final String[] SIN_SEGMENTOS = new String[0];
+
+    private static String[] split(String path) {
         if (path.equals("/")) {
-            return List.of();
+            return SIN_SEGMENTOS;
         }
-        return List.of(path.substring(1).split("/", -1));
+        return path.substring(1).split("/", -1);
     }
 
     private static String normalize(String path) {

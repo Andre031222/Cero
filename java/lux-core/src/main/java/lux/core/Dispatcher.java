@@ -24,6 +24,9 @@ final class Dispatcher implements Handler {
     private final List<Recovery> recoveries;
     private final Map<Class<?>, Object> controllers = new ConcurrentHashMap<>();
 
+    /** Armada una sola vez: la terminal lee la ruta del contexto en lugar de capturarla. */
+    private final Middleware.Chain chain;
+
     Dispatcher(Router router, Registry registry, List<Middleware> middleware,
                Authenticator authenticator, ViewRenderer views) {
         this.router = router;
@@ -32,6 +35,7 @@ final class Dispatcher implements Handler {
         this.authenticator = authenticator;
         this.views = views;
         this.recoveries = collectRecoveries(router);
+        this.chain = buildChain();
     }
 
     @Override
@@ -39,35 +43,43 @@ final class Dispatcher implements Handler {
         Router.Match match = router.resolve(request.method(), request.path());
         Context context = new Context(request, response,
                 match == null ? Map.of() : match.pathVariables(),
-                match == null ? null : match.route());
+                match == null ? null : match.route(),
+                match != null && match.methodNotAllowed());
         try {
             if (authenticator != null && match != null && !match.methodNotAllowed()) {
                 context.principal(authenticator.authenticate(context));
             }
-            render(runChain(context, match), context);
+            Object outcome = chain.proceed(context);
+            // Un middleware puede cortocircuitar y devolver lo suyo sin llegar a la terminal;
+            // eso todavía hay que pintarlo. Si ya se pintó, render() sale solo.
+            render(outcome, context);
         } catch (Throwable failure) {
             recover(failure, context);
         }
     }
 
-    private Object runChain(Context context, Router.Match match) throws Exception {
+    private Middleware.Chain buildChain() {
         Middleware.Chain terminal = ctx -> {
-            if (match == null) {
-                throw new HttpException(404, "no existe " + ctx.path());
-            }
-            if (match.methodNotAllowed()) {
+            if (ctx.methodNotAllowed()) {
                 ctx.response().header("Allow", allowHeader(ctx.path()));
                 throw new HttpException(405, "método no permitido en " + ctx.path());
             }
-            return invoke(match.route(), ctx);
+            if (ctx.route() == null) {
+                throw new HttpException(404, "no existe " + ctx.path());
+            }
+            Object outcome = invoke(ctx.route(), ctx);
+            // Pintar dentro de la cadena, no después: si no, un middleware que mide o registra
+            // ve un 200 en una petición cuya vista revienta al renderizarse.
+            render(outcome, ctx);
+            return outcome;
         };
-        Middleware.Chain chain = terminal;
+        Middleware.Chain built = terminal;
         for (int i = middleware.size() - 1; i >= 0; i--) {
             Middleware step = middleware.get(i);
-            Middleware.Chain next = chain;
-            chain = ctx -> step.handle(ctx, next);
+            Middleware.Chain next = built;
+            built = ctx -> step.handle(ctx, next);
         }
-        return chain.proceed(context);
+        return built;
     }
 
     private Object invoke(RouteEntry route, Context context) throws Exception {
@@ -77,9 +89,7 @@ final class Dispatcher implements Handler {
         authorize(route, context);
         Object controller = controllers.computeIfAbsent(route.controller(), registry::create);
         try {
-            Method action = route.action();
-            action.setAccessible(true);
-            return action.invoke(controller, Binder.argumentsFor(action, context));
+            return route.action().invoke(controller, Binder.argumentos(route.plan(), context));
         } catch (InvocationTargetException wrapped) {
             Throwable cause = wrapped.getCause();
             if (cause instanceof Exception failure) {
@@ -90,23 +100,18 @@ final class Dispatcher implements Handler {
     }
 
     private void authorize(RouteEntry route, Context context) {
-        boolean needsAuth = route.action().isAnnotationPresent(RequireAuth.class)
-                || route.controller().isAnnotationPresent(RequireAuth.class);
-        RequireRole role = route.action().getAnnotation(RequireRole.class) != null
-                ? route.action().getAnnotation(RequireRole.class)
-                : route.controller().getAnnotation(RequireRole.class);
-
-        if (!needsAuth && role == null) {
+        if (!route.requiresAuth()) {
             return;
         }
         Principal principal = context.principal();
         if (principal == null) {
             throw new HttpException(401, "se requiere autenticación");
         }
-        if (role == null) {
+        String[] roles = route.allowedRoles();
+        if (roles == null) {
             return;
         }
-        for (String allowed : role.value()) {
+        for (String allowed : roles) {
             if (principal.hasRole(allowed)) {
                 return;
             }
@@ -128,6 +133,7 @@ final class Dispatcher implements Handler {
             case HTML -> response.html(result.payload());
             case JSON -> response.json(result.payload());
             case REDIRECT -> response.redirect(result.payload());
+            case REDIRECT_EXTERNAL -> response.redirectExternal(result.payload());
             case EMPTY -> response.send(new byte[0]);
             case VIEW -> {
                 if (views == null) {
