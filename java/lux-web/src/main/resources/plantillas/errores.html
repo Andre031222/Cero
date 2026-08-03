@@ -1,0 +1,37 @@
+{% extends "base" %}
+
+{% block contenido %}
+<header class="cabecera-pagina">
+  <h1 class="titulo-pagina">Errores</h1>
+  <p class="entradilla">
+    Cómo responde el framework cuando algo va mal. Los dos enlaces provocan el error de verdad.
+  </p>
+</header>
+
+<section>
+  <div class="titulo-seccion"><span class="indice-num">01</span><h2>Pruébalos</h2></div>
+  <div class="pasos">
+    <div class="paso"><a class="boton" href="/error403">Provocar un 403</a>
+      <span class="etiqueta">Una excepción con estado, con su mensaje</span></div>
+    <div class="paso"><a class="boton" href="/error500">Provocar un 500</a>
+      <span class="etiqueta">Una excepción no controlada: el mensaje interno no sale</span></div>
+    <div class="paso"><a class="boton" href="/no-existe">Provocar un 404</a>
+      <span class="etiqueta">Una ruta que no está registrada</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="titulo-seccion"><span class="indice-num">02</span><h2>Qué devuelve</h2></div>
+  <div class="codigo"><pre>
+{
+  <span class="cm">"error"</span>: <span class="cm">"Forbidden"</span>,
+  <span class="cm">"message"</span>: <span class="cm">"Acceso denegado — recurso protegido"</span>,
+  <span class="cm">"path"</span>: <span class="cm">"/error403"</span>
+}
+</pre></div>
+  <p class="medida">
+    En un 500 el campo <code>message</code> dice «error interno» y nada más: el mensaje real de la
+    excepción se queda en el log del servidor, no viaja al cliente.
+  </p>
+</section>
+{% end %}

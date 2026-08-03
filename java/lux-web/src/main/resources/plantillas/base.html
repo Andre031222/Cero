@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}{{ titulo }}{% end %}</title>
+<meta name="description" content="Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LuxCore">
+<meta property="og:title" content="{{ titulo }}">
+<meta property="og:description" content="Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.">
+<meta property="og:url" content="https://luxcore.ginit.dev/">
+<meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 297 KB.">
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ titulo }}">
+<meta name="twitter:description" content="Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.">
+<meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<link rel="icon" href="/estaticos/favicon.svg">
+<link rel="stylesheet" href="/estaticos/lux.css">
+<script src="/estaticos/lux.js"></script>
+<script src="/estaticos/terminal.js" defer></script>
+</head>
+<body>
+
+<header class="barra-sitio">
+  <div class="marco">
+    <a class="marca-sitio" href="/">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-linecap="round">
+          <line x1="32" y1="19" x2="32" y2="8.5" stroke-width="2.4"/>
+          <line x1="41.19" y1="22.81" x2="48.62" y2="15.38" stroke-width="2.4"/>
+          <line x1="45" y1="32" x2="55.5" y2="32" stroke-width="2.4"/>
+          <line x1="41.19" y1="41.19" x2="48.62" y2="48.62" stroke-width="2.4"/>
+          <line x1="32" y1="45" x2="32" y2="55.5" stroke-width="2.4"/>
+          <line x1="22.81" y1="41.19" x2="15.38" y2="48.62" stroke-width="2.4"/>
+          <line x1="19" y1="32" x2="8.5" y2="32" stroke-width="2.4"/>
+          <line x1="22.81" y1="22.81" x2="15.38" y2="15.38" stroke-width="2.4"/>
+        </g>
+        <circle cx="32" cy="32" r="6.5" fill="currentColor"/>
+      </svg>
+      <span class="palabra">Lux<em>Core</em></span>
+    </a>
+    <nav class="nav-sitio" aria-label="Secciones del sitio">
+      <a href="/">Inicio</a>
+      <a href="/descargas">Descargas</a>
+      <a href="/empezar">Empezar</a>
+      <a href="/guia">Guía</a>
+      <a href="/modulos">Módulos</a>
+      <a href="/referencia">Referencia</a>
+      <a href="/panel">Panel</a>
+      {% if usuario %}<a href="/auth/perfil">{{ usuario.nombre }}</a>{% end %}
+    </nav>
+  </div>
+</header>
+
+<div class="marco">
+  <main>
+    {% block contenido %}{% end %}
+  </main>
+
+  <footer class="pie">
+    <div class="etiqueta">
+      <a href="/descargas#licencia">Vilca-Solorzano · Torres Cruz · Laura Murillo</a><br>
+      Universidad Nacional del Altiplano · Puno, Perú
+    </div>
+    <div class="etiqueta" style="text-align:right">
+      LuxCore 0.2.0 · Licencia MIT<br>
+      Servido por LuxCore, sin contenedor
+    </div>
+  </footer>
+</div>
+
+<nav class="nav-movil" aria-label="Secciones">
+  <ul>
+    <li><a href="/" aria-label="Inicio">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
+      <span>Inicio</span></a></li>
+    <li><a href="/descargas" aria-label="Descargas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M8 11l4 4 4-4"/><path d="M4 18v2h16v-2"/></svg>
+      <span>Bajar</span></a></li>
+    <li><a href="/guia" aria-label="Guía">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M8 7.5h7M8 11h7"/></svg>
+      <span>Guía</span></a></li>
+    <li><a href="/modulos" aria-label="Módulos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>Módulos</span></a></li>
+  </ul>
+</nav>
+
+</body>
+</html>

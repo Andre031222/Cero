@@ -101,6 +101,11 @@ final class ResponseOverServlet implements Response {
     }
 
     @Override
+    public void redirectExternal(String destino) {
+        redirect(destino);
+    }
+
+    @Override
     public OutputStream stream() {
         requerirAbierta();
         enviada = true;
@@ -111,6 +116,14 @@ final class ResponseOverServlet implements Response {
         } catch (IOException fallo) {
             throw new UncheckedIOException(fallo);
         }
+    }
+
+    @Override
+    public lux.http.Duplex switchProtocols() {
+        // El socket lo tiene el contenedor. Quien despliegue en Tomcat y necesite WebSocket usa
+        // el de Tomcat; sobre lux-http la misma aplicación lo tiene sin nada extra.
+        throw new UnsupportedOperationException(
+                "cambiar de protocolo no se puede desde el adaptador de servlet");
     }
 
     @Override

@@ -1,0 +1,39 @@
+{% extends "base" %}
+
+{% block contenido %}
+<header class="cabecera-pagina">
+  <h1 class="titulo-pagina">Panel en vivo</h1>
+  <p class="entradilla">
+    Métricas del proceso que está respondiendo ahora mismo, por ruta y con percentiles.
+  </p>
+</header>
+
+<section>
+  <div class="titulo-seccion"><span class="indice-num">01</span><h2>Ahora</h2></div>
+  <div class="envoltura">
+    <table id="tabla">
+      <thead><tr><th>Ruta</th><th class="cifra">Peticiones</th><th class="cifra">p50</th><th class="cifra">p95</th></tr></thead>
+      <tbody><tr><td colspan="4">Cargando…</td></tr></tbody>
+    </table>
+  </div>
+  <p class="medida">Se actualiza cada dos segundos contra <code>/panel-data</code>.</p>
+</section>
+
+<script>
+async function refrescar() {
+  try {
+    const datos = await (await fetch('/panel-data')).json();
+    const rutas = (datos.metrics && datos.metrics.rutas) || [];
+    const cuerpo = document.querySelector('#tabla tbody');
+    cuerpo.innerHTML = rutas.length
+      ? rutas.map(r => `<tr><td class="mono">${r.ruta}</td><td class="cifra">${r.peticiones}</td>`
+          + `<td class="cifra">${r.p50} ms</td><td class="cifra">${r.p95} ms</td></tr>`).join('')
+      : '<tr><td colspan="4">Todavía no hay peticiones medidas.</td></tr>';
+  } catch (e) {
+    /* el panel es informativo: si falla una vuelta, se reintenta en la siguiente */
+  }
+}
+refrescar();
+setInterval(refrescar, 2000);
+</script>
+{% end %}

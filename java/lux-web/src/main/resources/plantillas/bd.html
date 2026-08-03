@@ -1,0 +1,34 @@
+{% extends "base" %}
+
+{% block contenido %}
+<header class="cabecera-pagina">
+  <h1 class="titulo-pagina">Datos</h1>
+  <p class="entradilla">
+    Una tabla recorrida por el motor de plantillas. Estado de la conexión:
+    <b>{{ estadoConexion }}</b>.
+  </p>
+</header>
+
+<section>
+  <div class="titulo-seccion"><span class="indice-num">01</span><h2>Filas</h2></div>
+  {% if hayFilas %}
+  <div class="envoltura">
+    <table>
+      <thead><tr><th class="cifra">#</th><th>Nombre</th><th>Rol</th></tr></thead>
+      <tbody>
+        {% for fila in filas %}
+        <tr>
+          <td class="cifra">{{ fila.id }}</td>
+          <td>{{ fila.nombre }}</td>
+          <td>{{ fila.rol }}</td>
+        </tr>
+        {% end %}
+      </tbody>
+    </table>
+  </div>
+  {% end %}
+  {% if !hayFilas %}
+  <div class="aviso"><div class="etiqueta">Sin datos</div><p>No hay ninguna fila que mostrar.</p></div>
+  {% end %}
+</section>
+{% end %}

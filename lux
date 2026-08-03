@@ -3,11 +3,13 @@
 #
 #   ./lux correr        arranca la aplicación de ejemplo
 #   ./lux probar        corre las pruebas
+#   ./lux fatjar        empaqueta un módulo en un jar ejecutable
 #   ./lux empaquetar    genera los JAR
 #   ./lux instalar      compila e instala en el repositorio local
 #   ./lux limpiar       borra lo generado
 #   ./lux cache         muestra qué ocupa la caché, y con --purgar la vacía
-#   ./lux web           sirve la documentación con el propio LuxCore
+#   ./lux web           sirve la documentación estática con el propio LuxCore
+#   ./lux portal        arranca lux-web: el sitio con acceso, demos y generador
 #   ./lux sitio         regenera las páginas del sitio
 #   ./lux estado        resumen del proyecto
 set -euo pipefail
@@ -32,6 +34,7 @@ requisitos() {
 }
 
 modulos() { echo "lux-http lux-core lux-view lux-data lux-adapter-servlet"; }
+aplicaciones() { echo "ejemplo lux-web"; }
 
 classpath_ejemplo() {
   local destino="$JAVA_DIR/ejemplo/target/classpath.txt"
@@ -131,13 +134,46 @@ public class Sitio {
 }
 JAVA
     javac -cp "$cp" -d "$tmp" "$tmp/Sitio.java"
-    azul "sirviendo la documentación en http://localhost:$puerto"
+    azul "sirviendo la documentación estática en http://localhost:$puerto"
     java -cp "$cp:$tmp" Sitio "$AQUI/docs/web" "$puerto"
+    ;;
+
+  fatjar)
+    requisitos
+    modulo="${2:-ejemplo}"
+    main="${3:-}"
+    if [ -z "$main" ]; then
+      case "$modulo" in
+        ejemplo) main="ejemplo.App" ;;
+        lux-web) main="lux.web.App" ;;
+        *) malo "dime la clase principal: ./lux fatjar <modulo> <clase>"; exit 1 ;;
+      esac
+    fi
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
+    (cd "$JAVA_DIR/$modulo" && "${MVN[@]}" dependency:build-classpath \
+        -Dmdep.outputFile=target/classpath.txt >/dev/null)
+    destino="$AQUI/$modulo.jar"
+    java -cp "$JAVA_DIR/lux-launcher/target/classes" lux.launcher.Packager \
+         --main "$main" --out "$destino" \
+         "$JAVA_DIR/$modulo/target/classes" \
+         $(tr ':' '\n' < "$JAVA_DIR/$modulo/target/classpath.txt")
+    azul "arráncalo con:  java -jar $(basename "$destino")"
+    ;;
+
+  portal)
+    requisitos
+    puerto="${2:-8080}"
+    azul "compilando el sitio…"
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
+    cp="$JAVA_DIR/lux-web/target/classes:$(ls -d "$JAVA_DIR"/lux-*/target/lux-*.jar | tr '\n' ':')"
+    azul "arrancando el sitio en http://localhost:$puerto"
+    java -cp "$cp" lux.web.App "$puerto"
     ;;
 
   sitio)
     azul "regenerando las páginas…"
     python3 "$AQUI/docs/web/construir.py"
+    python3 "$AQUI/docs/web/a-plantillas.py"
     ;;
 
   estado|status)
@@ -159,10 +195,12 @@ JAVA
     printf '  %-22s %s\n' "./lux correr [puerto]"  "arranca la aplicación de ejemplo"
     printf '  %-23s %s\n' "./lux probar [módulo]"  "corre las pruebas"
     printf '  %-22s %s\n' "./lux empaquetar"       "genera los JAR y muestra sus tamaños"
+    printf '  %-22s %s\n' "./lux fatjar [módulo]"  "un solo jar ejecutable con java -jar"
     printf '  %-22s %s\n' "./lux instalar"         "compila, prueba e instala en ~/.m2"
     printf '  %-22s %s\n' "./lux limpiar"          "borra lo generado"
     printf '  %-22s %s\n' "./lux cache [--purgar]" " qué ocupa la caché, o vaciarla"
-    printf '  %-22s %s\n' "./lux web [puerto]"     "sirve la documentación con LuxCore"
+    printf '  %-22s %s\n' "./lux web [puerto]"     "sirve la documentación estática"
+    printf '  %-22s %s\n' "./lux portal [puerto]"  "arranca lux-web: acceso, demos y generador"
     printf '  %-22s %s\n' "./lux sitio"            "regenera las páginas del sitio"
     printf '  %-22s %s\n' "./lux estado"           "resumen del proyecto"
     ;;

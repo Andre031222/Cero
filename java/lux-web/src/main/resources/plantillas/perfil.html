@@ -1,0 +1,18 @@
+{% extends "base" %}
+
+{% block contenido %}
+<header class="cabecera-pagina">
+  <h1 class="titulo-pagina">Mi perfil</h1>
+  <p class="entradilla">Esta página exige sesión: sin ella el framework responde 401.</p>
+</header>
+
+<section>
+  <div class="ficha">
+    <div class="campo"><div class="etiqueta">Nombre</div><div>{{ usuario.nombre }}</div></div>
+    <div class="campo"><div class="etiqueta">Correo</div><div class="mono">{{ usuario.email }}</div></div>
+    <div class="campo"><div class="etiqueta">Proveedor</div><div>{{ usuario.proveedor }}</div></div>
+    <div class="campo"><div class="etiqueta">Rol</div><div>{{ usuario.rol }}</div></div>
+  </div>
+  <p class="medida"><a class="boton" href="/auth/logout">Cerrar sesión</a></p>
+</section>
+{% end %}
