@@ -19,9 +19,9 @@ rsync -a --exclude '.git' --exclude 'target/' --exclude '.DS_Store' \
 ```
 
 Verificada con `diff -r`: **94 archivos `.java`** en ambos lados, sin diferencias de contenido.
-Lo único que no vino: los tres `.DS_Store` (excluidos) y `.claude/skills/research-paper-writing/`
-(directorio protegido por permisos de macOS sobre el recurso SMB; es una skill de asistente,
-no código del framework).
+Lo único que no vino: los tres `.DS_Store`, excluidos a propósito, y un directorio de
+configuración local de herramientas que los permisos de macOS sobre el recurso SMB no dejaron
+leer. Ninguno de los dos es código del framework.
 
 ## Por qué se copió en vez de trabajar sobre el original
 

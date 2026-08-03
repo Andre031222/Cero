@@ -1,9 +1,3 @@
-# === Herramientas de IA / asistentes (no se versionan) ===
-.claude/
-.agents/
-CLAUDE.md
-skills-lock.json
-
 # === Secretos y configuración local ===
 .env
 .env.*
