@@ -17,6 +17,7 @@ final class Vista {
         modelo.put("titulo", titulo);
         modelo.put("usuario", Autenticacion.actual(contexto));
         modelo.put("csrf", Csrf.token(contexto));
+        modelo.put("v", Huella.ACTUAL);
         return modelo;
     }
 }
