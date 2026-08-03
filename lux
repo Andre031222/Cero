@@ -77,10 +77,10 @@ case "${1:-ayuda}" in
       malo "no compila desde cero: no se empaqueta"; exit 1; }
 
     v=$(version)
+    # Los guiones del instalador ya los copia Maven desde docs/ al compilar; aquí solo van los
+    # paquetes.
     destino="$JAVA_DIR/lux-web/src/main/resources/estaticos"
-    guiones="$JAVA_DIR/lux-web/src/main/resources/guiones"
-    mkdir -p "$destino" "$guiones"
-    cp "$AQUI/docs/instalar.sh" "$AQUI/docs/instalar.ps1" "$guiones/"
+    mkdir -p "$destino"
 
     # Antes de copiar nada: si quedaran los paquetes de la vez anterior, el nuevo se los
     # llevaría dentro y engordaría en cada pasada.
