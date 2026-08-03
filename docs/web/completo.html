@@ -739,7 +739,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
       <p class="subtitular">Framework web para Java</p>
       <p class="promesa">
         Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.
-        297 KB en cinco módulos que se toman por separado.
+        308 KB en cuatro módulos que se toman por separado.
       </p>
 
       <div class="botones">
@@ -748,7 +748,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
       </div>
 
       <div class="chips">
-        <div class="chip"><b>297</b><span>KB</span><em>Cinco módulos</em></div>
+        <div class="chip"><b>308</b><span>KB</span><em>Cuatro módulos</em></div>
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
@@ -881,7 +881,7 @@ Lux.app()
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th><th class="cifra">Diferencia</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td><td class="cifra">6,6×</td></tr>
-              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">297 KB</td><td class="cifra">51×</td></tr>
+              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
               <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 249</td><td class="cifra">2,7×</td></tr>
@@ -1111,28 +1111,28 @@ Lux.app()
         <div class="ficha">
           <div class="campo">
             <div class="etiqueta">Solo HTTP</div>
-            <div><span class="mono">lux-http</span> · <b>77 KB</b><br>
+            <div><span class="mono">lux-http</span> · <b>88 KB</b><br>
               Un servidor con handlers a mano, sin rutas ni inyección. Para un webhook, un
               healthcheck o un proxy pequeño.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Una API JSON</div>
-            <div><span class="mono">lux-core</span> · <b>224 KB</b><br>
+            <div><span class="mono">lux-core</span> · <b>235 KB</b><br>
               Rutas, inyección, validación, seguridad y métricas. Lo habitual para un servicio.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Una web con HTML</div>
-            <div><span class="mono">+ lux-view</span> · <b>262 KB</b><br>
+            <div><span class="mono">+ lux-view</span> · <b>273 KB</b><br>
               Añade plantillas con herencia y escapado por defecto.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Con base de datos</div>
-            <div><span class="mono">+ lux-data</span> · <b>297 KB</b><br>
+            <div><span class="mono">+ lux-data</span> · <b>308 KB</b><br>
               JDBC, pool, transacciones y repositorios. Más el driver de tu motor.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Migrando desde Tomcat</div>
-            <div><span class="mono">+ lux-adapter-servlet</span> · <b>310 KB</b><br>
+            <div><span class="mono">+ lux-adapter-servlet</span> · <b>321 KB</b><br>
               Despliega la misma aplicación dentro de Tomcat mientras haces el cambio, y vuelve
               atrás si hace falta.</div>
           </div>
@@ -2110,7 +2110,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">297 KB</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td></tr>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
@@ -2391,8 +2391,8 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
       { t: 'contar', hasta: 1249, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 297 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 297 KB', cls: 'ok' },
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },

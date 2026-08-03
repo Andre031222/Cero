@@ -94,7 +94,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 <meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 297 KB.">
+<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.">
 <meta property="og:locale" content="es_ES">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{completo}">
