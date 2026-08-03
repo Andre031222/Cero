@@ -84,6 +84,7 @@ public final class GeneradorProyecto {
                 %s    </dependencies>
 
                     <build>
+                        <finalName>%s</finalName>
                         <plugins>
                             <plugin>
                                 <groupId>org.apache.maven.plugins</groupId>
@@ -93,10 +94,42 @@ public final class GeneradorProyecto {
                                     <compilerArgs><arg>-parameters</arg></compilerArgs>
                                 </configuration>
                             </plugin>
+
+                            <!-- Las dos cosas que hacen que `java -jar` funcione: las dependencias
+                                 al lado del jar, y un manifiesto que las nombre. -->
+                            <plugin>
+                                <groupId>org.apache.maven.plugins</groupId>
+                                <artifactId>maven-dependency-plugin</artifactId>
+                                <version>3.6.1</version>
+                                <executions>
+                                    <execution>
+                                        <phase>package</phase>
+                                        <goals><goal>copy-dependencies</goal></goals>
+                                        <configuration>
+                                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                                        </configuration>
+                                    </execution>
+                                </executions>
+                            </plugin>
+                            <plugin>
+                                <groupId>org.apache.maven.plugins</groupId>
+                                <artifactId>maven-jar-plugin</artifactId>
+                                <version>3.4.1</version>
+                                <configuration>
+                                    <archive>
+                                        <manifest>
+                                            <mainClass>%s.App</mainClass>
+                                            <addClasspath>true</addClasspath>
+                                            <classpathPrefix>lib/</classpathPrefix>
+                                        </manifest>
+                                    </archive>
+                                </configuration>
+                            </plugin>
                         </plugins>
                     </build>
                 </project>
-                """.formatted(p.grupo(), p.artefacto(), p.nombre(), dependenciasDeDatos(p.motor()));
+                """.formatted(p.grupo(), p.artefacto(), p.nombre(), dependenciasDeDatos(p.motor()),
+                p.artefacto(), p.paquete());
     }
 
     private static String dependenciasDeDatos(String motor) {
@@ -160,7 +193,7 @@ public final class GeneradorProyecto {
                     public static void main(String[] args) throws Exception {
                         Lux.app()
                            .port(args.length > 0 ? Integer.parseInt(args[0]) : 8080)
-                           .views(Templates.fromClasspath("plantillas"))
+                           .views(Templates.fromClasspath("plantillas").suffix(".html"))
                            .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))
                            .controllers(InicioController.class)
                            .start()
@@ -244,12 +277,18 @@ public final class GeneradorProyecto {
 
                 ```bash
                 mvn package
-                java -cp target/classes:$(cat cp.txt) %s.App
+                java -jar target/%s.jar        # y en otro puerto:  java -jar target/%s.jar 9090
                 ```
 
                 Arranca en el puerto 8080. Sin contenedor de servlets y sin dependencias
                 externas más allá del driver JDBC si usas base de datos.
-                """.formatted(p.nombre(), p.paquete());
+
+                Necesita LuxCore en tu repositorio local de Maven:
+
+                ```bash
+                curl -fsSL https://luxcore.ginit.dev/instalar | sh
+                ```
+                """.formatted(p.nombre(), p.artefacto(), p.artefacto());
     }
 
     private static String coordenada(String valor, String porDefecto) {

@@ -36,6 +36,17 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Solo esto se filtra: así la versión que anuncia /version sale del pom y no
+                 hay un número más que acordarse de subir a mano. -->
+            <resource>
+                <directory>src/main/filtrado</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

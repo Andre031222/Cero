@@ -102,3 +102,12 @@ minio/data/
 Thumbs.db
 desktop.ini
 *.swp
+
+# === Paquetes que arma ./lux paquete (se rehacen; no se versionan) ===
+java/lux-web/src/main/resources/estaticos/luxcore-*.tar.gz
+java/lux-web/src/main/resources/estaticos/luxcore-*.zip
+java/lux-web/src/main/resources/estaticos/luxcore-*.sha256
+java/lux-web/src/main/resources/guiones/
+
+# El borrador del paper de JxMVC. No es de este repositorio y no se publica.
+main.pdf
