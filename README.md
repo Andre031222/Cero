@@ -196,13 +196,13 @@ compilación de terceros— y se regenera con `./lux build`. El mismo generador 
 
 MIT — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
-Autores: **Richar Andre Vilca-Solorzano** y **Laura Murillo Ramiro Pedro**.
+Autores: **Richar Andre Vilca-Solorzano** y **Ramiro Pedro Laura-Murillo**.
 Universidad Nacional del Altiplano, Puno, Perú.
 
 ```bibtex
 @software{vilcasolorzano2026luxcore,
   title  = {LuxCore: núcleo de framework web poliglota sin dependencias},
-  author = {Vilca-Solorzano, Richar Andre and Laura Murillo, Ramiro Pedro},
+  author = {Vilca-Solorzano, Richar Andre and Laura-Murillo, Ramiro Pedro},
   year   = {2026},
   url    = {https://github.com/Andre031222/LuxCore}
 }
