@@ -14,7 +14,13 @@ import sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 FRAGMENTOS = AQUI / "contenido"
-PLANTILLAS = AQUI.parent.parent / "java" / "lux-web" / "src" / "main" / "resources" / "plantillas"
+RECURSOS = AQUI.parent.parent / "java" / "lux-web" / "src" / "main" / "resources"
+PLANTILLAS = RECURSOS / "plantillas"
+ESTATICOS = RECURSOS / "estaticos"
+
+# lux-web sirve su propia copia de los assets. Si no se copian aquí, se separan sin avisar:
+# terminal.js se quedó anunciando 1 241 pruebas en el sitio en vivo tres cambios después.
+ASSETS = ("lux.css", "lux.js", "terminal.js")
 
 # fragmento -> plantilla
 PAGINAS = {
@@ -109,7 +115,10 @@ def main() -> int:
             encoding="utf-8")
         print(f"  {destino.name:16} {destino.stat().st_size:>7} B")
 
-    print(f"\n{len(PAGINAS)} plantillas generadas para lux-web")
+    for nombre in ASSETS:
+        (ESTATICOS / nombre).write_bytes((AQUI / "assets" / nombre).read_bytes())
+
+    print(f"\n{len(PAGINAS)} plantillas y {len(ASSETS)} assets copiados a lux-web")
     return 0
 
 
