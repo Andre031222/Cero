@@ -17,8 +17,10 @@ public record ServerOptions(
         int readBufferBytes,
         int maxKeepAliveRequests,
         int sessionTimeoutMillis,
+        SessionStore sessionStore,
         int gzipMinBytes,
         boolean requireHost,
+        boolean behindProxy,
         SSLContext tls) {
 
     public ServerOptions {
@@ -59,7 +61,8 @@ public record ServerOptions(
                 .maxHeaderBytes(maxHeaderBytes).maxHeaderCount(maxHeaderCount)
                 .maxBodyBytes(maxBodyBytes).readBufferBytes(readBufferBytes)
                 .maxKeepAliveRequests(maxKeepAliveRequests).sessionTimeoutMillis(sessionTimeoutMillis)
-                .gzipMinBytes(gzipMinBytes).requireHost(requireHost).tls(tls);
+                .sessionStore(sessionStore)
+                .gzipMinBytes(gzipMinBytes).requireHost(requireHost).behindProxy(behindProxy).tls(tls);
     }
 
     public static final class Builder {
@@ -78,8 +81,10 @@ public record ServerOptions(
         private int readBufferBytes = 16_384;
         private int maxKeepAliveRequests = 1_000;
         private int sessionTimeoutMillis = 30 * 60_000;
+        private SessionStore sessionStore;
         private int gzipMinBytes = 1_024;
         private boolean requireHost = true;
+        private boolean behindProxy;
         private SSLContext tls;
 
         public Builder host(String value) {
@@ -147,6 +152,12 @@ public record ServerOptions(
             return this;
         }
 
+        /** Dónde viven las sesiones. Sin declararlo, en la memoria de este proceso. */
+        public Builder sessionStore(SessionStore value) {
+            sessionStore = value;
+            return this;
+        }
+
         public Builder sessionTimeoutMillis(int value) {
             sessionTimeoutMillis = value;
             return this;
@@ -154,6 +165,16 @@ public record ServerOptions(
 
         public Builder gzipMinBytes(int value) {
             gzipMinBytes = value;
+            return this;
+        }
+
+        /**
+         * Declara que delante hay un proxy inverso de confianza. Con esto se hace caso a
+         * {@code X-Forwarded-Proto} para saber si la petición original venía por HTTPS, y la
+         * cookie de sesión se marca {@code Secure} como corresponde.
+         */
+        public Builder behindProxy(boolean value) {
+            behindProxy = value;
             return this;
         }
 
@@ -171,7 +192,7 @@ public record ServerOptions(
             return new ServerOptions(host, port, backlog, maxConnections, idleTimeoutMillis,
                     handlerTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
                     maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests,
-                    sessionTimeoutMillis, gzipMinBytes, requireHost, tls);
+                    sessionTimeoutMillis, sessionStore, gzipMinBytes, requireHost, behindProxy, tls);
         }
     }
 }

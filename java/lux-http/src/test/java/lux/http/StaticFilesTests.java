@@ -70,6 +70,7 @@ final class StaticFilesTests {
         }
 
         prefijo(root);
+        rangos();
         tipos();
 
         Files.deleteIfExists(fuera);
@@ -84,6 +85,62 @@ final class StaticFilesTests {
             Check.equal("fuera del prefijo da 404",
                     Fixture.get(base + "/estilo.css").statusCode(), 404);
         }
+    }
+
+    private static void rangos() throws Exception {
+        Path root = Files.createTempDirectory("lux-rangos");
+        Files.writeString(root.resolve("alfabeto.txt"), "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+                StaticFiles.from(root), ErrorReporter.silent())) {
+            String base = "http://127.0.0.1:" + server.port() + "/alfabeto.txt";
+
+            HttpResponse<String> entero = Fixture.get(base);
+            Check.equal("una respuesta entera anuncia que admite rangos",
+                    entero.headers().firstValue("accept-ranges").orElse(null), "bytes");
+            String etag = entero.headers().firstValue("etag").orElseThrow();
+
+            HttpResponse<String> trozo = conRango(base, "bytes=0-4", null);
+            Check.equal("un rango devuelve 206", trozo.statusCode(), 206);
+            Check.equal("con los bytes pedidos", trozo.body(), "ABCDE");
+            Check.equal("y el Content-Range",
+                    trozo.headers().firstValue("content-range").orElse(null), "bytes 0-4/26");
+
+            Check.equal("desde un punto hasta el final", conRango(base, "bytes=23-", null).body(), "XYZ");
+            Check.equal("los últimos bytes", conRango(base, "bytes=-3", null).body(), "XYZ");
+            Check.equal("un solo byte", conRango(base, "bytes=13-13", null).body(), "N");
+            Check.equal("un final que se pasa se recorta",
+                    conRango(base, "bytes=24-99", null).headers().firstValue("content-range").orElse(null),
+                    "bytes 24-25/26");
+
+            HttpResponse<String> fuera = conRango(base, "bytes=99-120", null);
+            Check.equal("empezar más allá del final da 416", fuera.statusCode(), 416);
+            Check.equal("diciendo el tamaño real",
+                    fuera.headers().firstValue("content-range").orElse(null), "bytes */26");
+
+            Check.equal("un rango invertido también da 416",
+                    conRango(base, "bytes=10-2", null).statusCode(), 416);
+            Check.equal("una cabecera que no se entiende sirve el recurso entero",
+                    conRango(base, "elementos=0-4", null).statusCode(), 200);
+            Check.equal("varios intervalos también sirven el recurso entero",
+                    conRango(base, "bytes=0-1,5-6", null).statusCode(), 200);
+
+            Check.equal("If-Range que coincide devuelve el trozo",
+                    conRango(base, "bytes=0-2", etag).statusCode(), 206);
+            Check.equal("If-Range que no coincide devuelve el recurso entero",
+                    conRango(base, "bytes=0-2", "\"otro\"").statusCode(), 200);
+        }
+    }
+
+    private static HttpResponse<String> conRango(String url, String rango, String ifRange)
+            throws Exception {
+        HttpRequest.Builder peticion = HttpRequest.newBuilder(URI.create(url))
+                .version(HttpClient.Version.HTTP_1_1)
+                .header("Range", rango);
+        if (ifRange != null) {
+            peticion.header("If-Range", ifRange);
+        }
+        return Fixture.send(peticion.build());
     }
 
     private static void tipos() {

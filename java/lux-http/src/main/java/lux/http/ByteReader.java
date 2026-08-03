@@ -21,6 +21,22 @@ final class ByteReader {
         return position < limit;
     }
 
+    /** Vista como {@link InputStream}, conservando lo que ya esté en el buffer. */
+    InputStream asInputStream() {
+        return new InputStream() {
+
+            @Override
+            public int read() throws IOException {
+                return ByteReader.this.read();
+            }
+
+            @Override
+            public int read(byte[] target, int offset, int length) throws IOException {
+                return ByteReader.this.read(target, offset, length);
+            }
+        };
+    }
+
     int read() throws IOException {
         if (position == limit && !fill()) {
             return -1;

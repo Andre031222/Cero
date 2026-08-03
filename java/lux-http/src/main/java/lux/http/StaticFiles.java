@@ -100,14 +100,54 @@ public final class StaticFiles {
 
         response.header("ETag", etag);
         response.header("Last-Modified", HttpDate.format(modified));
+        response.header("Accept-Ranges", "bytes");
         response.type(MimeTypes.of(target.getFileName().toString()));
 
-        if (attributes.size() > STREAM_THRESHOLD) {
+        long tamano = attributes.size();
+        Ranges pedido = rangoPedido(request, etag, tamano);
+        if (pedido == Ranges.NO_SATISFACIBLE) {
+            response.status(416).header("Content-Range", "bytes */" + tamano).send(new byte[0]);
+            return;
+        }
+        if (pedido != null) {
+            response.status(206).header("Content-Range", pedido.contentRange(tamano));
+            response.send(leerTrozo(target, pedido));
+            return;
+        }
+
+        if (tamano > STREAM_THRESHOLD) {
             try (OutputStream out = response.stream()) {
                 Files.copy(target, out);
             }
         } else {
             response.send(Files.readAllBytes(target));
+        }
+    }
+
+    /** El intervalo pedido, o {@code null} si hay que servir el recurso entero. */
+    private static Ranges rangoPedido(Request request, String etag, long tamano) {
+        String condicion = request.header("If-Range");
+        if (condicion != null && !condicion.trim().equals(etag)) {
+            return null;
+        }
+        return Ranges.parse(request.header("Range"), tamano);
+    }
+
+    private static byte[] leerTrozo(Path archivo, Ranges rango) throws IOException {
+        long longitud = rango.longitud();
+        if (longitud > STREAM_THRESHOLD) {
+            longitud = STREAM_THRESHOLD;
+        }
+        byte[] trozo = new byte[(int) longitud];
+        try (java.nio.channels.SeekableByteChannel canal = Files.newByteChannel(archivo)) {
+            canal.position(rango.desde());
+            java.nio.ByteBuffer destino = java.nio.ByteBuffer.wrap(trozo);
+            while (destino.hasRemaining() && canal.read(destino) > 0) {
+                continue;
+            }
+            return destino.hasRemaining()
+                    ? java.util.Arrays.copyOf(trozo, destino.position())
+                    : trozo;
         }
     }
 
@@ -129,7 +169,20 @@ public final class StaticFiles {
             return;
         }
         response.header("ETag", etag);
+        response.header("Accept-Ranges", "bytes");
         response.type(MimeTypes.of(name));
+
+        Ranges pedido = rangoPedido(request, etag, content.length);
+        if (pedido == Ranges.NO_SATISFACIBLE) {
+            response.status(416).header("Content-Range", "bytes */" + content.length).send(new byte[0]);
+            return;
+        }
+        if (pedido != null) {
+            response.status(206).header("Content-Range", pedido.contentRange(content.length));
+            response.send(java.util.Arrays.copyOfRange(content,
+                    (int) pedido.desde(), (int) pedido.hasta() + 1));
+            return;
+        }
         response.send(content);
     }
 

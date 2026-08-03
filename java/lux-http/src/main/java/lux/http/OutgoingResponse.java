@@ -1,6 +1,7 @@
 package lux.http;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -12,18 +13,30 @@ final class OutgoingResponse implements Response {
     private final IncomingRequest request;
     private final ServerOptions options;
     private final Headers headers = new Headers();
+    private final AsciiBuffer head;
     private final boolean headOnly;
 
     private int status = 200;
     private boolean committed;
     private boolean keepAlive = true;
+    private boolean upgraded;
     private ChunkedOutput chunked;
+    private ByteReader source;
 
-    OutgoingResponse(OutputStream target, IncomingRequest request, ServerOptions options) {
+    OutgoingResponse(OutputStream target, IncomingRequest request, ServerOptions options, AsciiBuffer head) {
         this.target = target;
         this.request = request;
         this.options = options;
+        this.head = head;
         this.headOnly = request != null && request.method() == HttpMethod.HEAD;
+    }
+
+    void source(ByteReader reader) {
+        source = reader;
+    }
+
+    boolean upgraded() {
+        return upgraded;
     }
 
     @Override
@@ -95,11 +108,52 @@ final class OutgoingResponse implements Response {
 
     @Override
     public void redirect(String location) {
+        if (esExterna(location)) {
+            throw new HttpException(400, "redirección externa no permitida: " + location
+                    + " — usa redirectExternal si es a propósito");
+        }
+        enviarRedireccion(location);
+    }
+
+    @Override
+    public void redirectExternal(String location) {
+        enviarRedireccion(location);
+    }
+
+    private void enviarRedireccion(String location) {
         if (status == 200) {
             status = 302;
         }
         header("Location", location);
         commit(NO_BODY);
+    }
+
+    /**
+     * Un destino fuera de este sitio: con esquema ({@code https:}, {@code javascript:}) o
+     * relativo al protocolo ({@code //otro.host}). Si viene de la entrada del usuario, dejarlo
+     * pasar es una redirección abierta.
+     */
+    static boolean esExterna(String location) {
+        if (location == null) {
+            return false;
+        }
+        String limpio = location.trim();
+        if (limpio.startsWith("//")) {
+            return true;
+        }
+        int puntos = limpio.indexOf(':');
+        if (puntos <= 0) {
+            return false;
+        }
+        for (int i = 0; i < puntos; i++) {
+            char c = limpio.charAt(i);
+            boolean valido = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+                    || (i > 0 && ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.'));
+            if (!valido) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -113,6 +167,48 @@ final class OutgoingResponse implements Response {
         } catch (IOException cause) {
             throw new UncheckedHttpException(cause);
         }
+    }
+
+    @Override
+    public Duplex switchProtocols() {
+        requireOpen();
+        if (source == null) {
+            throw new IllegalStateException("esta respuesta no tiene una conexión que ceder");
+        }
+        committed = true;
+        upgraded = true;
+        keepAlive = false;
+        try {
+            head.reset();
+            head.put("HTTP/1.1 101 ").put(HttpStatus.reason(101)).crlf();
+            for (int i = 0; i < headers.size(); i++) {
+                rejectControlCharacters(headers.name(i), headers.value(i));
+                head.put(headers.name(i)).put(": ").put(headers.value(i)).crlf();
+            }
+            head.crlf();
+            head.writeTo(target);
+            target.flush();
+        } catch (IOException cause) {
+            throw new UncheckedHttpException(cause);
+        }
+        InputStream entrada = source.asInputStream();
+        return new Duplex() {
+
+            @Override
+            public InputStream in() {
+                return entrada;
+            }
+
+            @Override
+            public OutputStream out() {
+                return target;
+            }
+
+            @Override
+            public Request request() {
+                return request;
+            }
+        };
     }
 
     @Override
@@ -173,42 +269,44 @@ final class OutgoingResponse implements Response {
             if (withBody && !headOnly && payload.length > 0) {
                 target.write(payload);
             }
-            target.flush();
+            // Sin vaciar: lo hace la conexión cuando el handler y su middleware han terminado.
+            // Así un registro o una métrica no se quedan a medias detrás de una respuesta que
+            // el cliente ya recibió, y se ahorra una llamada al sistema por petición.
         } catch (IOException cause) {
             throw new UncheckedHttpException(cause);
         }
     }
 
     private void writeHead(long contentLength, boolean useChunked, String encoding) throws IOException {
-        StringBuilder head = new StringBuilder(192);
-        head.append("HTTP/1.1 ").append(status).append(' ').append(HttpStatus.reason(status)).append("\r\n");
-        head.append("Date: ").append(HttpDate.now()).append("\r\n");
+        head.reset();
+        head.put("HTTP/1.1 ").put(status).put(' ').put(HttpStatus.reason(status)).crlf();
+        head.put("Date: ").put(HttpDate.now()).crlf();
 
         if (useChunked) {
-            head.append("Transfer-Encoding: chunked\r\n");
+            head.put("Transfer-Encoding: chunked").crlf();
         } else if (contentLength >= 0) {
-            head.append("Content-Length: ").append(contentLength).append("\r\n");
+            head.put("Content-Length: ").put(contentLength).crlf();
         }
         if (encoding != null) {
-            head.append("Content-Encoding: ").append(encoding).append("\r\n");
-            head.append("Vary: Accept-Encoding\r\n");
+            head.put("Content-Encoding: ").put(encoding).crlf();
+            head.put("Vary: Accept-Encoding").crlf();
         }
-        head.append("Connection: ").append(keepAlive ? "keep-alive" : "close").append("\r\n");
+        head.put("Connection: ").put(keepAlive ? "keep-alive" : "close").crlf();
 
         if (request != null) {
             Cookie pending = request.pendingSessionCookie();
             if (pending != null) {
-                head.append("Set-Cookie: ").append(pending.encode()).append("\r\n");
+                head.put("Set-Cookie: ").put(pending.encode()).crlf();
             }
         }
 
         for (int i = 0; i < headers.size(); i++) {
             rejectControlCharacters(headers.name(i), headers.value(i));
-            head.append(headers.name(i)).append(": ").append(headers.value(i)).append("\r\n");
+            head.put(headers.name(i)).put(": ").put(headers.value(i)).crlf();
         }
-        head.append("\r\n");
+        head.crlf();
 
-        target.write(head.toString().getBytes(StandardCharsets.ISO_8859_1));
+        head.writeTo(target);
     }
 
     private static void rejectControlCharacters(String name, String value) {
