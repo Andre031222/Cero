@@ -72,8 +72,31 @@ final class StaticFilesTests {
         prefijo(root);
         rangos();
         tipos();
+        cacheDelClasspath();
 
         Files.deleteIfExists(fuera);
+    }
+
+    /**
+     * El caché de recursos del classpath se llenaba con las rutas que NO existen —dos entradas
+     * por cada 404, con la ruta pedida como clave—, así que cualquiera podía agotar el montón
+     * pidiendo direcciones inventadas. Aquí se piden 400 y se exige que el caché siga vacío.
+     */
+    private static void cacheDelClasspath() throws Exception {
+        StaticFiles estaticos = StaticFiles.fromClasspath("estaticos-prueba");
+        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+                estaticos, ErrorReporter.silent())) {
+            String base = "http://127.0.0.1:" + server.port();
+
+            Check.equal("una ruta inexistente da 404",
+                    Fixture.get(base + "/no-existe.css").statusCode(), 404);
+
+            for (int i = 0; i < 400; i++) {
+                Fixture.get(base + "/inventada-" + i + ".css");
+            }
+            Check.equal("y 400 peticiones a rutas inventadas no dejan nada en el caché",
+                    estaticos.cacheados(), 0);
+        }
     }
 
     private static void prefijo(Path root) throws Exception {

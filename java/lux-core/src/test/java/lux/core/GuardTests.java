@@ -252,8 +252,10 @@ final class GuardTests {
             Check.equal("y sin cupo restante",
                     cuarta.headers().firstValue("x-ratelimit-remaining").orElse(null), "0");
 
-            Check.equal("otra ruta lleva su propia cuenta",
-                    send(base + "/api/token", "GET").statusCode(), 200);
+            // Antes cada ruta llevaba su propia cuenta, y eso convertía el limitador en un
+            // adorno: bastaba repartir la carga entre URLs para multiplicar la cuota.
+            Check.equal("cambiar de ruta no da cuota nueva",
+                    send(base + "/api/token", "GET").statusCode(), 429);
 
             limite.reset();
             Check.equal("reset devuelve el cupo", send(base + "/api", "GET").statusCode(), 200);
