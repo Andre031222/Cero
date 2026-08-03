@@ -45,6 +45,7 @@ final class Dispatcher implements Handler {
                 match == null ? Map.of() : match.pathVariables(),
                 match == null ? null : match.route(),
                 match != null && match.methodNotAllowed());
+        Current.enter(context);
         try {
             if (authenticator != null && match != null && !match.methodNotAllowed()) {
                 context.principal(authenticator.authenticate(context));
@@ -55,6 +56,9 @@ final class Dispatcher implements Handler {
             render(outcome, context);
         } catch (Throwable failure) {
             recover(failure, context);
+        } finally {
+            // Sin esto, un hilo reutilizado se llevaría el contexto de la petición anterior.
+            Current.exit();
         }
     }
 

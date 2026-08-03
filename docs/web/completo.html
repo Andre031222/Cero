@@ -770,7 +770,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1249</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1262</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
@@ -902,7 +902,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 249</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 262</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -1046,7 +1046,7 @@ Lux.app()
                 <td class="mono huella">c01fd6e53dc881f0…</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, caché, eventos, OpenAPI, tareas</span></td>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, clase base opcional, JSON, validación, seguridad, métricas, caché, eventos, tareas, OpenAPI</span></td>
                 <td>lux-http</td><td class="cifra">63</td><td class="cifra">147 KB</td>
                 <td class="mono huella">d14f56c376466651…</td>
               </tr>
@@ -1167,7 +1167,7 @@ Lux.app()
 
 ./lux install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux package     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux test        <span class="cm"># las 1 249 pruebas</span>
+./lux test        <span class="cm"># las 1 262 pruebas</span>
 ./lux run         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
 ./lux docs        <span class="cm"># esta documentación, servida por LuxCore</span>
@@ -1294,7 +1294,7 @@ Lux.app()
           Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
           antes de ejecutarlos — <a href="/instalar">instalar</a> ·
           <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 249 pruebas durante la instalación.
+          1 262 pruebas durante la instalación.
         </p>
 
         <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
@@ -1421,7 +1421,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
 <div class="hoja" id="p-guia" hidden>
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Guía</h1>
-    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación y errores.</p>
+    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación, errores y la clase base opcional.</p>
   </header>
 
   <div class="cuerpo">
@@ -1433,6 +1433,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
         <li><a href="#inyeccion"><span class="n">04</span> Inyección</a></li>
         <li><a href="#validacion"><span class="n">05</span> Validación</a></li>
         <li><a href="#errores"><span class="n">06</span> Errores</a></li>
+        <li><a href="#base"><span class="n">07</span> Clase base opcional</a></li>
       </ol>
     </nav>
     <main>
@@ -1680,6 +1681,63 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
           </p>
         </div>
       </section>
+
+      <section id="base">
+        <div class="titulo-seccion"><span class="indice-num">07</span><h2>Clase base opcional</h2></div>
+
+        <p class="medida">
+          Un controlador de LuxCore no hereda de nada: es una clase normal con anotaciones, y el
+          <code>Context</code> llega por parámetro cuando hace falta. Si un controlador lo usa en
+          casi todos sus métodos, puedes heredar de <code>Controller</code> y ahorrártelo.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Con la base</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Route</span>(<span class="st">"/panel"</span>)
+<span class="kw">public class</span> PanelController <span class="kw">extends</span> Controller {
+
+    <span class="an">@Get</span>(<span class="st">"/perfil"</span>)
+    <span class="kw">public</span> Result perfil() {
+        <span class="kw">if</span> (!autenticado()) <span class="kw">return</span> redirect(<span class="st">"/auth/login"</span>);
+        <span class="kw">return</span> view(<span class="st">"perfil"</span>, Map.of(<span class="st">"usuario"</span>, usuario().name()));
+    }
+
+    <span class="an">@Get</span>(<span class="st">"/informe/{id}"</span>)
+    <span class="kw">public</span> Result informe() {
+        <span class="kw">var</span> informe = informes.porId(param(<span class="st">"id"</span>));
+        <span class="kw">if</span> (informe == <span class="kw">null</span>) <span class="kw">throw</span> fallo(<span class="st">404</span>, <span class="st">"no existe"</span>);
+        <span class="kw">return</span> json(informe);
+    }
+}</pre>
+        </div>
+
+        <p class="medida">
+          Trae <code>param</code>, <code>query</code>, <code>form</code>, <code>header</code>,
+          <code>cookie</code>, <code>body</code>, <code>session</code>, <code>usuario</code>,
+          <code>autenticado</code>, y del lado de la respuesta <code>view</code>,
+          <code>json</code>, <code>text</code>, <code>html</code>, <code>redirect</code>,
+          <code>created</code>, <code>noContent</code>, <code>status</code> y <code>fallo</code>.
+          Para todo lo demás, <code>ctx()</code> devuelve el <code>Context</code> entero.
+        </p>
+
+        <p class="medida">
+          <b>Es opcional de verdad.</b> Los dos estilos conviven en la misma aplicación: quien no
+          hereda sigue recibiendo el <code>Context</code> por parámetro y no se entera de que esto
+          existe.
+        </p>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Por qué no guarda la petición en un campo</div>
+          <p>
+            Del controlador hay <b>una sola instancia</b>, compartida por todas las peticiones, y
+            LuxCore atiende cada conexión en su propio hilo virtual. Un campo con la petición
+            dentro sería una carrera: dos peticiones a la vez se lo pisarían y una acabaría
+            respondiendo con los datos de la otra. Por eso las ayudas leen de un portador por hilo.
+            Hay una prueba que lanza 200 peticiones simultáneas y comprueba que cada respuesta
+            trae lo suyo; con un campo compartido, falla.
+          </p>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -1721,7 +1779,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
                 <td>—</td><td class="cifra">38</td><td class="cifra">3860</td><td class="cifra">229</td><td class="cifra">81 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, caché, eventos, OpenAPI</span></td>
+                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, clase base opcional, JSON, validación, seguridad, métricas, caché, eventos, tareas, OpenAPI</span></td>
                 <td>lux-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
               </tr>
               <tr>
@@ -2105,8 +2163,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 249 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 249 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 262 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 262 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2143,7 +2201,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 249</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 262</td></tr>
               <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
               <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
               <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
@@ -2419,7 +2477,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1249, dur: 900,
+      { t: 'contar', hasta: 1262, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },

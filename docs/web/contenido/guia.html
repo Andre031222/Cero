@@ -1,6 +1,6 @@
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Guía</h1>
-    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación y errores.</p>
+    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación, errores y la clase base opcional.</p>
   </header>
 
   <div class="cuerpo">
@@ -12,6 +12,7 @@
         <li><a href="#inyeccion"><span class="n">04</span> Inyección</a></li>
         <li><a href="#validacion"><span class="n">05</span> Validación</a></li>
         <li><a href="#errores"><span class="n">06</span> Errores</a></li>
+        <li><a href="#base"><span class="n">07</span> Clase base opcional</a></li>
       </ol>
     </nav>
     <main>
@@ -256,6 +257,63 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
             Cualquier excepción que no sea <code>HttpException</code> devuelve un 500 con el
             mensaje genérico «error interno». La traza va al <code>ErrorReporter</code>, no a la
             respuesta.
+          </p>
+        </div>
+      </section>
+
+      <section id="base">
+        <div class="titulo-seccion"><span class="indice-num">07</span><h2>Clase base opcional</h2></div>
+
+        <p class="medida">
+          Un controlador de LuxCore no hereda de nada: es una clase normal con anotaciones, y el
+          <code>Context</code> llega por parámetro cuando hace falta. Si un controlador lo usa en
+          casi todos sus métodos, puedes heredar de <code>Controller</code> y ahorrártelo.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Con la base</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Route</span>(<span class="st">"/panel"</span>)
+<span class="kw">public class</span> PanelController <span class="kw">extends</span> Controller {
+
+    <span class="an">@Get</span>(<span class="st">"/perfil"</span>)
+    <span class="kw">public</span> Result perfil() {
+        <span class="kw">if</span> (!autenticado()) <span class="kw">return</span> redirect(<span class="st">"/auth/login"</span>);
+        <span class="kw">return</span> view(<span class="st">"perfil"</span>, Map.of(<span class="st">"usuario"</span>, usuario().name()));
+    }
+
+    <span class="an">@Get</span>(<span class="st">"/informe/{id}"</span>)
+    <span class="kw">public</span> Result informe() {
+        <span class="kw">var</span> informe = informes.porId(param(<span class="st">"id"</span>));
+        <span class="kw">if</span> (informe == <span class="kw">null</span>) <span class="kw">throw</span> fallo(<span class="st">404</span>, <span class="st">"no existe"</span>);
+        <span class="kw">return</span> json(informe);
+    }
+}</pre>
+        </div>
+
+        <p class="medida">
+          Trae <code>param</code>, <code>query</code>, <code>form</code>, <code>header</code>,
+          <code>cookie</code>, <code>body</code>, <code>session</code>, <code>usuario</code>,
+          <code>autenticado</code>, y del lado de la respuesta <code>view</code>,
+          <code>json</code>, <code>text</code>, <code>html</code>, <code>redirect</code>,
+          <code>created</code>, <code>noContent</code>, <code>status</code> y <code>fallo</code>.
+          Para todo lo demás, <code>ctx()</code> devuelve el <code>Context</code> entero.
+        </p>
+
+        <p class="medida">
+          <b>Es opcional de verdad.</b> Los dos estilos conviven en la misma aplicación: quien no
+          hereda sigue recibiendo el <code>Context</code> por parámetro y no se entera de que esto
+          existe.
+        </p>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Por qué no guarda la petición en un campo</div>
+          <p>
+            Del controlador hay <b>una sola instancia</b>, compartida por todas las peticiones, y
+            LuxCore atiende cada conexión en su propio hilo virtual. Un campo con la petición
+            dentro sería una carrera: dos peticiones a la vez se lo pisarían y una acabaría
+            respondiendo con los datos de la otra. Por eso las ayudas leen de un portador por hilo.
+            Hay una prueba que lanza 200 peticiones simultáneas y comprueba que cada respuesta
+            trae lo suyo; con un campo compartido, falla.
           </p>
         </div>
       </section>

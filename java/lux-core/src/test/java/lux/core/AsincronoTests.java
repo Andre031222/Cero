@@ -172,7 +172,7 @@ final class AsincronoTests {
     }
 
     private static void trabajos() throws Exception {
-        try (Jobs jobs = Jobs.start()) {
+        try (Tasks jobs = Tasks.start()) {
             CountDownLatch hecho = new CountDownLatch(3);
             for (int i = 0; i < 3; i++) {
                 jobs.run(hecho::countDown);
@@ -230,7 +230,7 @@ final class AsincronoTests {
                     jobs.submit(() -> "sigo").get(5, TimeUnit.SECONDS), "sigo");
         }
 
-        Jobs cerrado = Jobs.start();
+        Tasks cerrado = Tasks.start();
         cerrado.close();
         Check.that("un planificador cerrado lo declara", !cerrado.open());
         Check.raises("y rechaza tareas nuevas", IllegalStateException.class,
@@ -239,7 +239,7 @@ final class AsincronoTests {
         Check.that("cerrar dos veces no falla", true);
     }
 
-    private static int programadasTras(Jobs jobs, String expresion) {
+    private static int programadasTras(Tasks jobs, String expresion) {
         jobs.cron(expresion, () -> { });
         return jobs.programadas();
     }

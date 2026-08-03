@@ -13,9 +13,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class Jobs implements AutoCloseable {
+/**
+ * Trabajo fuera de la petición: lanzar y olvidar, esperar un resultado, repetir cada tanto o
+ * seguir una expresión cron. Una sola puerta para las cuatro cosas.
+ *
+ * <pre>{@code
+ * Tasks tareas = Tasks.start();
+ * tareas.run(() -> correo.enviar(aviso));               // y olvidarse
+ * tareas.every(Duration.ofMinutes(5), () -> sondear()); // cada tanto
+ * tareas.cron("0 3 * * *", () -> respaldo());           // a las 3 de la mañana
+ * }</pre>
+ *
+ * <p>Cada tarea corre en su propio hilo virtual, así que bloquearse dentro no cuesta un hilo del
+ * sistema. {@link Cron} es solo el tipo que interpreta la expresión; no hace falta tocarlo.
+ */
+public final class Tasks implements AutoCloseable {
 
-    private static final Log log = Log.of(Jobs.class);
+    private static final Log log = Log.of(Tasks.class);
 
     private final ExecutorService trabajadores = Executors.newVirtualThreadPerTaskExecutor();
     private final ScheduledExecutorService reloj;
@@ -25,16 +39,16 @@ public final class Jobs implements AutoCloseable {
 
     private volatile boolean abierto = true;
 
-    private Jobs() {
+    private Tasks() {
         reloj = Executors.newSingleThreadScheduledExecutor(tarea -> {
-            Thread hilo = new Thread(tarea, "lux-jobs");
+            Thread hilo = new Thread(tarea, "lux-tasks");
             hilo.setDaemon(true);
             return hilo;
         });
     }
 
-    public static Jobs start() {
-        return new Jobs();
+    public static Tasks start() {
+        return new Tasks();
     }
 
     /** Lanza y olvida, sobre un hilo virtual. Los fallos se registran, no se propagan. */
