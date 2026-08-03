@@ -803,7 +803,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1262</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1289</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
@@ -935,7 +935,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 262</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 289</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -1089,7 +1089,7 @@ Lux.app()
                 <td class="mono huella">5cb873be733207d1…</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
+                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones, repositorios y sesiones en tabla</span></td>
                 <td>lux-core</td><td class="cifra">14</td><td class="cifra">36 KB</td>
                 <td class="mono huella">415d5f62c17bdd1f…</td>
               </tr>
@@ -1179,7 +1179,7 @@ Lux.app()
           <div class="campo">
             <div class="etiqueta">Con base de datos</div>
             <div><span class="mono">+ lux-data</span> · <b>308 KB</b><br>
-              JDBC, pool, transacciones y repositorios. Más el driver de tu motor.</div>
+              JDBC, pool, transacciones, repositorios y sesiones en tabla. Más el driver de tu motor.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Migrando desde Tomcat</div>
@@ -1200,7 +1200,7 @@ Lux.app()
 
 ./lux install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux package     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux test        <span class="cm"># las 1 262 pruebas</span>
+./lux test        <span class="cm"># las 1 289 pruebas</span>
 ./lux run         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
 ./lux docs        <span class="cm"># esta documentación, servida por LuxCore</span>
@@ -1327,7 +1327,7 @@ Lux.app()
           Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
           antes de ejecutarlos — <a href="/instalar">instalar</a> ·
           <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 262 pruebas durante la instalación.
+          1 289 pruebas durante la instalación.
         </p>
 
         <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
@@ -1454,7 +1454,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
 <div class="hoja" id="p-guia" hidden>
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Guía</h1>
-    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación, errores y la clase base opcional.</p>
+    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación, errores, sesiones, acceso, tareas, métricas y despliegue detrás de un proxy.</p>
   </header>
 
   <div class="cuerpo">
@@ -1467,6 +1467,10 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
         <li><a href="#validacion"><span class="n">05</span> Validación</a></li>
         <li><a href="#errores"><span class="n">06</span> Errores</a></li>
         <li><a href="#base"><span class="n">07</span> Clase base opcional</a></li>
+        <li><a href="#sesiones"><span class="n">08</span> Sesiones y acceso</a></li>
+        <li><a href="#tareas"><span class="n">09</span> Tareas y caché</a></li>
+        <li><a href="#observar"><span class="n">10</span> Métricas y OpenAPI</a></li>
+        <li><a href="#proxy"><span class="n">11</span> Detrás de un proxy</a></li>
       </ol>
     </nav>
     <main>
@@ -1771,6 +1775,209 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
           </p>
         </div>
       </section>
+
+      <section id="sesiones">
+        <div class="titulo-seccion"><span class="indice-num">08</span><h2>Sesiones y acceso</h2></div>
+
+        <p class="medida">
+          La sesión se pide del contexto. Nace cuando se usa por primera vez, y la cookie sale
+          <code>HttpOnly</code>, <code>SameSite=Lax</code> y <code>Secure</code> si la petición
+          venía por HTTPS.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Sesión</span><span class="etiqueta">Java</span></div>
+<pre>Session sesion = ctx.session();
+sesion.set(<span class="st">"usuario"</span>, correo);
+String quien = sesion.get(<span class="st">"usuario"</span>, String.class);
+sesion.invalidate();                     <span class="cm">// al salir</span></pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Rota el identificador al identificarte</div>
+          <p>
+            El identificador que el visitante tiene <b>antes</b> de entrar no puede seguir valiendo
+            <b>después</b>: quien lo hubiera fijado en su navegador se quedaría con una sesión
+            autenticada. Es fijación de sesión, y se evita con una línea:
+          </p>
+<pre><span class="kw">if</span> (Passwords.matches(clave, usuario.hash())) {
+    ctx.session().regenerateId();        <span class="cm">// ← justo aquí, antes de guardar nada</span>
+    ctx.session().set(<span class="st">"usuario"</span>, usuario.correo());
+}</pre>
+          <p>
+            Conserva el contenido —incluido el token CSRF—, a diferencia de
+            <code>invalidate()</code>, que lo borra todo.
+          </p>
+        </div>
+
+        <p class="medida">
+          Las contraseñas se guardan con <code>Passwords</code>: PBKDF2-HMAC-SHA256 a 210 000
+          iteraciones, sal por contraseña y comparación en tiempo constante. El formato lleva
+          dentro el coste, así que se puede subir sin invalidar lo guardado.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Contraseñas</span><span class="etiqueta">Java</span></div>
+<pre>String guardado = Passwords.hash(clave);
+<span class="kw">boolean</span> vale = Passwords.matches(clave, guardado);
+<span class="kw">if</span> (Passwords.needsRehash(guardado)) {   <span class="cm">// subió el coste desde que se guardó</span>
+    usuarios.actualizarHash(id, Passwords.hash(clave));
+}</pre>
+        </div>
+
+        <p class="medida">
+          Y para entrar con Google, Microsoft o GitHub, <code>OAuth</code> trae el flujo completo
+          con PKCE y verificación de la firma del <code>id_token</code>.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">OAuth 2.0</span><span class="etiqueta">Java</span></div>
+<pre>OAuth google = OAuth.google(id, secreto, <span class="st">"https://mi-sitio/auth/google/vuelta"</span>);
+
+<span class="an">@Get</span>(<span class="st">"/auth/google"</span>)
+<span class="kw">public</span> Result entrar(Context ctx) {
+    <span class="kw">var</span> salida = google.comenzar();
+    ctx.session().set(<span class="st">"oauth.estado"</span>, salida.estado());
+    <span class="kw">return</span> Result.redirectExternal(salida.url());
+}
+
+<span class="an">@Get</span>(<span class="st">"/auth/google/vuelta"</span>)
+<span class="kw">public</span> Result vuelta(Context ctx) {
+    <span class="kw">var</span> identidad = google.completar(ctx.query(<span class="st">"code"</span>), ctx.query(<span class="st">"state"</span>),
+                                     ctx.session().get(<span class="st">"oauth.estado"</span>, String.class));
+    ctx.session().regenerateId();
+    ctx.session().set(<span class="st">"usuario"</span>, identidad.correo());
+    <span class="kw">return</span> Result.redirect(<span class="st">"/panel"</span>);
+}</pre>
+        </div>
+
+        <p class="medida">
+          Para varias instancias o para que las sesiones sobrevivan al despliegue, el almacén va a
+          una tabla. Con el de memoria —el de por defecto— cada despliegue echa a todo el mundo.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Sesiones compartidas</span><span class="etiqueta">Java</span></div>
+<pre>ServerOptions.builder()
+    .sessionStore(JdbcSessions.of(<span class="st">"lux_sesiones"</span>).createTable())
+    .sessionMaxLifetime(Duration.ofHours(<span class="st">12</span>))   <span class="cm">// tope de vida, no solo inactividad</span>
+    .build();</pre>
+        </div>
+      </section>
+
+      <section id="tareas">
+        <div class="titulo-seccion"><span class="indice-num">09</span><h2>Tareas y caché</h2></div>
+
+        <p class="medida">
+          Trabajo fuera de la petición: lanzar y olvidar, esperar un resultado, repetir cada tanto
+          o seguir una expresión cron. Cada tarea corre en su propio hilo virtual, así que
+          bloquearse dentro no cuesta un hilo del sistema.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tasks</span><span class="etiqueta">Java</span></div>
+<pre>Tasks tareas = Tasks.start();
+
+tareas.run(() -&gt; correo.enviar(aviso));                  <span class="cm">// y olvidarse</span>
+<span class="kw">var</span> futuro = tareas.submit(() -&gt; informe.generar());       <span class="cm">// con resultado</span>
+tareas.every(Duration.ofMinutes(<span class="st">5</span>), () -&gt; sondear());
+tareas.cron(<span class="st">"0 3 * * *"</span>, () -&gt; respaldo());                <span class="cm">// a las 3 de la mañana</span></pre>
+        </div>
+
+        <p class="medida">
+          Y para lo que cuesta calcular y cambia poco, una caché con caducidad por entrada:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Cache y Events</span><span class="etiqueta">Java</span></div>
+<pre>Cache&lt;String, List&lt;Noticia&gt;&gt; portada = Cache.of(Duration.ofMinutes(<span class="st">10</span>));
+List&lt;Noticia&gt; ultimas = portada.get(<span class="st">"portada"</span>, clave -&gt; noticias.ultimas(<span class="st">6</span>));
+
+<span class="cm">// Bus de eventos: quien publica no sabe quién escucha.</span>
+eventos.publish(<span class="kw">new</span> NoticiaPublicada(id));
+
+<span class="an">@Listens</span>
+<span class="kw">public void</span> alPublicar(NoticiaPublicada evento) {
+    portada.invalidate(<span class="st">"portada"</span>);
+}</pre>
+        </div>
+      </section>
+
+      <section id="observar">
+        <div class="titulo-seccion"><span class="indice-num">10</span><h2>Métricas y OpenAPI</h2></div>
+
+        <p class="medida">
+          <code>Metrics</code> cuenta peticiones y tiempos por ruta, con percentiles, y sabe
+          escribirse en el formato que lee Prometheus.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Observabilidad</span><span class="etiqueta">Java</span></div>
+<pre>Metrics metricas = Metrics.enabled().ignore(<span class="st">"/estaticos"</span>);
+
+Lux.app()
+   .service(metricas)
+   .use(metricas)
+   .use(AccessLog.combined())
+   .routes(r -&gt; r.get(<span class="st">"/lux/metrics"</span>, metricas.endpoint()))
+   .start();</pre>
+        </div>
+
+        <p class="medida">
+          <code>OpenApi</code> describe las rutas registradas —parámetros, tipos, qué exige
+          autenticación— sin anotar nada aparte. Sirve para generar el cliente TypeScript del
+          frontend a partir del servidor, en vez de escribirlo dos veces.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">OpenAPI</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.get(<span class="st">"/openapi.json"</span>, ctx -&gt; OpenApi.of(<span class="st">"Mi API"</span>, <span class="st">"1.0"</span>).json()))</pre>
+        </div>
+      </section>
+
+      <section id="proxy">
+        <div class="titulo-seccion"><span class="indice-num">11</span><h2>Detrás de un proxy</h2></div>
+
+        <p class="medida">
+          LuxCore habla <b>HTTP/1.1</b>. Para HTTP/2, HTTP/3 y certificados automáticos se le pone
+          delante nginx o Caddy, que además absorbe las conexiones lentas. Es la forma
+          recomendada de desplegarlo.
+        </p>
+
+        <div class="aviso">
+          <div class="etiqueta">Dos cosas que hay que declarar</div>
+          <p>
+            Detrás de un proxy, la petición llega desde el propio proxy y en texto plano. Si no se
+            le dice, la aplicación se cree que nadie usa HTTPS —y no marca la cookie de sesión como
+            <code>Secure</code>— y ve a todo el mundo con la misma dirección, con lo que el
+            limitador de peticiones cuenta a todos juntos y el primero que llegue al tope bloquea
+            el sitio entero.
+          </p>
+<pre>ServerOptions.builder()
+    .behindProxy(<span class="kw">true</span>)                  <span class="cm">// hace caso a X-Forwarded-Proto</span>
+    .trustProxy(<span class="st">"127.0.0.1"</span>, <span class="st">"::1"</span>)       <span class="cm">// y a X-Forwarded-For, solo desde ahí</span>
+    .build();</pre>
+          <p>
+            La lista de confianza no es opcional ni cosmética: creerse esas cabeceras vengan de
+            donde vengan deja que cualquiera diga que es otra dirección, y con eso se salta el
+            limitador y se ensucian los registros.
+          </p>
+        </div>
+
+        <p class="medida">
+          Y los estáticos con su directiva de caché, que si no el navegador revalida de más:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Estáticos</span><span class="etiqueta">Java</span></div>
+<pre>StaticFiles.from(raiz, <span class="st">"/medios"</span>)
+    .cacheControl(<span class="st">"public, max-age=3600"</span>);
+
+<span class="cm">// Para recursos con huella en el nombre — estilo.a1b2c3.css — se puede ir a por todas:</span>
+StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
+    .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>);</pre>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -1820,7 +2027,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
                 <td>lux-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
+                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones, repositorios y sesiones en tabla</span></td>
                 <td>lux-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
               </tr>
               <tr>
@@ -2196,8 +2403,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 262 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 262 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 289 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 289 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2234,7 +2441,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 262</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 289</td></tr>
               <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
               <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
               <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
@@ -2510,7 +2717,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1262, dur: 900,
+      { t: 'contar', hasta: 1289, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },

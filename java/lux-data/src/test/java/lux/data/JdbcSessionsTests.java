@@ -21,7 +21,7 @@ final class JdbcSessionsTests {
         DataSources.registerDefault(
                 Pool.to("jdbc:h2:mem:sesiones;DB_CLOSE_DELAY=-1").validate(false).build());
 
-        JdbcSessions almacen = JdbcSessions.en("lux_sesiones").crearTabla();
+        JdbcSessions almacen = JdbcSessions.of("lux_sesiones").createTable();
         try {
             ida(almacen);
             sinPisarse(almacen);

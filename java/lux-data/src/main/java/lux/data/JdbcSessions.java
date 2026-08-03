@@ -16,7 +16,7 @@ import java.util.function.UnaryOperator;
  *
  * <pre>{@code
  * ServerOptions.builder()
- *     .sessionStore(JdbcSessions.en("lux_sesiones").crearTabla())
+ *     .sessionStore(JdbcSessions.of("lux_sesiones").createTable())
  *     .build();
  * }</pre>
  *
@@ -45,11 +45,11 @@ public final class JdbcSessions implements SessionStore {
         this.tabla = tabla;
     }
 
-    public static JdbcSessions en(String tabla) {
+    public static JdbcSessions of(String tabla) {
         return new JdbcSessions(DataSources.DEFAULT, tabla);
     }
 
-    public static JdbcSessions en(String fuente, String tabla) {
+    public static JdbcSessions of(String fuente, String tabla) {
         return new JdbcSessions(fuente, tabla);
     }
 
@@ -57,7 +57,7 @@ public final class JdbcSessions implements SessionStore {
      * Crea la tabla si no está. Cómodo para arrancar; en un proyecto con migraciones, mejor que
      * la tabla salga de ahí y esto no se llame.
      */
-    public JdbcSessions crearTabla() {
+    public JdbcSessions createTable() {
         db().exec("create table if not exists " + tabla + " ("
                 + "id varchar(64) primary key, "
                 + "datos varchar(65535) not null, "
