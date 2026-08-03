@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
 # lux — órdenes de LuxCore. Sin dependencias más allá de Maven y un JDK 21.
 #
-#   ./lux correr        arranca la aplicación de ejemplo
-#   ./lux probar        corre las pruebas
+# Las órdenes van en inglés, que es lo que espera quien llega de fuera. Las de antes
+# —correr, probar, instalar…— siguen valiendo como alias y no se anuncian.
+#
+#   ./lux new <nombre>  crea un proyecto nuevo, listo para arrancar
+#   ./lux run           arranca la aplicación de ejemplo
+#   ./lux test          corre las pruebas
+#   ./lux package       genera los JAR
 #   ./lux fatjar        empaqueta un módulo en un jar ejecutable
-#   ./lux empaquetar    genera los JAR
-#   ./lux instalar      compila e instala en el repositorio local
-#   ./lux limpiar       borra lo generado
-#   ./lux cache         muestra qué ocupa la caché, y con --purgar la vacía
-#   ./lux web           sirve la documentación estática con el propio LuxCore
+#   ./lux install       compila e instala en el repositorio local
+#   ./lux dist          arma el .tar.gz y el .zip que baja el instalador
+#   ./lux clean         borra lo generado
+#   ./lux cache         muestra qué ocupa la caché, y con --purge la vacía
+#   ./lux docs          sirve la documentación estática con el propio LuxCore
 #   ./lux portal        arranca lux-web: el sitio con acceso, demos y generador
-#   ./lux sitio         regenera las páginas del sitio
-#   ./lux estado        resumen del proyecto
+#   ./lux build         regenera las páginas del sitio
+#   ./lux status        resumen del proyecto
 set -euo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JAVA_DIR="$AQUI/java"
 MVN=(mvn -B -q)
 
-azul()  { printf '\033[38;5;179m%s\033[0m\n' "$*"; }
+azul()  { printf '\033[38;5;205m%s\033[0m\n' "$*"; }
 gris()  { printf '\033[38;5;245m%s\033[0m\n' "$*"; }
 malo()  { printf '\033[38;5;167m%s\033[0m\n' "$*" >&2; }
 
@@ -49,16 +54,16 @@ version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<
 
 case "${1:-ayuda}" in
 
-  nuevo|new)
+  new|nuevo)
     requisitos
-    [ -n "${2:-}" ] || { malo "dime el nombre:  lux nuevo mi-app [grupo] [motor]"; exit 1; }
+    [ -n "${2:-}" ] || { malo "dime el nombre:  lux new mi-app [grupo] [motor]"; exit 1; }
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
     cp="$JAVA_DIR/lux-web/target/classes:$(ls -d "$JAVA_DIR"/lux-*/target/lux-*.jar | tr '\n' ':')"
     azul "creando $2…"
     java -cp "$cp" lux.web.Nuevo "${@:2}"
     ;;
 
-  paquete|dist)
+  dist|paquete)
     # Arma lo que se baja el instalador: el código fuente, sin target/ y sin la web.
     # Va dentro de los recursos de lux-web, así que se despliega con el propio sitio y no
     # hay un segundo sitio del que acordarse.
@@ -93,7 +98,7 @@ case "${1:-ayuda}" in
     gris "  huellas en .sha256 · los sirve lux-web en /estaticos/"
     ;;
 
-  correr|run)
+  run|correr)
     requisitos
     azul "compilando la aplicación de ejemplo…"
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
@@ -101,7 +106,7 @@ case "${1:-ayuda}" in
     java -cp "$(classpath_ejemplo)" ejemplo.App "${2:-8080}"
     ;;
 
-  probar|test)
+  test|probar)
     requisitos
     if [ -n "${2:-}" ]; then
       azul "probando $2"
@@ -112,7 +117,7 @@ case "${1:-ayuda}" in
     fi
     ;;
 
-  empaquetar|package)
+  package|empaquetar)
     requisitos
     azul "empaquetando…"
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests package)
@@ -129,13 +134,13 @@ case "${1:-ayuda}" in
     printf '  %-22s %7s KB\n' "total" "$((local_total / 1024))"
     ;;
 
-  instalar|install)
+  install|instalar)
     requisitos
     azul "compilando, probando e instalando en ~/.m2"
     (cd "$JAVA_DIR" && mvn -B install)
     ;;
 
-  limpiar|clean)
+  clean|limpiar)
     azul "borrando lo generado…"
     (cd "$JAVA_DIR" && "${MVN[@]}" clean) || true
     rm -rf "$JAVA_DIR"/*/target "$AQUI"/legacy/*/target 2>/dev/null || true
@@ -144,7 +149,7 @@ case "${1:-ayuda}" in
     ;;
 
   cache)
-    if [ "${2:-}" = "--purgar" ]; then
+    if [ "${2:-}" = "--purge" ]; then
       azul "vaciando la caché de LuxCore en ~/.m2…"
       rm -rf "$HOME/.m2/repository/lux"
       gris "artefactos de lux eliminados; la próxima compilación los rehace"
@@ -155,12 +160,12 @@ case "${1:-ayuda}" in
         printf '  %-34s %10s\n' "${d/#$AQUI/.}" "$(du -sh "$d" 2>/dev/null | cut -f1)"
       done
       echo
-      gris "  ./lux cache --purgar   vacía los artefactos de lux en ~/.m2"
-      gris "  ./lux limpiar          borra los target/ del proyecto"
+      gris "  ./lux cache --purge    vacía los artefactos de lux en ~/.m2"
+      gris "  ./lux clean            borra los target/ del proyecto"
     fi
     ;;
 
-  web)
+  docs|web)
     requisitos
     puerto="${2:-8095}"
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
@@ -216,13 +221,13 @@ JAVA
     java -cp "$cp" lux.web.App "$puerto"
     ;;
 
-  sitio)
+  build|sitio)
     azul "regenerando las páginas…"
     python3 "$AQUI/docs/web/construir.py"
     python3 "$AQUI/docs/web/a-plantillas.py"
     ;;
 
-  estado|status)
+  status|estado)
     printf '  %-16s %s\n' versión "$(grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<.*/\1/')"
     printf '  %-16s %s\n' java "$(java -version 2>&1 | head -1 | cut -d'"' -f2)"
     printf '  %-16s %s clases, %s líneas\n' código \
@@ -238,18 +243,18 @@ JAVA
   *)
     azul "lux — órdenes de LuxCore"
     echo
-    printf '  %-22s %s\n' "./lux nuevo <nombre>"   "crea un proyecto nuevo y listo para arrancar"
-    printf '  %-22s %s\n' "./lux paquete"          "arma el .tar.gz y el .zip que baja el instalador"
-    printf '  %-22s %s\n' "./lux correr [puerto]"  "arranca la aplicación de ejemplo"
-    printf '  %-23s %s\n' "./lux probar [módulo]"  "corre las pruebas"
-    printf '  %-22s %s\n' "./lux empaquetar"       "genera los JAR y muestra sus tamaños"
-    printf '  %-22s %s\n' "./lux fatjar [módulo]"  "un solo jar ejecutable con java -jar"
-    printf '  %-22s %s\n' "./lux instalar"         "compila, prueba e instala en ~/.m2"
-    printf '  %-22s %s\n' "./lux limpiar"          "borra lo generado"
-    printf '  %-22s %s\n' "./lux cache [--purgar]" " qué ocupa la caché, o vaciarla"
-    printf '  %-22s %s\n' "./lux web [puerto]"     "sirve la documentación estática"
-    printf '  %-22s %s\n' "./lux portal [puerto]"  "arranca lux-web: acceso, demos y generador"
-    printf '  %-22s %s\n' "./lux sitio"            "regenera las páginas del sitio"
-    printf '  %-22s %s\n' "./lux estado"           "resumen del proyecto"
+    printf '  %-24s %s\n' "./lux new <nombre>"     "crea un proyecto nuevo y listo para arrancar"
+    printf '  %-24s %s\n' "./lux run [puerto]"     "arranca la aplicación de ejemplo"
+    printf '  %-24s %s\n' "./lux test [módulo]"    "corre las pruebas"
+    printf '  %-24s %s\n' "./lux package"          "genera los JAR y muestra sus tamaños"
+    printf '  %-24s %s\n' "./lux fatjar [módulo]"  "un solo jar ejecutable con java -jar"
+    printf '  %-24s %s\n' "./lux install"          "compila, prueba e instala en ~/.m2"
+    printf '  %-24s %s\n' "./lux dist"             "arma el .tar.gz y el .zip del instalador"
+    printf '  %-24s %s\n' "./lux clean"            "borra lo generado"
+    printf '  %-24s %s\n' "./lux cache [--purge]"  "qué ocupa la caché, o vaciarla"
+    printf '  %-24s %s\n' "./lux docs [puerto]"    "sirve la documentación estática"
+    printf '  %-24s %s\n' "./lux portal [puerto]"  "arranca lux-web: acceso, demos y generador"
+    printf '  %-24s %s\n' "./lux build"            "regenera las páginas del sitio"
+    printf '  %-24s %s\n' "./lux status"           "resumen del proyecto"
     ;;
 esac

@@ -13,7 +13,7 @@ $JavaDir = Join-Path $Aqui 'java'
 
 $e = [char]27
 $Vivo = $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
-if ($Vivo) { $Laton = "$e[38;5;179m"; $Tenue = "$e[38;5;245m"; $Rojo = "$e[38;5;167m"; $Fin = "$e[0m" }
+if ($Vivo) { $Laton = "$e[38;5;205m"; $Tenue = "$e[38;5;245m"; $Rojo = "$e[38;5;167m"; $Fin = "$e[0m" }
 else       { $Laton = ''; $Tenue = ''; $Rojo = ''; $Fin = '' }
 
 function Azul([string] $t) { Write-Host "$Laton$t$Fin" }
@@ -43,7 +43,7 @@ function Classpath([string] $modulo) {
 
 switch -Regex ($Orden) {
 
-    '^(correr|run)$' {
+    '^(run|correr)$' {
         Requisitos
         $puerto = if ($Resto.Count -gt 0) { $Resto[0] } else { '8080' }
         Azul 'compilando la aplicación de ejemplo…'
@@ -52,7 +52,7 @@ switch -Regex ($Orden) {
         & java -cp (Classpath 'ejemplo') 'ejemplo.App' $puerto
     }
 
-    '^(probar|test)$' {
+    '^(test|probar)$' {
         Requisitos
         $pom = Join-Path $JavaDir 'pom.xml'
         if ($Resto.Count -gt 0) {
@@ -64,13 +64,13 @@ switch -Regex ($Orden) {
         }
     }
 
-    '^(instalar|install)$' {
+    '^(install|instalar)$' {
         Requisitos
         Azul 'compilando, probando e instalando en ~\.m2'
         Mvn @('-B', '-f', (Join-Path $JavaDir 'pom.xml'), 'install')
     }
 
-    '^(empaquetar|package)$' {
+    '^(package|empaquetar)$' {
         Requisitos
         Azul 'empaquetando…'
         Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'package')
@@ -87,7 +87,7 @@ switch -Regex ($Orden) {
         Write-Host ('  {0,-22} {1,7} KB' -f 'total', [int]($total / 1KB))
     }
 
-    '^(nuevo|new)$' {
+    '^(new|nuevo)$' {
         Requisitos
         if ($Resto.Count -eq 0) { Malo 'dime el nombre:  lux nuevo mi-app [grupo] [motor]' }
         Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'install')
@@ -124,13 +124,13 @@ switch -Regex ($Orden) {
         & java -cp (Classpath 'lux-web') 'lux.web.App' $puerto
     }
 
-    '^(limpiar|clean)$' {
+    '^(clean|limpiar)$' {
         Azul 'borrando lo generado…'
         Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), 'clean')
         Gris 'listo'
     }
 
-    '^(estado|status)$' {
+    '^(status|estado)$' {
         $pom = Select-String -Path (Join-Path $JavaDir 'pom.xml') -Pattern '<version>(.+?)</version>' |
                Select-Object -First 1
         $version = if ($pom) { $pom.Matches[0].Groups[1].Value } else { '—' }
@@ -145,14 +145,14 @@ switch -Regex ($Orden) {
     default {
         Azul 'lux — órdenes de LuxCore'
         Write-Host ''
-        Write-Host ('  {0,-24} {1}' -f 'lux nuevo <nombre>',   'crea un proyecto nuevo y listo para arrancar')
-        Write-Host ('  {0,-24} {1}' -f 'lux correr [puerto]',  'arranca la aplicación de ejemplo')
-        Write-Host ('  {0,-24} {1}' -f 'lux probar [módulo]',  'corre las pruebas')
-        Write-Host ('  {0,-24} {1}' -f 'lux empaquetar',       'genera los JAR y muestra sus tamaños')
-        Write-Host ('  {0,-24} {1}' -f 'lux fatjar [módulo]',  'un solo jar ejecutable con java -jar')
-        Write-Host ('  {0,-24} {1}' -f 'lux instalar',         'compila, prueba e instala en ~\.m2')
-        Write-Host ('  {0,-24} {1}' -f 'lux portal [puerto]',  'arranca lux-web: acceso, demos y generador')
-        Write-Host ('  {0,-24} {1}' -f 'lux limpiar',          'borra lo generado')
-        Write-Host ('  {0,-24} {1}' -f 'lux estado',           'resumen del proyecto')
+        Write-Host ('  {0,-24} {1}' -f 'lux new <nombre>',    'crea un proyecto nuevo y listo para arrancar')
+        Write-Host ('  {0,-24} {1}' -f 'lux run [puerto]',    'arranca la aplicación de ejemplo')
+        Write-Host ('  {0,-24} {1}' -f 'lux test [módulo]',   'corre las pruebas')
+        Write-Host ('  {0,-24} {1}' -f 'lux package',         'genera los JAR y muestra sus tamaños')
+        Write-Host ('  {0,-24} {1}' -f 'lux fatjar [módulo]', 'un solo jar ejecutable con java -jar')
+        Write-Host ('  {0,-24} {1}' -f 'lux install',         'compila, prueba e instala en ~\.m2')
+        Write-Host ('  {0,-24} {1}' -f 'lux portal [puerto]', 'arranca lux-web: acceso, demos y generador')
+        Write-Host ('  {0,-24} {1}' -f 'lux clean',           'borra lo generado')
+        Write-Host ('  {0,-24} {1}' -f 'lux status',          'resumen del proyecto')
     }
 }

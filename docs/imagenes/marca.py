@@ -18,10 +18,11 @@ DESTINOS = [AQUI / "portada.png", AQUI.parent / "web" / "assets" / "social.png"]
 
 ANCHO, ALTO = 1200, 630
 
-FONDO = (14, 16, 21)
-TINTA = (242, 240, 236)
-TENUE = (140, 144, 152)
-MARCA = (212, 160, 62)
+FONDO = (7, 11, 20)
+TINTA = (234, 240, 250)
+TENUE = (135, 146, 171)
+MARCA = (255, 61, 154)
+MARINO = (27, 75, 168)
 
 NEUE = "/System/Library/Fonts/HelveticaNeue.ttc"
 MONO = "/System/Library/Fonts/Menlo.ttc"
@@ -69,7 +70,9 @@ def main() -> int:
     imagen = Image.new("RGB", (ANCHO, ALTO), FONDO)
     d = ImageDraw.Draw(imagen)
 
-    d.rectangle([0, 0, ANCHO, 5], fill=MARCA)
+    for x in range(ANCHO):                       # la regla superior, de marino a magenta
+        t = x / (ANCHO - 1)
+        d.line([(x, 0), (x, 5)], fill=tuple(round(a + (b - a) * t) for a, b in zip(MARINO, MARCA)))
     sol(d, 180, 227, 62)
 
     # ─── columna izquierda: la marca ───

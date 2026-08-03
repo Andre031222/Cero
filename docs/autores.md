@@ -5,7 +5,6 @@ LuxCore es obra de tres autores de la **Universidad Nacional del Altiplano**, Pu
 | Autor | ORCID |
 |---|---|
 | Richar Andre Vilca-Solorzano | [0009-0003-2385-5263](https://orcid.org/0009-0003-2385-5263) |
-| Torres Cruz Fred | [0000-0003-0834-6834](https://orcid.org/0000-0003-0834-6834) |
 | Laura Murillo Ramiro Pedro | [0000-0003-1837-4871](https://orcid.org/0000-0003-1837-4871) |
 
 No se reparte el trabajo por partes: los tres figuran como autores del proyecto.
@@ -24,7 +23,7 @@ el código se explica solo, sin comentarios decorativos.
 ```bibtex
 @software{vilcasolorzano2026luxcore,
   title  = {LuxCore: núcleo de framework web poliglota sin dependencias},
-  author = {Vilca-Solorzano, Richar Andre and Torres Cruz, Fred and Laura Murillo, Ramiro Pedro},
+  author = {Vilca-Solorzano, Richar Andre and Laura Murillo, Ramiro Pedro},
   year   = {2026},
   url    = {https://github.com/Andre031222/LuxCore}
 }

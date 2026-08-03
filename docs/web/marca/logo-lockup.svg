@@ -30,6 +30,6 @@
   <text x="76" y="43.5"
         font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace"
         font-size="30" font-weight="700" letter-spacing="-1.1">
-    <tspan fill="currentColor">Lux</tspan><tspan fill="#8a6216">Core</tspan>
+    <tspan fill="currentColor">Lux</tspan><tspan fill="#c2136a">Core</tspan>
   </text>
 </svg>

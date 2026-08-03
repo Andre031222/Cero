@@ -29,12 +29,12 @@ done
 # Cuando esto va por una tubería la salida sigue siendo la terminal, así que la animación
 # vale igual. Si no lo es —CI, un fichero de registro— se apaga sola.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
-  LATON='\033[38;5;179m'; TENUE='\033[38;5;245m'; VERDE='\033[38;5;71m'
+  ACENTO='\033[38;5;205m'; TENUE='\033[38;5;245m'; VERDE='\033[38;5;71m'
   ROJO='\033[38;5;167m';  FUERTE='\033[1m';       FIN='\033[0m'
   OCULTA='\033[?25l';     MUESTRA='\033[?25h';    BORRA='\r\033[K'
   VIVO=si
 else
-  LATON=''; TENUE=''; VERDE=''; ROJO=''; FUERTE=''; FIN=''
+  ACENTO=''; TENUE=''; VERDE=''; ROJO=''; FUERTE=''; FIN=''
   OCULTA=''; MUESTRA=''; BORRA=''
   VIVO=no
 fi
@@ -44,11 +44,11 @@ p() { printf "$@"; }
 marca() {
   [ "$VIVO" = si ] || { p "LuxCore · instalador\n\n"; return; }
   p "\n"
-  p "        ${LATON}·${FIN}   ${LATON}|${FIN}   ${LATON}·${FIN}\n"
-  p "   ${LATON}\\${FIN}    ${LATON}·${FIN}     ${LATON}·${FIN}    ${LATON}/${FIN}\n"
-  p " ${LATON}—${FIN}   ${LATON}·${FIN}   ${LATON}${FUERTE}███${FIN}   ${LATON}·${FIN}   ${LATON}—${FIN}      ${FUERTE}LuxCore${FIN}\n"
-  p "   ${LATON}/${FIN}    ${LATON}·${FIN}     ${LATON}·${FIN}    ${LATON}\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
-  p "        ${LATON}·${FIN}   ${LATON}|${FIN}   ${LATON}·${FIN}\n\n"
+  p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n"
+  p "   ${ACENTO}\\${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}/${FIN}\n"
+  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}LuxCore${FIN}\n"
+  p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
+  p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n\n"
 }
 
 PASO=0
@@ -56,7 +56,7 @@ paso() {
   PASO=$((PASO + 1))
   # Sin terminal no se puede volver atrás sobre la línea, así que no se escribe y ya la
   # pinta entera el ✓ de después.
-  [ "$VIVO" = si ] && p "  ${LATON}%02d${FIN}  %s" "$PASO" "$1"
+  [ "$VIVO" = si ] && p "  ${ACENTO}%02d${FIN}  %s" "$PASO" "$1"
   return 0
 }
 bien()  { p "${BORRA}  ${VERDE}✓${FIN}   %s${TENUE}%s${FIN}\n" "$1" "${2:+  $2}"; }
@@ -85,7 +85,7 @@ girando() {
   while kill -0 "$HIJO" 2>/dev/null; do
     i=$((i + 1))
     giro=$(printf '%s' "$giros" | cut -c $(( (i % 10) + 1 )))
-    p "${BORRA}  ${LATON}%s${FIN}   %s ${TENUE}%ss${FIN}" "$giro" "$etiqueta" "$(( $(date +%s) - inicio ))"
+    p "${BORRA}  ${ACENTO}%s${FIN}   %s ${TENUE}%ss${FIN}" "$giro" "$etiqueta" "$(( $(date +%s) - inicio ))"
     sleep 0.08
   done
   wait "$HIJO"; estado=$?
@@ -158,7 +158,7 @@ else
   REAL=''
 fi
 if [ -z "$REAL" ]; then
-  p "${BORRA}  ${LATON}!${FIN}   huella ${TENUE}sin comprobar: no hay shasum ni sha256sum${FIN}\n"
+  p "${BORRA}  ${ACENTO}!${FIN}   huella ${TENUE}sin comprobar: no hay shasum ni sha256sum${FIN}\n"
 elif [ "$REAL" != "$ESPERADA" ]; then
   muere "la huella no coincide — el paquete llegó cambiado, no lo instalo.
       esperada  $ESPERADA
@@ -204,8 +204,8 @@ bien "orden lux" "$BIN/lux"
 
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
 paso "comprobando la instalación"
-"$BIN/lux" estado >/dev/null 2>&1 || muere "quedó instalado pero 'lux estado' no responde"
-bien "comprobado" "lux estado responde"
+"$BIN/lux" estado >/dev/null 2>&1 || muere "quedó instalado pero 'lux status' no responde"
+bien "comprobado" "lux status responde"
 
 # ─── final ──────────────────────────────────────────────────────────────────────────────
 p "\n  ${VERDE}${FUERTE}LuxCore $VERSION instalado${FIN}\n\n"
@@ -213,12 +213,12 @@ p "\n  ${VERDE}${FUERTE}LuxCore $VERSION instalado${FIN}\n\n"
 case ":$PATH:" in
   *":$BIN:"*) ;;
   *)
-    p "  ${LATON}Falta un paso${FIN} — $BIN no está en tu PATH. Añade esta línea a tu\n"
+    p "  ${ACENTO}Falta un paso${FIN} — $BIN no está en tu PATH. Añade esta línea a tu\n"
     p "  ${TENUE}~/.zshrc${FIN} o ${TENUE}~/.bashrc${FIN} y abre una terminal nueva:\n\n"
     p "      ${FUERTE}export PATH=\"%s:\$PATH\"${FIN}\n\n" "$(printf '%s' "$BIN" | sed "s|^$HOME|\$HOME|")" ;;
 esac
 
 p "  ${TENUE}Crear un proyecto y arrancarlo:${FIN}\n\n"
-p "      ${FUERTE}lux nuevo mi-app${FIN}\n"
+p "      ${FUERTE}lux new mi-app${FIN}\n"
 p "      ${FUERTE}cd mi-app && mvn -q package && java -jar target/mi-app.jar${FIN}\n\n"
 p "  ${TENUE}Guía completa:${FIN}  $BASE/empezar\n\n"

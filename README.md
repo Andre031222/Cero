@@ -82,7 +82,7 @@ guiones se sirven como texto plano a propósito —[instalar](https://luxcore.gi
 Después:
 
 ```bash
-lux nuevo mi-app
+lux new mi-app
 cd mi-app && mvn -q package && java -jar target/mi-app.jar
 ```
 
@@ -174,7 +174,7 @@ benchmarks/   Harness comparativo y prueba de carga sostenida
 docs/         Documentación y el sitio estático
 spec/         Contrato del kernel, neutral respecto al lenguaje   (fase 3)
 rust/  cpp/   Implementaciones adicionales                        (fase 3)
-lux           Órdenes del proyecto: ./lux probar, portal, fatjar…
+lux           Órdenes del proyecto: ./lux test, portal, fatjar…
 ```
 
 ## Documentación
@@ -189,20 +189,20 @@ lux           Órdenes del proyecto: ./lux probar, portal, fatjar…
 | [autores.md](docs/autores.md) | Autoría y atribución |
 
 El sitio del proyecto vive en [`docs/web/`](docs/web/) —ocho páginas, sin npm ni paso de
-compilación de terceros— y se regenera con `./lux sitio`. El mismo generador produce
+compilación de terceros— y se regenera con `./lux build`. El mismo generador produce
 `completo.html`: el sitio entero en un archivo, sin recursos externos.
 
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
-Autores: **Richar Andre Vilca-Solorzano**, **Torres Cruz Fred** y **Laura Murillo Ramiro Pedro**.
+Autores: **Richar Andre Vilca-Solorzano** y **Laura Murillo Ramiro Pedro**.
 Universidad Nacional del Altiplano, Puno, Perú.
 
 ```bibtex
 @software{vilcasolorzano2026luxcore,
   title  = {LuxCore: núcleo de framework web poliglota sin dependencias},
-  author = {Vilca-Solorzano, Richar Andre and Torres Cruz, Fred and Laura Murillo, Ramiro Pedro},
+  author = {Vilca-Solorzano, Richar Andre and Laura Murillo, Ramiro Pedro},
   year   = {2026},
   url    = {https://github.com/Andre031222/LuxCore}
 }

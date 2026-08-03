@@ -20,14 +20,14 @@ BARRA = 42
 INTERLINEA = 27
 SANGRIA = 26
 
-FONDO = (13, 15, 20)
-PANEL = (18, 20, 26)
-BORDE = (35, 39, 48)
-TINTA = (236, 238, 242)
-TENUE = (164, 169, 179)
-GRIS = (111, 115, 120)
-MARCA = (199, 150, 55)
-VERDE = (94, 184, 122)
+FONDO = (7, 11, 20)
+PANEL = (13, 20, 36)
+BORDE = (34, 46, 74)
+TINTA = (234, 240, 250)
+TENUE = (147, 160, 188)
+GRIS = (110, 123, 153)
+MARCA = (255, 61, 154)
+VERDE = (63, 196, 140)
 
 MONO = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 17)
 MONO_FINA = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 13)
@@ -43,7 +43,7 @@ GUION = [
     ("ok",         "orden lux  ~/.local/bin/lux"),
     ("blanco",     ""),
     ("comentario", "# 2 — un proyecto nuevo"),
-    ("orden",      "lux nuevo mi-app"),
+    ("orden",      "lux new mi-app"),
     ("salida",     "9 archivos · com.ejemplo:mi-app"),
     ("blanco",     ""),
     ("comentario", "# 3 — arrancar"),

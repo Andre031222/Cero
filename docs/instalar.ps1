@@ -25,10 +25,10 @@ $Bin  = Join-Path $Raiz 'bin'
 $Vivo = -not $SinColor -and $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
 $e = [char]27
 if ($Vivo) {
-    $Laton='{0}[38;5;179m' -f $e; $Tenue='{0}[38;5;245m' -f $e; $Verde='{0}[38;5;71m'  -f $e
+    $Acento='{0}[38;5;205m' -f $e; $Tenue='{0}[38;5;245m' -f $e; $Verde='{0}[38;5;71m'  -f $e
     $Rojo ='{0}[38;5;167m' -f $e; $Fuerte='{0}[1m'       -f $e; $Fin  ='{0}[0m'        -f $e
 } else {
-    $Laton=''; $Tenue=''; $Verde=''; $Rojo=''; $Fuerte=''; $Fin=''
+    $Acento=''; $Tenue=''; $Verde=''; $Rojo=''; $Fuerte=''; $Fin=''
 }
 
 function Escribe([string] $t) { Write-Host $t }
@@ -37,7 +37,7 @@ function Borra { if ($Vivo) { Write-Host ("`r{0}[K" -f $e) -NoNewline } }
 $script:Paso = 0
 function Paso([string] $t) {
     $script:Paso++
-    Write-Host ("  {0}{1:D2}{2}  {3}" -f $Laton, $script:Paso, $Fin, $t) -NoNewline
+    Write-Host ("  {0}{1:D2}{2}  {3}" -f $Acento, $script:Paso, $Fin, $t) -NoNewline
 }
 function Bien([string] $t, [string] $nota) {
     Borra
@@ -56,11 +56,11 @@ function Muere([string] $t, [string] $registro) {
 function Marca {
     if (-not $Vivo) { Escribe "LuxCore - instalador`n"; return }
     Escribe ''
-    Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Laton, $Fin)
-    Escribe ("   {0}\{1}    {0}.{1}     {0}.{1}    {0}/{1}" -f $Laton, $Fin)
-    Escribe (" {0}-{1}   {0}.{1}   {0}{2}###{1}   {0}.{1}   {0}-{1}      {2}LuxCore{1}" -f $Laton, $Fin, $Fuerte)
-    Escribe ("   {0}/{1}    {0}.{1}     {0}.{1}    {0}\{1}      {2}framework web para Java{1}" -f $Laton, $Fin, $Tenue)
-    Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Laton, $Fin)
+    Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Acento, $Fin)
+    Escribe ("   {0}\{1}    {0}.{1}     {0}.{1}    {0}/{1}" -f $Acento, $Fin)
+    Escribe (" {0}-{1}   {0}.{1}   {0}{2}###{1}   {0}.{1}   {0}-{1}      {2}LuxCore{1}" -f $Acento, $Fin, $Fuerte)
+    Escribe ("   {0}/{1}    {0}.{1}     {0}.{1}    {0}\{1}      {2}framework web para Java{1}" -f $Acento, $Fin, $Tenue)
+    Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Acento, $Fin)
     Escribe ''
 }
 
@@ -78,7 +78,7 @@ function Girando([string] $etiqueta, [string] $registro, [string] $orden, [strin
         while (-not $proc.HasExited) {
             $s = [int]((Get-Date) - $inicio).TotalSeconds
             Write-Host ("`r{0}[K  {1}{2}{3}   {4} {5}{6}s{3}" -f `
-                        $e, $Laton, $giros[$i % 4], $Fin, $etiqueta, $Tenue, $s) -NoNewline
+                        $e, $Acento, $giros[$i % 4], $Fin, $etiqueta, $Tenue, $s) -NoNewline
             $i++
             Start-Sleep -Milliseconds 90
         }
@@ -184,20 +184,20 @@ Bien 'orden lux' (Join-Path $Bin 'lux.cmd')
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
 Paso 'comprobando la instalacion'
 & cmd.exe /c "`"$Bin\lux.cmd`" estado" *> $null
-if ($LASTEXITCODE -ne 0) { Muere "quedo instalado pero 'lux estado' no responde" }
-Bien 'comprobado' 'lux estado responde'
+if ($LASTEXITCODE -ne 0) { Muere "quedo instalado pero 'lux status' no responde" }
+Bien 'comprobado' 'lux status responde'
 
 # ─── final ──────────────────────────────────────────────────────────────────────────────
 Escribe ''
 Escribe "  ${Verde}${Fuerte}LuxCore $version instalado${Fin}"
 Escribe ''
 if ($script:PathTocado) {
-    Escribe "  ${Laton}Abre una terminal nueva${Fin} para que el PATH se entere de la orden ${Fuerte}lux${Fin}."
+    Escribe "  ${Acento}Abre una terminal nueva${Fin} para que el PATH se entere de la orden ${Fuerte}lux${Fin}."
     Escribe ''
 }
 Escribe "  ${Tenue}Crear un proyecto y arrancarlo:${Fin}"
 Escribe ''
-Escribe "      ${Fuerte}lux nuevo mi-app${Fin}"
+Escribe "      ${Fuerte}lux new mi-app${Fin}"
 Escribe "      ${Fuerte}cd mi-app && mvn -q package && java -jar target\mi-app.jar${Fin}"
 Escribe ''
 Escribe "  ${Tenue}Guia completa:${Fin}  $Base/empezar"
