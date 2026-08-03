@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <rect width="1200" height="630" fill="#0d0f12"/>
-  <rect x="0" y="0" width="1200" height="6" fill="#c79637"/>
+  <rect x="0" y="0" width="1200" height="6" fill="#e6187e"/>
 
-  <g transform="translate(96,150) scale(2.6)"><g fill="none" stroke="#c79637" stroke-linecap="round">
+  <g transform="translate(96,150) scale(2.6)"><g fill="none" stroke="#e6187e" stroke-linecap="round">
     <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
     <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
     <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
@@ -28,10 +28,10 @@
     <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
     <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
   </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="#c79637"/></g>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="#e6187e"/></g>
 
   <text x="96" y="392" font-family="'SF Mono','Menlo',monospace" font-size="86" font-weight="700"
-        letter-spacing="-3" fill="#f2f0ec">Lux<tspan fill="#c79637">Core</tspan></text>
+        letter-spacing="-3" fill="#f2f0ec">Lux<tspan fill="#e6187e">Core</tspan></text>
 
   <text x="99" y="438" font-family="'SF Mono','Menlo',monospace" font-size="23" font-weight="600"
         letter-spacing="7" fill="#8c9098">FRAMEWORK WEB PARA JAVA</text>
@@ -42,7 +42,7 @@
         fill="#c6c8cc">y sin una sola dependencia externa.</text>
 
   <g font-family="'SF Mono','Menlo',monospace" text-anchor="end">
-    <text x="1104" y="300" font-size="70" font-weight="700" fill="#c79637">106<tspan font-size="30" fill="#8c9098"> ms</tspan></text>
+    <text x="1104" y="300" font-size="70" font-weight="700" fill="#e6187e">106<tspan font-size="30" fill="#8c9098"> ms</tspan></text>
     <text x="1104" y="332" font-size="20" letter-spacing="4" fill="#6f7378">ARRANQUE</text>
     <text x="1104" y="418" font-size="70" font-weight="700" fill="#f2f0ec">0<tspan font-size="30" fill="#8c9098"> deps</tspan></text>
     <text x="1104" y="450" font-size="20" letter-spacing="4" fill="#6f7378">EN EJECUCIÓN</text>

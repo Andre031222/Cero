@@ -5,7 +5,7 @@
     <h1 class="titulo-pagina">Descargas</h1>
     <p class="entradilla">
       Cinco módulos que se toman por separado. Toma solo lo que uses: si únicamente necesitas
-      atender HTTP, son 77 KB y no arrastras nada más.
+      atender HTTP, son 88 KB y no arrastras nada más.
     </p>
   </header>
 
@@ -47,36 +47,36 @@
             <tbody>
               <tr>
                 <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS, cookies, sesiones, multipart, gzip, estáticos, WebSocket</span></td>
-                <td>—</td><td class="cifra">36</td><td class="cifra">77 KB</td>
-                <td class="mono huella">79296a8a38a961c1…</td>
+                <td>—</td><td class="cifra">38</td><td class="cifra">88 KB</td>
+                <td class="mono huella">c01fd6e53dc881f0…</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, JSON, validación, seguridad, métricas, caché, eventos, OpenAPI, tareas</span></td>
                 <td>lux-http</td><td class="cifra">63</td><td class="cifra">147 KB</td>
-                <td class="mono huella">5309738f66a6fbde…</td>
+                <td class="mono huella">d14f56c376466651…</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
                 <td>lux-core</td><td class="cifra">9</td><td class="cifra">38 KB</td>
-                <td class="mono huella">cd0bf0447a2435f3…</td>
+                <td class="mono huella">5cb873be733207d1…</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones y repositorios</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">35 KB</td>
-                <td class="mono huella">dc57b2ccddf94d4f…</td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">36 KB</td>
+                <td class="mono huella">415d5f62c17bdd1f…</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
                 <td>lux-core</td><td class="cifra">4</td><td class="cifra">13 KB</td>
-                <td class="mono huella">b7cc3a24d28302ef…</td>
+                <td class="mono huella">e6dd080d6915585a…</td>
               </tr>
               <tr>
                 <td><span class="mono">lux-launcher</span><span class="detalle">Empaquetar la aplicación y el framework en un jar ejecutable</span></td>
                 <td>—</td><td class="cifra">1</td><td class="cifra">7 KB</td>
-                <td class="mono huella">—</td>
+                <td class="mono huella">1d7a0cef8c4efd98…</td>
               </tr>
               <tr class="total">
-                <td>Los seis</td><td>—</td><td class="cifra">129</td><td class="cifra">321 KB</td><td></td>
+                <td>Los seis</td><td>—</td><td class="cifra">129</td><td class="cifra">328 KB</td><td></td>
               </tr>
             </tbody>
           </table>
@@ -92,7 +92,7 @@
         <div class="titulo-seccion"><span class="indice-num">02</span><h2>Maven</h2></div>
 
         <p class="medida">
-          Tras <code>./lux instalar</code>, los artefactos quedan en tu repositorio local y se
+          Tras <code>./lux install</code>, los artefactos quedan en tu repositorio local y se
           declaran como cualquier otro.
         </p>
 
@@ -170,13 +170,14 @@
 <pre>git clone git@github.com:Andre031222/LuxCore.git
 <span class="kw">cd</span> LuxCore
 
-./lux instalar       <span class="cm"># compila, prueba e instala en ~/.m2</span>
-./lux empaquetar     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux probar         <span class="cm"># las 1 249 pruebas</span>
-./lux correr         <span class="cm"># la aplicación de ejemplo en :8080</span>
-./lux web            <span class="cm"># esta documentación, servida por LuxCore</span>
-./lux cache          <span class="cm"># qué ocupa, y --purgar para vaciarla</span>
-./lux limpiar        <span class="cm"># borra lo generado</span></pre>
+./lux install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
+./lux package     <span class="cm"># solo los JAR, con sus tamaños</span>
+./lux test        <span class="cm"># las 1 249 pruebas</span>
+./lux run         <span class="cm"># la aplicación de ejemplo en :8080</span>
+./lux new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
+./lux docs        <span class="cm"># esta documentación, servida por LuxCore</span>
+./lux cache       <span class="cm"># qué ocupa, y --purge para vaciarla</span>
+./lux clean       <span class="cm"># borra lo generado</span></pre>
         </div>
 
         <p class="medida">
@@ -229,7 +230,6 @@
             <div class="etiqueta">Autor</div>
             <div>
               Richar Andre Vilca-Solorzano · <a href="https://orcid.org/0009-0003-2385-5263">ORCID</a><br>
-              Torres Cruz Fred · <a href="https://orcid.org/0000-0003-0834-6834">ORCID</a><br>
               Laura Murillo Ramiro Pedro · <a href="https://orcid.org/0000-0003-1837-4871">ORCID</a><br>
               Universidad Nacional del Altiplano, Puno, Perú
             </div>
@@ -240,7 +240,7 @@
           </div>
           <div class="campo">
             <div class="etiqueta">Citación</div>
-            <div><span class="mono">Vilca-Solorzano, R. A., Torres Cruz, F. y Laura Murillo, R. P. (2026). LuxCore: núcleo de framework web
+            <div><span class="mono">Vilca-Solorzano, R. A. y Laura Murillo, R. P. (2026). LuxCore: núcleo de framework web
               poliglota sin dependencias. v0.2.0.</span></div>
           </div>
         </div>

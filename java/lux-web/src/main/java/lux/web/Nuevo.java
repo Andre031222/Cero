@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-/** {@code lux nuevo} — el mismo generador del sitio, pero escribiendo en disco. */
+/** {@code lux new} — el mismo generador del sitio, pero escribiendo en disco. */
 public final class Nuevo {
 
     private Nuevo() {
@@ -17,7 +17,7 @@ public final class Nuevo {
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].startsWith("-")) {
             System.err.println("""
-                    uso:  lux nuevo <artefacto> [grupo] [motor]
+                    uso:  lux new <artefacto> [grupo] [motor]
 
                       artefacto   nombre del proyecto y de la carpeta      (mi-app)
                       grupo       groupId de Maven                         (com.ejemplo)
