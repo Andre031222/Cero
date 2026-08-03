@@ -45,13 +45,13 @@
       <span class="palabra">Lux<em>Core</em></span>
     </a>
     <nav class="nav-sitio" aria-label="Secciones del sitio">
-      <a href="/">Inicio</a>
-      <a href="/descargas">Descargas</a>
-      <a href="/empezar">Empezar</a>
-      <a href="/guia">Guía</a>
-      <a href="/modulos">Módulos</a>
-      <a href="/referencia">Referencia</a>
-      <a href="/panel">Panel</a>
+      <a href="/"{% if ruta == "/" %} aria-current="page"{% end %}>Inicio</a>
+      <a href="/descargas"{% if ruta == "/descargas" %} aria-current="page"{% end %}>Descargas</a>
+      <a href="/empezar"{% if ruta == "/empezar" %} aria-current="page"{% end %}>Empezar</a>
+      <a href="/guia"{% if ruta == "/guia" %} aria-current="page"{% end %}>Guía</a>
+      <a href="/modulos"{% if ruta == "/modulos" %} aria-current="page"{% end %}>Módulos</a>
+      <a href="/referencia"{% if ruta == "/referencia" %} aria-current="page"{% end %}>Referencia</a>
+      <a href="/panel"{% if ruta == "/panel" %} aria-current="page"{% end %}>Panel</a>
       {% if usuario %}<a href="/auth/perfil">{{ usuario.nombre }}</a>{% end %}
     </nav>
     <button type="button" class="tema" aria-label="Cambiar de tema">

@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g fill="none" stroke="#e6187e" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="LuxCore">
+  <title>LuxCore</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
     <line x1="32.00" y1="19.00" x2="32.00" y2="8.50" stroke-width="2.4"/>
     <line x1="35.36" y1="19.44" x2="36.79" y2="14.13" stroke-width="1.6"/>
     <line x1="38.50" y1="20.74" x2="41.25" y2="15.98" stroke-width="1.6"/>
@@ -24,4 +26,10 @@
     <line x1="25.50" y1="20.74" x2="22.75" y2="15.98" stroke-width="1.6"/>
     <line x1="28.64" y1="19.44" x2="27.21" y2="14.13" stroke-width="1.6"/>
   </g>
-  <circle cx="32.0" cy="32.0" r="6.5" fill="#e6187e"/></svg>
+  <circle cx="32.0" cy="32.0" r="6.5" fill="currentColor"/>
+  <text x="76" y="43.5"
+        font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="30" font-weight="700" letter-spacing="-1.1">
+    <tspan fill="currentColor">Lux</tspan><tspan fill="#c2136a">Core</tspan>
+  </text>
+</svg>

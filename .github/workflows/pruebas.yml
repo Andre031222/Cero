@@ -124,9 +124,13 @@ jobs:
       - name: Regenerar y comprobar que no cambia nada
         run: |
           python3 docs/web/construir.py
-          if ! git diff --quiet -- docs/web; then
-            echo "::error::docs/web está desincronizado. Corre ./lux sitio y commitea el resultado."
-            git diff --stat -- docs/web
+          python3 docs/web/a-plantillas.py
+          # Las plantillas y los recursos de lux-web son copias de docs/web. Tres veces se
+          # quedaron atrás sin que nadie lo viera —terminal.js con el contador viejo, social.png
+          # y el favicon con la paleta anterior—, así que ahora lo comprueba la máquina.
+          if ! git diff --quiet -- docs/web java/lux-web/src/main/resources; then
+            echo "::error::El sitio o las copias de lux-web están desincronizados. Corre ./lux build y commitea."
+            git diff --stat -- docs/web java/lux-web/src/main/resources
             exit 1
           fi
-          echo "El sitio publicado coincide con sus fuentes."
+          echo "El sitio publicado y las copias de lux-web coinciden con sus fuentes."

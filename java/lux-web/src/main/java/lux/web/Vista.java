@@ -18,6 +18,8 @@ final class Vista {
         modelo.put("usuario", Autenticacion.actual(contexto));
         modelo.put("csrf", Csrf.token(contexto));
         modelo.put("v", Huella.ACTUAL);
+        // Para que la barra sepa marcar en qué sección estás.
+        modelo.put("ruta", contexto.path());
         return modelo;
     }
 }

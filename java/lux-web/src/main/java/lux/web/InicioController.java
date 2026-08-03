@@ -22,7 +22,7 @@ public class InicioController {
 
     @Get("")
     public Result index(Context contexto) {
-        return pagina(contexto, "inicio", "LuxCore — framework web para Java que arranca solo");
+        return pagina(contexto, "inicio", "LuxCore — Framework Java");
     }
 
     @Get("/descargas")

@@ -18,9 +18,17 @@ RECURSOS = AQUI.parent.parent / "java" / "lux-web" / "src" / "main" / "resources
 PLANTILLAS = RECURSOS / "plantillas"
 ESTATICOS = RECURSOS / "estaticos"
 
-# lux-web sirve su propia copia de los assets. Si no se copian aquí, se separan sin avisar:
-# terminal.js se quedó anunciando 1 241 pruebas en el sitio en vivo tres cambios después.
-ASSETS = ("lux.css", "lux.js", "terminal.js", "social.png")
+# lux-web sirve su propia copia de los recursos, así que hay que copiarlos.
+#
+# Esto NO es una lista a mano a propósito. Hubo tres: terminal.js anunciando 1 241 pruebas tres
+# cambios después, social.png con la paleta vieja, y el favicon dorado mucho después de que la
+# marca fuera magenta. Cada vez, el archivo estaba fuera de la lista y nadie se enteraba. Se
+# copian TODOS los de assets/ y los de marca/ que el sitio enlaza; si mañana aparece uno nuevo,
+# entra solo.
+CARPETAS = ("assets", "marca")
+
+# Lo que arma ./lux dist y no viene de aquí: no se toca al sincronizar.
+GENERADOS = ("luxcore-",)
 
 # fragmento -> plantilla
 PAGINAS = {
@@ -92,6 +100,28 @@ def preparar(cuerpo: str) -> str:
     return cuerpo
 
 
+def sincronizar() -> int:
+    """Copia a lux-web todo recurso del sitio, y avisa de lo que sobra por allí."""
+    ESTATICOS.mkdir(parents=True, exist_ok=True)
+    origenes = {}
+    for carpeta in CARPETAS:
+        for archivo in sorted((AQUI / carpeta).glob("*")):
+            if archivo.is_file():
+                origenes[archivo.name] = archivo
+
+    for nombre, archivo in origenes.items():
+        (ESTATICOS / nombre).write_bytes(archivo.read_bytes())
+
+    for servido in sorted(ESTATICOS.glob("*")):
+        if not servido.is_file() or servido.name in origenes:
+            continue
+        if any(servido.name.startswith(marca) for marca in GENERADOS):
+            continue
+        print(f"  ¡ojo! {servido.name} lo sirve lux-web y no tiene original en docs/web")
+
+    return len(origenes)
+
+
 def main() -> int:
     if not PLANTILLAS.is_dir():
         print(f"no encuentro {PLANTILLAS}", file=sys.stderr)
@@ -115,10 +145,8 @@ def main() -> int:
             encoding="utf-8")
         print(f"  {destino.name:16} {destino.stat().st_size:>7} B")
 
-    for nombre in ASSETS:
-        (ESTATICOS / nombre).write_bytes((AQUI / "assets" / nombre).read_bytes())
-
-    print(f"\n{len(PAGINAS)} plantillas y {len(ASSETS)} assets copiados a lux-web")
+    copiados = sincronizar()
+    print(f"\n{len(PAGINAS)} plantillas y {copiados} recursos copiados a lux-web")
     return 0
 
 
