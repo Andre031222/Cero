@@ -10,7 +10,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class StaticFiles {
+public final class StaticFiles implements Handler {
 
     private static final int STREAM_THRESHOLD = 1 << 20;
 
@@ -18,7 +18,13 @@ public final class StaticFiles {
     private final String resourcePrefix;
     private final String mount;
     private final String indexFile;
+    /**
+     * Recursos del classpath ya leídos. Solo entran los que existen y caben: la clave la elige
+     * quien hace la petición, así que guardar las ausencias dejaba que cualquiera llenara el
+     * montón pidiendo rutas inventadas — dos entradas por cada 404, sin tope ni desalojo.
+     */
     private final Map<String, byte[]> classpathCache = new ConcurrentHashMap<>();
+    private static final int MAX_CACHEADOS = 512;
 
     private StaticFiles(Path root, String resourcePrefix, String mount, String indexFile) {
         this.root = root == null ? null : root.toAbsolutePath().normalize();
@@ -27,34 +33,33 @@ public final class StaticFiles {
         this.indexFile = indexFile;
     }
 
-    public static Handler from(Path root) {
+    public static StaticFiles from(Path root) {
         return from(root, "/", "index.html");
     }
 
-    public static Handler from(Path root, String mount) {
+    public static StaticFiles from(Path root, String mount) {
         return from(root, mount, "index.html");
     }
 
-    public static Handler from(Path root, String mount, String indexFile) {
-        StaticFiles files = new StaticFiles(root, null, mount, indexFile);
-        return files::serve;
+    public static StaticFiles from(Path root, String mount, String indexFile) {
+        return new StaticFiles(root, null, mount, indexFile);
     }
 
-    public static Handler fromClasspath(String prefix) {
+    public static StaticFiles fromClasspath(String prefix) {
         return fromClasspath(prefix, "/", "index.html");
     }
 
-    public static Handler fromClasspath(String prefix, String mount) {
+    public static StaticFiles fromClasspath(String prefix, String mount) {
         return fromClasspath(prefix, mount, "index.html");
     }
 
-    public static Handler fromClasspath(String prefix, String mount, String indexFile) {
+    public static StaticFiles fromClasspath(String prefix, String mount, String indexFile) {
         String head = prefix.isEmpty() || prefix.endsWith("/") ? prefix : prefix + "/";
-        StaticFiles files = new StaticFiles(null, head, mount, indexFile);
-        return files::serve;
+        return new StaticFiles(null, head, mount, indexFile);
     }
 
-    private void serve(Request request, Response response) throws IOException {
+    @Override
+    public void handle(Request request, Response response) throws IOException {
         if (request.method() != HttpMethod.GET && request.method() != HttpMethod.HEAD) {
             response.status(405).header("Allow", "GET, HEAD").text("método no permitido");
             return;
@@ -78,14 +83,18 @@ public final class StaticFiles {
             return;
         }
 
-        BasicFileAttributes attributes = Files.readAttributes(target, BasicFileAttributes.class);
+        // NOFOLLOW igual que en la línea de arriba: sin esto readAttributes sigue el enlace,
+        // y un symlink dentro de la raíz servida que apunte fuera se serviría sin más.
+        BasicFileAttributes attributes =
+                Files.readAttributes(target, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (attributes.isDirectory()) {
             target = target.resolve(indexFile);
             if (!Files.isRegularFile(target)) {
                 response.status(404).text("no encontrado");
                 return;
             }
-            attributes = Files.readAttributes(target, BasicFileAttributes.class);
+            attributes = Files.readAttributes(target, BasicFileAttributes.class,
+                    LinkOption.NOFOLLOW_LINKS);
         }
         if (!attributes.isRegularFile()) {
             response.status(404).text("no encontrado");
@@ -153,16 +162,15 @@ public final class StaticFiles {
 
     private void serveFromClasspath(Request request, Response response, String relative) {
         String name = relative.isEmpty() ? indexFile : relative;
-        byte[] content = classpathCache.computeIfAbsent(name, this::readResource);
-        if (content.length == 0 && !classpathExists(name)) {
+        if (!classpathExists(name)) {
             String withIndex = name.endsWith("/") ? name + indexFile : name + "/" + indexFile;
-            content = classpathCache.computeIfAbsent(withIndex, this::readResource);
             if (!classpathExists(withIndex)) {
                 response.status(404).text("no encontrado");
                 return;
             }
             name = withIndex;
         }
+        byte[] content = cachear(name);
 
         String etag = "\"" + Integer.toHexString(java.util.Arrays.hashCode(content)) + "\"";
         if (notModified(request, response, etag)) {
@@ -192,6 +200,27 @@ public final class StaticFiles {
         }
         response.status(304).header("ETag", etag).send(new byte[0]);
         return true;
+    }
+
+    /**
+     * Lee el recurso, y lo guarda solo si el mapa no está lleno y no es enorme. Pasado el tope se
+     * sirve igual, leyéndolo cada vez: mejor perder velocidad que crecer sin freno.
+     */
+    private byte[] cachear(String name) {
+        byte[] guardado = classpathCache.get(name);
+        if (guardado != null) {
+            return guardado;
+        }
+        byte[] contenido = readResource(name);
+        if (classpathCache.size() < MAX_CACHEADOS && contenido.length <= STREAM_THRESHOLD) {
+            classpathCache.putIfAbsent(name, contenido);
+        }
+        return contenido;
+    }
+
+    /** Cuántos recursos hay cacheados. Para las pruebas. */
+    int cacheados() {
+        return classpathCache.size();
     }
 
     private byte[] readResource(String name) {
