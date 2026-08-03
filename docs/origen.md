@@ -15,7 +15,7 @@ La copia se hizo con:
 
 ```bash
 rsync -a --exclude '.git' --exclude 'target/' --exclude '.DS_Store' \
-  <origen>/ 45.Soft_LuxCore/
+  <origen>/ LuxCore/
 ```
 
 Verificada con `diff -r`: **94 archivos `.java`** en ambos lados, sin diferencias de contenido.

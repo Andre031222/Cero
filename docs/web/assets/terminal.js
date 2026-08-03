@@ -22,7 +22,7 @@
       pasos: [
         { n: '01', que: 'Clonar', cuanto: '~2 s' },
         { n: '02', que: 'Compilar y probar', cuanto: '~90 s' },
-        { n: '03', que: 'Arrancar', cuanto: '70 ms' },
+        { n: '03', que: 'Arrancar', cuanto: '10 ms' },
         { n: '04', que: 'Comprobar', cuanto: 'al instante' }
       ]
     },
@@ -34,7 +34,7 @@
       pasos: [
         { n: '01', que: 'Clone', cuanto: '~2 s' },
         { n: '02', que: 'Build and test', cuanto: '~90 s' },
-        { n: '03', que: 'Start', cuanto: '70 ms' },
+        { n: '03', que: 'Start', cuanto: '10 ms' },
         { n: '04', que: 'Check', cuanto: 'instant' }
       ]
     }
@@ -46,36 +46,39 @@
     var es = idioma === 'es';
     return [
       { t: 'cm', v: es ? '# 1 — traer el código' : '# 1 — get the source', paso: 0 },
-      { t: 'cmd', v: 'git clone https://github.com/Andre031222/45.Soft_LuxCore.git' },
-      { t: 'out', v: "Cloning into '45.Soft_LuxCore'...", cls: 'tenue' },
+      { t: 'cmd', v: 'git clone https://github.com/Andre031222/LuxCore.git' },
+      { t: 'out', v: "Cloning into 'LuxCore'...", cls: 'tenue' },
       { t: 'giro', v: es ? 'Recibiendo objetos' : 'Receiving objects', dur: 900,
         fin: 'remote: Enumerating objects: 486, done.', cls: 'tenue' },
       { t: 'barra', etiqueta: 'Receiving objects', dur: 1100, cola: '486/486, 1.31 MiB | 4.2 MiB/s' },
       { t: 'blank' },
 
-      { t: 'cmd', v: 'cd 45.Soft_LuxCore/java', ruta: '~/proyectos/45.Soft_LuxCore/java' },
+      { t: 'cmd', v: 'cd LuxCore/java', ruta: '~/LuxCore/java' },
       { t: 'blank' },
 
-      { t: 'cm', v: es ? '# 2 — compilar los cinco módulos y correr las pruebas'
-                       : '# 2 — build the five modules and run the tests', paso: 1 },
+      { t: 'cm', v: es ? '# 2 — compilar los ocho módulos y correr las pruebas'
+                       : '# 2 — build the eight modules and run the tests', paso: 1 },
       { t: 'cmd', v: 'mvn install' },
       { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.2.0:', cls: 'tenue' },
-      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http ....................... SUCCESS [ 01:17 min]   162 ✓' },
-      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core ....................... SUCCESS [   10.8 s]   333 ✓' },
-      { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view ....................... SUCCESS [    4.1 s]    88 ✓' },
-      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data ....................... SUCCESS [    1.1 s]   286 ✓' },
-      { t: 'giro', v: 'ejemplo',  dur: 500,  fin: '[INFO] ejemplo ........................ SUCCESS [    1.4 s]    36 ✓' },
+      { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http .............. SUCCESS [ 01:24 min]   238 ✓' },
+      { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core .............. SUCCESS [   12.1 s]   459 ✓' },
+      { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view .............. SUCCESS [    4.1 s]    88 ✓' },
+      { t: 'giro', v: 'lux-data', dur: 500,  fin: '[INFO] lux-data .............. SUCCESS [    9.7 s]   294 ✓' },
+      { t: 'giro', v: 'lux-adapter-servlet', dur: 400, fin: '[INFO] lux-adapter-servlet ... SUCCESS [    1.9 s]    35 ✓' },
+      { t: 'giro', v: 'ejemplo',  dur: 400,  fin: '[INFO] ejemplo ............... SUCCESS [    1.4 s]    43 ✓' },
+      { t: 'giro', v: 'lux-launcher', dur: 400, fin: '[INFO] lux-launcher .......... SUCCESS [    3.2 s]    10 ✓' },
+      { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 992, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 264 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 264 KB', cls: 'ok' },
+      { t: 'contar', hasta: 1238, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 297 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 297 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
-      { t: 'cmd', v: 'java -cp ejemplo/target/classes:$CP ejemplo.App' },
+      { t: 'cmd', v: './lux fatjar ejemplo && java -jar ejemplo.jar' },
       { t: 'ascii' },
-      { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 9 ms', cls: 'destacado' },
+      { t: 'out', v: 'lux · http://0.0.0.0:8080 · 9 rutas · 10 ms', cls: 'destacado' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 4 — comprobar que responde' : '# 4 — check that it answers', paso: 3 },

@@ -15,6 +15,14 @@ import sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 
+# Huella del contenido de los recursos: cambia cuando cambian, y así el navegador
+# no sirve la hoja de estilo vieja después de tocarla.
+def _huella():
+    import hashlib
+    datos = b"".join((AQUI / "assets" / n).read_bytes()
+                      for n in ("lux.css", "lux.js", "terminal.js"))
+    return hashlib.sha256(datos).hexdigest()[:8]
+
 PAGINAS = [
     # archivo,           título,                        entradilla,                                                        en el menú
     ("index.html",       "LuxCore",                     "Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.", None),
@@ -23,8 +31,6 @@ PAGINAS = [
     ("guia.html",        "Guía",                        "Rutas, parámetros, respuestas, inyección, validación y errores.",  "Guía"),
     ("modulos.html",     "Módulos",                     "Qué trae cada uno y cómo se usan por separado.",                   "Módulos"),
     ("referencia.html",  "Referencia",                  "Tamaños, motores de base de datos, sistemas y comparación.",       "Referencia"),
-    ("estado.html",      "Estado",                      "Qué está probado, qué no, y qué falta para producción.",           "Estado"),
-    ("marca/index.html", "Logo",                        "Construcción, tamaños y uso de la marca.",                         "Logo"),
 ]
 
 
@@ -69,7 +75,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
     lleva_terminal = 'id="pantalla"' in cuerpo
 
     guion_terminal = (
-        f'\n<script src="{raiz}/assets/terminal.js" defer></script>' if lleva_terminal else ""
+        f'\n<script src="{raiz}/assets/terminal.js?v={_huella()}" defer></script>' if lleva_terminal else ""
     )
 
     return f"""<!doctype html>
@@ -80,8 +86,22 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 <title>{completo}</title>
 <meta name="description" content="{entradilla}">
 <link rel="icon" href="data:image/svg+xml;base64,{icono}">
-<link rel="stylesheet" href="{raiz}/assets/lux.css">
-<script src="{raiz}/assets/lux.js"></script>{guion_terminal}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LuxCore">
+<meta property="og:title" content="{completo}">
+<meta property="og:description" content="{entradilla}">
+<meta property="og:url" content="https://luxcore.ginit.dev/">
+<meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 297 KB.">
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{completo}">
+<meta name="twitter:description" content="{entradilla}">
+<meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<link rel="stylesheet" href="{raiz}/assets/lux.css?v={_huella()}">
+<script src="{raiz}/assets/lux.js?v={_huella()}"></script>{guion_terminal}
 </head>
 <body>
 
@@ -103,7 +123,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 
   <footer class="pie">
     <div class="etiqueta">
-      Richar Andre Vilca-Solorzano<br>
+      Vilca-Solorzano · Torres Cruz · Laura Murillo<br>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
@@ -112,6 +132,23 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
     </div>
   </footer>
 </div>
+
+<nav class="nav-movil" aria-label="Secciones">
+  <ul>
+    <li><a href="{raiz}/" aria-label="Inicio">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
+      <span>Inicio</span></a></li>
+    <li><a href="{raiz}/descargas.html" aria-label="Descargas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M8 11l4 4 4-4"/><path d="M4 18v2h16v-2"/></svg>
+      <span>Bajar</span></a></li>
+    <li><a href="{raiz}/guia.html" aria-label="Guía">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M8 7.5h7M8 11h7"/></svg>
+      <span>Guía</span></a></li>
+    <li><a href="{raiz}/modulos.html" aria-label="Módulos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>Módulos</span></a></li>
+  </ul>
+</nav>
 
 </body>
 </html>
@@ -125,8 +162,6 @@ PAGINAS_UNICO = [
     ("guia.html", "Guía"),
     ("modulos.html", "Módulos"),
     ("referencia.html", "Referencia"),
-    ("estado.html", "Estado"),
-    ("marca/index.html", "Logo"),
 ]
 
 
@@ -220,7 +255,7 @@ def unico() -> int:
 
   <footer class="pie">
     <div class="etiqueta">
-      Richar Andre Vilca-Solorzano<br>
+      Vilca-Solorzano · Torres Cruz · Laura Murillo<br>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
