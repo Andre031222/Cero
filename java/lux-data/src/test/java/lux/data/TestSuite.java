@@ -11,6 +11,7 @@ public final class TestSuite {
         PoolTests.run();
         RepositoryTests.run();
         MotorTests.run();
+        JdbcSessionsTests.run();
 
         Check.report();
         if (Check.failures() > 0) {

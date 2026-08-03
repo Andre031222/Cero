@@ -28,6 +28,26 @@ public interface SessionStore {
 
     void save(String id, Datos datos);
 
+    /**
+     * Aplica un cambio sobre lo guardado, leyendo lo último que haya.
+     *
+     * <p>Existe porque {@link #save} pisa: cada petición trabajaba con su propia copia de los
+     * valores y volcaba el mapa entero, así que con dos peticiones en vuelo sobre la misma sesión
+     * —cosa normal, el navegador abre varias conexiones— la última en guardar borraba lo que
+     * escribió la otra. En silencio: un token CSRF recién puesto, un mensaje, el paso de un
+     * formulario largo.
+     *
+     * <p>La implementación por defecto es leer-modificar-escribir, que no es atómica. Un almacén
+     * que pueda hacerlo de una sola vez —{@code compute} de un mapa concurrente, un
+     * {@code UPDATE} condicional— debería sobrescribirla.
+     */
+    default void update(String id, java.util.function.UnaryOperator<Datos> cambio) {
+        Datos siguiente = cambio.apply(load(id));
+        if (siguiente != null) {
+            save(id, siguiente);
+        }
+    }
+
     void remove(String id);
 
     /** Descarta lo caducado. Un almacén con caducidad propia puede no hacer nada. */
@@ -52,6 +72,11 @@ public interface SessionStore {
         @Override
         public void save(String id, Datos datos) {
             entradas.put(id, datos);
+        }
+
+        @Override
+        public void update(String id, java.util.function.UnaryOperator<Datos> cambio) {
+            entradas.compute(id, (ignorado, previo) -> cambio.apply(previo));
         }
 
         @Override
