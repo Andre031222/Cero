@@ -63,27 +63,31 @@ public final class Router {
         return on(HttpMethod.DELETE, pattern, endpoint);
     }
 
+    private static final Match SIN_METODO = new Match(null, Map.of());
+
     public Match resolve(HttpMethod verb, String path) {
         ensureSorted();
+        // Se parte una vez y se prueba ya partido contra cada ruta candidata.
+        String[] parts = RoutePattern.parts(path);
         boolean pathExists = false;
         for (RouteEntry route : routes) {
-            Map<String, String> variables = route.pattern().match(path);
-            if (variables == null) {
+            if (!route.pattern().matches(parts)) {
                 continue;
             }
             pathExists = true;
             if (route.verb() == verb || (verb == HttpMethod.HEAD && route.verb() == HttpMethod.GET)) {
-                return new Match(route, variables);
+                return new Match(route, route.pattern().variables(parts));
             }
         }
-        return pathExists ? new Match(null, Map.of()) : null;
+        return pathExists ? SIN_METODO : null;
     }
 
     public Set<HttpMethod> allowedFor(String path) {
         ensureSorted();
+        String[] parts = RoutePattern.parts(path);
         Set<HttpMethod> allowed = EnumSet.noneOf(HttpMethod.class);
         for (RouteEntry route : routes) {
-            if (route.pattern().match(path) != null) {
+            if (route.pattern().matches(parts)) {
                 allowed.add(route.verb());
             }
         }

@@ -169,6 +169,9 @@ public final class Lux {
         if (config.has("server.idleTimeoutMillis")) {
             builder.idleTimeoutMillis(config.getInt("server.idleTimeoutMillis", current.idleTimeoutMillis()));
         }
+        if (config.has("server.behindProxy")) {
+            builder.behindProxy(config.getBoolean("server.behindProxy", false));
+        }
         if (config.has("server.handlerTimeoutMillis")) {
             builder.handlerTimeoutMillis(config.getInt("server.handlerTimeoutMillis",
                     current.handlerTimeoutMillis()));

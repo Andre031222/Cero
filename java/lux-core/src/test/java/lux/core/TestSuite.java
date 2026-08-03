@@ -16,6 +16,7 @@ public final class TestSuite {
         ObservabilidadTests.run();
         AsincronoTests.run();
         AutenticacionTests.run();
+        TransversalesTests.run();
 
         Check.report();
         if (Check.failures() > 0) {
