@@ -158,7 +158,7 @@ final class RequestOverServlet implements Request {
         if (nativa == null) {
             return null;
         }
-        sesion = new SessionOverServlet(nativa);
+        sesion = new SessionOverServlet(crudo, nativa);
         return sesion;
     }
 

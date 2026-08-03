@@ -1,5 +1,6 @@
 package lux.adapter.servlet;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lux.http.Session;
 
@@ -9,12 +10,14 @@ import java.util.Set;
 
 final class SessionOverServlet implements Session {
 
+    private final HttpServletRequest peticion;
     private final HttpSession nativa;
     private final boolean recienCreada;
 
     private boolean anulada;
 
-    SessionOverServlet(HttpSession nativa) {
+    SessionOverServlet(HttpServletRequest peticion, HttpSession nativa) {
+        this.peticion = peticion;
         this.nativa = nativa;
         this.recienCreada = nativa.isNew();
     }
@@ -61,6 +64,14 @@ final class SessionOverServlet implements Session {
             claves.add(nombres.nextElement());
         }
         return Collections.unmodifiableSet(claves);
+    }
+
+    @Override
+    public void regenerateId() {
+        requerirValida();
+        // El contenedor ya sabe hacerlo: cambia el identificador, conserva los atributos y emite
+        // la cookie nueva. Es lo mismo que hace Sessions cuando el servidor es el de LuxCore.
+        peticion.changeSessionId();
     }
 
     @Override
