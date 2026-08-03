@@ -18,6 +18,10 @@ final class PoolTests {
 
         Check.group("orígenes de datos");
         origenes();
+
+        Check.group("pool bajo concurrencia");
+        concurrencia();
+        validacionDiferida();
     }
 
     private static void prestamos() {
@@ -149,5 +153,80 @@ final class PoolTests {
 
         DataSources.clear();
         Check.that("clear vacía el registro", !DataSources.has("informes"));
+    }
+
+    /**
+     * Un pool que reparte más conexiones de las que dice su tope es una bomba: la base de datos
+     * corta por su lado y la aplicación no sabe por qué. Se pide y se devuelve desde muchos hilos
+     * a la vez y se comprueba que el techo aguanta.
+     */
+    private static void concurrencia() {
+        FakeDb.reset();
+        int tope = 4;
+        Pool pool = Pool.to(FakeDb.URL).maxSize(tope).validate(false)
+                .borrowTimeoutMillis(2_000).build();
+
+        int hilos = 24;
+        int vueltas = 40;
+        java.util.concurrent.atomic.AtomicInteger enUso = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger pico = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger fallos = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.CountDownLatch salida = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch llegada = new java.util.concurrent.CountDownLatch(hilos);
+
+        for (int i = 0; i < hilos; i++) {
+            Thread.ofVirtual().start(() -> {
+                try {
+                    salida.await();
+                    for (int vuelta = 0; vuelta < vueltas; vuelta++) {
+                        java.sql.Connection prestada = pool.borrow();
+                        int ahora = enUso.incrementAndGet();
+                        pico.updateAndGet(anterior -> Math.max(anterior, ahora));
+                        Thread.yield();
+                        enUso.decrementAndGet();
+                        pool.release(prestada);
+                    }
+                } catch (RuntimeException | InterruptedException fallo) {
+                    fallos.incrementAndGet();
+                } finally {
+                    llegada.countDown();
+                }
+            });
+        }
+        salida.countDown();
+        try {
+            Check.that("todos los hilos terminan",
+                    llegada.await(30, java.util.concurrent.TimeUnit.SECONDS));
+        } catch (InterruptedException interrumpido) {
+            Thread.currentThread().interrupt();
+        }
+
+        Check.equal("nadie falló pidiendo o devolviendo", fallos.get(), 0);
+        Check.that("nunca hubo más prestadas que el tope", pico.get() <= tope);
+        Check.that("no se abrieron más conexiones que el tope", FakeDb.opened.get() <= tope);
+        Check.equal("al final no queda ninguna activa", pool.active(), 0);
+        Check.that("y las abiertas siguen disponibles", pool.available() == pool.size());
+        pool.close();
+    }
+
+    /** Validar en cada préstamo es un viaje a la base de datos; con intervalo, se ahorra. */
+    private static void validacionDiferida() {
+        FakeDb.reset();
+        Pool siempre = Pool.to(FakeDb.URL).maxSize(1).validate(true).build();
+        for (int i = 0; i < 5; i++) {
+            siempre.release(siempre.borrow());
+        }
+        int conValidacionSiempre = FakeDb.validated.get();
+        Check.that("sin intervalo se valida en cada préstamo", conValidacionSiempre >= 5);
+        siempre.close();
+
+        FakeDb.reset();
+        Pool diferido = Pool.to(FakeDb.URL).maxSize(1).validate(true)
+                .validateEvery(java.time.Duration.ofMinutes(1)).build();
+        for (int i = 0; i < 5; i++) {
+            diferido.release(diferido.borrow());
+        }
+        Check.equal("con intervalo se valida una sola vez", FakeDb.validated.get(), 1);
+        diferido.close();
     }
 }
