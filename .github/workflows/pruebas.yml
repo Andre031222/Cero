@@ -60,7 +60,9 @@ jobs:
         # `mvn` en rojo quedaría tapado por el `tee` y el paso saldría en verde.
         run: |
           set -o pipefail
-          mvn -B test | tee ../pruebas.log
+          # install y no test: los pasos de después piden los artefactos por módulo, y con
+          # `test` no llegan al repositorio local. Además es lo mismo que hace quien instala.
+          mvn -B install | tee ../pruebas.log
 
       - name: Ningún motor quedó sin probar
         run: |
@@ -75,7 +77,7 @@ jobs:
         working-directory: java
         run: |
           mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=lux \
-              -DoutputFile=target/deps.txt -pl lux-http,lux-core,lux-view,lux-data
+              -DoutputFile=target/deps.txt -pl lux-http,lux-core,lux-view,lux-data -am
           fuera=$(grep -h ':jar:' lux-*/target/deps.txt || true)
           if [ -n "$fuera" ]; then
             echo "::error::El núcleo arrastra dependencias externas:"; echo "$fuera"; exit 1
