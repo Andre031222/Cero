@@ -111,7 +111,20 @@ final class IncomingRequest implements Request {
 
     @Override
     public String remoteAddress() {
-        return remoteAddress;
+        // Detrás de un proxy, remoteAddress es siempre el del proxy: sin esto el limitador cuenta
+        // a todo el mundo junto y el primero que llegue al tope bloquea el sitio entero. Solo se
+        // hace caso a la cabecera si quien nos habla está en la lista de confianza.
+        if (!context.options().trustedProxies().contains(remoteAddress)) {
+            return remoteAddress;
+        }
+        String reenviado = headers.get("X-Forwarded-For");
+        if (reenviado == null || reenviado.isBlank()) {
+            return remoteAddress;
+        }
+        // El primero de la lista es el cliente original; los siguientes, los saltos intermedios.
+        int coma = reenviado.indexOf(',');
+        String cliente = (coma < 0 ? reenviado : reenviado.substring(0, coma)).trim();
+        return cliente.isEmpty() ? remoteAddress : cliente;
     }
 
     @Override
@@ -220,10 +233,16 @@ final class IncomingRequest implements Request {
     }
 
     Cookie pendingSessionCookie() {
-        if (!sessionIsNew || session == null || !session.valid()) {
+        if (session == null || !session.valid()) {
+            return null;
+        }
+        // Nueva o recién rotada: en los dos casos hay que mandarle al navegador el identificador
+        // que toca. Antes solo se emitía al nacer, y por eso rotar no servía de nada.
+        if (!sessionIsNew && !session.idRotado()) {
             return null;
         }
         sessionIsNew = false;
+        session.cookieEmitida();
         return Cookie.of(Sessions.COOKIE, session.id())
                 .httpOnly(true)
                 .secure(secure())

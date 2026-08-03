@@ -75,7 +75,15 @@ public final class Csrf implements Middleware {
 
     private boolean exempted(String path) {
         for (String prefix : exempt) {
-            if (path.startsWith(prefix)) {
+            // Con startsWith pelado, eximir /api/publico eximía también /api/publicoSECRETO.
+            // Una exención de seguridad no es sitio para sorpresas: o es igual, o el corte cae
+            // en una barra.
+            if (!path.startsWith(prefix)) {
+                continue;
+            }
+            if (path.length() == prefix.length()
+                    || prefix.endsWith("/")
+                    || path.charAt(prefix.length()) == '/') {
                 return true;
             }
         }

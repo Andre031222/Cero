@@ -18,6 +18,7 @@ public final class StaticFiles implements Handler {
     private final String resourcePrefix;
     private final String mount;
     private final String indexFile;
+    private volatile String cacheControl;
     /**
      * Recursos del classpath ya leídos. Solo entran los que existen y caben: la clave la elige
      * quien hace la petición, así que guardar las ausencias dejaba que cualquiera llenara el
@@ -43,6 +44,17 @@ public final class StaticFiles implements Handler {
 
     public static StaticFiles from(Path root, String mount, String indexFile) {
         return new StaticFiles(root, null, mount, indexFile);
+    }
+
+    /**
+     * Valor de {@code Cache-Control} para lo que sirva. Sin esto el navegador aplica su
+     * heurística, que suele ser revalidar de más: un 304 por recurso y por visita. Para recursos
+     * con huella en el nombre —{@code estilo.a1b2c3.css}— lo correcto es
+     * {@code "public, max-age=31536000, immutable"}.
+     */
+    public StaticFiles cacheControl(String valor) {
+        this.cacheControl = valor;
+        return this;
     }
 
     public static StaticFiles fromClasspath(String prefix) {
@@ -110,6 +122,9 @@ public final class StaticFiles implements Handler {
         response.header("ETag", etag);
         response.header("Last-Modified", HttpDate.format(modified));
         response.header("Accept-Ranges", "bytes");
+        if (cacheControl != null) {
+            response.header("Cache-Control", cacheControl);
+        }
         response.type(MimeTypes.of(target.getFileName().toString()));
 
         long tamano = attributes.size();
@@ -120,7 +135,16 @@ public final class StaticFiles implements Handler {
         }
         if (pedido != null) {
             response.status(206).header("Content-Range", pedido.contentRange(tamano));
-            response.send(leerTrozo(target, pedido));
+            // Antes esto recortaba a 1 MB DESPUÉS de anunciar el rango entero, así que cabecera y
+            // cuerpo se contradecían y un vídeo o un PDF grande se cortaba a media descarga. Los
+            // rangos grandes se transmiten, igual que ya se hacía con el archivo completo.
+            if (pedido.longitud() > STREAM_THRESHOLD) {
+                try (OutputStream out = response.stream()) {
+                    transmitirTrozo(target, pedido, out);
+                }
+            } else {
+                response.send(leerTrozo(target, pedido));
+            }
             return;
         }
 
@@ -142,11 +166,29 @@ public final class StaticFiles implements Handler {
         return Ranges.parse(request.header("Range"), tamano);
     }
 
+    /** Vuelca el intervalo pedido, por trozos, sin traérselo entero a memoria. */
+    private static void transmitirTrozo(Path archivo, Ranges rango, OutputStream destino)
+            throws IOException {
+        byte[] buffer = new byte[16 * 1024];
+        long quedan = rango.longitud();
+        try (InputStream entrada = Files.newInputStream(archivo)) {
+            long saltado = entrada.skip(rango.desde());
+            if (saltado < rango.desde()) {
+                return;
+            }
+            while (quedan > 0) {
+                int leidos = entrada.read(buffer, 0, (int) Math.min(buffer.length, quedan));
+                if (leidos < 0) {
+                    return;
+                }
+                destino.write(buffer, 0, leidos);
+                quedan -= leidos;
+            }
+        }
+    }
+
     private static byte[] leerTrozo(Path archivo, Ranges rango) throws IOException {
         long longitud = rango.longitud();
-        if (longitud > STREAM_THRESHOLD) {
-            longitud = STREAM_THRESHOLD;
-        }
         byte[] trozo = new byte[(int) longitud];
         try (java.nio.channels.SeekableByteChannel canal = Files.newByteChannel(archivo)) {
             canal.position(rango.desde());
@@ -178,6 +220,9 @@ public final class StaticFiles implements Handler {
         }
         response.header("ETag", etag);
         response.header("Accept-Ranges", "bytes");
+        if (cacheControl != null) {
+            response.header("Cache-Control", cacheControl);
+        }
         response.type(MimeTypes.of(name));
 
         Ranges pedido = rangoPedido(request, etag, content.length);
