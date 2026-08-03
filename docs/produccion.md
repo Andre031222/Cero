@@ -6,7 +6,7 @@ funcionalidad y bastante en confianza.
 ## Lo que sí está resuelto
 
 - **1 227 pruebas en verde**, cero dependencias en el núcleo verificadas en cada corrida de CI.
-- Arranca en ~100 ms dentro de un contenedor y pesa 297 KB. El resto de contendientes, medidos
+- Arranca en ~100 ms dentro de un contenedor y pesa 308 KB. El resto de contendientes, medidos
   a la vez y en las mismas condiciones, tardan entre 4 y 13 veces más.
 - El endurecimiento HTTP es explícito y está probado: rechaza cabeceras plegadas,
   `Content-Length` duplicado, `Content-Length` junto a `Transfer-Encoding`, `Host` ausente o

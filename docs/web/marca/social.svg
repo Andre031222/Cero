@@ -46,7 +46,7 @@
     <text x="1104" y="332" font-size="20" letter-spacing="4" fill="#6f7378">ARRANQUE</text>
     <text x="1104" y="418" font-size="70" font-weight="700" fill="#f2f0ec">0<tspan font-size="30" fill="#8c9098"> deps</tspan></text>
     <text x="1104" y="450" font-size="20" letter-spacing="4" fill="#6f7378">EN EJECUCIÓN</text>
-    <text x="1104" y="536" font-size="70" font-weight="700" fill="#f2f0ec">297<tspan font-size="30" fill="#8c9098"> KB</tspan></text>
+    <text x="1104" y="536" font-size="70" font-weight="700" fill="#f2f0ec">308<tspan font-size="30" fill="#8c9098"> KB</tspan></text>
     <text x="1104" y="568" font-size="20" letter-spacing="4" fill="#6f7378">CINCO MÓDULOS</text>
   </g>
 </svg>

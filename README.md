@@ -12,7 +12,7 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 **En producción:** [luxcore.ginit.dev](https://luxcore.ginit.dev) — el sitio de este proyecto,
 servido por el propio framework, sin Tomcat detrás.
 
-![LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 297 KB](docs/imagenes/portada.png)
+![LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB](docs/imagenes/portada.png)
 
 * * *
 
@@ -141,7 +141,7 @@ la reflexión.
 | [`lux-web`](java/lux-web) | 82 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
 | [`ejemplo`](java/ejemplo) | 43 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
 
-Los cuatro del núcleo —`lux-http`, `lux-core`, `lux-view` y `lux-data`— suman **297 KB** y no
+Los cuatro del núcleo —`lux-http`, `lux-core`, `lux-view` y `lux-data`— suman **308 KB** y no
 declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo el proyecto está en
 `lux-adapter-servlet`, en *scope* `provided`.
 

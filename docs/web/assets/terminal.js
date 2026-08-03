@@ -71,8 +71,8 @@
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
       { t: 'contar', hasta: 1249, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 297 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 297 KB', cls: 'ok' },
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },

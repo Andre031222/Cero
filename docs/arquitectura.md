@@ -177,7 +177,7 @@ porque los absolutos dependen de la máquina.
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
 | Arranque | < 150 ms | **106 ms** | javalin 451 ms | **sí**, y por 4,3× |
-| JAR runtime | ≤ 400 KB | **297 KB** | — | **sí** |
+| JAR runtime | ≤ 400 KB | **308 KB** | — | **sí** |
 | Dependencias | 0 | **0** | spring: decenas | **sí** |
 | rps `/json` | batir al mejor rival | **25 431** | javalin 25 125 | **sí** |
 | RSS | < 120 MB | 136,4 MB | micronaut 201,2 MB | **no**, aunque es el más bajo |

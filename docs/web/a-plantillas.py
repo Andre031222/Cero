@@ -20,7 +20,7 @@ ESTATICOS = RECURSOS / "estaticos"
 
 # lux-web sirve su propia copia de los assets. Si no se copian aquí, se separan sin avisar:
 # terminal.js se quedó anunciando 1 241 pruebas en el sitio en vivo tres cambios después.
-ASSETS = ("lux.css", "lux.js", "terminal.js")
+ASSETS = ("lux.css", "lux.js", "terminal.js", "social.png")
 
 # fragmento -> plantilla
 PAGINAS = {
