@@ -45,7 +45,53 @@ classpath_ejemplo() {
   echo "$JAVA_DIR/ejemplo/target/classes:$(cat "$destino")"
 }
 
+version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<.*/\1/'; }
+
 case "${1:-ayuda}" in
+
+  nuevo|new)
+    requisitos
+    [ -n "${2:-}" ] || { malo "dime el nombre:  lux nuevo mi-app [grupo] [motor]"; exit 1; }
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
+    cp="$JAVA_DIR/lux-web/target/classes:$(ls -d "$JAVA_DIR"/lux-*/target/lux-*.jar | tr '\n' ':')"
+    azul "creando $2…"
+    java -cp "$cp" lux.web.Nuevo "${@:2}"
+    ;;
+
+  paquete|dist)
+    # Arma lo que se baja el instalador: el código fuente, sin target/ y sin la web.
+    # Va dentro de los recursos de lux-web, así que se despliega con el propio sitio y no
+    # hay un segundo sitio del que acordarse.
+    v=$(version)
+    destino="$JAVA_DIR/lux-web/src/main/resources/estaticos"
+    guiones="$JAVA_DIR/lux-web/src/main/resources/guiones"
+    mkdir -p "$destino" "$guiones"
+    cp "$AQUI/docs/instalar.sh" "$AQUI/docs/instalar.ps1" "$guiones/"
+
+    # Antes de copiar nada: si quedaran los paquetes de la vez anterior, el nuevo se los
+    # llevaría dentro y engordaría en cada pasada.
+    rm -f "$destino"/luxcore-*.tar.gz "$destino"/luxcore-*.zip "$destino"/luxcore-*.sha256
+
+    tmp=$(mktemp -d)
+    mkdir -p "$tmp/luxcore-$v"
+    # COPYFILE_DISABLE evita que el tar de macOS meta un ._archivo por cada archivo.
+    COPYFILE_DISABLE=1 tar -cf - \
+        --exclude target --exclude '*.class' --exclude .DS_Store --exclude classpath.txt \
+        --exclude 'luxcore-*.tar.gz' --exclude 'luxcore-*.zip' --exclude 'luxcore-*.sha256' \
+        -C "$AQUI" java lux lux.cmd lux.ps1 LICENSE NOTICE README.md \
+      | tar -xf - -C "$tmp/luxcore-$v"
+    COPYFILE_DISABLE=1 tar -czf "$destino/luxcore-$v.tar.gz" -C "$tmp" "luxcore-$v"
+    # jar en vez de zip: el JDK ya está, y `zip` no siempre.
+    (cd "$tmp" && jar --create --file "$destino/luxcore-$v.zip" "luxcore-$v")
+    rm -rf "$tmp"
+
+    for f in "$destino/luxcore-$v.tar.gz" "$destino/luxcore-$v.zip"; do
+      if command -v shasum >/dev/null; then shasum -a 256 "$f"; else sha256sum "$f"; fi \
+        | sed "s| .*| $(basename "$f")|" > "$f.sha256"
+      printf '  %-26s %6s KB\n' "$(basename "$f")" "$(( $(wc -c < "$f") / 1024 ))"
+    done
+    gris "  huellas en .sha256 · los sirve lux-web en /estaticos/"
+    ;;
 
   correr|run)
     requisitos
@@ -192,6 +238,8 @@ JAVA
   *)
     azul "lux — órdenes de LuxCore"
     echo
+    printf '  %-22s %s\n' "./lux nuevo <nombre>"   "crea un proyecto nuevo y listo para arrancar"
+    printf '  %-22s %s\n' "./lux paquete"          "arma el .tar.gz y el .zip que baja el instalador"
     printf '  %-22s %s\n' "./lux correr [puerto]"  "arranca la aplicación de ejemplo"
     printf '  %-23s %s\n' "./lux probar [módulo]"  "corre las pruebas"
     printf '  %-22s %s\n' "./lux empaquetar"       "genera los JAR y muestra sus tamaños"

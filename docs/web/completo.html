@@ -752,11 +752,11 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1238</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1249</b><span></span><em>Pruebas</em></div>
       </div>
 
-      <div class="orden" data-copiar="git clone https://github.com/Andre031222/LuxCore.git">
-        <code><span class="senal">$</span> git clone https://github.com/Andre031222/LuxCore.git</code>
+      <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
+        <code><span class="senal">$</span> curl -fsSL https://luxcore.ginit.dev/instalar | sh</code>
         <button type="button" class="copiar" aria-label="Copiar la orden">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -765,8 +765,9 @@ td.huella { color: var(--tenue); font-size: .75rem; }
           </svg>
         </button>
       </div>
-      <p class="tras-orden">Y de ahí, <a href="#p-empezar" data-hoja="p-empezar">los cuatro pasos</a>: compilar,
-        arrancar y comprobar. Requiere git, Maven y un JDK 21.</p>
+      <p class="tras-orden">En Windows,
+        <code>irm https://luxcore.ginit.dev/instalar.ps1 | iex</code>. Requiere Maven y un
+        JDK 21. Después: <code>lux nuevo mi-app</code>.</p>
     </div>
 
     <div class="portada-codigo">
@@ -883,7 +884,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">297 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 238</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 249</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -1148,7 +1149,7 @@ Lux.app()
 
 ./lux instalar       <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux empaquetar     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux probar         <span class="cm"># las 1 238 pruebas</span>
+./lux probar         <span class="cm"># las 1 249 pruebas</span>
 ./lux correr         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux web            <span class="cm"># esta documentación, servida por LuxCore</span>
 ./lux cache          <span class="cm"># qué ocupa, y --purgar para vaciarla</span>
@@ -1244,10 +1245,30 @@ Lux.app()
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Instalación</h2></div>
 
         <p>
-          LuxCore no está publicado en Maven Central todavía. Se instala compilándolo desde
-          <a href="https://github.com/Andre031222/LuxCore">el repositorio</a>, que deja los
-          artefactos en tu repositorio local de Maven.
+          LuxCore no está publicado en Maven Central todavía, así que hay un instalador. Baja el
+          paquete, comprueba su huella, lo compila, deja los artefactos en tu repositorio local de
+          Maven y te pone la orden <code>lux</code> a mano. No pide contraseña y no escribe fuera
+          de tu carpeta personal.
         </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">macOS y Linux</span><span class="etiqueta">sh</span></div>
+<pre>curl -fsSL https://luxcore.ginit.dev/instalar | sh</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Windows</span><span class="etiqueta">PowerShell</span></div>
+<pre>irm https://luxcore.ginit.dev/instalar.ps1 | iex</pre>
+        </div>
+
+        <p class="medida">
+          Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
+          antes de ejecutarlos — <a href="/instalar">instalar</a> ·
+          <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
+          1 249 pruebas durante la instalación.
+        </p>
+
+        <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
 
         <div class="mandos">
           <div class="conmutador" role="group" aria-label="Idioma / Language">
@@ -2055,8 +2076,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 238 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 238 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 249 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 249 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2093,7 +2114,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 238</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 249</td></tr>
               <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
               <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
               <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
@@ -2369,7 +2390,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1238, dur: 900,
+      { t: 'contar', hasta: 1249, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 297 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 297 KB', cls: 'ok' },
       { t: 'blank' },

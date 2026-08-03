@@ -36,6 +36,7 @@ public final class TestSuite {
             demos(base);
             acceso(base);
             generador(base);
+            instalador(base);
         } finally {
             servidor.stop();
         }
@@ -202,9 +203,12 @@ public final class TestSuite {
                 zip.headers().firstValue("content-disposition").orElse("").contains("mi-tienda-luxcore.zip"));
 
         java.util.List<String> entradas = new java.util.ArrayList<>();
+        java.util.Map<String, String> contenido = new java.util.HashMap<>();
         try (ZipInputStream lector = new ZipInputStream(new java.io.ByteArrayInputStream(zip.body()))) {
             for (var entrada = lector.getNextEntry(); entrada != null; entrada = lector.getNextEntry()) {
                 entradas.add(entrada.getName());
+                contenido.put(entrada.getName(),
+                        new String(lector.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
             }
         }
         comprobar("el ZIP trae pom.xml", entradas.contains("pom.xml"));
@@ -216,6 +220,35 @@ public final class TestSuite {
                 entradas.contains("src/main/resources/plantillas/base.html"));
         comprobar("sin web.xml, que es de lo que veníamos",
                 entradas.stream().noneMatch(nombre -> nombre.endsWith("web.xml")));
+
+        // Lo de verdad: que lo generado arranque con java -jar y pinte su portada. Las dos
+        // cosas estuvieron rotas y no se notaba, porque nadie miraba dentro del ZIP.
+        String pom = contenido.getOrDefault("pom.xml", "");
+        comprobar("el proyecto generado arma un jar ejecutable",
+                pom.contains("maven-jar-plugin")
+                        && pom.contains("<mainClass>com.acme.mitienda.App</mainClass>")
+                        && pom.contains("copy-dependencies"));
+        comprobar("y con el nombre que anuncia", pom.contains("<finalName>mi-tienda</finalName>"));
+        comprobar("y sus plantillas se resuelven con .html",
+                contenido.getOrDefault("src/main/java/com/acme/mitienda/App.java", "")
+                        .contains("suffix(\".html\")"));
+    }
+
+    private static void instalador(String base) throws Exception {
+        HttpResponse<String> version = get(base + "/version");
+        comprobar("/version responde 200", version.statusCode() == 200);
+        comprobar("con un número de versión", version.body().trim().matches("[0-9]+(\\.[0-9]+)*"));
+
+        HttpResponse<String> unix = get(base + "/instalar");
+        comprobar("/instalar responde 200", unix.statusCode() == 200);
+        comprobar("como texto plano, para poder leerlo antes de ejecutarlo",
+                unix.headers().firstValue("content-type").orElse("").startsWith("text/plain"));
+        comprobar("y es un guion de shell", unix.body().startsWith("#!/bin/sh"));
+        comprobar("que comprueba la huella de lo que baja", unix.body().contains("sha256"));
+
+        HttpResponse<String> windows = get(base + "/instalar.ps1");
+        comprobar("/instalar.ps1 responde 200", windows.statusCode() == 200);
+        comprobar("y comprueba la huella también", windows.body().contains("Get-FileHash"));
     }
 
     // ── utilidades ───────────────────────────────────────────────────────────

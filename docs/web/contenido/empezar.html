@@ -15,10 +15,30 @@
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Instalación</h2></div>
 
         <p>
-          LuxCore no está publicado en Maven Central todavía. Se instala compilándolo desde
-          <a href="https://github.com/Andre031222/LuxCore">el repositorio</a>, que deja los
-          artefactos en tu repositorio local de Maven.
+          LuxCore no está publicado en Maven Central todavía, así que hay un instalador. Baja el
+          paquete, comprueba su huella, lo compila, deja los artefactos en tu repositorio local de
+          Maven y te pone la orden <code>lux</code> a mano. No pide contraseña y no escribe fuera
+          de tu carpeta personal.
         </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">macOS y Linux</span><span class="etiqueta">sh</span></div>
+<pre>curl -fsSL https://luxcore.ginit.dev/instalar | sh</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Windows</span><span class="etiqueta">PowerShell</span></div>
+<pre>irm https://luxcore.ginit.dev/instalar.ps1 | iex</pre>
+        </div>
+
+        <p class="medida">
+          Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
+          antes de ejecutarlos — <a href="/instalar">instalar</a> ·
+          <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
+          1 249 pruebas durante la instalación.
+        </p>
+
+        <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
 
         <div class="mandos">
           <div class="conmutador" role="group" aria-label="Idioma / Language">

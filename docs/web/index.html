@@ -20,8 +20,8 @@
 <meta name="twitter:title" content="LuxCore">
 <meta name="twitter:description" content="Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.">
 <meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
-<link rel="stylesheet" href="./assets/lux.css?v=00b819c9">
-<script src="./assets/lux.js?v=00b819c9"></script>
+<link rel="stylesheet" href="./assets/lux.css?v=53b2f94e">
+<script src="./assets/lux.js?v=53b2f94e"></script>
 </head>
 <body>
 
@@ -98,11 +98,11 @@
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1238</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1249</b><span></span><em>Pruebas</em></div>
       </div>
 
-      <div class="orden" data-copiar="git clone https://github.com/Andre031222/LuxCore.git">
-        <code><span class="senal">$</span> git clone https://github.com/Andre031222/LuxCore.git</code>
+      <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
+        <code><span class="senal">$</span> curl -fsSL https://luxcore.ginit.dev/instalar | sh</code>
         <button type="button" class="copiar" aria-label="Copiar la orden">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -111,8 +111,9 @@
           </svg>
         </button>
       </div>
-      <p class="tras-orden">Y de ahí, <a href="./empezar.html">los cuatro pasos</a>: compilar,
-        arrancar y comprobar. Requiere git, Maven y un JDK 21.</p>
+      <p class="tras-orden">En Windows,
+        <code>irm https://luxcore.ginit.dev/instalar.ps1 | iex</code>. Requiere Maven y un
+        JDK 21. Después: <code>lux nuevo mi-app</code>.</p>
     </div>
 
     <div class="portada-codigo">
@@ -229,7 +230,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">297 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 238</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 249</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>

@@ -34,23 +34,25 @@ MONO_FINA = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 13)
 
 # (clase, texto). orden = tipo de línea: como se pinta y si se teclea.
 GUION = [
-    ("comentario", "# 1 — traer el código"),
-    ("orden",      "git clone https://github.com/Andre031222/LuxCore.git"),
-    ("salida",     "Receiving objects: 100% (486/486), 1.31 MiB | 4.2 MiB/s, done."),
+    ("comentario", "# 1 — instalar"),
+    ("orden",      "curl -fsSL https://luxcore.ginit.dev/instalar | sh"),
+    ("ok",         "entorno    Java 21 · Maven 3.9 · Darwin arm64"),
+    ("ok",         "descargado luxcore-0.2.0.tar.gz · 295 KB"),
+    ("ok",         "huella     sha256 717710b6c922b003…"),
+    ("ok",         "compilado  ocho módulos en ~/.m2 · 41 s"),
+    ("ok",         "orden lux  ~/.local/bin/lux"),
     ("blanco",     ""),
-    ("comentario", "# 2 — compilar los ocho módulos y correr las pruebas"),
-    ("orden",      "cd LuxCore/java && mvn install"),
-    ("salida",     "lux-http 238 · lux-core 459 · lux-view 88 · lux-data 294"),
-    ("salida",     "lux-adapter-servlet 35 · lux-launcher 10 · lux-web 71 · ejemplo 43"),
-    ("total",      "TOTAL  pass=1238  fail=0        BUILD SUCCESS"),
+    ("comentario", "# 2 — un proyecto nuevo"),
+    ("orden",      "lux nuevo mi-app"),
+    ("salida",     "9 archivos · com.ejemplo:mi-app"),
     ("blanco",     ""),
-    ("comentario", "# 3 — un solo jar, y arrancar"),
-    ("orden",      "./lux fatjar ejemplo && java -jar ejemplo.jar"),
-    ("arranque",   "LuxCore escuchando en http://localhost:8080 — listo en 10 ms"),
+    ("comentario", "# 3 — arrancar"),
+    ("orden",      "cd mi-app && mvn -q package && java -jar target/mi-app.jar"),
+    ("arranque",   "lux · http://0.0.0.0:8080 · 2 rutas · 10 ms"),
     ("blanco",     ""),
     ("comentario", "# 4 — comprobar"),
-    ("orden",      "curl -s localhost:8080/api/articulos"),
-    ("salida",     '[{"id":1,"nombre":"Teclado","precio":249.9}]'),
+    ("orden",      "curl -s localhost:8080/salud"),
+    ("salida",     "ok"),
 ]
 
 ALTO = MARGEN * 2 + BARRA + 20 + len(GUION) * INTERLINEA + 22
@@ -82,7 +84,7 @@ def lienzo() -> Image.Image:
 
     logo(d, MARGEN + 92, centro, 9)
     d.text((MARGEN + 108, centro - 8), "LuxCore", font=MONO, fill=TINTA)
-    d.text((ANCHO / 2 + 40, centro - 6), "~/LuxCore/java", font=MONO_FINA, fill=GRIS,
+    d.text((ANCHO / 2 + 40, centro - 6), "~/proyectos", font=MONO_FINA, fill=GRIS,
            anchor="mm")
     return imagen
 
@@ -100,6 +102,11 @@ def pintar(hasta: int, escritas: int) -> Image.Image:
             d.text((x, y), "$", font=MONO, fill=MARCA)
             x += MONO.getlength("$ ")
             d.text((x, y), texto, font=MONO, fill=TINTA)
+            ancho = MONO.getlength(texto)
+        elif clase == "ok":
+            d.text((x + MONO.getlength("  "), y), "✓", font=MONO, fill=VERDE)
+            x += MONO.getlength("  ✓   ")
+            d.text((x, y), texto, font=MONO, fill=TENUE)
             ancho = MONO.getlength(texto)
         else:
             color = {"comentario": GRIS, "total": VERDE, "arranque": MARCA}.get(clase, TENUE)

@@ -6,7 +6,7 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-1238-15803d?style=flat-square)](#estado)
+[![Pruebas](https://img.shields.io/badge/Pruebas-1249-15803d?style=flat-square)](#estado)
 [![En vivo](https://img.shields.io/badge/En_vivo-luxcore.ginit.dev-0f2444?style=flat-square)](https://luxcore.ginit.dev)
 
 **En producción:** [luxcore.ginit.dev](https://luxcore.ginit.dev) — el sitio de este proyecto,
@@ -67,11 +67,30 @@ Linux sin virtualizar antes de citarse.
 
 Java 21 o superior (hilos virtuales) y Maven. Nada más.
 
-![Clonar, compilar las 1 238 pruebas y arrancar en 10 ms](docs/imagenes/instalar.gif)
+![Una orden instala LuxCore, crea un proyecto y lo arranca en 10 ms](docs/imagenes/instalar.gif)
+
+```bash
+curl -fsSL https://luxcore.ginit.dev/instalar | sh          # macOS y Linux
+irm https://luxcore.ginit.dev/instalar.ps1 | iex            # Windows (PowerShell)
+```
+
+Baja el paquete, comprueba su `sha256`, lo compila, deja los artefactos en tu `~/.m2` y te pone la
+orden `lux` en el PATH. No pide contraseña y no escribe fuera de tu carpeta personal. Los dos
+guiones se sirven como texto plano a propósito —[instalar](https://luxcore.ginit.dev/instalar) ·
+[instalar.ps1](https://luxcore.ginit.dev/instalar.ps1)— para que puedas leerlos antes de ejecutarlos.
+
+Después:
+
+```bash
+lux nuevo mi-app
+cd mi-app && mvn -q package && java -jar target/mi-app.jar
+```
+
+Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
 git clone https://github.com/Andre031222/LuxCore.git && cd LuxCore
-cd java && mvn install     # 1 238 pruebas, runner propio (sin JUnit)
+cd java && mvn install     # 1 249 pruebas, runner propio (sin JUnit)
 ./lux fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
@@ -119,7 +138,7 @@ la reflexión.
 | [`lux-data`](java/lux-data) | 294 | `Row`, `Db`, `Pool`, `Tx` y `Repository<T, ID>`. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
 | [`lux-adapter-servlet`](java/lux-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
 | [`lux-launcher`](java/lux-launcher) | 10 | Empaqueta aplicación y framework en un jar ejecutable, con `java.util.jar` y sin plugins de terceros |
-| [`lux-web`](java/lux-web) | 71 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
+| [`lux-web`](java/lux-web) | 82 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
 | [`ejemplo`](java/ejemplo) | 43 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
 
 Los cuatro del núcleo —`lux-http`, `lux-core`, `lux-view` y `lux-data`— suman **297 KB** y no
@@ -133,7 +152,7 @@ transversales están reescritas y el sitio de referencia corre sobre el propio f
 
 Lo verificado, y cómo:
 
-- **1 238 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
+- **1 249 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.

@@ -55,7 +55,8 @@ public final class App {
                 .use(RateLimit.perMinute(600))
                 .use(Csrf.enabled().exempt("/demo/"))
                 .controllers(InicioController.class, AuthController.class,
-                        DemoController.class, GeneradorController.class)
+                        DemoController.class, GeneradorController.class,
+                        InstalarController.class)
                 .start();
     }
 }
