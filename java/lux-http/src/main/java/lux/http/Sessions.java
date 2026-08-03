@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class Sessions {
@@ -15,28 +14,34 @@ final class Sessions {
 
     private static final int SWEEP_EVERY = 256;
 
-    private final ConcurrentHashMap<String, Entry> entries = new ConcurrentHashMap<>();
+    private final SessionStore store;
     private final SecureRandom random = new SecureRandom();
     private final AtomicInteger sinceSweep = new AtomicInteger();
     private final long timeoutMillis;
 
     Sessions(long timeoutMillis) {
+        this(timeoutMillis, SessionStore.inMemory());
+    }
+
+    Sessions(long timeoutMillis, SessionStore store) {
         this.timeoutMillis = timeoutMillis;
+        this.store = store == null ? SessionStore.inMemory() : store;
     }
 
     Entry find(String id) {
         if (id == null) {
             return null;
         }
-        Entry entry = entries.get(id);
-        if (entry == null) {
+        SessionStore.Datos datos = store.load(id);
+        if (datos == null) {
             return null;
         }
-        if (expired(entry)) {
-            entries.remove(id, entry);
+        if (System.currentTimeMillis() - datos.ultimoAcceso() > timeoutMillis) {
+            store.remove(id);
             return null;
         }
-        entry.lastAccessAt = System.currentTimeMillis();
+        Entry entry = new Entry(this, id, datos);
+        entry.tocar();
         return entry;
     }
 
@@ -45,21 +50,18 @@ final class Sessions {
             sinceSweep.set(0);
             sweep();
         }
-        Entry entry = new Entry(this, newId());
-        entries.put(entry.id, entry);
+        long ahora = System.currentTimeMillis();
+        Entry entry = new Entry(this, newId(), new SessionStore.Datos(new HashMap<>(), ahora, ahora));
+        entry.guardar();
         return entry;
     }
 
     int size() {
-        return entries.size();
+        return store.size();
     }
 
     void sweep() {
-        entries.values().removeIf(this::expired);
-    }
-
-    private boolean expired(Entry entry) {
-        return !entry.valid || System.currentTimeMillis() - entry.lastAccessAt > timeoutMillis;
+        store.sweep(timeoutMillis);
     }
 
     private String newId() {
@@ -72,20 +74,35 @@ final class Sessions {
 
         private final Sessions owner;
         private final String id;
-        private final Map<String, Object> values = Collections.synchronizedMap(new HashMap<>());
-        private final long createdAt = System.currentTimeMillis();
+        private final Map<String, Object> values;
+        private final long createdAt;
 
-        private volatile long lastAccessAt = createdAt;
+        private volatile long lastAccessAt;
         private volatile boolean valid = true;
         private volatile boolean created;
 
-        Entry(Sessions owner, String id) {
+        Entry(Sessions owner, String id, SessionStore.Datos datos) {
             this.owner = owner;
             this.id = id;
+            this.values = Collections.synchronizedMap(new HashMap<>(datos.valores()));
+            this.createdAt = datos.creada();
+            this.lastAccessAt = datos.ultimoAcceso();
         }
 
         void markCreated() {
             created = true;
+        }
+
+        void tocar() {
+            lastAccessAt = System.currentTimeMillis();
+            guardar();
+        }
+
+        void guardar() {
+            synchronized (values) {
+                owner.store.save(id,
+                        new SessionStore.Datos(new HashMap<>(values), createdAt, lastAccessAt));
+            }
         }
 
         @Override
@@ -113,12 +130,14 @@ final class Sessions {
             } else {
                 values.put(key, value);
             }
+            guardar();
         }
 
         @Override
         public void remove(String key) {
             requireValid();
             values.remove(key);
+            guardar();
         }
 
         @Override
@@ -133,7 +152,7 @@ final class Sessions {
         public void invalidate() {
             valid = false;
             values.clear();
-            owner.entries.remove(id, this);
+            owner.store.remove(id);
         }
 
         @Override

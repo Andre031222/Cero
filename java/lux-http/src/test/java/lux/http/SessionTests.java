@@ -1,5 +1,10 @@
 package lux.http;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
 final class SessionTests {
 
     private SessionTests() {
@@ -75,7 +80,9 @@ final class SessionTests {
         Sessions.Entry entry = store.create();
         entry.set("k", "v");
 
-        Check.equal("la sesión recién creada se encuentra", store.find(entry.id()), entry);
+        Check.equal("la sesión recién creada se encuentra por su id",
+                store.find(entry.id()).id(), entry.id());
+        Check.equal("y rehidratada trae sus valores", store.find(entry.id()).get("k"), "v");
         Check.equal("la sesión guarda valores", entry.get("k"), "v");
         Check.equal("get tipado devuelve el valor", entry.get("k", String.class), "v");
         Check.equal("get tipado con tipo erróneo devuelve null", entry.get("k", Integer.class), null);
@@ -99,6 +106,61 @@ final class SessionTests {
             return false;
         } catch (IllegalStateException expected) {
             return true;
+        }
+    }
+
+    /**
+     * Lo que hace falta para escalar: dos servidores distintos, un almacén compartido, y la
+     * sesión abierta en uno vale en el otro. Con el almacén por proceso, la segunda instancia
+     * no sabría nada de esa cookie.
+     */
+    static void almacenCompartido() throws Exception {
+        Check.group("sesiones compartidas entre instancias");
+
+        SessionStore compartido = SessionStore.inMemory();
+        Handler handler = (peticion, respuesta) -> {
+            Session sesion = peticion.session();
+            if (peticion.path().equals("/guardar")) {
+                sesion.set("quien", "ana");
+                respuesta.text("guardado en " + respuesta.headers().hashCode());
+            } else {
+                Object quien = sesion.get("quien");
+                respuesta.text(quien == null ? "nadie" : String.valueOf(quien));
+            }
+        };
+
+        ServerOptions opciones = ServerOptions.builder().port(0).sessionStore(compartido).build();
+        try (Server primera = Server.start(opciones, handler, ErrorReporter.silent());
+             Server segunda = Server.start(opciones, handler, ErrorReporter.silent())) {
+
+            HttpResponse<String> alta = Fixture.get("http://127.0.0.1:" + primera.port() + "/guardar");
+            String cookie = alta.headers().firstValue("set-cookie").orElse("");
+            int fin = cookie.indexOf(';');
+            String galleta = fin < 0 ? cookie : cookie.substring(0, fin);
+            Check.that("la primera instancia abre sesión", !galleta.isEmpty());
+
+            HttpResponse<String> enLaOtra = Fixture.send(
+                    HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + segunda.port() + "/leer"))
+                            .version(HttpClient.Version.HTTP_1_1)
+                            .header("Cookie", galleta).build());
+            Check.equal("y la segunda instancia ve los mismos datos", enLaOtra.body(), "ana");
+        }
+
+        try (Server aislada = Server.start(ServerOptions.builder().port(0).build(),
+                handler, ErrorReporter.silent())) {
+            HttpResponse<String> alta = Fixture.get("http://127.0.0.1:" + aislada.port() + "/guardar");
+            String cookie = alta.headers().firstValue("set-cookie").orElse("");
+            int fin = cookie.indexOf(';');
+
+            try (Server otra = Server.start(ServerOptions.builder().port(0).build(),
+                    handler, ErrorReporter.silent())) {
+                HttpResponse<String> perdida = Fixture.send(
+                        HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + otra.port() + "/leer"))
+                                .version(HttpClient.Version.HTTP_1_1)
+                                .header("Cookie", fin < 0 ? cookie : cookie.substring(0, fin)).build());
+                Check.equal("sin almacén compartido, la otra instancia no la reconoce",
+                        perdida.body(), "nadie");
+            }
         }
     }
 }

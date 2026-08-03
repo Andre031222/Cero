@@ -116,7 +116,21 @@ final class IncomingRequest implements Request {
 
     @Override
     public boolean secure() {
-        return context.options().secure();
+        if (context.options().secure()) {
+            return true;
+        }
+        // Detrás de un proxy inverso el TLS lo termina él y a nosotros nos llega en claro. Solo
+        // se cree la cabecera si se ha declarado que hay un proxy: fiarse de ella sin más
+        // permitiría a cualquier cliente decir que su petición es segura.
+        if (!context.options().behindProxy()) {
+            return false;
+        }
+        String declarado = headers.get("X-Forwarded-Proto");
+        if (declarado == null) {
+            return false;
+        }
+        int coma = declarado.indexOf(',');
+        return (coma < 0 ? declarado : declarado.substring(0, coma)).trim().equalsIgnoreCase("https");
     }
 
     @Override

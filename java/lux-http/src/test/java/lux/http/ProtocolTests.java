@@ -57,6 +57,10 @@ final class ProtocolTests {
                 }
             }
             case "/redir" -> response.redirect("/destino");
+            case "/fuera" -> response.redirect("https://otro.sitio/robar");
+            case "/js" -> response.redirect("javascript:alert(1)");
+            case "/doblebarra" -> response.redirect("//otro.sitio/robar");
+            case "/oauth" -> response.redirectExternal("https://accounts.example/authorize");
             case "/no-existe" -> throw new HttpException(404, "no encontrado");
             case "/revienta" -> throw new IllegalStateException("fallo del handler");
             case "/ruta con espacio" -> response.text("decodificado");
@@ -220,8 +224,22 @@ final class ProtocolTests {
                 Fixture.raw(port, "GET / HTTP/2.0\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 505"));
         Check.that("método desconocido da 501",
                 Fixture.raw(port, "VOLAR / HTTP/1.1\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 501"));
-        Check.that("destino sin barra inicial da 400",
-                Fixture.raw(port, "GET http://x/ HTTP/1.1\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 400"));
+        Check.that("un destino que no es ninguna de las formas del RFC da 400",
+                Fixture.raw(port, "GET sinbarra HTTP/1.1\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 400"));
+        Check.that("absolute-form se acepta, como exige RFC 9112 §3.2.2",
+                Fixture.raw(port, "GET http://x/ HTTP/1.1\r\nHost: x\r\n\r\n").startsWith("HTTP/1.1 200"));
+        Check.that("una redirección a otro sitio se rechaza",
+                Fixture.raw(port, "GET /fuera HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+                        .startsWith("HTTP/1.1 400"));
+        Check.that("y también el esquema javascript",
+                Fixture.raw(port, "GET /js HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+                        .startsWith("HTTP/1.1 400"));
+        Check.that("y la forma //host",
+                Fixture.raw(port, "GET /doblebarra HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+                        .startsWith("HTTP/1.1 400"));
+        Check.that("una redirección declarada como externa sí sale",
+                Fixture.raw(port, "GET /oauth HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+                        .contains("Location: https://accounts.example/authorize"));
         Check.that("cabecera plegada se rechaza",
                 Fixture.raw(port, "GET / HTTP/1.1\r\nHost: x\r\nX-A: uno\r\n  dos\r\n\r\n")
                         .startsWith("HTTP/1.1 400"));
@@ -246,5 +264,41 @@ final class ProtocolTests {
         Check.that("demasiadas cabeceras da 431",
                 Fixture.raw(port, "GET / HTTP/1.1\r\nHost: x\r\n" + "X-A: 1\r\n".repeat(200) + "\r\n")
                         .startsWith("HTTP/1.1 431"));
+    }
+
+    /**
+     * Detrás de un proxy inverso el TLS lo termina él, así que la aplicación recibe texto plano.
+     * Si no se entera, la cookie de sesión sale sin {@code Secure} y viaja en claro. Pero creerse
+     * la cabecera sin más sería peor: cualquier cliente podría declararse seguro.
+     */
+    static void trasProxy() throws Exception {
+        Check.group("detrás de un proxy inverso");
+
+        Handler handler = (peticion, respuesta) -> respuesta.text(String.valueOf(peticion.secure()));
+
+        try (Server sinDeclarar = Server.start(ServerOptions.builder().port(0).build(),
+                handler, ErrorReporter.silent())) {
+            Check.equal("sin declarar el proxy, la cabecera se ignora",
+                    conProto(sinDeclarar.port(), "https"), "false");
+        }
+
+        try (Server declarado = Server.start(
+                ServerOptions.builder().port(0).behindProxy(true).build(),
+                handler, ErrorReporter.silent())) {
+
+            Check.equal("declarado, X-Forwarded-Proto: https cuenta como seguro",
+                    conProto(declarado.port(), "https"), "true");
+            Check.equal("y http no", conProto(declarado.port(), "http"), "false");
+            Check.equal("una cadena de proxies toma el primero",
+                    conProto(declarado.port(), "https, http"), "true");
+            Check.equal("sin la cabecera sigue siendo inseguro",
+                    Fixture.get("http://127.0.0.1:" + declarado.port() + "/").body(), "false");
+        }
+    }
+
+    private static String conProto(int puerto, String protocolo) throws Exception {
+        return Fixture.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + puerto + "/"))
+                .version(HttpClient.Version.HTTP_1_1)
+                .header("X-Forwarded-Proto", protocolo).build()).body();
     }
 }

@@ -7,9 +7,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ScheduledFuture;
 
-final class Connection implements Runnable {
+final class Connection implements Runnable, Watchdog.Vigilada {
 
     private static final byte[] CONTINUE = "HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1);
 
@@ -17,10 +16,21 @@ final class Connection implements Runnable {
     private final ServerContext context;
     private final Runnable release;
 
+    /** Instante en que vence la petición en vuelo, o 0 si no hay ninguna. Lo lee el watchdog. */
+    private volatile long limiteNanos;
+
+    /** Buffer de cabeceras compartido por todas las peticiones de esta conexión. */
+    private AsciiBuffer head;
+
     Connection(Socket socket, ServerContext context, Runnable release) {
         this.socket = socket;
         this.context = context;
         this.release = release;
+    }
+
+    @Override
+    public long limiteNanos() {
+        return limiteNanos;
     }
 
     @Override
@@ -33,8 +43,15 @@ final class Connection implements Runnable {
             OutputStream out = new BufferedOutputStream(open.getOutputStream(), 16_384);
             ByteReader reader = new ByteReader(open.getInputStream(), options.readBufferBytes());
             RequestReader requests = new RequestReader(reader, context);
+            head = new AsciiBuffer(512);
 
-            serve(requests, out, remoteAddress(open));
+            // Alta y baja una vez por conexión, no por petición.
+            context.watchdog().vigilar(this);
+            try {
+                serve(requests, reader, out, remoteAddress(open));
+            } finally {
+                context.watchdog().soltar(this);
+            }
         } catch (IOException cause) {
             context.reporter().transport(cause);
         } finally {
@@ -42,7 +59,8 @@ final class Connection implements Runnable {
         }
     }
 
-    private void serve(RequestReader requests, OutputStream out, String remote) throws IOException {
+    private void serve(RequestReader requests, ByteReader reader, OutputStream out, String remote)
+            throws IOException {
         ServerOptions options = context.options();
 
         for (int served = 0; served < options.maxKeepAliveRequests(); served++) {
@@ -62,7 +80,8 @@ final class Connection implements Runnable {
             boolean last = served + 1 == options.maxKeepAliveRequests();
             boolean keepAlive = wantsKeepAlive(request) && !last && context.accepting().getAsBoolean();
 
-            OutgoingResponse response = new OutgoingResponse(out, request, options);
+            OutgoingResponse response = new OutgoingResponse(out, request, options, head);
+            response.source(reader);
             response.keepAlive(keepAlive);
 
             if (request.headers().contains("Expect", "100-continue")) {
@@ -70,7 +89,7 @@ final class Connection implements Runnable {
                 out.flush();
             }
 
-            if (!guarded(request, response, out)) {
+            if (!guarded(request, response, out) || response.upgraded()) {
                 return;
             }
             if (!keepAlive || !drain(request)) {
@@ -84,11 +103,14 @@ final class Connection implements Runnable {
         if (timeout <= 0) {
             return dispatch(request, response, out);
         }
-        ScheduledFuture<?> alarm = context.watchdog().arm(timeout, this::abort);
+        // Todo el coste del vigilante en el camino caliente: dos escrituras de un volatile.
+        // Un límite de 0 no vale como marca de «en vuelo», así que se evita ese valor.
+        long limite = System.nanoTime() + timeout * 1_000_000L;
+        limiteNanos = limite == 0 ? 1 : limite;
         try {
             return dispatch(request, response, out);
         } finally {
-            alarm.cancel(false);
+            limiteNanos = 0;
         }
     }
 
@@ -96,6 +118,7 @@ final class Connection implements Runnable {
         try {
             context.handler().handle(request, response);
             response.finish();
+            out.flush();
             return true;
         } catch (OutgoingResponse.UncheckedHttpException broken) {
             context.reporter().transport(broken);
@@ -125,7 +148,10 @@ final class Connection implements Runnable {
         return false;
     }
 
-    private void abort() {
+    @Override
+    public void abortar() {
+        // Se limpia primero para que el barrendero no vuelva a cortar la misma conexión.
+        limiteNanos = 0;
         context.reporter().transport(new HttpException(504, "handler excedió el tiempo límite"));
         try {
             socket.close();
@@ -147,7 +173,7 @@ final class Connection implements Runnable {
 
     private void writeError(OutputStream out, int status, String message) {
         try {
-            OutgoingResponse response = new OutgoingResponse(out, null, context.options());
+            OutgoingResponse response = new OutgoingResponse(out, null, context.options(), head);
             response.keepAlive(false);
             response.status(status);
             response.type("text/plain; charset=utf-8");

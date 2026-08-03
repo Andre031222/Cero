@@ -20,8 +20,40 @@ final class LimitsTests {
         hostRequired();
         connectionCeiling();
         handlerTimeout();
+        handlerTimeoutNoCortaLoRapido();
         gracefulShutdown();
         keepAliveCeiling();
+    }
+
+    /**
+     * El vigilante marca un límite por petición y lo borra al terminar. Si se le olvidara
+     * borrarlo, la siguiente petición de la misma conexión heredaría un plazo ya vencido y
+     * moriría sin motivo. Con un plazo corto y muchas peticiones seguidas eso salta enseguida.
+     */
+    private static void handlerTimeoutNoCortaLoRapido() throws Exception {
+        ServerOptions options = ServerOptions.builder()
+                .port(0)
+                .handlerTimeoutMillis(150)
+                .idleTimeoutMillis(5_000)
+                .build();
+
+        try (Server server = Server.start(options, (req, res) -> res.text("ok"), ErrorReporter.silent());
+             Socket socket = Fixture.connect(server.port())) {
+
+            int atendidas = 0;
+            for (int i = 0; i < 50; i++) {
+                socket.getOutputStream().write(
+                        "GET / HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
+                socket.getOutputStream().flush();
+                String head = Fixture.readHead(socket.getInputStream());
+                if (!head.startsWith("HTTP/1.1 200")) {
+                    break;
+                }
+                Fixture.readExactly(socket.getInputStream(), Fixture.contentLength(head));
+                atendidas++;
+            }
+            Check.equal("50 peticiones seguidas bajo un plazo corto, ninguna cortada", atendidas, 50);
+        }
     }
 
     private static void hostRequired() throws Exception {
