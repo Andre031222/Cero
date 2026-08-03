@@ -16,6 +16,8 @@ public final class Pool implements AutoCloseable {
     private final int maxSize;
     private final long borrowTimeoutMillis;
     private final boolean validate;
+    private final long validacionCadaMillis;
+    private final java.util.Map<Connection, Long> ultimaValidacion = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final BlockingQueue<Connection> idle;
     private final AtomicInteger created = new AtomicInteger();
@@ -28,6 +30,7 @@ public final class Pool implements AutoCloseable {
         user = builder.user;
         password = builder.password;
         maxSize = builder.maxSize;
+        validacionCadaMillis = builder.validacionCadaMillis;
         borrowTimeoutMillis = builder.borrowTimeoutMillis;
         validate = builder.validate;
         idle = new ArrayBlockingQueue<>(builder.maxSize);
@@ -54,12 +57,20 @@ public final class Pool implements AutoCloseable {
             discard(reused);
             reused = idle.poll();
         }
-        if (created.get() < maxSize && created.incrementAndGet() <= maxSize) {
-            borrowed.incrementAndGet();
-            return connect();
+        // Reservar el hueco con un CAS. Comprobar y después incrementar deja dos carreras: dos
+        // hilos pueden pasar la comprobación a la vez, y si el pool está lleno se descontaba un
+        // hueco que nunca se había reservado — con lo que el contador se hundía y el pool acababa
+        // abriendo más conexiones de las que dice su tope.
+        while (true) {
+            int actuales = created.get();
+            if (actuales >= maxSize) {
+                return waitForOne();
+            }
+            if (created.compareAndSet(actuales, actuales + 1)) {
+                borrowed.incrementAndGet();
+                return connect();
+            }
         }
-        created.decrementAndGet();
-        return waitForOne();
     }
 
     public void release(Connection connection) {
@@ -137,7 +148,25 @@ public final class Pool implements AutoCloseable {
             if (connection.isClosed()) {
                 return false;
             }
-            return !validate || connection.isValid(1);
+            if (!validate) {
+                return true;
+            }
+            // isValid() es un viaje a la base de datos. Con un intervalo, una conexión que se
+            // validó hace poco se da por buena: en un pool caliente eso es un viaje por préstamo
+            // que se ahorra.
+            long ahora = System.currentTimeMillis();
+            if (validacionCadaMillis > 0) {
+                Long ultima = ultimaValidacion.get(connection);
+                if (ultima != null && ahora - ultima < validacionCadaMillis) {
+                    return true;
+                }
+            }
+            if (!connection.isValid(1)) {
+                ultimaValidacion.remove(connection);
+                return false;
+            }
+            ultimaValidacion.put(connection, ahora);
+            return true;
         } catch (SQLException cause) {
             return false;
         }
@@ -145,6 +174,7 @@ public final class Pool implements AutoCloseable {
 
     private void discard(Connection connection) {
         created.decrementAndGet();
+        ultimaValidacion.remove(connection);
         try {
             connection.close();
         } catch (SQLException ignored) {
@@ -159,6 +189,7 @@ public final class Pool implements AutoCloseable {
         private int maxSize = 10;
         private long borrowTimeoutMillis = 5_000;
         private boolean validate = true;
+        private long validacionCadaMillis;
 
         private Builder(String url) {
             this.url = url;
@@ -167,6 +198,16 @@ public final class Pool implements AutoCloseable {
         public Builder credentials(String user, String password) {
             this.user = user;
             this.password = password;
+            return this;
+        }
+
+        /**
+         * Cuánto vale una validación antes de repetirla. 0 —el valor por defecto— valida en cada
+         * préstamo, que es lo seguro; en un pool con mucho tráfico, unos segundos ahorran un
+         * viaje a la base de datos por petición.
+         */
+        public Builder validateEvery(java.time.Duration intervalo) {
+            validacionCadaMillis = intervalo == null ? 0 : Math.max(0, intervalo.toMillis());
             return this;
         }
 

@@ -32,6 +32,7 @@ public final class FakeDb implements java.sql.Driver {
 
     static final AtomicInteger opened = new AtomicInteger();
     static final AtomicInteger closed = new AtomicInteger();
+    static final AtomicInteger validated = new AtomicInteger();
     static final AtomicInteger commits = new AtomicInteger();
     static final AtomicInteger rollbacks = new AtomicInteger();
     static final AtomicLong nextKey = new AtomicLong(1);
@@ -55,6 +56,7 @@ public final class FakeDb implements java.sql.Driver {
         updates.clear();
         opened.set(0);
         closed.set(0);
+        validated.set(0);
         commits.set(0);
         rollbacks.set(0);
         nextKey.set(1);
@@ -121,7 +123,10 @@ public final class FakeDb implements java.sql.Driver {
             case "prepareStatement" -> statement((String) args[0]);
             case "createStatement" -> statement("");
             case "isClosed" -> shut[0];
-            case "isValid" -> !shut[0];
+            case "isValid" -> {
+                validated.incrementAndGet();
+                yield !shut[0];
+            }
             case "close" -> {
                 if (!shut[0]) {
                     shut[0] = true;
