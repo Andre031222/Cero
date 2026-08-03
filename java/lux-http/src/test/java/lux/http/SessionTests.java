@@ -17,6 +17,7 @@ final class SessionTests {
         expiry();
         rotacion();
         vidaMaxima();
+        sinPisarse();
     }
 
     /**
@@ -68,6 +69,33 @@ final class SessionTests {
 
         Check.equal("pasada la vida máxima caduca aunque se esté usando",
                 conTope.find(entry.id()), null);
+    }
+
+    /**
+     * B2 · Dos peticiones sobre la misma sesión. Cada una trabajaba con su copia y volcaba el
+     * mapa entero, así que la última en guardar borraba lo que escribió la otra — en silencio.
+     */
+    private static void sinPisarse() throws Exception {
+        Sessions store = new Sessions(60_000);
+        Sessions.Entry base = store.create();
+        String id = base.id();
+
+        // Dos peticiones distintas sobre la misma sesión: cada una carga su propia vista.
+        Sessions.Entry peticionA = store.find(id);
+        Sessions.Entry peticionB = store.find(id);
+
+        peticionA.set("csrf", "token-de-A");
+        peticionB.set("carrito", "3 artículos");
+
+        Sessions.Entry despues = store.find(id);
+        Check.equal("lo que escribió la primera sigue ahí", despues.get("csrf"), "token-de-A");
+        Check.equal("y lo que escribió la segunda también", despues.get("carrito"), "3 artículos");
+
+        peticionA.remove("csrf");
+        Sessions.Entry alFinal = store.find(id);
+        Check.equal("borrar una clave no arrastra las otras",
+                alFinal.get("carrito"), "3 artículos");
+        Check.equal("y la borrada se fue", alFinal.get("csrf"), null);
     }
 
     private static void overHttp() throws Exception {

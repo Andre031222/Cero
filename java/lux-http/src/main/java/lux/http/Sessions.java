@@ -114,8 +114,32 @@ final class Sessions {
         }
 
         void tocar() {
-            lastAccessAt = System.currentTimeMillis();
-            guardar();
+            long ahora = System.currentTimeMillis();
+            long anterior = lastAccessAt;
+            lastAccessAt = ahora;
+            // No se escribe en cada petición. Contra un almacén en memoria daba igual, pero
+            // contra una tabla eso es un UPDATE por petición solo para mover una marca de tiempo.
+            // Con refrescar cuando ha pasado una décima del tiempo de expiración basta.
+            if (ahora - anterior < owner.timeoutMillis / 10) {
+                return;
+            }
+            owner.store.update(id, previo -> previo == null ? null
+                    : new SessionStore.Datos(previo.valores(), previo.creada(), ahora));
+        }
+
+        /** Escribe UN valor sobre lo último guardado, en vez de volcar la copia local entera. */
+        private void aplicar(String clave, Object valor) {
+            owner.store.update(id, previo -> {
+                Map<String, Object> fusion = previo == null
+                        ? new HashMap<>() : new HashMap<>(previo.valores());
+                if (valor == null) {
+                    fusion.remove(clave);
+                } else {
+                    fusion.put(clave, valor);
+                }
+                long creada = previo == null ? createdAt : previo.creada();
+                return new SessionStore.Datos(fusion, creada, lastAccessAt);
+            });
         }
 
         void guardar() {
@@ -150,14 +174,14 @@ final class Sessions {
             } else {
                 values.put(key, value);
             }
-            guardar();
+            aplicar(key, value);
         }
 
         @Override
         public void remove(String key) {
             requireValid();
             values.remove(key);
-            guardar();
+            aplicar(key, null);
         }
 
         @Override
