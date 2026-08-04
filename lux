@@ -93,6 +93,7 @@ case "${1:-ayuda}" in
         --exclude target --exclude '*.class' --exclude .DS_Store --exclude classpath.txt \
         --exclude 'luxcore-*.tar.gz' --exclude 'luxcore-*.zip' --exclude 'luxcore-*.sha256' \
         -C "$AQUI" java lux lux.cmd lux.ps1 LICENSE NOTICE README.md \
+                  docs/instalar.sh docs/instalar.ps1 \
       | tar -xf - -C "$tmp/luxcore-$v"
     COPYFILE_DISABLE=1 tar -czf "$destino/luxcore-$v.tar.gz" -C "$tmp" "luxcore-$v"
     # jar en vez de zip: el JDK ya está, y `zip` no siempre.
@@ -104,6 +105,25 @@ case "${1:-ayuda}" in
         | sed "s| .*| $(basename "$f")|" > "$f.sha256"
       printf '  %-26s %6s KB\n' "$(basename "$f")" "$(( $(wc -c < "$f") / 1024 ))"
     done
+    # Y ahora la comprobación que faltaba: se desempaqueta lo que se acaba de armar y se
+    # corren SUS pruebas. Compilar el repositorio no dice nada del paquete — el repositorio
+    # tiene archivos que el paquete no lleva, y así se publicó uno cuyas pruebas de /instalar
+    # fallaban porque docs/ no viajaba dentro. Se prueba lo que se entrega, no lo que se tiene.
+    if [ "${2:-}" != "--sin-probar" ]; then
+      azul "probando el paquete recién armado, no el repositorio…"
+      prueba=$(mktemp -d)
+      tar -xzf "$destino/luxcore-$v.tar.gz" -C "$prueba"
+      if (cd "$prueba/luxcore-$v" && mvn -B -q -f java/pom.xml test >"$prueba/salida.log" 2>&1); then
+        gris "  el paquete pasa sus propias pruebas"
+      else
+        malo "el paquete NO pasa sus pruebas — no se publica"
+        grep -E "XX |ERROR" "$prueba/salida.log" | head -12
+        rm -rf "$prueba"
+        exit 1
+      fi
+      rm -rf "$prueba"
+    fi
+
     gris "  huellas en .sha256 · los sirve lux-web en /estaticos/"
     ;;
 
