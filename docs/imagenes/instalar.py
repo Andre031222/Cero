@@ -37,7 +37,7 @@ GUION = [
     ("comentario", "# 1 — instalar"),
     ("orden",      "curl -fsSL https://luxcore.ginit.dev/instalar | sh"),
     ("ok",         "entorno    Java 21 · Maven 3.9 · Darwin arm64"),
-    ("ok",         "descargado luxcore-0.2.0.tar.gz · 295 KB"),
+    ("ok",         "descargado luxcore-0.3.0.tar.gz · 295 KB"),
     ("ok",         "huella     sha256 717710b6c922b003…"),
     ("ok",         "compilado  ocho módulos en ~/.m2 · 41 s"),
     ("ok",         "orden lux  ~/.local/bin/lux"),

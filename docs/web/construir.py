@@ -127,7 +127,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.2.0 · Licencia MIT<br>
+      LuxCore 0.3.0 · Licencia MIT<br>
       Medido el 2 de agosto de 2026
     </div>
   </footer>
@@ -259,7 +259,7 @@ def unico() -> int:
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.2.0 · Licencia MIT<br>
+      LuxCore 0.3.0 · Licencia MIT<br>
       Medido el 2 de agosto de 2026
     </div>
   </footer>

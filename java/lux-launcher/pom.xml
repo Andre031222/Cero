@@ -5,7 +5,7 @@
     <parent>
         <groupId>lux</groupId>
         <artifactId>lux-parent</artifactId>
-        <version>0.2.0</version>
+        <version>0.3.0</version>
     </parent>
 
     <artifactId>lux-launcher</artifactId>
@@ -16,7 +16,7 @@
         <dependency>
             <groupId>lux</groupId>
             <artifactId>lux-core</artifactId>
-            <version>0.2.0</version>
+            <version>0.3.0</version>
         </dependency>
     </dependencies>
 

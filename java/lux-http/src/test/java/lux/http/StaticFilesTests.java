@@ -91,11 +91,21 @@ final class StaticFilesTests {
             Check.equal("una ruta inexistente da 404",
                     Fixture.get(base + "/no-existe.css").statusCode(), 404);
 
+            // Una exportación estática pone cada página en su carpeta: /seccion es
+            // seccion/index.html. Un directorio del classpath "existe" y leerlo da cero bytes,
+            // así que sin cuidado se respondía 200 con el cuerpo vacío.
+            var seccion = Fixture.get(base + "/seccion");
+            Check.equal("un directorio sirve su index.html", seccion.statusCode(), 200);
+            Check.equal("y con su contenido, no vacío", seccion.body(), "<h1>seccion</h1>");
+            Check.that("con el tipo de HTML",
+                    seccion.headers().firstValue("content-type").orElse("").startsWith("text/html"));
+
+            int antes = estaticos.cacheados();
             for (int i = 0; i < 400; i++) {
                 Fixture.get(base + "/inventada-" + i + ".css");
             }
-            Check.equal("y 400 peticiones a rutas inventadas no dejan nada en el caché",
-                    estaticos.cacheados(), 0);
+            Check.equal("y 400 peticiones a rutas inventadas no añaden nada al caché",
+                    estaticos.cacheados(), antes);
         }
     }
 

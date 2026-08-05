@@ -74,12 +74,12 @@ public final class GeneradorProyecto {
                         <dependency>
                             <groupId>lux</groupId>
                             <artifactId>lux-core</artifactId>
-                            <version>0.2.0</version>
+                            <version>0.3.0</version>
                         </dependency>
                         <dependency>
                             <groupId>lux</groupId>
                             <artifactId>lux-view</artifactId>
-                            <version>0.2.0</version>
+                            <version>0.3.0</version>
                         </dependency>
                 %s    </dependencies>
 
@@ -140,7 +140,7 @@ public final class GeneradorProyecto {
                         <dependency>
                             <groupId>lux</groupId>
                             <artifactId>lux-data</artifactId>
-                            <version>0.2.0</version>
+                            <version>0.3.0</version>
                         </dependency>
                 """;
         return datos + switch (motor) {
