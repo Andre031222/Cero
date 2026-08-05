@@ -10,7 +10,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- El Dockerfile la sobrescribe con la versión real de java/pom.xml, para que
              subir la versión del framework no vuelva a dejar a LuxCore fuera del banco. -->
-        <lux.version>0.2.0</lux.version>
+        <lux.version>0.3.0</lux.version>
     </properties>
 
     <dependencies>

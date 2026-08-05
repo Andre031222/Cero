@@ -6,7 +6,8 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-1289-15803d?style=flat-square)](#estado)
+[![Pruebas](https://img.shields.io/badge/Pruebas-1292-15803d?style=flat-square)](#estado)
+[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.3.0-6d28d9?style=flat-square)](docs/versiones.md)
 [![En vivo](https://img.shields.io/badge/En_vivo-luxcore.ginit.dev-0f2444?style=flat-square)](https://luxcore.ginit.dev)
 
 **En producción:** [luxcore.ginit.dev](https://luxcore.ginit.dev) — el sitio de este proyecto,
@@ -90,7 +91,7 @@ Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
 git clone https://github.com/Andre031222/LuxCore.git && cd LuxCore
-cd java && mvn install     # 1 289 pruebas, runner propio (sin JUnit)
+cd java && mvn install     # 1 292 pruebas, runner propio (sin JUnit)
 ./lux fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
@@ -147,12 +148,17 @@ declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo
 
 ## Estado
 
-**Las fases 1 y 2 están cerradas.** Del núcleo heredado no queda código por migrar: las 14 clases
-transversales están reescritas y el sitio de referencia corre sobre el propio framework.
+**Las fases 1 y 2 están cerradas** — versión **0.3.0**, 4 de agosto de 2026. Del núcleo heredado
+no queda código por migrar, y el sitio de referencia corre sobre el propio framework.
+
+Lo que cerró la fase 2 no fue una lista de casillas: fue que el framework tuvo su **primer
+consumidor externo** y con él la primera auditoría de alguien que no lo escribió — once hallazgos
+leyendo el código, dos explotables desde fuera sin credenciales. Los once están cerrados con
+prueba propia. Ver [versiones.md](docs/versiones.md).
 
 Lo verificado, y cómo:
 
-- **1 289 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
+- **1 292 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.
@@ -184,6 +190,7 @@ lux           Órdenes del proyecto: ./lux test, portal, fatjar…
 | [produccion.md](docs/produccion.md) | ¿Está listo para producción? (respuesta corta: todavía no, y ahí está la lista) |
 | [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
 | [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Comparación con JxMVC, capa por capa |
+| [versiones.md](docs/versiones.md) | Qué cambió en cada versión, y por qué una publicada no se toca |
 | [papers.md](docs/papers.md) | Plan de publicación: los tres artículos y qué bloquea cada uno |
 | [origen.md](docs/origen.md) | De dónde viene el código y por qué el original no se toca |
 | [autores.md](docs/autores.md) | Autoría y atribución |

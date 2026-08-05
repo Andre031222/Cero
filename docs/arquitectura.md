@@ -201,10 +201,21 @@ reales —una redirección abierta y una carrera que hacía al pool pasarse de s
 están corregidos con prueba propia.
 
 **Criterio de cierre — cumplido el 2 de agosto de 2026.** El sitio de referencia corre entero en
-modo standalone: es `java/lux-web`, con 65 pruebas de punta a punta que lo comprueban. Sustituye
+modo standalone: es `java/lux-web`, con 82 pruebas de punta a punta que lo comprueban. Sustituye
 al `jxmvc2x` heredado, que se ha retirado del repositorio.
 
-Queda por portar las 347 pruebas del núcleo heredado al runner propio.
+**Cerrada del todo el 4 de agosto de 2026, con la versión 0.3.0.** El 3 de agosto el framework
+tuvo su primer consumidor externo —el portal FINESI— y con él la primera auditoría de alguien que
+no lo había escrito: once hallazgos leyendo el código, dos de ellos explotables desde fuera sin
+credenciales. Están los once cerrados, cada uno con prueba propia, y de ahí salieron además el
+almacén de sesiones en tabla, la base opcional de controladores y la confianza en proxy.
+
+Eso es lo que convierte «paridad» en algo comprobado: no la lista de casillas, sino que alguien
+de fuera intentara construir encima y anotara lo que le faltaba. Ver
+[versiones.md](versiones.md) y las [observaciones del portal](observaciones-portal-finesi.md).
+
+Lo que **no** se hizo, y a propósito: portar literalmente las 347 pruebas heredadas. Se comparó
+cobertura una a una, que es lo que aportaban, y aparecieron dos fallos reales.
 
 ## Fase 3 — El framework de frameworks
 

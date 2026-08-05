@@ -204,13 +204,17 @@ public final class StaticFiles implements Handler {
 
     private void serveFromClasspath(Request request, Response response, String relative) {
         String name = relative.isEmpty() ? indexFile : relative;
-        if (!classpathExists(name)) {
-            String withIndex = name.endsWith("/") ? name + indexFile : name + "/" + indexFile;
-            if (!classpathExists(withIndex)) {
-                response.status(404).text("no encontrado");
-                return;
-            }
+
+        // Si existe ruta/index.html, gana: es la única forma de que "ruta" sea una carpeta, y
+        // una carpeta del classpath también "existe" —leerla devuelve su listado—, así que sin
+        // esto /nosotros respondía 200 con el nombre del archivo dentro en vez de la página.
+        // Es justo lo que pide una exportación estática, donde cada sección es una carpeta.
+        String withIndex = name.endsWith("/") ? name + indexFile : name + "/" + indexFile;
+        if (classpathExists(withIndex)) {
             name = withIndex;
+        } else if (!classpathExists(name)) {
+            response.status(404).text("no encontrado");
+            return;
         }
         byte[] content = cachear(name);
 

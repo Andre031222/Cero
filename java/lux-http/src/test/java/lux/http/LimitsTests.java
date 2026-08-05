@@ -172,9 +172,12 @@ final class LimitsTests {
             }
         });
 
-        Check.that("el handler arrancó", entered.await(3, TimeUnit.SECONDS));
+        // Con margen de sobra: este tiempo está para que la prueba no se cuelgue, no para medir
+        // velocidad. Con 3 segundos fallaba de vez en cuando al correr la suite entera, con la
+        // máquina saturada — y una prueba que falla a cara o cruz no dice nada de nadie.
+        Check.that("el handler arrancó", entered.await(30, TimeUnit.SECONDS));
         server.stop();
-        client.join(5_000);
+        client.join(30_000);
 
         Check.that("la petición en vuelo termina durante el apagado",
                 captured.toString().endsWith("terminada"));

@@ -810,7 +810,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1289</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1292</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
@@ -942,7 +942,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 289</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 292</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -1060,7 +1060,7 @@ Lux.app()
     <main>
 
       <section id="artefactos">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Artefactos · 0.2.0</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Artefactos · 0.3.0</h2></div>
 
         <div class="aviso nota">
           <div class="etiqueta">Todavía no hay binarios publicados</div>
@@ -1137,21 +1137,21 @@ Lux.app()
 &lt;dependency&gt;
     &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
     &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;
-    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
 &lt;/dependency&gt;
 
 <span class="cm">&lt;!-- si sirves HTML --&gt;</span>
 &lt;dependency&gt;
     &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
     &lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;
-    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
 &lt;/dependency&gt;
 
 <span class="cm">&lt;!-- si hablas con una base de datos --&gt;</span>
 &lt;dependency&gt;
     &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
     &lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;
-    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
 &lt;/dependency&gt;
 
 <span class="cm">&lt;!-- el driver lo pones tú: este es el único externo --&gt;</span>
@@ -1207,7 +1207,7 @@ Lux.app()
 
 ./lux install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux package     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux test        <span class="cm"># las 1 289 pruebas</span>
+./lux test        <span class="cm"># las 1 292 pruebas</span>
 ./lux run         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
 ./lux docs        <span class="cm"># esta documentación, servida por LuxCore</span>
@@ -1224,7 +1224,7 @@ Lux.app()
         <h3>Comprobar lo que compilaste</h3>
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Huellas</span><span class="etiqueta">Shell</span></div>
-<pre>shasum -a 256 java/lux-core/target/lux-core-0.2.0.jar
+<pre>shasum -a 256 java/lux-core/target/lux-core-0.3.0.jar
 
 <span class="cm"># debe empezar por 5309738f66a6fbde</span></pre>
         </div>
@@ -1287,7 +1287,7 @@ Lux.app()
           <div class="campo">
             <div class="etiqueta">Citación</div>
             <div><span class="mono">Vilca-Solorzano, R. A. y Laura-Murillo, R. P. (2026). LuxCore: núcleo de framework web
-              poliglota sin dependencias. v0.2.0.</span></div>
+              poliglota sin dependencias. v0.3.0.</span></div>
           </div>
         </div>
       </section>
@@ -1334,7 +1334,7 @@ Lux.app()
           Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
           antes de ejecutarlos — <a href="/instalar">instalar</a> ·
           <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 289 pruebas durante la instalación.
+          1 292 pruebas durante la instalación.
         </p>
 
         <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
@@ -1370,12 +1370,12 @@ Lux.app()
 <pre>&lt;dependency&gt;
     &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
     &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;   <span class="cm">&lt;!-- arrastra lux-http --&gt;</span>
-    &lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
 &lt;/dependency&gt;
 
 <span class="cm">&lt;!-- opcionales --&gt;</span>
-&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;&lt;/dependency&gt;
-&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.2.0</span>&lt;/version&gt;&lt;/dependency&gt;
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;&lt;/dependency&gt;
+&lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;&lt;/dependency&gt;
 
 <span class="cm">&lt;!-- el driver JDBC lo pone tu aplicación --&gt;</span>
 &lt;dependency&gt;&lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">42.7.3</span>&lt;/version&gt;&lt;/dependency&gt;</pre>
@@ -1516,7 +1516,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
           <div class="barra"><span class="etiqueta">Lambdas</span><span class="etiqueta">Java</span></div>
 <pre>.routes(r -&gt; r
     .get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
-    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.2.0"</span>))
+    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.3.0"</span>))
     .post(<span class="st">"/eco"</span>, ctx -&gt; ctx.bodyText()))</pre>
         </div>
       </section>
@@ -2410,8 +2410,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 289 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 289 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 292 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 292 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2448,7 +2448,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 289</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 292</td></tr>
               <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
               <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
               <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
@@ -2503,7 +2503,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.2.0 · Licencia MIT<br>
+      LuxCore 0.3.0 · Licencia MIT<br>
       Medido el 2 de agosto de 2026
     </div>
   </footer>
@@ -2713,7 +2713,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'cm', v: es ? '# 2 — compilar los ocho módulos y correr las pruebas'
                        : '# 2 — build the eight modules and run the tests', paso: 1 },
       { t: 'cmd', v: 'mvn install' },
-      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.2.0:', cls: 'tenue' },
+      { t: 'out', v: '[INFO] Reactor Summary for LuxCore 0.3.0:', cls: 'tenue' },
       { t: 'giro', v: 'lux-http', dur: 1000, fin: '[INFO] lux-http .............. SUCCESS [ 01:24 min]   238 ✓' },
       { t: 'giro', v: 'lux-core', dur: 800,  fin: '[INFO] lux-core .............. SUCCESS [   12.1 s]   459 ✓' },
       { t: 'giro', v: 'lux-view', dur: 550,  fin: '[INFO] lux-view .............. SUCCESS [    4.1 s]    88 ✓' },
@@ -2724,7 +2724,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1289, dur: 900,
+      { t: 'contar', hasta: 1292, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },
