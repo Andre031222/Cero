@@ -12,8 +12,8 @@ sudo usermod -aG docker $USER              # re-login para usar docker sin sudo
 
 ## Correr
 ```bash
-git clone https://github.com/Andre031222/jxmvc.git
-cd jxmvc/benchmarks/docker
+git clone https://github.com/Andre031222/LuxCore.git
+cd LuxCore/benchmarks/docker
 ./bench.sh 64 30 5                          # 64 conexiones, 30 s, 5 repeticiones
 
 # Incluir además Quarkus compilado a binario NATIVO (GraalVM, build lento ~5-10 min):
@@ -27,6 +27,37 @@ Salida:
 - `../results/RESULTS-docker.md` — tabla (mediana de rps por framework/endpoint).
 - `../results/raw-docker.csv` — cada repetición (para estadística).
 
+## Núcleos híbridos (Intel 12ª generación y posteriores) — **léelo antes de medir**
+
+Un i5 de 12ª generación no tiene seis núcleos iguales: tiene **P-cores** (rápidos) y **E-cores**
+(eficientes, bastante más lentos). El planificador mueve procesos entre unos y otros según le
+parece, y eso **arruina la reproducibilidad**: la misma corrida da cifras distintas según dónde
+cayó cada contenedor, y peor, un framework puede quedar en P-cores y otro en E-cores dentro de la
+misma tanda. No es ruido que se corrija con más repeticiones — es sesgo.
+
+Averigua cuáles son tus P-cores:
+
+```bash
+cat /sys/devices/cpu_core/cpus     # los P-cores, p. ej. 0-7
+cat /sys/devices/cpu_atom/cpus     # los E-cores, p. ej. 8-15
+lscpu -e                           # y para verlo con sus frecuencias
+```
+
+Y fija **el servidor a P-cores** dejando el resto para el generador de carga:
+
+```bash
+# ejemplo con P-cores 0-7: el contenedor en 0-3, el cliente en 4-7
+BENCH_CPUSET="0-3" BENCH_CPUS=4 BENCH_MEM=2g ./bench.sh 64 30 5
+```
+
+**Que el cliente y el servidor no compartan núcleos** es la regla que más cambia los resultados.
+Si el generador de carga compite con el servidor por la misma CPU, no estás midiendo el
+framework: estás midiendo quién ganó la pelea por el núcleo. Fue exactamente el defecto de la
+primera medición casera de este proyecto —cliente y servidor juntos, con `ab`— y por eso sus
+94 610 rps no valían nada.
+
+Con 32 GB de RAM vas sobrado: el techo aquí es la CPU, no la memoria.
+
 ## Buenas prácticas para números de paper
 - Cerrar navegador/IDE; `sudo cpupower frequency-set -g performance` si está disponible.
 - N≥5 repeticiones; reportar **mediana + [min, max]**.
@@ -34,10 +65,18 @@ Salida:
 - Anotar el entorno exacto (CPU, RAM, kernel, versión de JDK y de Docker) en el paper.
 - La 1ª repetición (JIT frío) la descarta la mediana; aun así, warmup de 5 s ya incluido.
 
-## Alternativa sin Docker (procesos JVM directos)
-Si prefieres no usar Docker, `bench-native-bins.sh` corre binarios ya construidos. Requiere
-extraer los JAR de las imágenes (o construirlos con un JDK 17) — ver el script. En una máquina
-con JDK 17/21 limpio, `bench-native.sh` compila y corre todo sin Docker.
+## Qué anotar
+
+Para que la corrida sea citable, el paper necesita el entorno exacto. Cópialo de aquí:
+
+```bash
+lscpu | head -20                       # modelo, núcleos, frecuencias
+uname -r                               # kernel
+docker --version && java -version      # versiones
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor   # gobernador
+```
+
+Y en la tabla del paper, la mediana con su rango `[min, max]` — nunca la media sola.
 
 ## Nota sobre el VPS
 No se recomienda correr la carga en el VPS de producción (comparte CPU con apps en vivo, y su
