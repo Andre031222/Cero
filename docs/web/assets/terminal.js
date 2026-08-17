@@ -70,7 +70,7 @@
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1300, dur: 900,
+      { t: 'contar', hasta: 1308, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },

@@ -20,6 +20,8 @@ public final class TestSuite {
         WebSocketTests.run();
         ConformidadTests.run();
 
+        SseTests.run();
+
         Check.report();
         if (Check.failures() > 0) {
             System.exit(1);

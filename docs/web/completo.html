@@ -810,7 +810,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1300</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1308</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
@@ -942,7 +942,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 300</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 308</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -1207,7 +1207,7 @@ Lux.app()
 
 ./lux install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux package     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux test        <span class="cm"># las 1 300 pruebas</span>
+./lux test        <span class="cm"># las 1 308 pruebas</span>
 ./lux run         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
 ./lux docs        <span class="cm"># esta documentación, servida por LuxCore</span>
@@ -1334,7 +1334,7 @@ Lux.app()
           Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
           antes de ejecutarlos — <a href="/instalar">instalar</a> ·
           <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 300 pruebas durante la instalación.
+          1 308 pruebas durante la instalación.
         </p>
 
         <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
@@ -1479,6 +1479,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
         <li><a href="#observar"><span class="n">10</span> Métricas y OpenAPI</a></li>
         <li><a href="#proxy"><span class="n">11</span> Detrás de un proxy</a></li>
         <li><a href="#frontend"><span class="n">12</span> Con React, Svelte o Vue</a></li>
+        <li><a href="#tiempo-real"><span class="n">13</span> Tiempo real</a></li>
       </ol>
     </nav>
     <main>
@@ -2072,6 +2073,83 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
           <code>mvn package</code> y tienes un jar con todo dentro.
         </p>
       </section>
+
+      <section id="tiempo-real">
+        <div class="titulo-seccion"><span class="indice-num">13</span><h2>Tiempo real</h2></div>
+
+        <p class="medida">
+          Dos formas, y casi siempre quieres la primera.
+        </p>
+
+        <h3>Eventos del servidor · una dirección</h3>
+
+        <p class="medida">
+          El servidor manda cuando hay algo, en vez de que el navegador pregunte cada dos
+          segundos. Es HTTP normal: atraviesa proxies sin configurar nada y el navegador se
+          reconecta solo. Para un panel, un progreso o un aviso, es exactamente lo que hace falta.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Servidor</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/eventos"</span>)
+<span class="kw">public void</span> eventos(Context ctx) <span class="kw">throws</span> InterruptedException {
+    <span class="kw">try</span> (Sse eventos = Sse.open(ctx.response())) {
+        <span class="kw">while</span> (eventos.abierto()) {
+            eventos.send(Json.write(metricas.snapshot()));
+            Thread.sleep(<span class="st">1000</span>);
+        }
+    }
+}</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Navegador</span><span class="etiqueta">JavaScript</span></div>
+<pre><span class="kw">const</span> eventos = <span class="kw">new</span> EventSource(<span class="st">'/eventos'</span>);
+eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Por qué el bucle no es un problema</div>
+          <p>
+            Ese <code>while</code> deja el hilo dentro mientras el panel esté abierto. Con hilos
+            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero LuxCore atiende
+            cada conexión en su <b>propio hilo virtual</b>: cien paneles son cien hilos virtuales,
+            que cuestan unos cientos de bytes cada uno. Es la razón por la que aquí se puede
+            escribir código que bloquea sin pagar por ello.
+          </p>
+        </div>
+
+        <p class="medida">
+          El <a href="/panel">panel de este sitio</a> lo usa: los números que ves los empuja el
+          servidor cada segundo.
+        </p>
+
+        <h3>WebSocket · las dos direcciones</h3>
+
+        <p class="medida">
+          Cuando el navegador también tiene que hablar — un chat, un editor compartido, un juego.
+          Cuesta un protocolo aparte y un proxy configurado; si solo necesitas recibir, no lo uses.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">WebSocket</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.ws(<span class="st">"/chat"</span>, socket -&gt; {
+    socket.onMessage(texto -&gt; socket.send(<span class="st">"eco: "</span> + texto));
+    socket.onClose(() -&gt; log.info(<span class="st">"se fue"</span>));
+}))</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Sobre «programación reactiva»</div>
+          <p>
+            LuxCore <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
+            Ese estilo existe para no bloquear hilos del sistema, que son caros. Con los hilos
+            virtuales de Java 21 dejan de serlo: puedes escribir código normal, de arriba abajo,
+            que bloquea — y el rendimiento es el mismo sin el coste de encadenar operadores ni de
+            depurar trazas de pila ilegibles. Es la misma capacidad, por otro camino.
+          </p>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -2497,8 +2575,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 300 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 300 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 308 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 308 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2535,7 +2613,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 300</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 308</td></tr>
               <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
               <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
               <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
@@ -2811,7 +2889,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1300, dur: 900,
+      { t: 'contar', hasta: 1308, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },

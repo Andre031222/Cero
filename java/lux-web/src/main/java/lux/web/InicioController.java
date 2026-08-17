@@ -3,10 +3,12 @@ package lux.web;
 import lux.core.Context;
 import lux.core.Get;
 import lux.core.Inject;
+import lux.core.Json;
 import lux.core.Metrics;
 import lux.core.Result;
 import lux.core.Route;
 import lux.http.HttpException;
+import lux.http.Sse;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,12 +57,32 @@ public class InicioController {
         return pagina(contexto, "panel", "Panel en vivo · LuxCore");
     }
 
+    /**
+     * El mismo dato que /panel-data, pero empujado. El hilo se queda aquí mientras el panel esté
+     * abierto, y eso solo sale barato porque cada conexión tiene su propio hilo virtual: cien
+     * paneles abiertos son cien hilos virtuales, no cien del sistema.
+     */
+    @Get("/panel-eventos")
+    public void panelEventos(Context contexto) throws InterruptedException {
+        try (Sse eventos = Sse.open(contexto.response())) {
+            eventos.reintentarEn(3000);
+            while (eventos.abierto()) {
+                eventos.send(Json.write(estadoDelPanel()));
+                Thread.sleep(1000);
+            }
+        }
+    }
+
     @Get("/panel-data")
     public Result panelDatos() {
+        return Result.json(estadoDelPanel());
+    }
+
+    private Map<String, Object> estadoDelPanel() {
         Map<String, Object> cuerpo = new LinkedHashMap<>();
         cuerpo.put("uptimeMs", System.currentTimeMillis() - ARRANQUE);
         cuerpo.put("metrics", metricas == null ? Map.of() : metricas.snapshot());
-        return Result.json(cuerpo);
+        return cuerpo;
     }
 
     @Get("/datos")
