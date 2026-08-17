@@ -73,6 +73,7 @@ final class StaticFilesTests {
         rangos();
         tipos();
         cacheDelClasspath();
+        spa();
 
         Files.deleteIfExists(fuera);
     }
@@ -106,6 +107,45 @@ final class StaticFilesTests {
             }
             Check.equal("y 400 peticiones a rutas inventadas no añaden nada al caché",
                     estaticos.cacheados(), antes);
+        }
+    }
+
+    /**
+     * Una aplicación que enruta en el cliente —React, Svelte— no tiene un archivo por ruta. Sin
+     * respaldo, /nosotros da 404 y la aplicación solo funciona entrando por la portada. Con él,
+     * devuelve index.html… pero solo para rutas de página: un .css que falte tiene que seguir
+     * dando 404, o un error evidente se convierte en uno de una hora.
+     */
+    private static void spa() throws Exception {
+        Path raiz = Files.createTempDirectory("lux-spa");
+        Files.writeString(raiz.resolve("index.html"), "<div id=app></div>");
+        Files.createDirectory(raiz.resolve("assets"));
+        Files.writeString(raiz.resolve("assets").resolve("app.js"), "console.log(1)");
+
+        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+                StaticFiles.from(raiz).spa(), ErrorReporter.silent())) {
+            String base = "http://127.0.0.1:" + server.port();
+
+            Check.equal("la portada se sirve", Fixture.get(base + "/").body(), "<div id=app></div>");
+            Check.equal("y sus recursos", Fixture.get(base + "/assets/app.js").body(), "console.log(1)");
+
+            HttpResponse<String> ruta = Fixture.get(base + "/nosotros");
+            Check.equal("una ruta de cliente devuelve 200", ruta.statusCode(), 200);
+            Check.equal("con el HTML de la portada", ruta.body(), "<div id=app></div>");
+
+            HttpResponse<String> anidada = Fixture.get(base + "/panel/usuarios/7");
+            Check.equal("también si va anidada", anidada.statusCode(), 200);
+
+            Check.equal("pero un recurso que falta sigue dando 404",
+                    Fixture.get(base + "/assets/no-esta.css").statusCode(), 404);
+            Check.equal("y una imagen que falta también",
+                    Fixture.get(base + "/logo.png").statusCode(), 404);
+        }
+
+        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+                StaticFiles.from(raiz), ErrorReporter.silent())) {
+            Check.equal("sin spa() activado, la ruta de cliente da 404",
+                    Fixture.get("http://127.0.0.1:" + server.port() + "/nosotros").statusCode(), 404);
         }
     }
 

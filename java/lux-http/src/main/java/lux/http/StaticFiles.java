@@ -19,6 +19,7 @@ public final class StaticFiles implements Handler {
     private final String mount;
     private final String indexFile;
     private volatile String cacheControl;
+    private volatile String spaPagina;
     /**
      * Recursos del classpath ya leídos. Solo entran los que existen y caben: la clave la elige
      * quien hace la petición, así que guardar las ausencias dejaba que cualquiera llenara el
@@ -57,6 +58,27 @@ public final class StaticFiles implements Handler {
         return this;
     }
 
+    /**
+     * Respaldo para una aplicación de una sola página — React, Svelte, Vue— que enruta en el
+     * cliente. Con ella, una ruta que no existe como archivo devuelve {@code index.html} y deja
+     * que el navegador decida qué pintar; sin ella daría 404 y la aplicación solo funcionaría
+     * entrando por la portada.
+     *
+     * <p>No se aplica a todo: solo cuando el cliente pide HTML o la ruta no tiene extensión. Un
+     * {@code .css} o un {@code .png} que falten siguen dando 404 — devolverles el HTML de la
+     * portada convierte un error evidente en uno que se tarda una hora en encontrar.
+     *
+     * <pre>{@code StaticFiles.fromClasspath("front").spa();}</pre>
+     */
+    public StaticFiles spa() {
+        return spa(indexFile);
+    }
+
+    public StaticFiles spa(String pagina) {
+        this.spaPagina = pagina;
+        return this;
+    }
+
     public static StaticFiles fromClasspath(String prefix) {
         return fromClasspath(prefix, "/", "index.html");
     }
@@ -91,6 +113,14 @@ public final class StaticFiles implements Handler {
     private void serveFromDisk(Request request, Response response, String relative) throws IOException {
         Path target = resolve(relative);
         if (target == null || !Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+            if (respaldoSpa(request, relative)) {
+                target = resolve(spaPagina);
+                if (target != null && Files.isRegularFile(target)) {
+                    response.type(MimeTypes.of(spaPagina));
+                    response.send(Files.readAllBytes(target));
+                    return;
+                }
+            }
             response.status(404).text("no encontrado");
             return;
         }
@@ -213,6 +243,11 @@ public final class StaticFiles implements Handler {
         if (classpathExists(withIndex)) {
             name = withIndex;
         } else if (!classpathExists(name)) {
+            if (respaldoSpa(request, relative) && classpathExists(spaPagina)) {
+                response.type(MimeTypes.of(spaPagina));
+                response.send(cachear(spaPagina));
+                return;
+            }
             response.status(404).text("no encontrado");
             return;
         }
@@ -278,6 +313,24 @@ public final class StaticFiles implements Handler {
         } catch (IOException cause) {
             return new byte[0];
         }
+    }
+
+    /** {@code true} si esta petición parece una página y no un recurso que falta. */
+    private boolean respaldoSpa(Request request, String relative) {
+        if (spaPagina == null) {
+            return false;
+        }
+        String ultimo = relative;
+        int barra = ultimo.lastIndexOf('/');
+        if (barra >= 0) {
+            ultimo = ultimo.substring(barra + 1);
+        }
+        if (ultimo.indexOf('.') >= 0) {
+            // Tiene extensión: es un archivo que falta, no una ruta de la aplicación.
+            String acepta = request.header("Accept");
+            return acepta != null && acepta.contains("text/html");
+        }
+        return true;
     }
 
     private boolean classpathExists(String name) {

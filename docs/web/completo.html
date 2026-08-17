@@ -810,7 +810,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
         <div class="chip"><b>143</b><span>cls</span><em>De producción</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>1292</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1300</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
@@ -942,7 +942,7 @@ Lux.app()
               <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 292</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 300</td><td class="cifra">2,7×</td></tr>
             </tbody>
           </table>
         </div>
@@ -1207,7 +1207,7 @@ Lux.app()
 
 ./lux install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./lux package     <span class="cm"># solo los JAR, con sus tamaños</span>
-./lux test        <span class="cm"># las 1 292 pruebas</span>
+./lux test        <span class="cm"># las 1 300 pruebas</span>
 ./lux run         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./lux new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
 ./lux docs        <span class="cm"># esta documentación, servida por LuxCore</span>
@@ -1334,7 +1334,7 @@ Lux.app()
           Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
           antes de ejecutarlos — <a href="/instalar">instalar</a> ·
           <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 292 pruebas durante la instalación.
+          1 300 pruebas durante la instalación.
         </p>
 
         <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
@@ -1478,6 +1478,7 @@ servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
         <li><a href="#tareas"><span class="n">09</span> Tareas y caché</a></li>
         <li><a href="#observar"><span class="n">10</span> Métricas y OpenAPI</a></li>
         <li><a href="#proxy"><span class="n">11</span> Detrás de un proxy</a></li>
+        <li><a href="#frontend"><span class="n">12</span> Con React, Svelte o Vue</a></li>
       </ol>
     </nav>
     <main>
@@ -1985,6 +1986,92 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
     .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>);</pre>
         </div>
       </section>
+
+      <section id="frontend">
+        <div class="titulo-seccion"><span class="indice-num">12</span><h2>Con React, Svelte o Vue</h2></div>
+
+        <p class="medida">
+          LuxCore no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
+          dejar que el frontend lo pinte, que es lo normal hoy. Las dos formas conviven en la misma
+          aplicación: unas rutas devuelven vistas y otras JSON.
+        </p>
+
+        <h3>En desarrollo · dos servidores</h3>
+
+        <p class="medida">
+          El frontend en su servidor —<code>5173</code> para Vite, <code>3000</code> para Next— y
+          LuxCore en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
+          solo para ese:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Desarrollo</span><span class="etiqueta">Java</span></div>
+<pre>Lux.app()
+   .use(Cors.allowing(<span class="st">"http://localhost:5173"</span>))
+   .controllers(ApiController.class)
+   .start();</pre>
+        </div>
+
+        <h3>En producción · un solo artefacto</h3>
+
+        <p class="medida">
+          Se compila el frontend, su salida se copia a los recursos, y sale <b>un jar</b> que sirve
+          las dos cosas. Sin nginx delante para unirlos, sin dos despliegues.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Un jar con todo</span><span class="etiqueta">Java</span></div>
+<pre>Lux.app()
+   .controllers(ApiController.class)          <span class="cm">// /api/... devuelve JSON</span>
+   .fallback(StaticFiles.fromClasspath(<span class="st">"front"</span>).spa()
+                        .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>))
+   .start();</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Qué hace spa() y por qué hace falta</div>
+          <p>
+            Una aplicación que enruta en el cliente —React Router, el router de Svelte— <b>no tiene
+            un archivo por ruta</b>: solo existe <code>index.html</code>. Sin
+            <code>spa()</code>, entrar directo en <code>/panel/usuarios/7</code> daría 404 y la
+            aplicación solo funcionaría navegando desde la portada.
+          </p>
+          <p>
+            Con <code>spa()</code>, una ruta que no existe como archivo devuelve el
+            <code>index.html</code> y el navegador decide qué pintar. <b>Pero solo para rutas de
+            página:</b> un <code>.css</code> o un <code>.png</code> que falten siguen dando 404 —
+            devolverles el HTML de la portada convierte un error evidente en uno que se tarda una
+            hora en encontrar.
+          </p>
+        </div>
+
+        <p class="medida">
+          Si tu frontend genera un archivo por ruta —la exportación estática de Next.js, Astro,
+          Hugo—, no hace falta <code>spa()</code>: <code>/nosotros</code> encuentra
+          <code>nosotros/index.html</code> por su cuenta.
+        </p>
+
+        <h3>Cómo queda el proyecto</h3>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Estructura</span><span class="etiqueta">Texto</span></div>
+<pre>mi-proyecto/
+├── backend/            <span class="cm"># LuxCore — Maven, Java 21</span>
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/...
+│       └── resources/front/     <span class="cm"># ← aquí se copia lo compilado del frontend</span>
+└── frontend/           <span class="cm"># React, Svelte, Vue, lo que sea</span>
+    ├── package.json
+    └── src/...</pre>
+        </div>
+
+        <p class="medida">
+          El paso de copiar la salida del frontend a <code>resources/front/</code> lo hace tu guion
+          de compilación o el <code>maven-resources-plugin</code>. A partir de ahí,
+          <code>mvn package</code> y tienes un jar con todo dentro.
+        </p>
+      </section>
     </main>
   </div>
 
@@ -2410,8 +2497,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 292 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 292 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 300 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 300 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2448,7 +2535,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 292</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 300</td></tr>
               <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
               <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
               <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
@@ -2724,7 +2811,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'lux-web',  dur: 500,  fin: '[INFO] lux-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1292, dur: 900,
+      { t: 'contar', hasta: 1300, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 308 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 308 KB', cls: 'ok' },
       { t: 'blank' },
