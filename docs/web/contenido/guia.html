@@ -17,6 +17,7 @@
         <li><a href="#tareas"><span class="n">09</span> Tareas y caché</a></li>
         <li><a href="#observar"><span class="n">10</span> Métricas y OpenAPI</a></li>
         <li><a href="#proxy"><span class="n">11</span> Detrás de un proxy</a></li>
+        <li><a href="#frontend"><span class="n">12</span> Con React, Svelte o Vue</a></li>
       </ol>
     </nav>
     <main>
@@ -523,6 +524,92 @@ Lux.app()
 StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
     .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>);</pre>
         </div>
+      </section>
+
+      <section id="frontend">
+        <div class="titulo-seccion"><span class="indice-num">12</span><h2>Con React, Svelte o Vue</h2></div>
+
+        <p class="medida">
+          LuxCore no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
+          dejar que el frontend lo pinte, que es lo normal hoy. Las dos formas conviven en la misma
+          aplicación: unas rutas devuelven vistas y otras JSON.
+        </p>
+
+        <h3>En desarrollo · dos servidores</h3>
+
+        <p class="medida">
+          El frontend en su servidor —<code>5173</code> para Vite, <code>3000</code> para Next— y
+          LuxCore en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
+          solo para ese:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Desarrollo</span><span class="etiqueta">Java</span></div>
+<pre>Lux.app()
+   .use(Cors.allowing(<span class="st">"http://localhost:5173"</span>))
+   .controllers(ApiController.class)
+   .start();</pre>
+        </div>
+
+        <h3>En producción · un solo artefacto</h3>
+
+        <p class="medida">
+          Se compila el frontend, su salida se copia a los recursos, y sale <b>un jar</b> que sirve
+          las dos cosas. Sin nginx delante para unirlos, sin dos despliegues.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Un jar con todo</span><span class="etiqueta">Java</span></div>
+<pre>Lux.app()
+   .controllers(ApiController.class)          <span class="cm">// /api/... devuelve JSON</span>
+   .fallback(StaticFiles.fromClasspath(<span class="st">"front"</span>).spa()
+                        .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>))
+   .start();</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Qué hace spa() y por qué hace falta</div>
+          <p>
+            Una aplicación que enruta en el cliente —React Router, el router de Svelte— <b>no tiene
+            un archivo por ruta</b>: solo existe <code>index.html</code>. Sin
+            <code>spa()</code>, entrar directo en <code>/panel/usuarios/7</code> daría 404 y la
+            aplicación solo funcionaría navegando desde la portada.
+          </p>
+          <p>
+            Con <code>spa()</code>, una ruta que no existe como archivo devuelve el
+            <code>index.html</code> y el navegador decide qué pintar. <b>Pero solo para rutas de
+            página:</b> un <code>.css</code> o un <code>.png</code> que falten siguen dando 404 —
+            devolverles el HTML de la portada convierte un error evidente en uno que se tarda una
+            hora en encontrar.
+          </p>
+        </div>
+
+        <p class="medida">
+          Si tu frontend genera un archivo por ruta —la exportación estática de Next.js, Astro,
+          Hugo—, no hace falta <code>spa()</code>: <code>/nosotros</code> encuentra
+          <code>nosotros/index.html</code> por su cuenta.
+        </p>
+
+        <h3>Cómo queda el proyecto</h3>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Estructura</span><span class="etiqueta">Texto</span></div>
+<pre>mi-proyecto/
+├── backend/            <span class="cm"># LuxCore — Maven, Java 21</span>
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/...
+│       └── resources/front/     <span class="cm"># ← aquí se copia lo compilado del frontend</span>
+└── frontend/           <span class="cm"># React, Svelte, Vue, lo que sea</span>
+    ├── package.json
+    └── src/...</pre>
+        </div>
+
+        <p class="medida">
+          El paso de copiar la salida del frontend a <code>resources/front/</code> lo hace tu guion
+          de compilación o el <code>maven-resources-plugin</code>. A partir de ahí,
+          <code>mvn package</code> y tienes un jar con todo dentro.
+        </p>
       </section>
     </main>
   </div>
