@@ -18,6 +18,7 @@
         <li><a href="#observar"><span class="n">10</span> Métricas y OpenAPI</a></li>
         <li><a href="#proxy"><span class="n">11</span> Detrás de un proxy</a></li>
         <li><a href="#frontend"><span class="n">12</span> Con React, Svelte o Vue</a></li>
+        <li><a href="#tiempo-real"><span class="n">13</span> Tiempo real</a></li>
       </ol>
     </nav>
     <main>
@@ -610,6 +611,83 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
           de compilación o el <code>maven-resources-plugin</code>. A partir de ahí,
           <code>mvn package</code> y tienes un jar con todo dentro.
         </p>
+      </section>
+
+      <section id="tiempo-real">
+        <div class="titulo-seccion"><span class="indice-num">13</span><h2>Tiempo real</h2></div>
+
+        <p class="medida">
+          Dos formas, y casi siempre quieres la primera.
+        </p>
+
+        <h3>Eventos del servidor · una dirección</h3>
+
+        <p class="medida">
+          El servidor manda cuando hay algo, en vez de que el navegador pregunte cada dos
+          segundos. Es HTTP normal: atraviesa proxies sin configurar nada y el navegador se
+          reconecta solo. Para un panel, un progreso o un aviso, es exactamente lo que hace falta.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Servidor</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/eventos"</span>)
+<span class="kw">public void</span> eventos(Context ctx) <span class="kw">throws</span> InterruptedException {
+    <span class="kw">try</span> (Sse eventos = Sse.open(ctx.response())) {
+        <span class="kw">while</span> (eventos.abierto()) {
+            eventos.send(Json.write(metricas.snapshot()));
+            Thread.sleep(<span class="st">1000</span>);
+        }
+    }
+}</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Navegador</span><span class="etiqueta">JavaScript</span></div>
+<pre><span class="kw">const</span> eventos = <span class="kw">new</span> EventSource(<span class="st">'/eventos'</span>);
+eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Por qué el bucle no es un problema</div>
+          <p>
+            Ese <code>while</code> deja el hilo dentro mientras el panel esté abierto. Con hilos
+            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero LuxCore atiende
+            cada conexión en su <b>propio hilo virtual</b>: cien paneles son cien hilos virtuales,
+            que cuestan unos cientos de bytes cada uno. Es la razón por la que aquí se puede
+            escribir código que bloquea sin pagar por ello.
+          </p>
+        </div>
+
+        <p class="medida">
+          El <a href="/panel">panel de este sitio</a> lo usa: los números que ves los empuja el
+          servidor cada segundo.
+        </p>
+
+        <h3>WebSocket · las dos direcciones</h3>
+
+        <p class="medida">
+          Cuando el navegador también tiene que hablar — un chat, un editor compartido, un juego.
+          Cuesta un protocolo aparte y un proxy configurado; si solo necesitas recibir, no lo uses.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">WebSocket</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.ws(<span class="st">"/chat"</span>, socket -&gt; {
+    socket.onMessage(texto -&gt; socket.send(<span class="st">"eco: "</span> + texto));
+    socket.onClose(() -&gt; log.info(<span class="st">"se fue"</span>));
+}))</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Sobre «programación reactiva»</div>
+          <p>
+            LuxCore <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
+            Ese estilo existe para no bloquear hilos del sistema, que son caros. Con los hilos
+            virtuales de Java 21 dejan de serlo: puedes escribir código normal, de arriba abajo,
+            que bloquea — y el rendimiento es el mismo sin el coste de encadenar operadores ni de
+            depurar trazas de pila ilegibles. Es la misma capacidad, por otro camino.
+          </p>
+        </div>
       </section>
     </main>
   </div>
