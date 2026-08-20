@@ -1,7 +1,49 @@
   <header class="cabecera-pagina">
     <div class="cuervo-escena" aria-hidden="true">
-      <span class="cuervo-ave"></span>
-      <span class="cuervo-percha"></span>
+      <svg class="cuervo-ave" viewBox="0 0 420 320" aria-hidden="true">
+        <!--
+        Cuervo de LuxCore. Dibujo original en vector: silueta maciza con el plumaje calado.
+        Los calados van en var(--papel) y no por máscara, para poder incrustarlo dos veces en la
+        misma página sin que choquen los identificadores. Toma el color con currentColor, así que
+        sirve igual en claro y en oscuro.
+        -->
+        <path fill="currentColor" d="
+        M12 96
+        C 44 88, 74 80, 100 74
+        C 106 54, 124 40, 148 39
+        C 172 38, 190 50, 196 70
+        C 234 90, 270 120, 296 158
+        C 312 180, 332 198, 356 214
+        C 372 224, 384 234, 392 244
+        C 397 250, 394 259, 386 258
+        C 366 255, 340 244, 314 226
+        C 294 216, 262 236, 216 240
+        C 184 240, 160 228, 150 204
+        C 140 180, 140 154, 148 132
+        C 152 122, 150 118, 144 116
+        C 128 118, 114 118, 104 116
+        C 70 110, 40 104, 12 96 Z"/>
+        <g stroke="var(--papel, #fff)" fill="none" stroke-linecap="round">
+        <path stroke-width="4"   d="M20 97 C 50 99, 76 101, 100 101"/>
+        <path stroke-width="4.5" d="M146 118 C 138 127, 137 137, 141 146"/>
+        <path stroke-width="4.5" d="M158 124 C 149 134, 148 145, 152 155"/>
+        <path stroke-width="7"   d="M190 104 C 226 124, 256 152, 276 186"/>
+        <path stroke-width="6"   d="M178 130 C 212 148, 240 174, 258 204"/>
+        <path stroke-width="6"   d="M168 158 C 198 174, 222 196, 236 222"/>
+        <path stroke-width="5"   d="M160 186 C 184 200, 204 218, 214 238"/>
+        <path stroke-width="6"   d="M286 178 C 314 196, 340 214, 366 234"/>
+        <path stroke-width="6"   d="M274 198 C 300 216, 324 232, 348 246"/>
+        </g>
+        <circle cx="149" cy="70" r="7.5" fill="var(--papel, #fff)"/>
+        <circle cx="151" cy="69" r="3" fill="currentColor"/>
+        <g stroke="currentColor" fill="none" stroke-linecap="round">
+        <path stroke-width="8.5" d="M194 238 L 186 278"/>
+        <path stroke-width="8.5" d="M228 236 L 236 278"/>
+        <path stroke-width="6" d="M170 280 L 204 280"/>
+        <path stroke-width="6" d="M222 280 L 256 280"/>
+        <path stroke-width="4" d="M10 284 L 410 284"/>
+        </g>
+      </svg>
     </div>
     <h1 class="titulo-pagina">Get started</h1>
     <p class="entradilla">From nothing to a server answering requests, in four commands. All you need is git, Maven and a JDK 21.</p>

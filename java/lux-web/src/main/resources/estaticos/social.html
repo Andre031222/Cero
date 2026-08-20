@@ -13,9 +13,7 @@
   body { background:var(--papel); color:var(--tinta); font-family:"Source Serif",Georgia,serif;
          padding:58px 64px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; }
   .cima { display:flex; align-items:center; gap:14px; }
-  .marca { width:52px; height:35px; background:var(--acento);
-           -webkit-mask:url("../assets/cuervo-marca.png") center/contain no-repeat;
-                   mask:url("../assets/cuervo-marca.png") center/contain no-repeat; }
+  .marca { width:58px; height:auto; color:var(--acento); display:block; }
   .palabra { font-family:"JetBrains Mono",monospace; font-size:30px; font-weight:700; letter-spacing:-.02em; }
   .palabra em { font-style:normal; color:var(--acento); }
   .medio { display:flex; align-items:flex-end; gap:34px; padding-right:186px; }
@@ -26,9 +24,7 @@
        letter-spacing:-.06em; line-height:.9; }
   h1 span { color:var(--acento); }
   .sub { font-size:23px; color:var(--apagado); margin-top:20px; max-width:30ch; line-height:1.45; }
-  .ave { width:322px; height:215px; background:var(--tinta); flex:none;
-         -webkit-mask:url("../assets/cuervo.webp") center bottom/contain no-repeat;
-                 mask:url("../assets/cuervo.webp") center bottom/contain no-repeat; }
+  .ave { width:330px; height:auto; color:var(--tinta); flex:none; display:block; }
   .cifras { display:flex; border-top:2px solid var(--tinta); padding-top:18px; }
   .c { padding:0 26px; border-left:1px solid var(--linea); }
   .c:first-child { padding-left:0; border-left:0; }
@@ -36,14 +32,14 @@
   .c i { font-style:normal; font-family:"JetBrains Mono",monospace; font-size:13px;
          letter-spacing:.15em; text-transform:uppercase; color:var(--apagado); }
 </style>
-<div class="cima"><span class="marca"></span><span class="palabra">Lux<em>Core</em></span></div>
+<div class="cima"><svg class="marca" viewBox="0 0 420 296" aria-hidden="true"><path fill="currentColor" d=" M12 96 C 44 88, 74 80, 100 74 C 106 54, 124 40, 148 39 C 172 38, 190 50, 196 70 C 234 90, 270 120, 296 158 C 312 180, 332 198, 356 214 C 372 224, 384 234, 392 244 C 397 250, 394 259, 386 258 C 366 255, 340 244, 314 226 C 294 216, 262 236, 216 240 C 184 240, 160 228, 150 204 C 140 180, 140 154, 148 132 C 152 122, 150 118, 144 116 C 128 118, 114 118, 104 116 C 70 110, 40 104, 12 96 Z"/> <g stroke="var(--papel, #fff)" fill="none" stroke-linecap="round"> <path stroke-width="4" d="M20 97 C 50 99, 76 101, 100 101"/> <path stroke-width="4.5" d="M146 118 C 138 127, 137 137, 141 146"/> <path stroke-width="4.5" d="M158 124 C 149 134, 148 145, 152 155"/> <path stroke-width="7" d="M190 104 C 226 124, 256 152, 276 186"/> <path stroke-width="6" d="M178 130 C 212 148, 240 174, 258 204"/> <path stroke-width="6" d="M168 158 C 198 174, 222 196, 236 222"/> <path stroke-width="5" d="M160 186 C 184 200, 204 218, 214 238"/> <path stroke-width="6" d="M286 178 C 314 196, 340 214, 366 234"/> <path stroke-width="6" d="M274 198 C 300 216, 324 232, 348 246"/> </g> <circle cx="149" cy="70" r="7.5" fill="var(--papel, #fff)"/> <circle cx="151" cy="69" r="3" fill="currentColor"/> </svg><span class="palabra">Lux<em>Core</em></span></div>
 <div class="medio">
   <div class="texto">
     <div class="ante">Framework web para Java · v0.3.0</div>
     <h1>Sin<br><span>contenedor.</span></h1>
     <p class="sub">Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.</p>
   </div>
-  <div class="ave"></div>
+  <svg class="ave" viewBox="0 0 420 320" aria-hidden="true"><path fill="currentColor" d=" M12 96 C 44 88, 74 80, 100 74 C 106 54, 124 40, 148 39 C 172 38, 190 50, 196 70 C 234 90, 270 120, 296 158 C 312 180, 332 198, 356 214 C 372 224, 384 234, 392 244 C 397 250, 394 259, 386 258 C 366 255, 340 244, 314 226 C 294 216, 262 236, 216 240 C 184 240, 160 228, 150 204 C 140 180, 140 154, 148 132 C 152 122, 150 118, 144 116 C 128 118, 114 118, 104 116 C 70 110, 40 104, 12 96 Z"/> <g stroke="var(--papel, #fff)" fill="none" stroke-linecap="round"> <path stroke-width="4" d="M20 97 C 50 99, 76 101, 100 101"/> <path stroke-width="4.5" d="M146 118 C 138 127, 137 137, 141 146"/> <path stroke-width="4.5" d="M158 124 C 149 134, 148 145, 152 155"/> <path stroke-width="7" d="M190 104 C 226 124, 256 152, 276 186"/> <path stroke-width="6" d="M178 130 C 212 148, 240 174, 258 204"/> <path stroke-width="6" d="M168 158 C 198 174, 222 196, 236 222"/> <path stroke-width="5" d="M160 186 C 184 200, 204 218, 214 238"/> <path stroke-width="6" d="M286 178 C 314 196, 340 214, 366 234"/> <path stroke-width="6" d="M274 198 C 300 216, 324 232, 348 246"/> </g> <circle cx="149" cy="70" r="7.5" fill="var(--papel, #fff)"/> <circle cx="151" cy="69" r="3" fill="currentColor"/> <g stroke="currentColor" fill="none" stroke-linecap="round"> <path stroke-width="8.5" d="M194 238 L 186 278"/> <path stroke-width="8.5" d="M228 236 L 236 278"/> <path stroke-width="6" d="M170 280 L 204 280"/> <path stroke-width="6" d="M222 280 L 256 280"/> <path stroke-width="4" d="M10 284 L 410 284"/> </g></svg>
 </div>
 <div class="cifras">
   <div class="c"><b>106</b><i>ms de arranque</i></div>
