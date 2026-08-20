@@ -1,30 +1,30 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LuxCore</title>
-<meta name="description" content="Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.">
+<meta name="description" content="Web framework for Java that boots on its own, with no servlet container and not a single external dependency.">
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGltYWdlIGhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRUFBQUFCQUNBTUFBQUNkdDRIc0FBQUJvVkJNVkVYbUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdINHYvWTg1QUFBQWluUlNUbE1BQVFNRUJqSEIvdHBKQWxMOWh4RS9kcWI3Z2dVcWplMkYrdkVXL01Da3pOblgzbFVrdVNBbmlBelU3bU5QdUJYb1lLOTRoREp0YTVRTnQwQ2hxUTRhNitwQmdPbDNzL25kdy9NSHRVdDVSUGZSdW82d1RaNU9obHo0bmZYeXhad3BXM3FWenVVNEMwSTVSWkJzY0FqZ1pmWjFIQjZuN3lXdExhTGpmeFF1cFIycm1XRkcwOVV2WWowZkVTS1JBQUFDOEVsRVFWUll3KzFXYVZmVFVCQ2RsNlJFWWtBTlZDa0dLWWhBaXlpTExJcFVRS0JsRVJGWFJFRkZYSERmRmNSOXZiL2FTU3FFTG5sTnYzSTZYVTc3M3BtYmUrL01tNFNvRktYWU9TRVVWYU5RR1hSKzdTb25JWXBMTjFUbmU3ZkoyWEErRldRVWxhOFFWZTdadXcrdzRJUnBvb3FxaTBJSTd6L2daaUlkdW9ueW9oQnFPTW1LV0RvMncwVHRRZEtDQTZTemJIaGhvWTZkQ1d6RW9mcG9ROVJUa0VaclBFeWtCaTZHRUtLcExJTUQvejdTekJEQnFzQVhNcWdGR1dGYTBGdGpRU0dZZ1VMeERCRXVpYmFqd2ExUXFlcC9IMnlGenYvajdVVFZnYXd3cUNuZGlWazZjT3g0TURjRkdkRXNEYTRPQ3gyZGxXNjNGclNTdWpMcTRQVUUycm9wUUdlcWRDTGJCRTlIdk1ldFZRR0EzdndBN0dZRTZDTlJvS0lHOWNBM1dGcy9xNVJXVk5ESnRwd3liQy9wcVlFQ2JhWFFhVVNrSkFZVFVpOE5Pak9VcDVBZWdvM2hFYW1YS29YZ0w0S0QrZldTckJnYVZjaEVNQWtkWjJYelVsQmlWQ2FDK2Rsb2wzV2xTcDF5Q3J3N0ppMkZRZU5JU3ZKTnBBenBUVU9RbUVERTMwZ2RrMkhTWkFnS1RVMDdTdjBwSk0vSkp3UTdOQVBJRU5DYWtMWWtqN0R6b3hJclRSdVRmWXAweG1qVU5PdVBvR09pRWZFUktRbU53aGVROUxIU3hweVNBaTVxcFBxM0ZJTmZjbTZ5WHY5d0QxcVdaZXJPb242NTV3cVF1aW9qd1R2WFBDc3o1Rmc4b1pMOTg5ZUJoWmdFd1JBMGNpUGQxbnp4bTR0THQwSzM3eXpmTmFNcnZNREw5KzZ6akpVSGtzTXBOSHFZZE00bTB4aGYzVnh0aWNVZU1Ra2J0WThyRnhqOFNiNmpKVlNGaEVIcVUvZFdZMkU2N0F3enhWRFZkT2xDZGE2b1o4OXJYZ0F6ZWNpVE84UDVQV002MXgrZW91cXQ4OGNIZ1RkZVJtQnk4dUxTRVBoNDUrUW41Z2RJNiszb0huU2ZWYUt2c3NjWWo5YlhiN2loWm9GaEUyOXo4dCtOSXJtY2NzMjNtY0Q3UEk5czdQMkhOWGZHb1dFOTJ3QnFEbjNjMWpVUnJHL2tUakdETlgzNjdOeTFCci9rV01qdmplNnYzOWErL3lqNzZXRDhvbnhqMEhreS9OM0YyMk81UmRnMnNmNU05NjJHZk1hb3doQi81MUJQcFNqRkRvbC9mTGJ0TGtDNzFRMEFBQUFBU1VWT1JLNUNZSUk9IiB3aWR0aD0iNjQiIGhlaWdodD0iNjQiLz48L3N2Zz4K">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LuxCore">
 <meta property="og:title" content="LuxCore">
-<meta property="og:description" content="Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.">
-<meta property="og:url" content="https://luxcore.ginit.dev/">
+<meta property="og:description" content="Web framework for Java that boots on its own, with no servlet container and not a single external dependency.">
+<meta property="og:url" content="https://luxcore.ginit.dev/en">
 <link rel="alternate" hreflang="es" href="https://luxcore.ginit.dev/">
 <link rel="alternate" hreflang="en" href="https://luxcore.ginit.dev/en">
 <link rel="alternate" hreflang="x-default" href="https://luxcore.ginit.dev/">
 <meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.">
-<meta property="og:locale" content="es_ES">
+<meta property="og:image:alt" content="LuxCore — web framework for Java. 106 ms boot, 0 dependencies, 308 KB.">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="LuxCore">
-<meta name="twitter:description" content="Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.">
+<meta name="twitter:description" content="Web framework for Java that boots on its own, with no servlet container and not a single external dependency.">
 <meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
-<link rel="stylesheet" href="./assets/lux.css?v=ee81332e">
-<script src="./assets/lux.js?v=ee81332e"></script>
+<link rel="stylesheet" href="../assets/lux.css?v=ee81332e">
+<script src="../assets/lux.js?v=ee81332e"></script>
 </head>
 <body>
 
@@ -34,16 +34,16 @@
       <span class="logo" aria-hidden="true"></span>
       <span class="palabra">Lux<em>Core</em></span>
     </a>
-    <nav class="nav-sitio" aria-label="Secciones del sitio">
-        <a href="./index.html" aria-current="page">Inicio</a>
-        <a href="./descargas.html">Descargas</a>
-        <a href="./empezar.html">Empezar</a>
-        <a href="./guia.html">Guía</a>
-        <a href="./modulos.html">Módulos</a>
-        <a href="./referencia.html">Referencia</a>
+    <nav class="nav-sitio" aria-label="Site sections">
+        <a href="./index.html" aria-current="page">Home</a>
+        <a href="./descargas.html">Downloads</a>
+        <a href="./empezar.html">Get started</a>
+        <a href="./guia.html">Guide</a>
+        <a href="./modulos.html">Modules</a>
+        <a href="./referencia.html">Reference</a>
     </nav>
-    <a class="idioma" href="./en/index.html" hreflang="en" lang="en" title="Read this page in English">English</a>
-    <button type="button" class="tema" aria-label="Cambiar de tema">
+    <a class="idioma" href="../index.html" hreflang="es" lang="es" title="Leer esta página en español">Español</a>
+    <button type="button" class="tema" aria-label="Switch theme">
         <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4"/>
@@ -62,34 +62,34 @@
     <span class="cuervo" aria-hidden="true"></span>
     <div class="portada-texto">
       <p class="antetitulo">
-        <span class="nuevo">Nuevo</span>
-        Framework web para Java
-        <span class="desde">v0.3.0 · agosto de 2026</span>
+        <span class="nuevo">New</span>
+        Web framework for Java
+        <span class="desde">v0.3.0 · August 2026</span>
       </p>
 
-      <h1 class="titular">Sin<br><span>contenedor.</span></h1>
+      <h1 class="titular">No<br><span>container.</span></h1>
 
       <p class="promesa">
-        Un servidor HTTP propio, un hilo virtual por conexión y <b>cero dependencias</b>.
-        <code>java -jar</code> y está corriendo — sin Tomcat, sin <code>web.xml</code>,
-        sin despliegue.
+        Its own HTTP server, one virtual thread per connection and <b>zero dependencies</b>.
+        <code>java -jar</code> and it is running — no Tomcat, no <code>web.xml</code>,
+        no deployment.
       </p>
 
       <div class="botones">
-        <a class="boton principal" href="./empezar.html">Empezar</a>
-        <a class="boton" href="./guia.html">Documentación</a>
+        <a class="boton principal" href="./empezar.html">Get started</a>
+        <a class="boton" href="./guia.html">Documentation</a>
       </div>
 
       <div class="chips">
-        <div class="chip"><b>308</b><span>KB</span><em>Desplegado</em></div>
-        <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
-        <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
-        <div class="chip"><b>1342</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>308</b><span>KB</span><em>Deployed</em></div>
+        <div class="chip"><b>106</b><span>ms</span><em>Boot</em></div>
+        <div class="chip"><b>0</b><span>deps</span><em>At runtime</em></div>
+        <div class="chip"><b>1342</b><span></span><em>Tests</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
         <code><span class="senal">$</span> curl -fsSL https://luxcore.ginit.dev/instalar | sh</code>
-        <button type="button" class="copiar" aria-label="Copiar la orden">
+        <button type="button" class="copiar" aria-label="Copy the command">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="9" y="9" width="12" height="12" rx="2"/>
@@ -97,19 +97,19 @@
           </svg>
         </button>
       </div>
-      <p class="tras-orden">En Windows,
-        <code>irm https://luxcore.ginit.dev/instalar.ps1 | iex</code>. Requiere Maven y un
-        JDK 21. Después: <code>lux new mi-app</code>.</p>
+      <p class="tras-orden">On Windows,
+        <code>irm https://luxcore.ginit.dev/instalar.ps1 | iex</code>. Requires Maven and a
+        JDK 21. Then: <code>lux new mi-app</code>.</p>
     </div>
 
     <div class="portada-codigo">
       <div class="ventana">
         <div class="ventana-barra">
           <div class="luces" aria-hidden="true"><i class="luz"></i><i class="luz"></i><i class="luz"></i></div>
-          <div class="pestanas" role="tablist" aria-label="Ejemplo de código">
-            <button type="button" role="tab" aria-selected="true"  data-panel="pn-controlador">Controlador</button>
-            <button type="button" role="tab" aria-selected="false" data-panel="pn-modelo">Modelo</button>
-            <button type="button" role="tab" aria-selected="false" data-panel="pn-arranque">Arranque</button>
+          <div class="pestanas" role="tablist" aria-label="Code example">
+            <button type="button" role="tab" aria-selected="true"  data-panel="pn-controlador">Controller</button>
+            <button type="button" role="tab" aria-selected="false" data-panel="pn-modelo">Model</button>
+            <button type="button" role="tab" aria-selected="false" data-panel="pn-arranque">Startup</button>
           </div>
         </div>
 
@@ -146,7 +146,7 @@
         </div>
 
         <div class="panel" id="pn-modelo" role="tabpanel" hidden>
-<pre><span class="cm">// El record es la entidad, la validación y el mapeo. No hay tres clases.</span>
+<pre><span class="cm">// The record is the entity, the validation and the mapping. There are no three classes.</span>
 <span class="an">@Table</span>(<span class="st">"tareas"</span>)
 <span class="kw">public record</span> Tarea(
         <span class="an">@Id</span> <span class="kw">long</span> id,
@@ -171,10 +171,10 @@
         </div>
 
         <div class="panel" id="pn-arranque" role="tabpanel" hidden>
-<pre><span class="cm">// Una línea para lo simple…</span>
+<pre><span class="cm">// One line for the simple case…</span>
 Lux.run(<span class="st">8080</span>, TareaController.class);
 
-<span class="cm">// …y todo declarado para lo serio.</span>
+<span class="cm">// …and everything spelled out for the serious one.</span>
 Lux.app()
    .loadConfig()
    .views(Templates.fromClasspath(<span class="st">"plantillas"</span>))
@@ -200,108 +200,108 @@ Lux.app()
     <main>
 
       <section id="por-que">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Por qué existe</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Why it exists</h2></div>
 
         <p class="medida">
-          LuxCore nace de JxMVC, un framework MVC que funciona y está en producción — pero que
-          necesita Tomcat para arrancar. Quitar el contenedor no era un capricho: era el 94 % del
-          tiempo de arranque y el 98 % del peso desplegado.
+          LuxCore grew out of JxMVC, an MVC framework that works and is in production — but that
+          needs Tomcat to start. Dropping the container was not a whim: it accounted for 94 % of
+          the boot time and 98 % of the deployed weight.
         </p>
 
         <div class="envoltura">
           <table>
-            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th><th class="cifra">Diferencia</th></tr></thead>
+            <thead><tr><th>Metric</th><th class="cifra">JxMVC on Tomcat</th><th class="cifra">LuxCore</th><th class="cifra">Difference</th></tr></thead>
             <tbody>
-              <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td><td class="cifra">6,6×</td></tr>
-              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
-              <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
-              <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
-              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 342</td><td class="cifra">2,7×</td></tr>
+              <tr><td>Boot</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td><td class="cifra">6.6×</td></tr>
+              <tr><td>Deployed</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
+              <tr><td>Container image</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2.5×</td></tr>
+              <tr><td>Runtime dependencies</td><td class="cifra">Jakarta EE 10</td><td class="cifra">none</td><td class="cifra">—</td></tr>
+              <tr><td>Tests</td><td class="cifra">347</td><td class="cifra">1,342</td><td class="cifra">2.7×</td></tr>
             </tbody>
           </table>
         </div>
 
         <p class="medida">
-          Y no hay que saltar de golpe: <code>lux-adapter-servlet</code> despliega una aplicación
-          LuxCore dentro de Tomcat, así que la migración es reversible.
+          And you do not have to jump all at once: <code>lux-adapter-servlet</code> deploys a
+          LuxCore application inside Tomcat, so the migration is reversible.
         </p>
       </section>
 
       <section id="que-trae">
-        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Qué trae</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>What it brings</h2></div>
 
         <div class="rejilla-rasgos">
           <div class="rasgo">
-            <div class="etiqueta">Servidor</div>
-            <p>HTTP/1.1 con un hilo virtual por conexión. TLS, keep-alive, chunked, multipart,
-              gzip, cookies, sesiones y archivos estáticos.</p>
+            <div class="etiqueta">Server</div>
+            <p>HTTP/1.1 with one virtual thread per connection. TLS, keep-alive, chunked,
+              multipart, gzip, cookies, sessions and static files.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Rutas</div>
-            <p>Plantillas <code>{var}</code>, comodines y una regla sin excepciones. Lo literal
-              gana a lo variable y las rutas duplicadas fallan al arrancar, no en producción.</p>
+            <div class="etiqueta">Routes</div>
+            <p><code>{var}</code> templates, wildcards and one rule with no exceptions. Literal
+              beats variable, and duplicate routes fail at startup, not in production.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Datos</div>
-            <p>JDBC directo sin ORM, con pool, transacciones y repositorios. Verificado contra
-              PostgreSQL 16, MySQL 8 y H2 con la misma batería.</p>
+            <div class="etiqueta">Data</div>
+            <p>Plain JDBC with no ORM, plus pool, transactions and repositories. Verified against
+              PostgreSQL 16, MySQL 8 and H2 with the same test suite.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Vistas</div>
-            <p>Plantillas compiladas con herencia, bucles e inclusión. El escapado HTML es el
-              comportamiento por defecto, no una opción que se olvida.</p>
+            <div class="etiqueta">Views</div>
+            <p>Compiled templates with inheritance, loops and includes. HTML escaping is the
+              default behaviour, not an option you forget to switch on.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Seguridad</div>
-            <p>CORS, CSRF, rate limiting, validación declarativa, sanitizado y cabeceras de
-              seguridad. Probado con clientes hostiles y entradas malformadas.</p>
+            <div class="etiqueta">Security</div>
+            <p>CORS, CSRF, rate limiting, declarative validation, sanitising and security headers.
+              Tested with hostile clients and malformed input.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Asíncrono</div>
-            <p>Tareas en segundo plano sobre hilos virtuales, programación por intervalo y cron
-              de cinco campos. Una tarea que falla no derriba el planificador.</p>
+            <div class="etiqueta">Asynchronous</div>
+            <p>Background tasks on virtual threads, interval scheduling and five-field cron. A task
+              that fails does not bring the scheduler down.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Integración</div>
-            <p>Cliente HTTP con reintentos y eventos servidos — que es como transmiten las APIs
-              de IA, así que consumirlas es una línea.</p>
+            <div class="etiqueta">Integration</div>
+            <p>HTTP client with retries and server-sent events — which is how AI APIs stream, so
+              consuming them is one line.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Identidad</div>
-            <p>Entrar con Google, Microsoft o GitHub, con PKCE y verificación de firma del
-              <code>id_token</code>. Contraseñas con PBKDF2 y coste embebido.</p>
+            <div class="etiqueta">Identity</div>
+            <p>Sign in with Google, Microsoft or GitHub, with PKCE and signature verification of
+              the <code>id_token</code>. Passwords with PBKDF2 and an embedded cost factor.</p>
           </div>
           <div class="rasgo">
-            <div class="etiqueta">Observabilidad</div>
-            <p>Métricas por ruta con percentiles, en JSON o formato Prometheus, y log de acceso
-              combinado o compacto.</p>
+            <div class="etiqueta">Observability</div>
+            <p>Per-route metrics with percentiles, in JSON or Prometheus format, and a combined or
+              compact access log.</p>
           </div>
         </div>
       </section>
 
       <section id="empezar-ya">
-        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Empezar</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Getting started</h2></div>
 
         <div class="tarjetas">
           <a class="tarjeta" href="./descargas.html">
-            <div class="etiqueta">Descargas</div>
-            <h3>Módulos y artefactos</h3>
-            <p>Los cinco JAR con su tamaño y huella, coordenadas de Maven y qué necesita cada uno.</p>
+            <div class="etiqueta">Downloads</div>
+            <h3>Modules and artefacts</h3>
+            <p>The five JARs with their size and fingerprint, Maven coordinates and what each one needs.</p>
           </a>
           <a class="tarjeta" href="./empezar.html">
-            <div class="etiqueta">Instalación</div>
-            <h3>De cero a corriendo</h3>
-            <p>Cuatro órdenes, con la guía paso a paso en terminal.</p>
+            <div class="etiqueta">Installation</div>
+            <h3>From nothing to running</h3>
+            <p>Four commands, with the step-by-step guide in a terminal.</p>
           </a>
           <a class="tarjeta" href="./guia.html">
-            <div class="etiqueta">Guía</div>
-            <h3>Escribir una aplicación</h3>
-            <p>Rutas, parámetros, respuestas, inyección, validación y errores.</p>
+            <div class="etiqueta">Guide</div>
+            <h3>Writing an application</h3>
+            <p>Routes, parameters, responses, injection, validation and errors.</p>
           </a>
           <a class="tarjeta" href="./modulos.html">
-            <div class="etiqueta">Módulos</div>
-            <h3>Servidor, vistas, datos</h3>
-            <p>Qué trae cada pieza y cómo tomarlas por separado.</p>
+            <div class="etiqueta">Modules</div>
+            <h3>Server, views, data</h3>
+            <p>What each piece brings and how to take them separately.</p>
           </a>
         </div>
       </section>
@@ -313,29 +313,29 @@ Lux.app()
   <footer class="pie">
     <div class="etiqueta">
       Richar Andre Vilca-Solorzano · Ramiro Pedro Laura-Murillo<br>
-      Universidad Nacional del Altiplano · Puno, Perú
+      Universidad Nacional del Altiplano · Puno, Peru
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.3.0 · Licencia MIT<br>
-      Medido el 2 de agosto de 2026
+      LuxCore 0.3.0 · MIT licence<br>
+      Measured on 2 August 2026
     </div>
   </footer>
 </div>
 
-<nav class="nav-movil" aria-label="Secciones">
+<nav class="nav-movil" aria-label="Sections">
   <ul>
-    <li><a href="./index.html" aria-label="Inicio">
+    <li><a href="./index.html" aria-label="Home">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
-      <span>Inicio</span></a></li>
-    <li><a href="./descargas.html" aria-label="Bajar">
+      <span>Home</span></a></li>
+    <li><a href="./descargas.html" aria-label="Get">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M8 11l4 4 4-4"/><path d="M4 18v2h16v-2"/></svg>
-      <span>Bajar</span></a></li>
-    <li><a href="./guia.html" aria-label="Guía">
+      <span>Get</span></a></li>
+    <li><a href="./guia.html" aria-label="Guide">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M8 7.5h7M8 11h7"/></svg>
-      <span>Guía</span></a></li>
-    <li><a href="./modulos.html" aria-label="Módulos">
+      <span>Guide</span></a></li>
+    <li><a href="./modulos.html" aria-label="Modules">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span>Módulos</span></a></li>
+      <span>Modules</span></a></li>
   </ul>
 </nav>
 

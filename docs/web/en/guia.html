@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LuxCore — Guide</title>
+<meta name="description" content="Routes, parameters, responses, injection, validation and errors.">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGltYWdlIGhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRUFBQUFCQUNBTUFBQUNkdDRIc0FBQUJvVkJNVkVYbUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdINHYvWTg1QUFBQWluUlNUbE1BQVFNRUJqSEIvdHBKQWxMOWh4RS9kcWI3Z2dVcWplMkYrdkVXL01Da3pOblgzbFVrdVNBbmlBelU3bU5QdUJYb1lLOTRoREp0YTVRTnQwQ2hxUTRhNitwQmdPbDNzL25kdy9NSHRVdDVSUGZSdW82d1RaNU9obHo0bmZYeXhad3BXM3FWenVVNEMwSTVSWkJzY0FqZ1pmWjFIQjZuN3lXdExhTGpmeFF1cFIycm1XRkcwOVV2WWowZkVTS1JBQUFDOEVsRVFWUll3KzFXYVZmVFVCQ2RsNlJFWWtBTlZDa0dLWWhBaXlpTExJcFVRS0JsRVJGWFJFRkZYSERmRmNSOXZiL2FTU3FFTG5sTnYzSTZYVTc3M3BtYmUrL01tNFNvRktYWU9TRVVWYU5RR1hSKzdTb25JWXBMTjFUbmU3ZkoyWEErRldRVWxhOFFWZTdadXcrdzRJUnBvb3FxaTBJSTd6L2daaUlkdW9ueW9oQnFPTW1LV0RvMncwVHRRZEtDQTZTemJIaGhvWTZkQ1d6RW9mcG9ROVJUa0VaclBFeWtCaTZHRUtLcExJTUQvejdTekJEQnFzQVhNcWdGR1dGYTBGdGpRU0dZZ1VMeERCRXVpYmFqd2ExUXFlcC9IMnlGenYvajdVVFZnYXd3cUNuZGlWazZjT3g0TURjRkdkRXNEYTRPQ3gyZGxXNjNGclNTdWpMcTRQVUUycm9wUUdlcWRDTGJCRTlIdk1ldFZRR0EzdndBN0dZRTZDTlJvS0lHOWNBM1dGcy9xNVJXVk5ESnRwd3liQy9wcVlFQ2JhWFFhVVNrSkFZVFVpOE5Pak9VcDVBZWdvM2hFYW1YS29YZ0w0S0QrZldTckJnYVZjaEVNQWtkWjJYelVsQmlWQ2FDK2Rsb2wzV2xTcDF5Q3J3N0ppMkZRZU5JU3ZKTnBBenBUVU9RbUVERTMwZ2RrMkhTWkFnS1RVMDdTdjBwSk0vSkp3UTdOQVBJRU5DYWtMWWtqN0R6b3hJclRSdVRmWXAweG1qVU5PdVBvR09pRWZFUktRbU53aGVROUxIU3hweVNBaTVxcFBxM0ZJTmZjbTZ5WHY5d0QxcVdaZXJPb242NTV3cVF1aW9qd1R2WFBDc3o1Rmc4b1pMOTg5ZUJoWmdFd1JBMGNpUGQxbnp4bTR0THQwSzM3eXpmTmFNcnZNREw5KzZ6akpVSGtzTXBOSHFZZE00bTB4aGYzVnh0aWNVZU1Ra2J0WThyRnhqOFNiNmpKVlNGaEVIcVUvZFdZMkU2N0F3enhWRFZkT2xDZGE2b1o4OXJYZ0F6ZWNpVE84UDVQV002MXgrZW91cXQ4OGNIZ1RkZVJtQnk4dUxTRVBoNDUrUW41Z2RJNiszb0huU2ZWYUt2c3NjWWo5YlhiN2loWm9GaEUyOXo4dCtOSXJtY2NzMjNtY0Q3UEk5czdQMkhOWGZHb1dFOTJ3QnFEbjNjMWpVUnJHL2tUakdETlgzNjdOeTFCci9rV01qdmplNnYzOWErL3lqNzZXRDhvbnhqMEhreS9OM0YyMk81UmRnMnNmNU05NjJHZk1hb3doQi81MUJQcFNqRkRvbC9mTGJ0TGtDNzFRMEFBQUFBU1VWT1JLNUNZSUk9IiB3aWR0aD0iNjQiIGhlaWdodD0iNjQiLz48L3N2Zz4K">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LuxCore">
+<meta property="og:title" content="LuxCore — Guide">
+<meta property="og:description" content="Routes, parameters, responses, injection, validation and errors.">
+<meta property="og:url" content="https://luxcore.ginit.dev/en/guia">
+<link rel="alternate" hreflang="es" href="https://luxcore.ginit.dev/guia">
+<link rel="alternate" hreflang="en" href="https://luxcore.ginit.dev/en/guia">
+<link rel="alternate" hreflang="x-default" href="https://luxcore.ginit.dev/guia">
+<meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LuxCore — web framework for Java. 106 ms boot, 0 dependencies, 308 KB.">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LuxCore — Guide">
+<meta name="twitter:description" content="Routes, parameters, responses, injection, validation and errors.">
+<meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<link rel="stylesheet" href="../assets/lux.css?v=ee81332e">
+<script src="../assets/lux.js?v=ee81332e"></script>
+</head>
+<body>
+
+<header class="barra-sitio">
+  <div class="marco">
+    <a class="marca-sitio" href="./index.html">
+      <span class="logo" aria-hidden="true"></span>
+      <span class="palabra">Lux<em>Core</em></span>
+    </a>
+    <nav class="nav-sitio" aria-label="Site sections">
+        <a href="./index.html">Home</a>
+        <a href="./descargas.html">Downloads</a>
+        <a href="./empezar.html">Get started</a>
+        <a href="./guia.html" aria-current="page">Guide</a>
+        <a href="./modulos.html">Modules</a>
+        <a href="./referencia.html">Reference</a>
+    </nav>
+    <a class="idioma" href="../guia.html" hreflang="es" lang="es" title="Leer esta página en español">Español</a>
+    <button type="button" class="tema" aria-label="Switch theme">
+        <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </svg>
+        <svg class="luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+        </svg>
+      </button>
+  </div>
+</header>
+
+<div class="marco">
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Guide</h1>
+    <p class="entradilla">Everything you need to write an application: routes, parameters, responses, injection, validation, errors, sessions, access, tasks, metrics and deploying behind a proxy.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="On this page">
+      <ol>
+        <li><a href="#rutas"><span class="n">01</span> Routes</a></li>
+        <li><a href="#parametros"><span class="n">02</span> Parameters</a></li>
+        <li><a href="#respuestas"><span class="n">03</span> Responses</a></li>
+        <li><a href="#inyeccion"><span class="n">04</span> Injection</a></li>
+        <li><a href="#validacion"><span class="n">05</span> Validation</a></li>
+        <li><a href="#errores"><span class="n">06</span> Errors</a></li>
+        <li><a href="#base"><span class="n">07</span> Optional base class</a></li>
+        <li><a href="#sesiones"><span class="n">08</span> Sessions and access</a></li>
+        <li><a href="#tareas"><span class="n">09</span> Tasks and cache</a></li>
+        <li><a href="#observar"><span class="n">10</span> Metrics and OpenAPI</a></li>
+        <li><a href="#proxy"><span class="n">11</span> Behind a proxy</a></li>
+        <li><a href="#frontend"><span class="n">12</span> With React, Svelte or Vue</a></li>
+        <li><a href="#tiempo-real"><span class="n">13</span> Real time</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="rutas">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Routes</h2></div>
+
+        <p>
+          <code>@Route</code> on the class sets the base; the verbs on the methods add the rest.
+          One rule, no exceptions: <strong>an empty value maps to the base route.</strong>
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Annotation</th><th>Resulting route</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Route("/api/tareas")</td><td class="mono">/api/tareas</td><td>Class base</td></tr>
+              <tr><td class="mono-clave">@Get</td><td class="mono">/api/tareas</td><td>Empty value = the base</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}")</td><td class="mono">/api/tareas/{id}</td><td>Route variable</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}/notas/{n}")</td><td class="mono">…/{id}/notas/{n}</td><td>Several variables</td></tr>
+              <tr><td class="mono-clave">@Get("/archivos/*")</td><td class="mono">/api/tareas/archivos/*</td><td>Wildcard, only at the end</td></tr>
+              <tr><td class="mono-clave">@Post @Put @Patch @Delete</td><td class="mono">—</td><td>Same criteria</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="prosa">
+          <li><strong>Literal beats variable.</strong> <code>/tareas/nueva</code> resolves before <code>/tareas/{id}</code>, whatever order they are declared in.</li>
+          <li><strong>Without <code>@Route</code></strong>, the base comes from the class name: <code>ReporteController</code> → <code>/reporte</code>.</li>
+          <li><strong>Duplicate routes fail at startup</strong>, not on the first request.</li>
+          <li><strong>405 with <code>Allow</code>.</strong> If the route exists but the verb does not, the response lists the valid verbs.</li>
+          <li><strong>HEAD resolves against GET</strong> automatically, with no body.</li>
+        </ul>
+
+        <h3>Loose routes, with no controller</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Lambdas</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r
+    .get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
+    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.3.0"</span>))
+    .post(<span class="st">"/eco"</span>, ctx -&gt; ctx.bodyText()))</pre>
+        </div>
+      </section>
+<section id="parametros">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Parameters</h2></div>
+
+        <p>
+          Method arguments are resolved by annotation or by type. Conversion to <code>int</code>,
+          <code>long</code>, <code>boolean</code>, enums or dates is automatic; if the value does
+          not convert, the response is a 400.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Annotation</th><th>Where it comes from</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Path("id")</td><td>Route variable</td><td class="mono">@Path("id") long id</td></tr>
+              <tr><td class="mono-clave">@Query("q")</td><td>Query string</td><td class="mono">@Query(value="p", orElse="1") int p</td></tr>
+              <tr><td class="mono-clave">@Form("titulo")</td><td>HTML form</td><td class="mono">@Form("titulo") String t</td></tr>
+              <tr><td class="mono-clave">@Body</td><td>JSON body</td><td class="mono">@Body Tarea tarea</td></tr>
+              <tr><td class="mono-clave">@Body @Valid</td><td>JSON + validation</td><td class="mono">answers 422 on failure</td></tr>
+              <tr><td class="mono-clave">@Header("X-Traza")</td><td>Header</td><td class="mono">@Header("X-Traza") String t</td></tr>
+              <tr><td class="mono-clave">@CookieValue("sesion")</td><td>Cookie</td><td class="mono">@CookieValue("s") String s</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>By type, with no annotation</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Type</th><th>What it receives</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">Context</td><td>The whole request context</td></tr>
+              <tr><td class="mono-clave">Request / Response</td><td>The raw lux-http objects</td></tr>
+              <tr><td class="mono-clave">Session</td><td>The session, creating it if it does not exist</td></tr>
+              <tr><td class="mono-clave">Principal</td><td>Whoever the <code>Authenticator</code> authenticated</td></tr>
+              <tr><td class="mono-clave">Part</td><td>A multipart file, by parameter name</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>The context, if you prefer it by hand</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Context</span><span class="etiqueta">Java</span></div>
+<pre>ctx.pathVariable(<span class="st">"id"</span>)      ctx.query(<span class="st">"q"</span>, <span class="st">"por-defecto"</span>)   ctx.queryAll(<span class="st">"tag"</span>)
+ctx.form(<span class="st">"titulo"</span>)         ctx.header(<span class="st">"Accept"</span>)             ctx.cookie(<span class="st">"sesion"</span>)
+ctx.body(Tarea.class)      ctx.bodyText()                  ctx.bodyBytes()
+ctx.part(<span class="st">"archivo"</span>)        ctx.field(<span class="st">"nota"</span>)               ctx.parts()
+ctx.session()              ctx.principal()                 ctx.authenticated()
+ctx.attribute(<span class="st">"clave"</span>, valor)                                 ctx.route()</pre>
+        </div>
+      </section>
+<section id="respuestas">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Responses</h2></div>
+
+        <p>What an action returns decides the format, with no annotations:</p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>You return</th><th>What goes out</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">String</td><td>text/plain</td><td class="mono">200</td></tr>
+              <tr><td class="mono">null</td><td>no body</td><td class="mono">204</td></tr>
+              <tr><td class="mono">any object</td><td>application/json</td><td class="mono">200</td></tr>
+              <tr><td class="mono">Result</td><td>whatever it declares</td><td class="mono">the one you set</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Result</span><span class="etiqueta">Java</span></div>
+<pre>Result.text(<span class="st">"hola"</span>)                     Result.html(<span class="st">"&lt;h1&gt;hola&lt;/h1&gt;"</span>)
+Result.json(objeto)                    Result.raw(<span class="st">"{\"ya\":\"serializado\"}"</span>)
+Result.view(<span class="st">"lista.html"</span>, modelo)    Result.redirect(<span class="st">"/"</span>)
+Result.created(objeto)                 Result.noContent()
+Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
+
+<span class="cm">// chainable</span>
+<span class="kw">return</span> Result.json(tarea)
+             .status(<span class="st">201</span>)
+             .header(<span class="st">"Location"</span>, <span class="st">"/api/tareas/"</span> + tarea.id());</pre>
+        </div>
+      </section>
+<section id="inyeccion">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Injection</h2></div>
+
+        <p>
+          Mark a service with <code>@Service</code> and it is built the first time somebody asks
+          for it. Controllers receive it with <code>@Inject</code>, by field or by constructor.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Services</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Service</span>
+<span class="kw">public class</span> Catalogo {
+    <span class="an">@Inject</span> Repositorio repositorio;      <span class="cm">// by field</span>
+}
+
+<span class="an">@Service</span>
+<span class="kw">public class</span> Facturas {
+    <span class="kw">private final</span> Catalogo catalogo;
+    <span class="an">@Inject</span> Facturas(Catalogo catalogo) {   <span class="cm">// by constructor</span>
+        <span class="kw">this</span>.catalogo = catalogo;
+    }
+}
+
+<span class="cm">// or by hand, handy for swapping in tests</span>
+Lux.app().service(Reloj.class, () -&gt; Instant.now())</pre>
+        </div>
+
+        <ul class="prosa">
+          <li>Services are <strong>singletons</strong>: one instance per application.</li>
+          <li>They are also registered <strong>under their interfaces</strong>, so you can ask for the contract.</li>
+          <li><strong>Circular dependencies</strong> are detected and the error names the whole chain.</li>
+        </ul>
+      </section>
+<section id="validacion">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Validation</h2></div>
+
+        <p>
+          The annotations go on the components of a <code>record</code> or the fields of a class.
+          <code>@Valid</code> next to <code>@Body</code> validates before entering the method.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Annotation</th><th>What it checks</th><th>Default message</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Required</td><td>Not null, not empty, not blank</td><td>es obligatorio</td></tr>
+              <tr><td class="mono-clave">@Length(min, max)</td><td>Text length</td><td>debe tener entre N y M caracteres</td></tr>
+              <tr><td class="mono-clave">@Range(min, max)</td><td>Numeric range</td><td>debe estar entre N y M</td></tr>
+              <tr><td class="mono-clave">@Email</td><td>Email format</td><td>no es un correo válido</td></tr>
+              <tr><td class="mono-clave">@Match("regex")</td><td>Regular expression</td><td>no tiene el formato esperado</td></tr>
+              <tr><td class="mono-clave">@OneOf({"a","b"})</td><td>Value from a list</td><td>debe ser uno de: a, b</td></tr>
+              <tr><td class="mono-clave">@Satisfies(Regla.class)</td><td>Your own rule</td><td>the rule's own</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tarea.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="kw">public record</span> Tarea(
+        <span class="an">@Id</span> <span class="kw">long</span> id,
+        <span class="an">@Required @Length</span>(min = <span class="st">3</span>, max = <span class="st">120</span>) String titulo,
+        <span class="an">@OneOf</span>({<span class="st">"baja"</span>, <span class="st">"media"</span>, <span class="st">"alta"</span>}) String prioridad) {}
+
+<span class="cm">// a rule of your own</span>
+<span class="kw">public class</span> Ruc <span class="kw">implements</span> Rule&lt;String&gt; {
+    <span class="kw">public boolean</span> test(String v) { <span class="kw">return</span> v.length() == <span class="st">11</span> &amp;&amp; v.startsWith(<span class="st">"20"</span>); }
+    <span class="kw">public</span> String message()    { <span class="kw">return</span> <span class="st">"no es un RUC válido"</span>; }
+}</pre>
+        </div>
+
+        <p>When something fails, the response is a 422 with the field map, without writing it:</p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">422 Unprocessable Content</span><span class="etiqueta">JSON</span></div>
+<pre>{
+  <span class="st">"error"</span>: <span class="st">"Unprocessable Content"</span>,
+  <span class="st">"message"</span>: <span class="st">"hay 2 campo(s) inválido(s)"</span>,
+  <span class="st">"path"</span>: <span class="st">"/api/tareas"</span>,
+  <span class="st">"fields"</span>: {
+    <span class="st">"titulo"</span>: <span class="st">"debe tener entre 3 y 120 caracteres"</span>,
+    <span class="st">"prioridad"</span>: <span class="st">"debe ser uno de: baja, media, alta"</span>
+  }
+}</pre>
+        </div>
+
+        <p>Outside a route, the same check by hand:</p>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Validation</span><span class="etiqueta">Java</span></div>
+<pre>Validation.check(tarea);                <span class="cm">// throws ValidationException (422)</span>
+Validation.valid(tarea);                <span class="cm">// true / false</span>
+Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
+        </div>
+      </section>
+<section id="errores">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Errors</h2></div>
+
+        <p>
+          Throw <code>HttpException</code> with whatever status you want, or register a handler
+          with <code>@OnError</code> for an exception from your own domain.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Error handling</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+<span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+    Tarea t = tareas.findById(id);
+    <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">throw new</span> HttpException(<span class="st">404</span>, <span class="st">"no existe la tarea "</span> + id);
+    <span class="kw">return</span> t;
+}
+
+<span class="an">@OnError</span>(SaldoInsuficiente.class)
+<span class="kw">public</span> Object saldo(SaldoInsuficiente fallo) {
+    <span class="kw">return</span> Result.json(Map.of(<span class="st">"motivo"</span>, fallo.getMessage())).status(<span class="st">422</span>);
+}</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Uncaught exceptions never leak details</div>
+          <p>
+            Any exception that is not an <code>HttpException</code> returns a 500 with the generic
+            message "error interno". The stack trace goes to the <code>ErrorReporter</code>, not to
+            the response.
+          </p>
+        </div>
+      </section>
+
+      <section id="base">
+        <div class="titulo-seccion"><span class="indice-num">07</span><h2>Optional base class</h2></div>
+
+        <p class="medida">
+          A LuxCore controller inherits from nothing: it is an ordinary class with annotations, and
+          the <code>Context</code> arrives as a parameter when it is needed. If a controller uses
+          it in nearly every method, you can extend <code>Controller</code> and save yourself the
+          trouble.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">With the base class</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Route</span>(<span class="st">"/panel"</span>)
+<span class="kw">public class</span> PanelController <span class="kw">extends</span> Controller {
+
+    <span class="an">@Get</span>(<span class="st">"/perfil"</span>)
+    <span class="kw">public</span> Result perfil() {
+        <span class="kw">if</span> (!autenticado()) <span class="kw">return</span> redirect(<span class="st">"/auth/login"</span>);
+        <span class="kw">return</span> view(<span class="st">"perfil"</span>, Map.of(<span class="st">"usuario"</span>, usuario().name()));
+    }
+
+    <span class="an">@Get</span>(<span class="st">"/informe/{id}"</span>)
+    <span class="kw">public</span> Result informe() {
+        <span class="kw">var</span> informe = informes.porId(param(<span class="st">"id"</span>));
+        <span class="kw">if</span> (informe == <span class="kw">null</span>) <span class="kw">throw</span> fallo(<span class="st">404</span>, <span class="st">"no existe"</span>);
+        <span class="kw">return</span> json(informe);
+    }
+}</pre>
+        </div>
+
+        <p class="medida">
+          It brings <code>param</code>, <code>query</code>, <code>form</code>, <code>header</code>,
+          <code>cookie</code>, <code>body</code>, <code>session</code>, <code>usuario</code>,
+          <code>autenticado</code>, and on the response side <code>view</code>, <code>json</code>,
+          <code>text</code>, <code>html</code>, <code>redirect</code>, <code>created</code>,
+          <code>noContent</code>, <code>status</code> and <code>fallo</code>. For everything else,
+          <code>ctx()</code> returns the whole <code>Context</code>.
+        </p>
+
+        <p class="medida">
+          <b>It really is optional.</b> Both styles live side by side in the same application:
+          whoever does not extend it keeps receiving the <code>Context</code> as a parameter and
+          never learns this exists.
+        </p>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Why it does not keep the request in a field</div>
+          <p>
+            There is <b>a single instance</b> of the controller, shared by every request, and
+            LuxCore serves each connection on its own virtual thread. A field holding the request
+            would be a race: two simultaneous requests would overwrite it and one would end up
+            answering with the other's data. That is why the helpers read from a per-thread holder.
+            There is a test that fires 200 simultaneous requests and checks that each response
+            carries its own data; with a shared field, it fails.
+          </p>
+        </div>
+      </section>
+
+      <section id="sesiones">
+        <div class="titulo-seccion"><span class="indice-num">08</span><h2>Sessions and access</h2></div>
+
+        <p class="medida">
+          The session is requested from the context. It is born the first time it is used, and the
+          cookie goes out <code>HttpOnly</code>, <code>SameSite=Lax</code> and <code>Secure</code>
+          if the request came over HTTPS.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Session</span><span class="etiqueta">Java</span></div>
+<pre>Session sesion = ctx.session();
+sesion.set(<span class="st">"usuario"</span>, correo);
+String quien = sesion.get(<span class="st">"usuario"</span>, String.class);
+sesion.invalidate();                     <span class="cm">// on sign-out</span></pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Rotate the identifier when signing in</div>
+          <p>
+            The identifier a visitor holds <b>before</b> signing in cannot stay valid
+            <b>afterwards</b>: whoever had planted it in their browser would end up with an
+            authenticated session. That is session fixation, and one line avoids it:
+          </p>
+<pre><span class="kw">if</span> (Passwords.matches(clave, usuario.hash())) {
+    ctx.session().regenerateId();        <span class="cm">// ← right here, before storing anything</span>
+    ctx.session().set(<span class="st">"usuario"</span>, usuario.correo());
+}</pre>
+          <p>
+            It preserves the contents —including the CSRF token— unlike
+            <code>invalidate()</code>, which wipes everything.
+          </p>
+        </div>
+
+        <p class="medida">
+          Passwords are stored with <code>Passwords</code>: PBKDF2-HMAC-SHA256 at 210,000
+          iterations, a per-password salt and constant-time comparison. The format carries the cost
+          inside, so it can be raised without invalidating what is already stored.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Passwords</span><span class="etiqueta">Java</span></div>
+<pre>String guardado = Passwords.hash(clave);
+<span class="kw">boolean</span> vale = Passwords.matches(clave, guardado);
+<span class="kw">if</span> (Passwords.needsRehash(guardado)) {   <span class="cm">// the cost went up since it was stored</span>
+    usuarios.actualizarHash(id, Passwords.hash(clave));
+}</pre>
+        </div>
+
+        <p class="medida">
+          And to sign in with Google, Microsoft or GitHub, <code>OAuth</code> brings the complete
+          flow with PKCE and signature verification of the <code>id_token</code>.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">OAuth 2.0</span><span class="etiqueta">Java</span></div>
+<pre>OAuth google = OAuth.google(id, secreto, <span class="st">"https://mi-sitio/auth/google/vuelta"</span>);
+
+<span class="an">@Get</span>(<span class="st">"/auth/google"</span>)
+<span class="kw">public</span> Result entrar(Context ctx) {
+    <span class="kw">var</span> salida = google.comenzar();
+    ctx.session().set(<span class="st">"oauth.estado"</span>, salida.estado());
+    <span class="kw">return</span> Result.redirectExternal(salida.url());
+}
+
+<span class="an">@Get</span>(<span class="st">"/auth/google/vuelta"</span>)
+<span class="kw">public</span> Result vuelta(Context ctx) {
+    <span class="kw">var</span> identidad = google.completar(ctx.query(<span class="st">"code"</span>), ctx.query(<span class="st">"state"</span>),
+                                     ctx.session().get(<span class="st">"oauth.estado"</span>, String.class));
+    ctx.session().regenerateId();
+    ctx.session().set(<span class="st">"usuario"</span>, identidad.correo());
+    <span class="kw">return</span> Result.redirect(<span class="st">"/panel"</span>);
+}</pre>
+        </div>
+
+        <p class="medida">
+          For several instances, or so that sessions survive a deployment, the store goes into a
+          table. With the in-memory one —the default— every deployment throws everybody out.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Shared sessions</span><span class="etiqueta">Java</span></div>
+<pre>ServerOptions.builder()
+    .sessionStore(JdbcSessions.of(<span class="st">"lux_sesiones"</span>).createTable())
+    .sessionMaxLifetime(Duration.ofHours(<span class="st">12</span>))   <span class="cm">// a lifetime cap, not just inactivity</span>
+    .build();</pre>
+        </div>
+      </section>
+
+      <section id="tareas">
+        <div class="titulo-seccion"><span class="indice-num">09</span><h2>Tasks and cache</h2></div>
+
+        <p class="medida">
+          Work outside the request: fire and forget, wait for a result, repeat every so often or
+          follow a cron expression. Each task runs on its own virtual thread, so blocking inside
+          one does not cost a platform thread.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tasks</span><span class="etiqueta">Java</span></div>
+<pre>Tasks tareas = Tasks.start();
+
+tareas.run(() -&gt; correo.enviar(aviso));                  <span class="cm">// and forget about it</span>
+<span class="kw">var</span> futuro = tareas.submit(() -&gt; informe.generar());       <span class="cm">// with a result</span>
+tareas.every(Duration.ofMinutes(<span class="st">5</span>), () -&gt; sondear());
+tareas.cron(<span class="st">"0 3 * * *"</span>, () -&gt; respaldo());                <span class="cm">// at three in the morning</span></pre>
+        </div>
+
+        <p class="medida">
+          And for whatever is expensive to compute and changes little, a cache with per-entry
+          expiry:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Cache and Events</span><span class="etiqueta">Java</span></div>
+<pre>Cache&lt;String, List&lt;Noticia&gt;&gt; portada = Cache.of(Duration.ofMinutes(<span class="st">10</span>));
+List&lt;Noticia&gt; ultimas = portada.get(<span class="st">"portada"</span>, clave -&gt; noticias.ultimas(<span class="st">6</span>));
+
+<span class="cm">// Event bus: whoever publishes does not know who is listening.</span>
+eventos.publish(<span class="kw">new</span> NoticiaPublicada(id));
+
+<span class="an">@Listens</span>
+<span class="kw">public void</span> alPublicar(NoticiaPublicada evento) {
+    portada.invalidate(<span class="st">"portada"</span>);
+}</pre>
+        </div>
+      </section>
+
+      <section id="observar">
+        <div class="titulo-seccion"><span class="indice-num">10</span><h2>Metrics and OpenAPI</h2></div>
+
+        <p class="medida">
+          <code>Metrics</code> counts requests and times per route, with percentiles, and knows how
+          to write itself in the format Prometheus reads.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Observability</span><span class="etiqueta">Java</span></div>
+<pre>Metrics metricas = Metrics.enabled().ignore(<span class="st">"/estaticos"</span>);
+
+Lux.app()
+   .service(metricas)
+   .use(metricas)
+   .use(AccessLog.combined())
+   .routes(r -&gt; r.get(<span class="st">"/lux/metrics"</span>, metricas.endpoint()))
+   .start();</pre>
+        </div>
+
+        <p class="medida">
+          <code>OpenApi</code> describes the registered routes —parameters, types, what requires
+          authentication— with nothing extra to annotate. It is useful for generating the
+          frontend's TypeScript client from the server instead of writing it twice.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">OpenAPI</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.get(<span class="st">"/openapi.json"</span>, ctx -&gt; OpenApi.of(<span class="st">"Mi API"</span>, <span class="st">"1.0"</span>).json()))</pre>
+        </div>
+      </section>
+
+      <section id="proxy">
+        <div class="titulo-seccion"><span class="indice-num">11</span><h2>Behind a proxy</h2></div>
+
+        <p class="medida">
+          LuxCore speaks <b>HTTP/1.1</b>. For HTTP/2, HTTP/3 and automatic certificates you put
+          nginx or Caddy in front, which also absorbs slow connections. It is the recommended way
+          to deploy it.
+        </p>
+
+        <div class="aviso">
+          <div class="etiqueta">Two things you have to declare</div>
+          <p>
+            Behind a proxy, the request arrives from the proxy itself and in plain text. If nobody
+            tells it otherwise, the application believes nobody is using HTTPS —and does not mark
+            the session cookie as <code>Secure</code>— and sees everyone coming from the same
+            address, so the rate limiter counts them all together and the first to hit the cap
+            blocks the whole site.
+          </p>
+<pre>ServerOptions.builder()
+    .behindProxy(<span class="kw">true</span>)                  <span class="cm">// honours X-Forwarded-Proto</span>
+    .trustProxy(<span class="st">"127.0.0.1"</span>, <span class="st">"::1"</span>)       <span class="cm">// and X-Forwarded-For, only from there</span>
+    .build();</pre>
+          <p>
+            The trust list is neither optional nor cosmetic: believing those headers wherever they
+            come from lets anyone claim to be another address, and with that they slip past the
+            limiter and pollute the logs.
+          </p>
+        </div>
+
+        <p class="medida">
+          And static files with their cache directive, because otherwise the browser revalidates
+          more than it needs to:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Static files</span><span class="etiqueta">Java</span></div>
+<pre>StaticFiles.from(raiz, <span class="st">"/medios"</span>)
+    .cacheControl(<span class="st">"public, max-age=3600"</span>);
+
+<span class="cm">// For assets with a fingerprint in the name — estilo.a1b2c3.css — you can go all in:</span>
+StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
+    .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>);</pre>
+        </div>
+      </section>
+
+      <section id="frontend">
+        <div class="titulo-seccion"><span class="indice-num">12</span><h2>With React, Svelte or Vue</h2></div>
+
+        <p class="medida">
+          LuxCore does not force you to use its template engine. It can serve <b>JSON and nothing
+          else</b> and let the frontend paint it, which is the normal thing today. Both ways live
+          side by side in the same application: some routes return views and others JSON.
+        </p>
+
+        <h3>In development · two servers</h3>
+
+        <p class="medida">
+          The frontend on its own server —<code>5173</code> for Vite, <code>3000</code> for Next—
+          and LuxCore on its own. Since they are different origins, you have to open CORS for that
+          port and only for that one:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Development</span><span class="etiqueta">Java</span></div>
+<pre>Lux.app()
+   .use(Cors.allowing(<span class="st">"http://localhost:5173"</span>))
+   .controllers(ApiController.class)
+   .start();</pre>
+        </div>
+
+        <h3>In production · a single artefact</h3>
+
+        <p class="medida">
+          You build the frontend, copy its output into the resources, and out comes <b>one jar</b>
+          that serves both. No nginx in front to join them, no two deployments.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">One jar with everything</span><span class="etiqueta">Java</span></div>
+<pre>Lux.app()
+   .controllers(ApiController.class)          <span class="cm">// /api/... returns JSON</span>
+   .fallback(StaticFiles.fromClasspath(<span class="st">"front"</span>).spa()
+                        .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>))
+   .start();</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">What spa() does and why it is needed</div>
+          <p>
+            An application that routes on the client —React Router, Svelte's router— <b>does not
+            have one file per route</b>: only <code>index.html</code> exists. Without
+            <code>spa()</code>, going straight to <code>/panel/usuarios/7</code> would give a 404
+            and the application would only work when navigating from the home page.
+          </p>
+          <p>
+            With <code>spa()</code>, a route that does not exist as a file returns
+            <code>index.html</code> and the browser decides what to paint. <b>But only for page
+            routes:</b> a missing <code>.css</code> or <code>.png</code> still gives a 404 —
+            handing them the home page's HTML turns an obvious error into one that takes an hour to
+            find.
+          </p>
+        </div>
+
+        <p class="medida">
+          If your frontend generates one file per route —Next.js static export, Astro, Hugo— you do
+          not need <code>spa()</code>: <code>/nosotros</code> finds
+          <code>nosotros/index.html</code> on its own.
+        </p>
+
+        <h3>How the project ends up</h3>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Structure</span><span class="etiqueta">Text</span></div>
+<pre>mi-proyecto/
+├── backend/            <span class="cm"># LuxCore — Maven, Java 21</span>
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/...
+│       └── resources/front/     <span class="cm"># ← the built frontend is copied here</span>
+└── frontend/           <span class="cm"># React, Svelte, Vue, whatever</span>
+    ├── package.json
+    └── src/...</pre>
+        </div>
+
+        <p class="medida">
+          Copying the frontend output into <code>resources/front/</code> is done by your build
+          script or by <code>maven-resources-plugin</code>. From there,
+          <code>mvn package</code> and you have a jar with everything inside.
+        </p>
+      </section>
+
+      <section id="tiempo-real">
+        <div class="titulo-seccion"><span class="indice-num">13</span><h2>Real time</h2></div>
+
+        <p class="medida">
+          Two ways, and nearly always you want the first.
+        </p>
+
+        <h3>Server-sent events · one direction</h3>
+
+        <p class="medida">
+          The server sends when there is something, instead of the browser asking every two
+          seconds. It is ordinary HTTP: it crosses proxies with nothing to configure and the
+          browser reconnects on its own. For a dashboard, a progress bar or a notification, it is
+          exactly what is needed.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Server</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/eventos"</span>)
+<span class="kw">public void</span> eventos(Context ctx) <span class="kw">throws</span> InterruptedException {
+    <span class="kw">try</span> (Sse eventos = Sse.open(ctx.response())) {
+        <span class="kw">while</span> (eventos.abierto()) {
+            eventos.send(Json.write(metricas.snapshot()));
+            Thread.sleep(<span class="st">1000</span>);
+        }
+    }
+}</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Browser</span><span class="etiqueta">JavaScript</span></div>
+<pre><span class="kw">const</span> eventos = <span class="kw">new</span> EventSource(<span class="st">'/eventos'</span>);
+eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Why that loop is not a problem</div>
+          <p>
+            That <code>while</code> keeps the thread inside for as long as the dashboard is open.
+            With platform threads it would be unworkable —a hundred dashboards, a hundred blocked
+            threads— but LuxCore serves each connection on its <b>own virtual thread</b>: a hundred
+            dashboards are a hundred virtual threads, costing a few hundred bytes each. That is why
+            here you can write blocking code without paying for it.
+          </p>
+        </div>
+
+        <p class="medida">
+          This site's <a href="/panel">dashboard</a> uses it: the numbers you see are pushed by the
+          server every second.
+        </p>
+
+        <h3>WebSocket · both directions</h3>
+
+        <p class="medida">
+          For when the browser also has to talk — a chat, a shared editor, a game. It costs a
+          separate protocol and a configured proxy; if you only need to receive, do not use it.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">WebSocket</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.ws(<span class="st">"/chat"</span>, socket -&gt; {
+    socket.onMessage(texto -&gt; socket.send(<span class="st">"eco: "</span> + texto));
+    socket.onClose(() -&gt; log.info(<span class="st">"se fue"</span>));
+}))</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">On "reactive programming"</div>
+          <p>
+            LuxCore has <b>no</b> <i>Flux</i>, <i>Mono</i> or anything of the sort, and that is a
+            decision. That style exists to avoid blocking platform threads, which are expensive.
+            With Java 21's virtual threads they stop being expensive: you can write ordinary
+            top-to-bottom code that blocks — and the performance is the same, without the cost of
+            chaining operators or debugging unreadable stack traces. Same capability, another road.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <footer class="pie">
+    <div class="etiqueta">
+      Richar Andre Vilca-Solorzano · Ramiro Pedro Laura-Murillo<br>
+      Universidad Nacional del Altiplano · Puno, Peru
+    </div>
+    <div class="etiqueta" style="text-align:right">
+      LuxCore 0.3.0 · MIT licence<br>
+      Measured on 2 August 2026
+    </div>
+  </footer>
+</div>
+
+<nav class="nav-movil" aria-label="Sections">
+  <ul>
+    <li><a href="./index.html" aria-label="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
+      <span>Home</span></a></li>
+    <li><a href="./descargas.html" aria-label="Get">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M8 11l4 4 4-4"/><path d="M4 18v2h16v-2"/></svg>
+      <span>Get</span></a></li>
+    <li><a href="./guia.html" aria-label="Guide">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M8 7.5h7M8 11h7"/></svg>
+      <span>Guide</span></a></li>
+    <li><a href="./modulos.html" aria-label="Modules">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>Modules</span></a></li>
+  </ul>
+</nav>
+
+</body>
+</html>

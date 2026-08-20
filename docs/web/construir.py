@@ -33,6 +33,98 @@ PAGINAS = [
     ("referencia.html",  "Referencia",                  "Tamaños, motores de base de datos, sistemas y comparación.",       "Referencia"),
 ]
 
+# ── bilingüe ──────────────────────────────────────────────────────────────────
+# El castellano vive en la raíz y el inglés bajo /en/. Los nombres de archivo NO se
+# traducen (/en/guia, no /en/guide): así el par de cada página es evidente y el hreflang
+# sale de una sustitución, sin tabla de equivalencias que se desincronice.
+
+IDIOMAS = ("es", "en")
+
+# archivo -> (título, entradilla, etiqueta de menú) en inglés
+EN = {
+    "index.html":      ("LuxCore",
+                        "Web framework for Java that boots on its own, with no servlet container "
+                        "and not a single external dependency.",
+                        "Home"),
+    "descargas.html":  ("Downloads",
+                        "The five modules with their size, footprint and Maven coordinates.",
+                        "Downloads"),
+    "empezar.html":    ("Get started",
+                        "From nothing to a server answering requests, in four commands.",
+                        "Get started"),
+    "guia.html":       ("Guide",
+                        "Routes, parameters, responses, injection, validation and errors.",
+                        "Guide"),
+    "modulos.html":    ("Modules",
+                        "What each one brings and how to use them separately.",
+                        "Modules"),
+    "referencia.html": ("Reference",
+                        "Sizes, database engines, systems and comparison.",
+                        "Reference"),
+}
+
+# Textos de la propia plantilla: pie, barra inferior, etiquetas de accesibilidad.
+TEXTOS = {
+    "es": {
+        "locale": "es_ES",
+        "secciones": "Secciones del sitio",
+        "en_esta": "Secciones",
+        "tema": "Cambiar de tema",
+        "otro_idioma": "English",
+        "otro_titulo": "Read this page in English",
+        "pie_sede": "Universidad Nacional del Altiplano · Puno, Perú",
+        "pie_licencia": "LuxCore 0.3.0 · Licencia MIT",
+        "pie_medido": "Medido el 2 de agosto de 2026",
+        "movil": ("Inicio", "Bajar", "Guía", "Módulos"),
+        "og_alt": "LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.",
+    },
+    "en": {
+        "locale": "en_US",
+        "secciones": "Site sections",
+        "en_esta": "Sections",
+        "tema": "Switch theme",
+        "otro_idioma": "Español",
+        "otro_titulo": "Leer esta página en español",
+        "pie_sede": "Universidad Nacional del Altiplano · Puno, Peru",
+        "pie_licencia": "LuxCore 0.3.0 · MIT licence",
+        "pie_medido": "Measured on 2 August 2026",
+        "movil": ("Home", "Get", "Guide", "Modules"),
+        "og_alt": "LuxCore — web framework for Java. 106 ms boot, 0 dependencies, 308 KB.",
+    },
+}
+
+
+def textos(idioma: str, archivo: str):
+    """Título, entradilla y etiqueta de menú de una página en el idioma pedido."""
+    for a, titulo, entradilla, menu in PAGINAS:
+        if a == archivo:
+            return (titulo, entradilla, menu) if idioma == "es" else EN[archivo]
+    raise KeyError(archivo)
+
+
+def ruta_publica(archivo: str, idioma: str) -> str:
+    """La URL que sirve lux-web: /guia, no /guia.html; y /en/guia en inglés."""
+    hoja = "" if archivo == "index.html" else "/" + archivo.replace(".html", "")
+    return ("/en" + hoja) if idioma == "en" else (hoja or "/")
+
+
+def alternativas(archivo: str) -> str:
+    base = "https://luxcore.ginit.dev"
+    filas = [
+        f'<link rel="alternate" hreflang="{i}" href="{base}{ruta_publica(archivo, i)}">'
+        for i in IDIOMAS
+    ]
+    filas.append(f'<link rel="alternate" hreflang="x-default" href="{base}{ruta_publica(archivo, "es")}">')
+    return "\n".join(filas)
+
+
+def conmutador(archivo: str, idioma: str) -> str:
+    otro = "en" if idioma == "es" else "es"
+    destino = f"./en/{archivo}" if otro == "en" else f"../{archivo}"
+    t = TEXTOS[idioma]
+    return (f'<a class="idioma" href="{destino}" hreflang="{otro}" lang="{otro}" '
+            f'title="{t["otro_titulo"]}">{t["otro_idioma"]}</a>')
+
 
 def logo_svg() -> str:
     # La marca es el cuervo. Va como máscara CSS y no como SVG incrustado, para que
@@ -45,17 +137,19 @@ def favicon_incrustado() -> str:
     return base64.b64encode(icono.encode()).decode()
 
 
-def navegacion(actual: str, raiz: str) -> str:
+def navegacion(actual: str, idioma: str) -> str:
     partes = []
     for archivo, _titulo, _entradilla, menu in PAGINAS:
         if not menu:
             continue
+        etiqueta = menu if idioma == "es" else EN[archivo][2]
         activa = ' aria-current="page"' if archivo == actual else ""
-        partes.append(f'<a href="{raiz}/{archivo}"{activa}>{menu}</a>')
+        # las páginas de un idioma son hermanas entre sí, así que el enlace es relativo
+        partes.append(f'<a href="./{archivo}"{activa}>{etiqueta}</a>')
     return "\n        ".join(partes)
 
 
-BOTON_TEMA = """<button type="button" class="tema" aria-label="Cambiar de tema">
+BOTON_TEMA = """<button type="button" class="tema" aria-label="__TEMA__">
         <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4"/>
@@ -68,8 +162,11 @@ BOTON_TEMA = """<button type="button" class="tema" aria-label="Cambiar de tema">
       </button>"""
 
 
-def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str) -> str:
-    raiz = ".." if "/" in archivo else "."
+def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str,
+             idioma: str = "es") -> str:
+    # los recursos viven en la raíz del sitio; desde /en/ hay que subir un nivel
+    raiz = ".." if idioma != "es" else "."
+    t = TEXTOS[idioma]
     completo = "LuxCore" if archivo == "index.html" else f"LuxCore — {titulo}"
     lleva_terminal = 'id="pantalla"' in cuerpo
 
@@ -78,7 +175,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
     )
 
     return f"""<!doctype html>
-<html lang="es">
+<html lang="{idioma}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -89,12 +186,13 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 <meta property="og:site_name" content="LuxCore">
 <meta property="og:title" content="{completo}">
 <meta property="og:description" content="{entradilla}">
-<meta property="og:url" content="https://luxcore.ginit.dev/">
+<meta property="og:url" content="https://luxcore.ginit.dev{ruta_publica(archivo, idioma)}">
+{alternativas(archivo)}
 <meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.">
-<meta property="og:locale" content="es_ES">
+<meta property="og:image:alt" content="{t['og_alt']}">
+<meta property="og:locale" content="{t['locale']}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{completo}">
 <meta name="twitter:description" content="{entradilla}">
@@ -106,14 +204,15 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 
 <header class="barra-sitio">
   <div class="marco">
-    <a class="marca-sitio" href="{raiz}/index.html">
+    <a class="marca-sitio" href="./index.html">
       {logo_svg()}
       <span class="palabra">Lux<em>Core</em></span>
     </a>
-    <nav class="nav-sitio" aria-label="Secciones del sitio">
-        {navegacion(archivo, raiz)}
+    <nav class="nav-sitio" aria-label="{t['secciones']}">
+        {navegacion(archivo, idioma)}
     </nav>
-    {BOTON_TEMA}
+    {conmutador(archivo, idioma)}
+    {BOTON_TEMA.replace("__TEMA__", t["tema"])}
   </div>
 </header>
 
@@ -123,29 +222,29 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
   <footer class="pie">
     <div class="etiqueta">
       Richar Andre Vilca-Solorzano · Ramiro Pedro Laura-Murillo<br>
-      Universidad Nacional del Altiplano · Puno, Perú
+      {t['pie_sede']}
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.3.0 · Licencia MIT<br>
-      Medido el 2 de agosto de 2026
+      {t['pie_licencia']}<br>
+      {t['pie_medido']}
     </div>
   </footer>
 </div>
 
-<nav class="nav-movil" aria-label="Secciones">
+<nav class="nav-movil" aria-label="{t['en_esta']}">
   <ul>
-    <li><a href="{raiz}/" aria-label="Inicio">
+    <li><a href="./index.html" aria-label="{t['movil'][0]}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
-      <span>Inicio</span></a></li>
-    <li><a href="{raiz}/descargas.html" aria-label="Descargas">
+      <span>{t['movil'][0]}</span></a></li>
+    <li><a href="./descargas.html" aria-label="{t['movil'][1]}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M8 11l4 4 4-4"/><path d="M4 18v2h16v-2"/></svg>
-      <span>Bajar</span></a></li>
-    <li><a href="{raiz}/guia.html" aria-label="Guía">
+      <span>{t['movil'][1]}</span></a></li>
+    <li><a href="./guia.html" aria-label="{t['movil'][2]}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M8 7.5h7M8 11h7"/></svg>
-      <span>Guía</span></a></li>
-    <li><a href="{raiz}/modulos.html" aria-label="Módulos">
+      <span>{t['movil'][2]}</span></a></li>
+    <li><a href="./modulos.html" aria-label="{t['movil'][3]}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span>Módulos</span></a></li>
+      <span>{t['movil'][3]}</span></a></li>
   </ul>
 </nav>
 
@@ -165,7 +264,12 @@ PAGINAS_UNICO = [
 
 
 def unico() -> int:
-    """Agrupa el sitio entero en un archivo, para leerlo sin servidor ni conexión."""
+    """Agrupa el sitio entero en un archivo, para leerlo sin servidor ni conexión.
+
+    Solo en castellano: el archivo único es para leer el sitio sin conexión, y duplicarlo
+    en dos idiomas doblaría un archivo que ya pesa 155 KB.
+    """
+    t = TEXTOS["es"]
     estilo = (AQUI / "assets" / "lux.css").read_text(encoding="utf-8")
     guion = (AQUI / "assets" / "lux.js").read_text(encoding="utf-8")
     terminal = (AQUI / "assets" / "terminal.js").read_text(encoding="utf-8")
@@ -245,7 +349,7 @@ def unico() -> int:
     <nav class="nav-sitio" aria-label="Secciones del sitio">
         {chr(10).join("        " + t for t in pestanas).strip()}
     </nav>
-    {BOTON_TEMA}
+    {BOTON_TEMA.replace("__TEMA__", t["tema"])}
   </div>
 </header>
 
@@ -255,11 +359,11 @@ def unico() -> int:
   <footer class="pie">
     <div class="etiqueta">
       Richar Andre Vilca-Solorzano · Ramiro Pedro Laura-Murillo<br>
-      Universidad Nacional del Altiplano · Puno, Perú
+      {t['pie_sede']}
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.3.0 · Licencia MIT<br>
-      Medido el 2 de agosto de 2026
+      {t['pie_licencia']}<br>
+      {t['pie_medido']}
     </div>
   </footer>
 </div>
@@ -286,24 +390,38 @@ def unico() -> int:
 def construir() -> int:
     icono = favicon_incrustado()
     generadas = 0
+    faltan = []
 
-    for archivo, titulo, entradilla, _menu in PAGINAS:
-        fuente = AQUI / "contenido" / (archivo.replace("/", "-").replace(".html", ".html"))
-        if not fuente.is_file():
-            print(f"  falta el contenido de {archivo} ({fuente.name})", file=sys.stderr)
-            continue
+    for idioma in IDIOMAS:
+        # el castellano en la raíz, el inglés bajo /en/
+        carpeta_fuente = AQUI / "contenido" if idioma == "es" else AQUI / "contenido" / "en"
+        carpeta_salida = AQUI if idioma == "es" else AQUI / "en"
 
-        destino = AQUI / archivo
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_text(
-            envolver(archivo, titulo, entradilla, fuente.read_text(encoding="utf-8"), icono),
-            encoding="utf-8",
-        )
-        print(f"  {archivo:22} {destino.stat().st_size:6d} B")
-        generadas += 1
+        for archivo, _t, _e, _menu in PAGINAS:
+            fuente = carpeta_fuente / archivo
+            if not fuente.is_file():
+                # sin traducir todavía: se avisa y NO se genera, que una página a medias
+                # indexada en Google es peor que una que no existe
+                faltan.append(f"{idioma}/{archivo}")
+                continue
 
-    print(f"\n{generadas} páginas generadas en {AQUI}")
-    return 0 if generadas == len(PAGINAS) else 1
+            titulo, entradilla, _m = textos(idioma, archivo)
+            destino = carpeta_salida / archivo
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_text(
+                envolver(archivo, titulo, entradilla,
+                         fuente.read_text(encoding="utf-8"), icono, idioma),
+                encoding="utf-8",
+            )
+            etiqueta = archivo if idioma == "es" else f"en/{archivo}"
+            print(f"  {etiqueta:22} {destino.stat().st_size:6d} B")
+            generadas += 1
+
+    esperadas = len(PAGINAS) * len(IDIOMAS)
+    print(f"\n{generadas} de {esperadas} páginas generadas en {AQUI}")
+    if faltan:
+        print(f"  sin traducir: {', '.join(faltan)}", file=sys.stderr)
+    return 0 if generadas == esperadas else 1
 
 
 if __name__ == "__main__":

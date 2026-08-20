@@ -94,12 +94,16 @@ INDICE_EXTRA = {
 }
 
 
-def preparar(cuerpo: str) -> str:
-    """Escapa la sintaxis de plantilla que aparece dentro de los ejemplos de código."""
+def preparar(cuerpo: str, idioma: str = "es") -> str:
+    """Escapa la sintaxis de plantilla de los ejemplos y reescribe los enlaces a rutas de lux-web."""
     cuerpo = cuerpo.replace("{%", "&#123;&#37;").replace("%}", "&#37;&#125;")
     cuerpo = cuerpo.replace("{{", "&#123;&#123;").replace("}}", "&#125;&#125;")
+    prefijo = "" if idioma == "es" else "/en"
     for viejo, nuevo in RUTAS.items():
-        cuerpo = cuerpo.replace(f'href="{viejo}"', f'href="{nuevo}"')
+        destino = (prefijo + nuevo) if idioma != "es" else nuevo
+        if idioma != "es" and nuevo == "/":
+            destino = "/en"
+        cuerpo = cuerpo.replace(f'href="{viejo}"', f'href="{destino}"')
     return cuerpo
 
 
@@ -140,26 +144,38 @@ def main() -> int:
         print(f"no encuentro {PLANTILLAS}", file=sys.stderr)
         return 1
 
-    for fragmento, plantilla in PAGINAS.items():
-        cuerpo = preparar((FRAGMENTOS / fragmento).read_text(encoding="utf-8"))
+    hechas = 0
+    for idioma in ("es", "en"):
+        origen = FRAGMENTOS if idioma == "es" else FRAGMENTOS / "en"
+        salida = PLANTILLAS if idioma == "es" else PLANTILLAS / "en"
+        salida.mkdir(parents=True, exist_ok=True)
 
-        if plantilla in INDICE_EXTRA:
-            viejo, nuevo = INDICE_EXTRA[plantilla]
-            cuerpo = cuerpo.replace(viejo, nuevo, 1)
+        for fragmento, plantilla in PAGINAS.items():
+            fuente = origen / fragmento
+            if not fuente.is_file():
+                print(f"  sin traducir: {idioma}/{fragmento}", file=sys.stderr)
+                continue
+            cuerpo = preparar(fuente.read_text(encoding="utf-8"), idioma)
 
-        if plantilla in EXTRAS:
-            # El extra va dentro del <main>, justo antes de cerrarlo.
-            corte = cuerpo.rindex("    </main>")
-            cuerpo = cuerpo[:corte] + EXTRAS[plantilla] + cuerpo[corte:]
+            if idioma == "es" and plantilla in INDICE_EXTRA:
+                viejo, nuevo = INDICE_EXTRA[plantilla]
+                cuerpo = cuerpo.replace(viejo, nuevo, 1)
 
-        destino = PLANTILLAS / f"{plantilla}.html"
-        destino.write_text(
-            '{% extends "base" %}\n\n{% block contenido %}\n' + cuerpo + "\n{% end %}\n",
-            encoding="utf-8")
-        print(f"  {destino.name:16} {destino.stat().st_size:>7} B")
+            if idioma == "es" and plantilla in EXTRAS:
+                # El extra va dentro del <main>, justo antes de cerrarlo.
+                corte = cuerpo.rindex("    </main>")
+                cuerpo = cuerpo[:corte] + EXTRAS[plantilla] + cuerpo[corte:]
+
+            destino = salida / f"{plantilla}.html"
+            destino.write_text(
+                '{% extends "base" %}\n\n{% block contenido %}\n' + cuerpo + "\n{% end %}\n",
+                encoding="utf-8")
+            etiqueta = destino.name if idioma == "es" else f"en/{destino.name}"
+            print(f"  {etiqueta:16} {destino.stat().st_size:>7} B")
+            hechas += 1
 
     copiados = sincronizar()
-    print(f"\n{len(PAGINAS)} plantillas y {copiados} recursos copiados a lux-web")
+    print(f"\n{hechas} plantillas y {copiados} recursos copiados a lux-web")
     return 0
 
 

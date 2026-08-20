@@ -1,35 +1,32 @@
-{% extends "base" %}
-
-{% block contenido %}
   <header class="cabecera-pagina">
     <div class="cuervo-escena" aria-hidden="true">
       <span class="cuervo-ave"></span>
       <span class="cuervo-percha"></span>
     </div>
-    <h1 class="titulo-pagina">Empezar</h1>
-    <p class="entradilla">De cero a un servidor respondiendo, en cuatro órdenes. No hace falta nada más que git, Maven y un JDK 21.</p>
+    <h1 class="titulo-pagina">Get started</h1>
+    <p class="entradilla">From nothing to a server answering requests, in four commands. All you need is git, Maven and a JDK 21.</p>
   </header>
 
   <div class="cuerpo">
-    <nav class="indice" aria-label="En esta página">
+    <nav class="indice" aria-label="On this page">
       <ol>
-        <li><a href="#instalar"><span class="n">01</span> Instalación</a></li>
-        <li><a href="#empezar"><span class="n">02</span> Primeros pasos</a></li>
+        <li><a href="#instalar"><span class="n">01</span> Installation</a></li>
+        <li><a href="#empezar"><span class="n">02</span> First steps</a></li>
       </ol>
     </nav>
     <main>
 <section id="instalar">
-        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Instalación</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Installation</h2></div>
 
         <p>
-          LuxCore no está publicado en Maven Central todavía, así que hay un instalador. Baja el
-          paquete, comprueba su huella, lo compila, deja los artefactos en tu repositorio local de
-          Maven y te pone la orden <code>lux</code> a mano. No pide contraseña y no escribe fuera
-          de tu carpeta personal.
+          LuxCore is not published to Maven Central yet, so there is an installer. It downloads the
+          package, checks its fingerprint, builds it, leaves the artefacts in your local Maven
+          repository and puts the <code>lux</code> command within reach. It asks for no password and
+          writes nothing outside your home folder.
         </p>
 
         <div class="codigo">
-          <div class="barra"><span class="etiqueta">macOS y Linux</span><span class="etiqueta">sh</span></div>
+          <div class="barra"><span class="etiqueta">macOS and Linux</span><span class="etiqueta">sh</span></div>
 <pre>curl -fsSL https://luxcore.ginit.dev/instalar | sh</pre>
         </div>
 
@@ -39,20 +36,20 @@
         </div>
 
         <p class="medida">
-          Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
-          antes de ejecutarlos — <a href="/instalar">instalar</a> ·
-          <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 342 pruebas durante la instalación.
+          Both scripts are served as plain text on purpose: open them in your browser and read them
+          before running them — <a href="/instalar">instalar</a> ·
+          <a href="/instalar.ps1">instalar.ps1</a>. With <code>--con-pruebas</code> the installer
+          also runs the 1,342 tests as it goes.
         </p>
 
-        <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
+        <p>And if you would rather do it by hand, it is the same thing step by step:</p>
 
         <div class="mandos">
           <div class="conmutador" role="group" aria-label="Idioma / Language">
             <button type="button" id="btnEs" aria-pressed="true">ES</button>
             <button type="button" id="btnEn" aria-pressed="false">EN</button>
           </div>
-          <button type="button" class="accion" id="btnRepetir">Repetir</button>
+          <button type="button" class="accion" id="btnRepetir">Replay</button>
         </div>
 
         <div class="terminal">
@@ -67,43 +64,43 @@
         <div class="pasos" id="pasos"></div>
 
         <p style="margin-top:1.5rem" id="nota">
-          Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 21</code> o superior. Nada
-          más — LuxCore no tiene dependencias externas.
+          Requirements: <code>git</code>, <code>Maven</code> and a <code>JDK 21</code> or newer.
+          Nothing else — LuxCore has no external dependencies.
         </p>
 
-        <p>Después, en tu <code>pom.xml</code>, toma solo lo que uses:</p>
+        <p>Then, in your <code>pom.xml</code>, take only what you use:</p>
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">pom.xml</span><span class="etiqueta">XML</span></div>
 <pre>&lt;dependency&gt;
     &lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;
-    &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;   <span class="cm">&lt;!-- arrastra lux-http --&gt;</span>
+    &lt;artifactId&gt;<span class="st">lux-core</span>&lt;/artifactId&gt;   <span class="cm">&lt;!-- pulls in lux-http --&gt;</span>
     &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
 &lt;/dependency&gt;
 
-<span class="cm">&lt;!-- opcionales --&gt;</span>
+<span class="cm">&lt;!-- optional --&gt;</span>
 &lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-view</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;&lt;/dependency&gt;
 &lt;dependency&gt;&lt;groupId&gt;<span class="st">lux</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">lux-data</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;&lt;/dependency&gt;
 
-<span class="cm">&lt;!-- el driver JDBC lo pone tu aplicación --&gt;</span>
+<span class="cm">&lt;!-- the JDBC driver is your application's business --&gt;</span>
 &lt;dependency&gt;&lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;&lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;&lt;version&gt;<span class="st">42.7.3</span>&lt;/version&gt;&lt;/dependency&gt;</pre>
         </div>
 
         <div class="aviso nota">
-          <div class="etiqueta">Aplicación de ejemplo</div>
+          <div class="etiqueta">Example application</div>
           <p>
-            <code>java/ejemplo</code> es un gestor de tareas completo —vistas, formularios, H2 y
-            API REST— con 36 pruebas de punta a punta. Es el mejor sitio por donde empezar a leer.
+            <code>java/ejemplo</code> is a complete task manager —views, forms, H2 and a REST API—
+            with 36 end-to-end tests. It is the best place to start reading.
           </p>
         </div>
       </section>
 <section id="empezar">
-        <div class="titulo-seccion"><span class="indice-num">02</span><h2>En cinco minutos</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>In five minutes</h2></div>
 
         <p>
-          Un controlador es una clase corriente. Lo que devuelve decide el formato: un objeto se
-          serializa a JSON, un <code>String</code> sale como texto plano, <code>null</code> es un
-          204. Sin anotación de por medio.
+          A controller is an ordinary class. What it returns decides the format: an object is
+          serialised to JSON, a <code>String</code> goes out as plain text, <code>null</code> is a
+          204. No annotation involved.
         </p>
 
         <div class="codigo">
@@ -137,11 +134,11 @@
         </div>
 
         <p>
-          Eso es todo. <code>Lux.run</code> registra las rutas, levanta el servidor e imprime el
-          puerto y el tiempo de arranque. No hay <code>web.xml</code>, ni contenedor, ni despliegue.
+          That is all. <code>Lux.run</code> registers the routes, starts the server and prints the
+          port and the boot time. There is no <code>web.xml</code>, no container, no deployment.
         </p>
 
-        <h3>Con todo declarado</h3>
+        <h3>With everything spelled out</h3>
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">App.java</span><span class="etiqueta">Java</span></div>
@@ -159,10 +156,8 @@
     .routes(r -&gt; r.get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>))
     .start();
 
-servidor.await();  <span class="cm">// bloquea hasta que se apague</span></pre>
+servidor.await();  <span class="cm">// blocks until shutdown</span></pre>
         </div>
       </section>
     </main>
   </div>
-
-{% end %}

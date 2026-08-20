@@ -1,0 +1,356 @@
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Modules</h1>
+    <p class="entradilla">Five pieces you take separately. If all you need is to answer HTTP, lux-http is enough and it is 64 KB.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="On this page">
+      <ol>
+        <li><a href="#piezas"><span class="n">01</span> The five</a></li>
+        <li><a href="#servidor"><span class="n">02</span> Server</a></li>
+        <li><a href="#vistas"><span class="n">03</span> Views</a></li>
+        <li><a href="#datos"><span class="n">04</span> Data</a></li>
+        <li><a href="#seguridad"><span class="n">05</span> Security</a></li>
+        <li><a href="#configuracion"><span class="n">06</span> Configuration</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="piezas">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>The five modules</h2></div>
+
+        <p>
+          Each module is taken separately. If all you need is to answer HTTP,
+          <code>lux-http</code> is enough and it is 64 KB.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead>
+              <tr><th>Module</th><th>Needs</th><th class="cifra">Classes</th><th class="cifra">Lines</th><th class="cifra">Tests</th><th class="cifra">Size</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mono">lux-http</span><span class="detalle">HTTP/1.1 server, reloadable TLS, pluggable sessions, multipart, gzip, static files with ranges, WebSocket</span></td>
+                <td>—</td><td class="cifra">38</td><td class="cifra">3860</td><td class="cifra">229</td><td class="cifra">81 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-core</span><span class="detalle">Routes, injection, optional base class, JSON, validation, security, metrics, cache, events, tasks, OpenAPI</span></td>
+                <td>lux-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-view</span><span class="detalle">Templates with inheritance, loops and escaping by default</span></td>
+                <td>lux-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transactions, repositories and table-backed sessions</span></td>
+                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
+              </tr>
+              <tr>
+                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Deploy a LuxCore application inside Tomcat 10.1+</span></td>
+                <td>lux-core</td><td class="cifra">4</td><td class="cifra">588</td><td class="cifra">35</td><td class="cifra">13 KB</td>
+              </tr>
+              <tr class="total">
+                <td>All five</td><td>—</td><td class="cifra">126</td><td class="cifra">11,759</td><td class="cifra">1,047</td><td class="cifra">310 KB</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The remaining 36 tests up to 940 belong to the example application, which exercises the
+          five modules end to end.
+        </p>
+      </section>
+<section id="servidor">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Server · lux-http</h2></div>
+
+        <p>
+          HTTP/1.1 with one virtual thread per connection. It can be used on its own, without
+          <code>lux-core</code>, if all you want is to answer requests.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">No framework</span><span class="etiqueta">Java</span></div>
+<pre>Server.start(<span class="st">8080</span>, (req, res) -&gt; res.text(<span class="st">"Hola"</span>));</pre>
+        </div>
+
+        <h3>Options</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Option</th><th class="cifra">Default</th><th>What for</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">port</td><td class="cifra">8080</td><td>0 picks a free one</td></tr>
+              <tr><td class="mono-clave">host</td><td class="cifra">0.0.0.0</td><td>Listening interface</td></tr>
+              <tr><td class="mono-clave">maxConnections</td><td class="cifra">10,000</td><td>Ceiling on concurrent connections</td></tr>
+              <tr><td class="mono-clave">idleTimeoutMillis</td><td class="cifra">30,000</td><td>Cuts idle connections</td></tr>
+              <tr><td class="mono-clave">handlerTimeoutMillis</td><td class="cifra">30,000</td><td>Frees the connection if the handler hangs</td></tr>
+              <tr><td class="mono-clave">shutdownGraceMillis</td><td class="cifra">10,000</td><td>Waits for in-flight requests on shutdown</td></tr>
+              <tr><td class="mono-clave">maxBodyBytes</td><td class="cifra">10 MB</td><td>Maximum body size</td></tr>
+              <tr><td class="mono-clave">maxHeaderBytes</td><td class="cifra">32,768</td><td>Maximum header size</td></tr>
+              <tr><td class="mono-clave">maxHeaderCount</td><td class="cifra">100</td><td>Maximum number of headers</td></tr>
+              <tr><td class="mono-clave">maxKeepAliveRequests</td><td class="cifra">1,000</td><td>Requests per connection</td></tr>
+              <tr><td class="mono-clave">sessionTimeoutMillis</td><td class="cifra">30 min</td><td>Session expiry on inactivity</td></tr>
+              <tr><td class="mono-clave">gzipMinBytes</td><td class="cifra">1,024</td><td>Compression threshold; 0 disables it</td></tr>
+              <tr><td class="mono-clave">requireHost</td><td class="cifra">true</td><td>Requires <code>Host</code> on HTTP/1.1</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">TLS and static files</span><span class="etiqueta">Java</span></div>
+<pre>ServerOptions opciones = ServerOptions.builder()
+    .port(<span class="st">8443</span>)
+    .tls(Tls.fromKeystore(Path.of(<span class="st">"certificado.p12"</span>), <span class="st">"clave"</span>.toCharArray()))
+    .maxBodyBytes(<span class="st">50L</span> &lt;&lt; <span class="st">20</span>)
+    .build();
+
+StaticFiles.from(Path.of(<span class="st">"publico"</span>))                   <span class="cm">// from disk</span>
+StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">"/estaticos"</span>)  <span class="cm">// from the JAR</span></pre>
+        </div>
+
+        <p>
+          Static files emit <code>ETag</code> and <code>Last-Modified</code>, answer 304 to
+          <code>If-None-Match</code>, and block any attempt to escape the root directory.
+        </p>
+      </section>
+<section id="vistas">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Views · lux-view</h2></div>
+
+        <p>
+          Compiled and cached templates, with inheritance. HTML escaping is the default behaviour:
+          raw output has to be asked for explicitly.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Syntax</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">{{ expr }}</td><td>Interpolates, escaping the HTML</td></tr>
+              <tr><td class="mono-clave">{{&amp; expr }}</td><td>Interpolates without escaping</td></tr>
+              <tr><td class="mono-clave">{% if c %} … {% end %}</td><td>Conditional, with <code>{% elseif %}</code> and <code>{% else %}</code></td></tr>
+              <tr><td class="mono-clave">{% for x in lista %}</td><td>Loop, with <code>{% else %}</code> if it comes out empty</td></tr>
+              <tr><td class="mono-clave">{% include "parcial.html" %}</td><td>Inserts another template</td></tr>
+              <tr><td class="mono-clave">{% extends "base.html" %}</td><td>Inherits from a layout</td></tr>
+              <tr><td class="mono-clave">{% block nombre %}</td><td>Defines or overrides a block</td></tr>
+              <tr><td class="mono-clave">{# nota #}</td><td>Comment, never reaches the HTML</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Inside a loop</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Variable</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">loop.index</td><td>Position from 0</td></tr>
+              <tr><td class="mono-clave">loop.number</td><td>Position from 1</td></tr>
+              <tr><td class="mono-clave">loop.first / loop.last</td><td>Whether it is the first or the last</td></tr>
+              <tr><td class="mono-clave">loop.size</td><td>How many elements there are</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">lista.html</span><span class="etiqueta">Template</span></div>
+<pre>{% extends <span class="st">"base.html"</span> %}
+
+{% block titulo %}Tareas · {{ pendientes }} pendientes{% end %}
+
+{% block contenido %}
+{% if tareas %}
+  &lt;ul&gt;
+  {% for t in tareas %}
+    &lt;li class=<span class="st">"{{ t.etiqueta }}"</span>&gt;
+      {{ loop.number }}. {{ t.titulo }}
+      {% if !loop.last %}&lt;hr&gt;{% end %}
+    &lt;/li&gt;
+  {% end %}
+  &lt;/ul&gt;
+{% else %}
+  &lt;p&gt;No hay ninguna tarea.&lt;/p&gt;
+{% end %}
+{% end %}</pre>
+        </div>
+
+        <p>
+          Expressions accept dotted paths (<code>autor.nombre</code>), list indexes
+          (<code>items.0</code>), <code>.size</code>, literals, and the operators
+          <code>== != &lt; &gt; &lt;= &gt;=</code>, <code>and</code>, <code>or</code>,
+          <code>!</code> and parentheses. Nothing else: it is deliberately small.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Configuring the engine</span><span class="etiqueta">Java</span></div>
+<pre>Templates.fromClasspath(<span class="st">"plantillas"</span>)          <span class="cm">// inside the JAR</span>
+Templates.from(Path.of(<span class="st">"plantillas"</span>))          <span class="cm">// from disk</span>
+    .suffix(<span class="st">".html"</span>)                          <span class="cm">// so you can write view("lista")</span>
+    .reload(<span class="kw">true</span>)                             <span class="cm">// recompiles on edit, during development</span></pre>
+        </div>
+      </section>
+<section id="datos">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Data · lux-data</h2></div>
+
+        <p>
+          Plain JDBC, no ORM. Everything goes through prepared statements; table and column names
+          are validated character by character before the database is touched.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Connecting</span><span class="etiqueta">Java</span></div>
+<pre>DataSources.registerDefault(
+    Pool.to(<span class="st">"jdbc:postgresql://localhost/tareas"</span>)
+        .credentials(<span class="st">"usuario"</span>, <span class="st">"clave"</span>)
+        .maxSize(<span class="st">10</span>)
+        .build());</pre>
+        </div>
+
+        <h3>Queries</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Db</span><span class="etiqueta">Java</span></div>
+<pre>Db db = Db.open();
+
+Rows filas = db.select(<span class="st">"tareas"</span>, <span class="st">"hecha = ?"</span>, <span class="kw">false</span>);
+Row  una   = db.selectOne(<span class="st">"tareas"</span>, <span class="st">"id = ?"</span>, <span class="st">7</span>);
+<span class="kw">long</span> total = db.count(<span class="st">"tareas"</span>, <span class="kw">null</span>);
+
+List&lt;Tarea&gt; t = db.query(Tarea.class, <span class="st">"SELECT * FROM tareas WHERE prioridad = ?"</span>, <span class="st">"alta"</span>);
+Page&lt;Row&gt; pag = db.page(<span class="st">"tareas"</span>, <span class="st">"hecha = ?"</span>, <span class="st">1</span>, <span class="st">20</span>, <span class="kw">false</span>);
+
+db.insert(<span class="st">"tareas"</span>, Row.of(<span class="st">"titulo"</span>, <span class="st">"Escribir"</span>, <span class="st">"prioridad"</span>, <span class="st">"alta"</span>));
+db.update(<span class="st">"tareas"</span>, Row.of(<span class="st">"hecha"</span>, <span class="kw">true</span>), <span class="st">"id = ?"</span>, <span class="st">7</span>);
+db.delete(<span class="st">"tareas"</span>, <span class="st">"id = ?"</span>, <span class="st">7</span>);
+
+<span class="cm">// named parameters</span>
+db.queryNamed(<span class="st">"SELECT * FROM tareas WHERE prioridad = :p"</span>, Map.of(<span class="st">"p"</span>, <span class="st">"alta"</span>));</pre>
+        </div>
+
+        <h3>Repositories</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Repository</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Table</span>(<span class="st">"tareas"</span>)
+<span class="kw">public record</span> Tarea(<span class="an">@Id</span> <span class="kw">long</span> id, String titulo,
+                   <span class="an">@Column</span>(<span class="st">"hecha"</span>) <span class="kw">boolean</span> completada) {}
+
+<span class="an">@Service</span>
+<span class="kw">public class</span> Tareas <span class="kw">extends</span> Repository&lt;Tarea, Long&gt; {
+    <span class="kw">public</span> Tareas() { <span class="kw">super</span>(Tarea.class); }
+
+    <span class="kw">public</span> List&lt;Tarea&gt; pendientes() { <span class="kw">return</span> findBy(<span class="st">"hecha = ?"</span>, <span class="kw">false</span>); }
+}
+
+tareas.findById(<span class="st">7L</span>)     tareas.findAll()      tareas.findPage(<span class="st">1</span>, <span class="st">20</span>)
+tareas.insert(tarea)     tareas.update(tarea)  tareas.deleteById(<span class="st">7L</span>)
+tareas.count()           tareas.existsById(<span class="st">7L</span>)</pre>
+        </div>
+
+        <h3>Transactions</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tx</span><span class="etiqueta">Java</span></div>
+<pre>Tx.run(() -&gt; {
+    cuentas.debitar(origen, monto);
+    cuentas.acreditar(destino, monto);      <span class="cm">// if this throws, everything is undone</span>
+});
+
+<span class="kw">long</span> id = Tx.call(() -&gt; pedidos.insert(pedido));</pre>
+        </div>
+
+        <ul class="prosa">
+          <li>Queries inside a transaction <strong>share a connection</strong> automatically.</li>
+          <li><strong>Nested transactions join</strong> the outer one; there are no savepoints.</li>
+          <li>Column names are looked up <strong>case-insensitively</strong>: H2 and Oracle return <code>TITULO</code>, PostgreSQL returns <code>titulo</code>, and both work.</li>
+        </ul>
+      </section>
+<section id="seguridad">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Security</h2></div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Middleware</span><span class="etiqueta">Java</span></div>
+<pre>.use(Cors.allowing(<span class="st">"https://app.pe"</span>).credentials(<span class="kw">true</span>))
+.use(Csrf.enabled().exempt(<span class="st">"/api/"</span>))
+.use(RateLimit.perMinute(<span class="st">300</span>).keyBy(ctx -&gt; ctx.header(<span class="st">"X-Cliente"</span>)))
+.use((ctx, cadena) -&gt; {                    <span class="cm">// one of your own</span>
+    <span class="kw">long</span> t0 = System.nanoTime();
+    <span class="kw">try</span> { <span class="kw">return</span> cadena.proceed(ctx); }
+    <span class="kw">finally</span> { registrar(ctx, System.nanoTime() - t0); }
+})</pre>
+        </div>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Piece</th><th>What it covers</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">Cors</td><td><code>OPTIONS</code> preflight, credentials, <code>Vary: Origin</code>. With credentials it never answers <code>*</code>: it returns the specific origin.</td></tr>
+              <tr><td class="mono-clave">Csrf</td><td>Token in the session, constant-time comparison. Reads <code>_csrf</code> from the header, the form or the query string. Exemption by prefix or with <code>@CsrfExempt</code>.</td></tr>
+              <tr><td class="mono-clave">RateLimit</td><td>Weighted sliding window, <code>X-RateLimit-*</code> and <code>Retry-After</code> headers, configurable key.</td></tr>
+              <tr><td class="mono-clave">Sanitize</td><td><code>html()</code> strips scripts, styles, iframes and event handlers; <code>text()</code> leaves only text; <code>filename()</code> neutralises paths.</td></tr>
+              <tr><td class="mono-clave">@RequireAuth</td><td>401 if there is no principal.</td></tr>
+              <tr><td class="mono-clave">@RequireRole("admin")</td><td>401 when unauthenticated, 403 when the role is insufficient.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Authentication</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Authenticator</span><span class="etiqueta">Java</span></div>
+<pre>.authenticator(ctx -&gt; {
+    String token = ctx.header(<span class="st">"Authorization"</span>);
+    <span class="kw">if</span> (token == <span class="kw">null</span>) <span class="kw">return null</span>;         <span class="cm">// anonymous</span>
+    <span class="kw">return</span> Principal.of(<span class="st">"andre"</span>, <span class="st">"admin"</span>);   <span class="cm">// id + roles</span>
+})</pre>
+        </div>
+
+        <p>
+          The pipeline order is <strong>authenticate → middleware → authorise → bind →
+          invoke → render</strong>. That way middleware sees the principal and can at the same
+          time wrap the 401s and 403s to log them.
+        </p>
+
+        <div class="aviso nota">
+          <div class="etiqueta">What the server rejects on its own</div>
+          <p>
+            Folded headers, duplicate <code>Content-Length</code>, <code>Content-Length</code>
+            alongside <code>Transfer-Encoding</code>, a missing or duplicate <code>Host</code>,
+            control characters in response headers, and escapes from the root directory in static
+            files.
+          </p>
+        </div>
+      </section>
+<section id="configuracion">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Configuration</h2></div>
+
+        <p>
+          <code>loadConfig()</code> reads <code>application.properties</code> from the classpath
+          and the current directory, and on top of that applies environment variables prefixed
+          with <code>LUX_</code> and system properties prefixed with <code>lux.</code>
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">application.properties</span><span class="etiqueta">Properties</span></div>
+<pre>server.port=8080
+server.maxConnections=5000
+server.gzipMinBytes=512
+
+db.url=jdbc:postgresql://localhost/tareas
+db.usuario=lux
+db.pool=10</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Reading it</span><span class="etiqueta">Java</span></div>
+<pre>Config config = Config.load();
+
+config.get(<span class="st">"db.url"</span>)                    config.getInt(<span class="st">"db.pool"</span>, <span class="st">5</span>)
+config.getBoolean(<span class="st">"app.debug"</span>, <span class="kw">false</span>)   config.under(<span class="st">"db"</span>)
+
+<span class="cm">// or bind it to a record</span>
+<span class="kw">record</span> Datos(String url, String usuario, <span class="kw">int</span> pool) {}
+Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
+        </div>
+
+        <p>
+          The <code>server.*</code> keys configure the server without writing code:
+          <code>LUX_SERVER_PORT=9000</code> in the environment changes the port.
+        </p>
+      </section>
+    </main>
+  </div>
