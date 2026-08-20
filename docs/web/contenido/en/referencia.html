@@ -1,0 +1,144 @@
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Reference</h1>
+    <p class="entradilla">Verified database engines, systems it runs on, and a comparison with its predecessor on Tomcat.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="On this page">
+      <ol>
+        <li><a href="#bases"><span class="n">01</span> Databases</a></li>
+        <li><a href="#sistemas"><span class="n">02</span> Where it runs</a></li>
+        <li><a href="#comparacion"><span class="n">03</span> Against Tomcat</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="bases">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Databases</h2></div>
+
+        <p>
+          <code>lux-data</code> speaks JDBC and nothing else. Any engine with a JDBC driver works —
+          the driver comes from your application, which is the only external dependency LuxCore
+          allows.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Engine</th><th>Status</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Verified</span></td><td>In memory and on file. The engine behind the example application and its 36 end-to-end tests.</td></tr>
+              <tr><td class="mono">PostgreSQL 16</td><td><span class="pastilla ok">Verified</span></td><td>47 cases in a container: <code>BIGSERIAL</code>, exact decimals, native booleans, dates and <code>LIMIT/OFFSET</code>.</td></tr>
+              <tr><td class="mono">MySQL 8</td><td><span class="pastilla ok">Verified</span></td><td>The same 47 cases: <code>AUTO_INCREMENT</code>, booleans over <code>TINYINT</code> and generated keys.</td></tr>
+              <tr><td class="mono">MariaDB</td><td><span class="pastilla parcial">Not verified</span></td><td>Shares protocol and dialect with MySQL, so it should behave the same.</td></tr>
+              <tr><td class="mono">SQL Server</td><td><span class="pastilla pend">Needs work</span></td><td>Does not support <code>LIMIT/OFFSET</code>: it uses <code>OFFSET … FETCH</code>. Pagination needs an adjustment.</td></tr>
+              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Not verified</span></td><td>Returns column names in upper case, which is already handled since that bug was fixed.</td></tr>
+              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Not verified</span></td><td>No write concurrency: the pool should be set to 1.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">What "verified" means here</div>
+          <p>
+            The three engines marked as such pass <b>the same suite of 47 cases</b>, running in
+            containers: generated keys, exact decimals, booleans, dates, pagination, upper-case
+            aliases, committed and rolled-back transactions, repositories and batch inserts. That
+            suite found a real bug —<code>Row.as()</code> ignored <code>@Column</code> and returned
+            null fields— that no test with a mocked driver had caught.
+          </p>
+        </div>
+      </section>
+<section id="sistemas">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Where it runs</h2></div>
+
+        <p>
+          There is no native code and nothing platform-specific. Wherever there is a JDK 21 or
+          newer, it runs the same.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>System</th><th>Status</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Tested</span></td><td>Intel and Apple Silicon. Where it was developed and where the 1,342 tests run.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Tested</span></td><td>All 1,342 tests green on Linux 6.12, with real PostgreSQL and MySQL. In continuous integration, on JDK 21 and 25, on every change.</td></tr>
+              <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Not verified</span></td><td>Nothing touches system-specific paths or permissions.</td></tr>
+              <tr><td class="mono">Containers</td><td><span class="pastilla parcial">Not verified</span></td><td>Any image with a JRE 21. With no servlet container, the image is the JRE plus 223 KB.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">The real requirement</div>
+            <div>Java 21, because of virtual threads: the server assigns one per connection, and
+              without them the model does not hold up. Developed and measured with OpenJDK 25.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">No native code</div>
+            <div>No JNI, no system libraries, no absolute paths. The JAR is the same everywhere.</div>
+          </div>
+        </div>
+      </section>
+<section id="comparacion">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Against Tomcat</h2></div>
+
+        <p>
+          LuxCore grew out of JxMVC 3.4.0, an MVC framework that works and is in production, but
+          that needs Tomcat to start. The comparison is against its own predecessor.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Metric</th><th class="cifra">JxMVC on Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <tbody>
+              <tr><td>Boot</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
+              <tr><td>Artefact</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td></tr>
+              <tr><td>Needs a container</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
+              <tr><td>Runtime dependencies</td><td class="cifra">Jakarta EE 10</td><td class="cifra">none</td></tr>
+              <tr><td>Production lines</td><td class="cifra">10,379</td><td class="cifra">12,784</td></tr>
+              <tr><td>Tests</td><td class="cifra">347</td><td class="cifra">1,342</td></tr>
+              <tr><td>Tests / code</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
+              <tr><td>rps <code>/json</code></td><td class="cifra">23,307</td><td class="cifra">25,431</td></tr>
+              <tr><td>Memory (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Against the other five</h3>
+
+        <p>
+          All six in identical containers, 64 connections, 30 seconds, median of five runs, zero
+          errors. Sorted by boot time.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Framework</th><th class="cifra">Boot</th><th class="cifra">Image</th><th class="cifra">RSS</th><th class="cifra">/plaintext</th><th class="cifra">/json</th><th class="cifra">/db</th></tr></thead>
+            <tbody>
+              <tr><td><b>LuxCore</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110.3 MB</td><td class="cifra"><b>136.4 MB</b></td><td class="cifra"><b>26,425</b></td><td class="cifra"><b>25,431</b></td><td class="cifra"><b>25,931</b></td></tr>
+              <tr><td>Javalin</td><td class="cifra">451 ms</td><td class="cifra">115.2 MB</td><td class="cifra">285.7 MB</td><td class="cifra">21,994</td><td class="cifra">25,125</td><td class="cifra">24,459</td></tr>
+              <tr><td>JxMVC</td><td class="cifra">698 ms</td><td class="cifra"><b>110.1 MB</b></td><td class="cifra">191.5 MB</td><td class="cifra">24,240</td><td class="cifra">23,307</td><td class="cifra">18,771</td></tr>
+              <tr><td>Quarkus</td><td class="cifra">707 ms</td><td class="cifra">123.2 MB</td><td class="cifra">259.8 MB</td><td class="cifra">25,515</td><td class="cifra">22,744</td><td class="cifra">21,258</td></tr>
+              <tr><td>Micronaut</td><td class="cifra">838 ms</td><td class="cifra">120.7 MB</td><td class="cifra">201.2 MB</td><td class="cifra">18,381</td><td class="cifra">19,088</td><td class="cifra">17,213</td></tr>
+              <tr><td>Spring Boot</td><td class="cifra">1467 ms</td><td class="cifra">127.3 MB</td><td class="cifra">352.5 MB</td><td class="cifra">19,809</td><td class="cifra">20,432</td><td class="cifra">20,088</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">What this table says, and what it does not</div>
+          <p>
+            It says LuxCore <b>wins on everything except image size</b>, and there it loses by
+            0.2 MB. It boots 4.3 times faster than the next one, uses the least memory of the six
+            and leads on all three endpoints. On <code>/db</code> —the one that measures the
+            framework doing real work— it beats the JxMVC it came from by 38 %.
+          </p>
+          <p>
+            What it does not give you is quotable absolute figures: this was measured on Docker
+            Desktop, inside a VM. The conditions were identical for all six, so the comparison is
+            fair; the individual numbers need repeating on bare metal before they go anywhere.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>

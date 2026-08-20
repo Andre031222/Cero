@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="{{ idioma }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,6 +20,9 @@
 <meta name="twitter:description" content="Arranca solo, sin contenedor de servlets y sin una sola dependencia externa.">
 <meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
 <link rel="icon" href="/estaticos/favicon.svg">
+<link rel="alternate" hreflang="es" href="https://luxcore.ginit.dev{{ rutaEs }}">
+<link rel="alternate" hreflang="en" href="https://luxcore.ginit.dev{{ rutaEn }}">
+<link rel="alternate" hreflang="x-default" href="https://luxcore.ginit.dev{{ rutaEs }}">
 <link rel="stylesheet" href="/estaticos/lux.css?v={{ v }}">
 <script src="/estaticos/lux.js?v={{ v }}"></script>
 <script src="/estaticos/terminal.js?v={{ v }}" defer></script>
@@ -33,15 +36,11 @@
       <span class="palabra">Lux<em>Core</em></span>
     </a>
     <nav class="nav-sitio" aria-label="Secciones del sitio">
-      <a href="/"{% if ruta == "/" %} aria-current="page"{% end %}>Inicio</a>
-      <a href="/descargas"{% if ruta == "/descargas" %} aria-current="page"{% end %}>Descargas</a>
-      <a href="/empezar"{% if ruta == "/empezar" %} aria-current="page"{% end %}>Empezar</a>
-      <a href="/guia"{% if ruta == "/guia" %} aria-current="page"{% end %}>Guía</a>
-      <a href="/modulos"{% if ruta == "/modulos" %} aria-current="page"{% end %}>Módulos</a>
-      <a href="/referencia"{% if ruta == "/referencia" %} aria-current="page"{% end %}>Referencia</a>
-      <a href="/panel"{% if ruta == "/panel" %} aria-current="page"{% end %}>Panel</a>
-      {% if usuario %}<a href="/auth/perfil">{{ usuario.nombre }}</a>{% end %}
+      {% for n in nav %}<a href="{{ n.href }}"{% if n.actual %} aria-current="page"{% end %}>{{ n.texto }}</a>
+      {% end %}{% if usuario %}<a href="/auth/perfil">{{ usuario.nombre }}</a>{% end %}
     </nav>
+    <a class="idioma" href="{{ rutaOtra }}" hreflang="{{ otroIdioma }}" lang="{{ otroIdioma }}"
+       title="{{ tituloOtro }}">{{ etiquetaOtro }}</a>
     <button type="button" class="tema" aria-label="Cambiar de tema">
       <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" aria-hidden="true">

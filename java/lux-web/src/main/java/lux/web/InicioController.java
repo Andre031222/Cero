@@ -52,6 +52,40 @@ public class InicioController {
         return pagina(contexto, "referencia", "Referencia · LuxCore");
     }
 
+    // ── inglés ──────────────────────────────────────────────────────────────
+    // Mismas páginas bajo /en. El nombre del archivo no se traduce (/en/guia, no /en/guide):
+    // así cada página y su pareja se corresponden sin tabla de equivalencias.
+
+    @Get("/en")
+    public Result indexEn(Context contexto) {
+        return pagina(contexto, "en/inicio", "LuxCore — Java framework");
+    }
+
+    @Get("/en/descargas")
+    public Result descargasEn(Context contexto) {
+        return pagina(contexto, "en/descargas", "Downloads · LuxCore");
+    }
+
+    @Get("/en/empezar")
+    public Result empezarEn(Context contexto) {
+        return pagina(contexto, "en/empezar", "Get started · LuxCore");
+    }
+
+    @Get("/en/guia")
+    public Result guiaEn(Context contexto) {
+        return pagina(contexto, "en/guia", "Guide · LuxCore");
+    }
+
+    @Get("/en/modulos")
+    public Result modulosEn(Context contexto) {
+        return pagina(contexto, "en/modulos", "Modules · LuxCore");
+    }
+
+    @Get("/en/referencia")
+    public Result referenciaEn(Context contexto) {
+        return pagina(contexto, "en/referencia", "Reference · LuxCore");
+    }
+
     @Get("/panel")
     public Result panel(Context contexto) {
         return pagina(contexto, "panel", "Panel en vivo · LuxCore");

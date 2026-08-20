@@ -188,6 +188,7 @@ lux           Órdenes del proyecto: ./lux test, portal, fatjar…
 | Documento | Qué responde |
 |---|---|
 | [produccion.md](docs/produccion.md) | ¿Está listo para producción? (respuesta corta: todavía no, y ahí está la lista) |
+| [sitio-web.md](docs/sitio-web.md) | Cómo se construye, se traduce y se despliega luxcore.ginit.dev |
 | [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
 | [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Comparación con JxMVC, capa por capa |
 | [versiones.md](docs/versiones.md) | Qué cambió en cada versión, y por qué una publicada no se toca |
