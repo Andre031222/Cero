@@ -127,9 +127,16 @@ def conmutador(archivo: str, idioma: str) -> str:
 
 
 def logo_svg() -> str:
-    # La marca es el cuervo. Va como máscara CSS y no como SVG incrustado, para que
-    # tome el color del tema en claro y en oscuro con un solo archivo.
-    return '<span class="logo" aria-hidden="true"></span>' 
+    """El cuervo de la barra: el mismo dibujo de marca/cuervo.svg, sin patas ni percha.
+
+    Va incrustado y no como imagen para que tome el color del tema con currentColor y
+    quede nítido a cualquier tamaño.
+    """
+    bruto = (AQUI / "marca" / "cuervo.svg").read_text(encoding="utf-8")
+    cuerpo = " ".join(re.sub(r"^<svg[^>]*>|</svg>\s*$|<!--.*?-->", "", bruto, flags=re.S).split())
+    cuerpo = re.sub(r'<g stroke="currentColor".*?</g>', "", cuerpo, flags=re.S)
+    return f'<svg class="logo" viewBox="0 0 420 296" aria-hidden="true">{cuerpo}</svg>'
+
 
 
 def favicon_incrustado() -> str:

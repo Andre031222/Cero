@@ -66,26 +66,26 @@ indexada es peor que una que no existe.
 
 ## La marca
 
-La marca es un **cuervo**, sacado de un dibujo a lápiz (`docs/Cuervo-scaled.jpg`).
+La marca es un **cuervo dibujado de cero en vector**, en `marca/cuervo.svg`: silueta maciza con
+el plumaje calado, 2 KB, y toma el color del tema con `currentColor`, así que sirve igual en
+claro y en oscuro sin duplicar archivos.
 
-El fondo no se recorta: se convierte **la luminancia en canal alfa**. Eso conserva el antialias
-del trazo y, sobre todo, deja el dibujo *tintable por CSS*, así que se usa como máscara sobre
-`background: var(--tinta)` y en tema oscuro se invierte solo, como un grabado, con un único
-archivo en vez de dos.
+Va **incrustado**, no como imagen: en la portada y en la cabecera de Empezar por el propio
+fragmento de contenido, y en la barra a través de `logo_svg()` de `construir.py` y de `base.html`
+en `lux-web`. La versión de la barra es la misma quitándole patas y percha, que a ese tamaño
+solo ensucian.
 
-| Recurso | Dónde se usa | Cómo se hizo |
-|---|---|---|
-| `assets/cuervo.webp` | Portada y cabecera de Empezar | Luminancia → alfa, `-level 0%,38%` para darle presencia, 620 px, 75 KB |
-| `assets/cuervo-marca.png` | Barra superior | Silueta sólida del mismo dibujo, 3,8 KB |
-| `marca/favicon.svg` | Pestaña del navegador | La silueta con los rasgos finos engrosados, para que aguante a 16 px |
+Los calados van pintados en `var(--papel)` y **no por máscara**, a propósito: una máscara obliga
+a un identificador único, y el dibujo aparece dos veces en la misma página. Como la marca
+siempre se apoya sobre el fondo de la página, el resultado es el mismo y no hay ids que choquen.
 
-La silueta se saca nivelando el papel a blanco absoluto, umbralizando, rellenando el interior y
-limpiando las motas por componentes conexas. El relleno por inundación a secas **no** funciona:
-el trazo a lápiz no es una curva cerrada y se desborda.
+El favicon es el mismo dibujo en magenta, recortado a su caja.
 
-> **Licencia sin comprobar.** El sufijo `-scaled` del archivo es de WordPress, así que el dibujo
-> probablemente venga descargado. Para un repositorio que acompaña papers, conviene aclarar su
-> licencia antes de seguir usándolo como marca.
+> **Hubo antes otro cuervo, y hubo que retirarlo.** Era un dibujo a lápiz precioso, pero resultó
+> ser de **SEO/BirdLife**: el archivo conservaba el atributo `kMDItemWhereFroms` de macOS
+> apuntando a `atlasaves.seo.org`, y la huella SHA-256 coincidía byte a byte con la del original.
+> Se sustituyó por el dibujo propio y se borraron el JPG y sus cinco derivados. **Lección: antes
+> de usar una imagen, mirar `xattr -l` y el EXIF** — el archivo casi siempre dice de dónde viene.
 
 ### La imagen que sale al compartir el enlace
 
