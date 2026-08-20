@@ -56,6 +56,21 @@ recomienda usar.
 
 `Jobs` → `Tasks`. Sin alias: la clase nació esta misma semana y nunca se publicó.
 
+### Añadido después de etiquetar la 0.3.0
+
+Lo que sigue entró tras la etiqueta y saldrá en la **0.4.0**; el paquete `0.3.0` publicado no lo
+lleva:
+
+- **`Migrations`** — migraciones de esquema. Aplica los `.sql` de un directorio en orden y una
+  sola vez, cada uno en su transacción, y **falla si un archivo ya aplicado cambió de huella**.
+- **`Mail`** — cliente SMTP sobre `Socket`, con STARTTLS y AUTH LOGIN. JavaMail no es parte de
+  Java SE, así que mandar un correo obligaba a traerse una dependencia.
+- **`Sse`** — eventos del servidor al navegador. El panel del sitio ya no pregunta cada dos
+  segundos: el servidor empuja.
+- **`StaticFiles.spa()`** — respaldo para React, Svelte y Vue con rutas de cliente.
+- **`lux new … --front`** — genera el proyecto separado en `backend/` y `frontend/`, con CORS de
+  desarrollo y el respaldo de SPA ya puestos.
+
 ### Cifras
 
 | | 0.2.0 | 0.3.0 |
