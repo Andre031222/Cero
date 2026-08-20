@@ -18,6 +18,7 @@ public final class TestSuite {
         AutenticacionTests.run();
         TransversalesTests.run();
         ControladorBaseTests.run();
+        MailTests.run();
 
         Check.report();
         if (Check.failures() > 0) {

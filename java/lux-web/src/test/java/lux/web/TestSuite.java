@@ -37,6 +37,7 @@ public final class TestSuite {
             acceso(base);
             generador(base);
             instalador(base);
+            generadorConFrontend();
         } finally {
             servidor.stop();
         }
@@ -249,6 +250,51 @@ public final class TestSuite {
         HttpResponse<String> windows = get(base + "/instalar.ps1");
         comprobar("/instalar.ps1 responde 200", windows.statusCode() == 200);
         comprobar("y comprueba la huella también", windows.body().contains("Get-FileHash"));
+    }
+
+    /** {@code lux new … --front} tiene que dejar un backend que ya hable con un frontend aparte. */
+    private static void generadorConFrontend() throws Exception {
+        java.nio.file.Path base = java.nio.file.Files.createTempDirectory("lux-front");
+        java.nio.file.Path proyecto = base.resolve("demo");
+
+        String antes = System.getProperty("user.dir");
+        System.setProperty("user.dir", base.toString());
+        try {
+            java.nio.file.Path raizJava = proyecto.resolve("backend");
+            var peticion = GeneradorProyecto.Peticion.de("com.acme", "demo", "Demo", "ninguno");
+            escribirZip(GeneradorProyecto.construir(peticion), raizJava);
+            Frontend.escribir(proyecto, peticion);
+            Frontend.cablearBackend(raizJava, peticion);
+
+            java.nio.file.Path app = raizJava.resolve("src/main/java/com/acme/demo/App.java");
+            String fuente = java.nio.file.Files.readString(app);
+            comprobar("la aplicación generada sirve el frontend", fuente.contains("fromClasspath(\"front\").spa()"));
+            comprobar("y abre CORS a los puertos de desarrollo", fuente.contains("localhost:5173"));
+            comprobar("sin motor de plantillas, que aquí no pinta nada", !fuente.contains("Templates"));
+
+            String controlador = java.nio.file.Files.readString(
+                    raizJava.resolve("src/main/java/com/acme/demo/InicioController.java"));
+            comprobar("el controlador es una API bajo /api", controlador.contains("@Route(\"/api\")"));
+
+            comprobar("hay carpeta para lo compilado del frontend",
+                    java.nio.file.Files.isDirectory(raizJava.resolve("src/main/resources/front")));
+            comprobar("y no quedan plantillas del otro estilo",
+                    !java.nio.file.Files.exists(raizJava.resolve("src/main/resources/plantillas")));
+            comprobar("el frontend tiene su carpeta y su guía",
+                    java.nio.file.Files.exists(proyecto.resolve("frontend/LEEME.md")));
+        } finally {
+            System.setProperty("user.dir", antes);
+        }
+    }
+
+    private static void escribirZip(byte[] zip, java.nio.file.Path destino) throws Exception {
+        try (var entrada = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(zip))) {
+            for (var e = entrada.getNextEntry(); e != null; e = entrada.getNextEntry()) {
+                java.nio.file.Path archivo = destino.resolve(e.getName());
+                java.nio.file.Files.createDirectories(archivo.getParent());
+                java.nio.file.Files.write(archivo, entrada.readAllBytes());
+            }
+        }
     }
 
     // ── utilidades ───────────────────────────────────────────────────────────

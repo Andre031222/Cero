@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -20,27 +22,39 @@ public final class Nuevo {
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].startsWith("-")) {
             System.err.println("""
-                    uso:  lux new <nombre> [grupo] [motor]
-                          lux new <nombre> [motor]
+                    uso:  lux new <nombre> [grupo] [motor] [--front]
 
                       nombre   nombre del proyecto y de la carpeta      (mi-app)
                       grupo    groupId de Maven                         (com.ejemplo)
                       motor    ninguno | h2 | postgresql | mysql        (ninguno)
+                      --front  separa en backend/ y frontend/, listo para React,
+                               Svelte o Vue, con la API sirviendo JSON
 
-                      lux new tienda                 sin base de datos
-                      lux new tienda h2              con H2
-                      lux new tienda pe.unap mysql   grupo propio y MySQL""");
+                      lux new tienda                       sin base de datos
+                      lux new tienda h2                    con H2
+                      lux new tienda pe.unap mysql         grupo propio y MySQL
+                      lux new tienda h2 --front            con carpeta para el frontend""");
             System.exit(1);
         }
 
-        String artefacto = args[0];
-        String grupo = args.length > 1 ? args[1] : "com.ejemplo";
-        String motor = args.length > 2 ? args[2] : "ninguno";
+        List<String> libres = new ArrayList<>();
+        boolean conFrontend = false;
+        for (String argumento : args) {
+            if (argumento.equals("--front")) {
+                conFrontend = true;
+            } else {
+                libres.add(argumento);
+            }
+        }
+
+        String artefacto = libres.get(0);
+        String grupo = libres.size() > 1 ? libres.get(1) : "com.ejemplo";
+        String motor = libres.size() > 2 ? libres.get(2) : "ninguno";
 
         // "lux new tienda h2" es lo que sale solo; sin esto, h2 acabaría siendo el groupId.
-        if (args.length == 2 && MOTORES.contains(args[1])) {
+        if (libres.size() == 2 && MOTORES.contains(libres.get(1))) {
             grupo = "com.ejemplo";
-            motor = args[1];
+            motor = libres.get(1);
         }
 
         Path destino = Path.of(artefacto).toAbsolutePath();
@@ -50,14 +64,30 @@ public final class Nuevo {
         }
 
         var peticion = GeneradorProyecto.Peticion.de(grupo, artefacto, artefacto, motor);
-        int archivos = descomprimir(GeneradorProyecto.construir(peticion), destino);
+        Path raizJava = conFrontend ? destino.resolve("backend") : destino;
+        int archivos = descomprimir(GeneradorProyecto.construir(peticion), raizJava);
+
+        if (conFrontend) {
+            archivos += Frontend.escribir(destino, peticion);
+            Frontend.cablearBackend(raizJava, peticion);
+        }
 
         System.out.println("  " + destino);
         System.out.println("  " + archivos + " archivos · " + peticion.grupo() + ":"
-                + peticion.artefacto() + (peticion.motor().equals("ninguno") ? "" : " · " + peticion.motor()));
+                + peticion.artefacto() + (peticion.motor().equals("ninguno") ? "" : " · " + peticion.motor())
+                + (conFrontend ? " · backend + frontend" : ""));
         System.out.println();
-        System.out.println("    cd " + artefacto);
-        System.out.println("    mvn -q package && java -jar target/" + peticion.artefacto() + ".jar");
+        if (conFrontend) {
+            System.out.println("    cd " + artefacto + "/backend");
+            System.out.println("    mvn -q package && java -jar target/" + peticion.artefacto() + ".jar");
+            System.out.println();
+            System.out.println("  El frontend va en frontend/. Cuando lo compiles, su salida se");
+            System.out.println("  copia a backend/src/main/resources/front/ y sale un solo jar.");
+            System.out.println("  Lo explica frontend/LEEME.md.");
+        } else {
+            System.out.println("    cd " + artefacto);
+            System.out.println("    mvn -q package && java -jar target/" + peticion.artefacto() + ".jar");
+        }
     }
 
     private static int descomprimir(byte[] zip, Path destino) throws IOException {
