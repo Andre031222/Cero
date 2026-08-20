@@ -9,6 +9,7 @@ import lux.http.ErrorReporter;
 import lux.http.Server;
 
 import java.net.URI;
+import java.time.Duration;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -88,9 +89,19 @@ final class IntegrationTests {
         }
     }
 
+    /**
+     * Con plazos. Sin ellos, un servidor que no contesta deja la peticion aparcada para siempre
+     * y cuelga la compilacion entera: paso el 20 de agosto de 2026, una hora parada aqui.
+     */
     private static HttpResponse<String> get(String url) throws Exception {
-        return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
-                .send(HttpRequest.newBuilder(URI.create(url)).version(HttpClient.Version.HTTP_1_1).build(),
+        return HttpClient.newBuilder()
+                        .version(HttpClient.Version.HTTP_1_1)
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build()
+                .send(HttpRequest.newBuilder(URI.create(url))
+                                .version(HttpClient.Version.HTTP_1_1)
+                                .timeout(Duration.ofSeconds(15))
+                                .build(),
                         HttpResponse.BodyHandlers.ofString());
     }
 }
