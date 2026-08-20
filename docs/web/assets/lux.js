@@ -137,3 +137,31 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+
+// ── revelado al entrar en pantalla ──
+// La clase .revelar la pone el JS, nunca el HTML: si el guion no corre, o si el visitante
+// pidió menos movimiento, el contenido se queda visible en vez de desaparecer.
+document.addEventListener('DOMContentLoaded', function () {
+  var quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (quieto || !('IntersectionObserver' in window)) { return; }
+
+  var objetivos = Array.prototype.slice.call(
+    document.querySelectorAll('main > section, .tarjetas, .envoltura, .codigo')
+  ).filter(function (el) {
+    // lo que ya se ve al cargar no se anima: aparecería y desaparecería bajo el pulgar
+    return el.getBoundingClientRect().top > window.innerHeight * 0.9;
+  });
+  if (!objetivos.length) { return; }
+
+  objetivos.forEach(function (el) { el.classList.add('revelar'); });
+
+  var observador = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (entrada) {
+      if (!entrada.isIntersecting) { return; }
+      entrada.target.classList.add('visible');
+      observador.unobserve(entrada.target);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+
+  objetivos.forEach(function (el) { observador.observe(el); });
+});
