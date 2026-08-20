@@ -66,26 +66,42 @@ indexada es peor que una que no existe.
 
 ## La marca
 
-La marca es un **cuervo dibujado de cero en vector**, en `marca/cuervo.svg`: silueta maciza con
-el plumaje calado, 2 KB, y toma el color del tema con `currentColor`, así que sirve igual en
-claro y en oscuro sin duplicar archivos.
+La marca es un **cuervo grabado en el siglo XVIII**, en **dominio público**.
 
-Va **incrustado**, no como imagen: en la portada y en la cabecera de Empezar por el propio
-fragmento de contenido, y en la barra a través de `logo_svg()` de `construir.py` y de `base.html`
-en `lux-web`. La versión de la barra es la misma quitándole patas y percha, que a ese tamaño
-solo ensucian.
+| | |
+|---|---|
+| Autor | **François-Nicolas Martinet** (1731–1800) |
+| Obra | *Histoire Naturelle des Oiseaux* de Buffon, lámina 495 — «Le Corbeau» |
+| Ejemplar | Iconographia Zoologica, Colecciones Especiales de la Universidad de Ámsterdam, UBA01 IZ15700199 |
+| Licencia | Dominio público. El autor murió en 1800, así que lo es en toda jurisdicción |
+| Vía | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Corvus_corax_-_1700-1880_-_Print_-_Iconographia_Zoologica_-_Special_Collections_University_of_Amsterdam_-_UBA01_IZ15700199.tif) |
 
-Los calados van pintados en `var(--papel)` y **no por máscara**, a propósito: una máscara obliga
-a un identificador único, y el dibujo aparece dos veces en la misma página. Como la marca
-siempre se apoya sobre el fondo de la página, el resultado es el mismo y no hay ids que choquen.
+De la lámina solo se usa el ave. Recortarla tuvo su gracia: **está posada sobre una roca musgosa
+tan oscura como ella**, así que por umbral de luminancia no había forma de separarlas. Lo que
+funciona es la **saturación**: la roca es olivácea y el ave neutra, de modo que el alfa se
+construye multiplicando «oscuridad» por «poca saturación». Después, quedarse con el componente
+conexo mayor limpia las motas del papel y del marco.
 
-El favicon es el mismo dibujo en magenta, recortado a su caja.
+| Recurso | Dónde se usa | Cómo se hizo |
+|---|---|---|
+| `assets/cuervo.webp` | Portada y cabecera de Empezar | Ave aislada por saturación, 700 px, 12 KB |
+| `assets/cuervo-marca.png` | Barra superior | La misma ave sin patas, engrosada para tamaños pequeños |
+| `marca/favicon.svg` | Pestaña del navegador | La silueta en magenta dentro de una caja de 64 |
 
-> **Hubo antes otro cuervo, y hubo que retirarlo.** Era un dibujo a lápiz precioso, pero resultó
-> ser de **SEO/BirdLife**: el archivo conservaba el atributo `kMDItemWhereFroms` de macOS
-> apuntando a `atlasaves.seo.org`, y la huella SHA-256 coincidía byte a byte con la del original.
-> Se sustituyó por el dibujo propio y se borraron el JPG y sus cinco derivados. **Lección: antes
-> de usar una imagen, mirar `xattr -l` y el EXIF** — el archivo casi siempre dice de dónde viene.
+Todos van como **máscara CSS** sobre `var(--tinta)` o `var(--acento)`: un solo archivo sirve para
+claro y para oscuro, porque el color lo pone el tema.
+
+> **Antes hubo dos cuervos que no valieron, y conviene saber por qué.**
+>
+> El primero era un dibujo a lápiz precioso, pero resultó ser de **SEO/BirdLife**: el archivo
+> conservaba el atributo `kMDItemWhereFroms` de macOS apuntando a `atlasaves.seo.org`, y la huella
+> SHA-256 coincidía byte a byte con la del original. **Lección: antes de usar una imagen, mirar
+> `xattr -l` y el EXIF** — el archivo casi siempre dice de dónde viene.
+>
+> El segundo lo dibujé a mano en vector para salir del paso. Era original y legalmente limpio,
+> pero no daba la talla. De ahí se sale mejor buscando en el **dominio público**: las láminas
+> ornitológicas anteriores a 1900 son dibujos reales, excelentes y sin derechos, y Wikimedia
+> Commons expone la licencia de cada archivo por API.
 
 ### La imagen que sale al compartir el enlace
 
