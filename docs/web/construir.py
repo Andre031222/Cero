@@ -25,7 +25,7 @@ def _huella():
 
 PAGINAS = [
     # archivo,           título,                        entradilla,                                                        en el menú
-    ("index.html",       "LuxCore",                     "Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.", None),
+    ("index.html",       "LuxCore",                     "Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.", "Inicio"),
     ("descargas.html",   "Descargas",                   "Los cinco módulos con su tamaño, huella y coordenadas de Maven.",  "Descargas"),
     ("empezar.html",     "Empezar",                     "De cero a un servidor respondiendo, en cuatro órdenes.",           "Empezar"),
     ("guia.html",        "Guía",                        "Rutas, parámetros, respuestas, inyección, validación y errores.",  "Guía"),
@@ -35,10 +35,9 @@ PAGINAS = [
 
 
 def logo_svg() -> str:
-    bruto = (AQUI / "marca" / "logo.svg").read_text(encoding="utf-8")
-    cuerpo = re.search(r"<svg[^>]*>(.*)</svg>", bruto, re.S).group(1)
-    cuerpo = re.sub(r"\s*<title>.*?</title>\s*", "", cuerpo, flags=re.S).strip()
-    return '<svg class="logo" viewBox="0 0 64 64" aria-hidden="true">' + cuerpo + "</svg>"
+    # La marca es el cuervo. Va como máscara CSS y no como SVG incrustado, para que
+    # tome el color del tema en claro y en oscuro con un solo archivo.
+    return '<span class="logo" aria-hidden="true"></span>' 
 
 
 def favicon_incrustado() -> str:
