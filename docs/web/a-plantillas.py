@@ -27,6 +27,9 @@ ESTATICOS = RECURSOS / "estaticos"
 # entra solo.
 CARPETAS = ("assets", "marca")
 
+# Y lo que vive en subcarpetas: las fuentes alojadas.
+SUBCARPETAS = ("assets/fuentes",)
+
 # Lo que arma ./lux dist y no viene de aquí: no se toca al sincronizar.
 GENERADOS = ("luxcore-",)
 
@@ -112,10 +115,20 @@ def sincronizar() -> int:
     for nombre, archivo in origenes.items():
         (ESTATICOS / nombre).write_bytes(archivo.read_bytes())
 
+    for sub in SUBCARPETAS:
+        destino = ESTATICOS / pathlib.Path(sub).name
+        destino.mkdir(parents=True, exist_ok=True)
+        for archivo in sorted((AQUI / sub).glob("*")):
+            if archivo.is_file():
+                (destino / archivo.name).write_bytes(archivo.read_bytes())
+                origenes[f"{pathlib.Path(sub).name}/{archivo.name}"] = archivo
+
     for servido in sorted(ESTATICOS.glob("*")):
         if not servido.is_file() or servido.name in origenes:
             continue
         if any(servido.name.startswith(marca) for marca in GENERADOS):
+            continue
+        if servido.is_dir():
             continue
         print(f"  ¡ojo! {servido.name} lo sirve lux-web y no tiene original en docs/web")
 

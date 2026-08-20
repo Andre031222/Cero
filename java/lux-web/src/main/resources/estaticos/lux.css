@@ -1,8 +1,24 @@
-/* LuxCore — sistema visual. Marino y magenta, titulares en monoespaciada
-   versaleada, cifras tabulares, reglas finas.
+/* LuxCore — sistema visual, dirección editorial.
 
-   El acento en claro es más oscuro que en oscuro a propósito: el magenta del
-   cartel (#e6187e) sobre blanco da 4,4:1 y se queda corto para texto. */
+   Serif para la prosa, monoespaciada para titulares, cifras y todo lo que es
+   interfaz. Las dos alojadas aquí: traerlas de Google sería una dependencia
+   externa en un proyecto que presume de no tener ninguna. Recortadas a los
+   caracteres que se usan y con el eje óptico fijado — 55 KB las dos. */
+
+@font-face {
+  font-family: "Source Serif";
+  src: url("./fuentes/source-serif-4-latin.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./fuentes/jetbrains-mono-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   color-scheme: light dark;
@@ -31,8 +47,11 @@
   --term-borde: rgba(14, 27, 61, .13);
   --term-brillo: none;
 
-  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* El acento en claro es más oscuro que en oscuro a propósito: el magenta de
+     la marca (#e6187e) sobre blanco da 4,4:1 y se queda corto para texto. */
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --serif: "Source Serif", Georgia, "Times New Roman", serif;
+  --sans: var(--serif);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,10 +102,11 @@ body {
   margin: 0;
   background: var(--papel);
   color: var(--tinta);
-  font-family: var(--sans);
-  font-size: 15px;
-  line-height: 1.62;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.68;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .marco { max-width: 78rem; margin: 0 auto; padding: 0 1.5rem; }
@@ -430,42 +450,38 @@ footer.pie {
 /* ═══ portada ═══ */
 
 .portada {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 3rem;
-  align-items: center;
-  /* La barra superior es sticky y translúcida: sin este aire, la ventana de código queda
-     debajo de ella al desplazarse y se lee a través del desenfoque. */
-  padding: 11rem 0 3.5rem;
-  border-bottom: 1px solid var(--linea);
+  padding: 6.5rem 0 0;
+  border-bottom: 3px solid var(--tinta);
 }
+.portada-texto { max-width: 60rem; }
 
-@media (max-width: 64rem) {
-  /* Se apila en una columna, pero el aire de arriba se mantiene: la barra es sticky
-     y con 2.5rem la ventana de código se le metía debajo. */
-  .portada { grid-template-columns: 1fr; gap: 2.25rem; padding-top: 8.5rem; }
-}
+@media (max-width: 64rem) { .portada { padding-top: 5rem; } }
 
 .titular {
   font-family: var(--mono);
-  font-size: clamp(3rem, 8vw, 4.75rem);
-  font-weight: 700;
-  letter-spacing: -.055em;
-  line-height: .95;
+  font-size: clamp(3.25rem, 9.5vw, 6.5rem);
+  font-weight: 800;
+  letter-spacing: -.06em;
+  line-height: .88;
   margin: 0;
+  text-wrap: balance;
 }
-/* El titular va del marino al magenta, como la marca. Si el navegador no sabe
-   recortar el fondo al texto, se queda con el color de siempre y se lee igual. */
-.titular {
-  background: linear-gradient(100deg, var(--marino) 8%, var(--acento) 78%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
+/* En la portada el titular es una frase, no la marca: va en tinta, y solo la
+   palabra que carga el sentido lleva el acento. */
+.titular span { color: var(--acento); }
+
+/* La antesala: de qué va esto, antes del golpe. */
+.antetitulo {
+  font-family: var(--mono); font-size: .6875rem; font-weight: 700;
+  letter-spacing: .24em; text-transform: uppercase;
+  color: var(--acento); margin: 0 0 1.6rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
 }
-.titular span { color: inherit; }
-@supports not (background-clip: text) {
-  .titular { background: none; color: var(--tinta); -webkit-text-fill-color: currentColor; }
-  .titular span { color: var(--acento); }
+.antetitulo .nuevo {
+  padding: .2rem .5rem; border-radius: 4px;
+  background: var(--acento); color: var(--papel); letter-spacing: .14em;
 }
+.antetitulo .desde { color: var(--apagado); letter-spacing: .14em; }
 
 .subtitular {
   font-family: var(--mono);
@@ -477,13 +493,21 @@ footer.pie {
   margin: .7rem 0 1.1rem;
 }
 
-.promesa { font-size: 1.0625rem; line-height: 1.55; max-width: 32rem; margin: 0 0 1.75rem; }
+.promesa {
+  max-width: 34rem;
+  margin: 1.9rem 0 0;
+  font-size: 1.3125rem;
+  line-height: 1.5;
+  color: var(--apagado);
+  text-wrap: pretty;
+}
+.promesa b, .promesa strong { color: var(--tinta); font-weight: 600; }
 
-.botones { display: flex; flex-wrap: wrap; gap: .65rem; margin-bottom: 2rem; }
+.botones { display: flex; flex-wrap: wrap; gap: .65rem; margin: 2rem 0 0; }
 
 .boton {
   display: inline-flex; align-items: center; justify-content: center;
-  padding: .62rem 1.35rem; border-radius: 7px;
+  padding: .62rem 1.35rem; border-radius: 4px;
   border: 1px solid var(--linea);
   font-family: var(--mono); font-size: .8125rem; font-weight: 600; letter-spacing: .04em;
   text-decoration: none; color: var(--tinta); background: transparent;
@@ -501,23 +525,31 @@ footer.pie {
   .boton, .boton:hover, .boton:active { transform: none; transition: none; }
 }
 
-.chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
-
-.chip {
-  border: 1px solid var(--linea); border-radius: 8px;
-  padding: .5rem .8rem .55rem; min-width: 4.75rem;
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0;
+  margin: 3.75rem 0 0;
+  padding-bottom: 2.25rem;
 }
+.chip {
+  border-left: 1px solid var(--linea);
+  padding: 0 1.25rem;
+}
+.chip:first-child { padding-left: 0; border-left: 0; }
 .chip b {
-  font-family: var(--mono); font-size: 1.15rem; font-weight: 700;
-  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  display: block;
+  font-family: var(--mono); font-size: clamp(2rem, 4.2vw, 3.25rem); font-weight: 800;
+  letter-spacing: -.05em; line-height: 1; font-variant-numeric: tabular-nums;
 }
 .chip span {
-  font-family: var(--mono); font-size: .6875rem; color: var(--apagado); margin-left: .18rem;
+  font-family: var(--mono); font-size: .9375rem; font-weight: 600;
+  color: var(--apagado); letter-spacing: -.02em; margin-left: .15rem;
 }
 .chip em {
-  display: block; font-style: normal; font-family: var(--mono);
-  font-size: .5938rem; letter-spacing: .13em; text-transform: uppercase;
-  color: var(--tenue); margin-top: .12rem;
+  display: block; font-style: normal; margin-top: .7rem;
+  font-family: var(--mono); font-size: .625rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--apagado);
 }
 
 .orden {
@@ -699,14 +731,24 @@ td.huella { color: var(--tenue); font-size: .75rem; }
    de escritorio: menos aire, tipos más pequeños y las rejillas de dos en dos. */
 @media (max-width: 34rem) {
   .marco { padding: 0 1rem; }
+  body { font-size: 16px; }
 
-  /* En una pantalla de mano, 6,5rem de aire son media pantalla vacía antes de
-     leer nada. La barra mide 3,5rem, así que 4,5rem ya despega el titular. */
-  .portada { padding: 4.5rem 0 2.5rem; gap: 1.75rem; }
-  .titular { font-size: clamp(2.5rem, 13vw, 3.25rem); }
-  .subtitular { font-size: .875rem; }
+  /* En una pantalla de mano, el aire de escritorio es media pantalla vacía antes
+     de leer nada. La barra mide 3,5rem, así que 3,5 más ya despega el titular. */
+  .portada { padding: 3.5rem 0 0; }
+  .antetitulo { font-size: .625rem; gap: .5rem; margin-bottom: 1.1rem; }
+  .promesa { font-size: 1.0625rem; margin-top: 1.3rem; }
 
-  .chips { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  /* Dos y dos, y cada una con su regla arriba en vez de a la izquierda: en una
+     columna estrecha las reglas verticales no separan nada. */
+  .chips { grid-template-columns: repeat(2, 1fr); gap: 1.4rem 1rem; margin-top: 2.4rem; }
+  .chip, .chip:first-child {
+    border-left: 0; border-top: 1px solid var(--linea);
+    padding: .8rem 0 0;
+  }
+  .chip b { font-size: 2rem; }
+  .chip em { margin-top: .45rem; }
+
   .medidas { grid-template-columns: repeat(2, 1fr); }
 
   .codigo pre, .ventana pre { font-size: .75rem; line-height: 1.6; padding: .8rem .9rem; }
