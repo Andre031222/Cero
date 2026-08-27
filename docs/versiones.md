@@ -40,6 +40,20 @@ Grafana se quedan vacíos —sin dar error— hasta que se actualicen las métri
 **No hay capa de compatibilidad, a propósito.** Solo seis aplicaciones usan el framework y son
 todas nuestras: aceptar los dos nombres significaría arrastrar código muerto para siempre.
 
+### Añadido
+
+- **Respuestas binarias.** `Result.bytes(datos, tipo)` y `Result.download(datos, nombre, tipo)`
+  devuelven bytes tal cual desde un controlador: un PDF, una imagen, un zip armado al vuelo.
+
+  Antes no había forma de hacerlo sin bajar a `Response.send(byte[])` a mano, y el atajo obvio
+  —devolver el binario como `String`— lo rompe en silencio: el cuerpo se escribe en UTF-8 y todo
+  byte por encima de `0x7F` sale convertido en otra cosa. El archivo llega, pesa parecido y no
+  abre. La prueba manda los 256 valores de un byte y los compara uno a uno, porque un «hola» en
+  ASCII habría pasado sin enterarse de nada.
+
+  `download` además sanea el nombre del archivo antes de meterlo en `Content-Disposition`: unas
+  comillas o un salto de línea en un nombre que venga de fuera partirían la respuesta en dos.
+
 ### Arreglado por el camino
 
 - `Registry.get` resolvía dentro de `computeIfAbsent` y `build()` vuelve a entrar en `get()`, así

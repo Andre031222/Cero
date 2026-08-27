@@ -30,6 +30,18 @@ final class Cliente {
                 .method(verb, HttpRequest.BodyPublishers.noBody()));
     }
 
+    /** Para respuestas que no son texto: un jar, un zip, una imagen. */
+    static HttpResponse<byte[]> bytes(String url) throws Exception {
+        return HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .connectTimeout(Duration.ofSeconds(5))
+                .build()
+                .send(HttpRequest.newBuilder(URI.create(url))
+                                .version(HttpClient.Version.HTTP_1_1).GET().build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+    }
+
     private static HttpResponse<String> send(HttpRequest.Builder request) throws Exception {
         return HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
