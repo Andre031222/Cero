@@ -23,7 +23,7 @@ public final class TestSuite {
 
     public static void main(String[] args) throws Exception {
         System.out.println();
-        System.out.println("── lux-web, el sitio de punta a punta");
+        System.out.println("── corvo-web, el sitio de punta a punta");
 
         Server servidor = App.arrancar(0, Config.empty());
         String base = "http://127.0.0.1:" + servidor.port();
@@ -201,7 +201,7 @@ public final class TestSuite {
         comprobar("con tipo zip",
                 zip.headers().firstValue("content-type").orElse("").equals("application/zip"));
         comprobar("y nombre de archivo",
-                zip.headers().firstValue("content-disposition").orElse("").contains("mi-tienda-luxcore.zip"));
+                zip.headers().firstValue("content-disposition").orElse("").contains("mi-tienda-corvo.zip"));
 
         java.util.List<String> entradas = new java.util.ArrayList<>();
         java.util.Map<String, String> contenido = new java.util.HashMap<>();
@@ -254,7 +254,7 @@ public final class TestSuite {
 
     /** {@code corvo new … --front} tiene que dejar un backend que ya hable con un frontend aparte. */
     private static void generadorConFrontend() throws Exception {
-        java.nio.file.Path base = java.nio.file.Files.createTempDirectory("lux-front");
+        java.nio.file.Path base = java.nio.file.Files.createTempDirectory("corvo-front");
         java.nio.file.Path proyecto = base.resolve("demo");
 
         String antes = System.getProperty("user.dir");

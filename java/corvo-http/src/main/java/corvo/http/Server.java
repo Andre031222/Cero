@@ -47,7 +47,7 @@ public final class Server implements AutoCloseable {
         this.sessions = new Sessions(options.sessionTimeoutMillis(), options.sessionStore(),
                 options.sessionMaxLifetimeMillis());
         this.context = new ServerContext(options, handler, reporter, watchdog, sessions, () -> running);
-        this.acceptor = Thread.ofPlatform().name("lux-accept").daemon(false).start(this::acceptLoop);
+        this.acceptor = Thread.ofPlatform().name("corvo-accept").daemon(false).start(this::acceptLoop);
     }
 
     public int port() {

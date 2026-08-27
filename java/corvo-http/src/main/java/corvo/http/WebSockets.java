@@ -10,7 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
 /**
- * Apretón de manos y bucle de marcos de WebSocket (RFC 6455) sobre una conexión de lux-http.
+ * Apretón de manos y bucle de marcos de WebSocket (RFC 6455) sobre una conexión de corvo-http.
  *
  * <pre>
  *   Corvo.app().routes(r -&gt; r.get("/chat", contexto -&gt;

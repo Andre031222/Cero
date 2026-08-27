@@ -24,8 +24,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_PASSWORD: lux
-          POSTGRES_DB: luxpruebas
+          POSTGRES_PASSWORD: corvo
+          POSTGRES_DB: corvopruebas
         ports: ['55432:5432']
         options: >-
           --health-cmd pg_isready
@@ -36,11 +36,11 @@ jobs:
       mysql:
         image: mysql:8
         env:
-          MYSQL_ROOT_PASSWORD: lux
-          MYSQL_DATABASE: luxpruebas
+          MYSQL_ROOT_PASSWORD: corvo
+          MYSQL_DATABASE: corvopruebas
         ports: ['53306:3306']
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -plux"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pcorvo"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 30
@@ -76,9 +76,9 @@ jobs:
       - name: Cero dependencias en runtime
         working-directory: java
         run: |
-          mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=lux \
-              -DoutputFile=target/deps.txt -pl lux-http,lux-core,lux-view,lux-data -am
-          fuera=$(grep -h ':jar:' lux-*/target/deps.txt || true)
+          mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=dev.ginit.corvo \
+              -DoutputFile=target/deps.txt -pl corvo-http,corvo-core,corvo-view,corvo-data -am
+          fuera=$(grep -h ':jar:' corvo-*/target/deps.txt || true)
           if [ -n "$fuera" ]; then
             echo "::error::El núcleo arrastra dependencias externas:"; echo "$fuera"; exit 1
           fi
@@ -125,12 +125,12 @@ jobs:
         run: |
           python3 docs/web/construir.py
           python3 docs/web/a-plantillas.py
-          # Las plantillas y los recursos de lux-web son copias de docs/web. Tres veces se
+          # Las plantillas y los recursos de corvo-web son copias de docs/web. Tres veces se
           # quedaron atrás sin que nadie lo viera —terminal.js con el contador viejo, social.png
           # y el favicon con la paleta anterior—, así que ahora lo comprueba la máquina.
-          if ! git diff --quiet -- docs/web java/lux-web/src/main/resources; then
-            echo "::error::El sitio o las copias de lux-web están desincronizados. Corre ./lux build y commitea."
-            git diff --stat -- docs/web java/lux-web/src/main/resources
+          if ! git diff --quiet -- docs/web java/corvo-web/src/main/resources; then
+            echo "::error::El sitio o las copias de corvo-web están desincronizados. Corre ./corvo build y commitea."
+            git diff --stat -- docs/web java/corvo-web/src/main/resources
             exit 1
           fi
-          echo "El sitio publicado y las copias de lux-web coinciden con sus fuentes."
+          echo "El sitio publicado y las copias de corvo-web coinciden con sus fuentes."

@@ -33,7 +33,7 @@ final class MotorTests {
                         creado        DATE           NOT NULL
                     )"""),
 
-            new Motor("PostgreSQL", "jdbc:postgresql://127.0.0.1:55432/luxpruebas", "postgres", "lux", """
+            new Motor("PostgreSQL", "jdbc:postgresql://127.0.0.1:55432/corvopruebas", "postgres", "corvo", """
                     CREATE TABLE articulos (
                         id            BIGSERIAL      PRIMARY KEY,
                         titulo        VARCHAR(120)   NOT NULL,
@@ -42,7 +42,7 @@ final class MotorTests {
                         creado        DATE           NOT NULL
                     )"""),
 
-            new Motor("MySQL", "jdbc:mysql://127.0.0.1:53306/luxpruebas", "root", "lux", """
+            new Motor("MySQL", "jdbc:mysql://127.0.0.1:53306/corvopruebas", "root", "corvo", """
                     CREATE TABLE articulos (
                         id            BIGINT AUTO_INCREMENT PRIMARY KEY,
                         titulo        VARCHAR(120)   NOT NULL,

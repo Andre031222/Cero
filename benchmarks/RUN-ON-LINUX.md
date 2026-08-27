@@ -12,8 +12,8 @@ sudo usermod -aG docker $USER              # re-login para usar docker sin sudo
 
 ## Correr
 ```bash
-git clone https://github.com/Andre031222/LuxCore.git
-cd LuxCore/benchmarks/docker
+git clone https://github.com/Andre031222/Corvo.git
+cd Corvo/benchmarks/docker
 ./bench.sh 64 30 5                          # 64 conexiones, 30 s, 5 repeticiones
 
 # Incluir además Quarkus compilado a binario NATIVO (GraalVM, build lento ~5-10 min):

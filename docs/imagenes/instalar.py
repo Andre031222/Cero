@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dibuja instalar.gif: la instalación de LuxCore escribiéndose sola.
+"""Dibuja instalar.gif: la instalación de Corvo escribiéndose sola.
 
 Es la misma terminal que la del sitio, pero como imagen, porque GitHub no ejecuta
 JavaScript en el README. Se regenera cuando cambien las cifras:
@@ -35,20 +35,20 @@ MONO_FINA = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 13)
 # (clase, texto). orden = tipo de línea: como se pinta y si se teclea.
 GUION = [
     ("comentario", "# 1 — instalar"),
-    ("orden",      "curl -fsSL https://luxcore.ginit.dev/instalar | sh"),
+    ("orden",      "curl -fsSL https://corvo.ginit.dev/instalar | sh"),
     ("ok",         "entorno    Java 21 · Maven 3.9 · Darwin arm64"),
-    ("ok",         "descargado luxcore-0.3.0.tar.gz · 295 KB"),
+    ("ok",         "descargado corvo-0.3.0.tar.gz · 295 KB"),
     ("ok",         "huella     sha256 717710b6c922b003…"),
     ("ok",         "compilado  ocho módulos en ~/.m2 · 41 s"),
-    ("ok",         "orden lux  ~/.local/bin/lux"),
+    ("ok",         "orden corvo  ~/.local/bin/corvo"),
     ("blanco",     ""),
     ("comentario", "# 2 — un proyecto nuevo"),
-    ("orden",      "lux new mi-app"),
+    ("orden",      "corvo new mi-app"),
     ("salida",     "9 archivos · com.ejemplo:mi-app"),
     ("blanco",     ""),
     ("comentario", "# 3 — arrancar"),
     ("orden",      "cd mi-app && mvn -q package && java -jar target/mi-app.jar"),
-    ("arranque",   "lux · http://0.0.0.0:8080 · 2 rutas · 10 ms"),
+    ("arranque",   "corvo · http://0.0.0.0:8080 · 2 rutas · 10 ms"),
     ("blanco",     ""),
     ("comentario", "# 4 — comprobar"),
     ("orden",      "curl -s localhost:8080/salud"),
@@ -83,7 +83,7 @@ def lienzo() -> Image.Image:
         d.ellipse([x, centro - 5.5, x + 11, centro + 5.5], fill=color)
 
     logo(d, MARGEN + 92, centro, 9)
-    d.text((MARGEN + 108, centro - 8), "LuxCore", font=MONO, fill=TINTA)
+    d.text((MARGEN + 108, centro - 8), "Corvo", font=MONO, fill=TINTA)
     d.text((ANCHO / 2 + 40, centro - 6), "~/proyectos", font=MONO_FINA, fill=GRIS,
            anchor="mm")
     return imagen

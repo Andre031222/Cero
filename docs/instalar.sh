@@ -1,18 +1,18 @@
 #!/bin/sh
-# Instalador de LuxCore para macOS y Linux.
+# Instalador de Corvo para macOS y Linux.
 #
-#   curl -fsSL https://luxcore.ginit.dev/instalar | sh
+#   curl -fsSL https://corvo.ginit.dev/instalar | sh
 #
 # Baja el paquete, comprueba su huella, lo compila, deja los artefactos en ~/.m2 y la orden
-# `lux` en el PATH. No pide contraseña y no escribe fuera de $HOME.
+# `corvo` en el PATH. No pide contraseña y no escribe fuera de $HOME.
 #
 #   --con-pruebas   corre las 1 238 pruebas durante la instalación (~90 s más)
 #   --sin-color     salida plana, para registros y CI
 set -eu
 
-BASE="${LUX_BASE:-https://luxcore.ginit.dev}"
-RAIZ="${LUX_HOME:-$HOME/.luxcore}"
-BIN="${LUX_BIN:-$HOME/.local/bin}"
+BASE="${CORVO_BASE:-https://corvo.ginit.dev}"
+RAIZ="${CORVO_HOME:-$HOME/.corvo}"
+BIN="${CORVO_BIN:-$HOME/.local/bin}"
 PRUEBAS=no
 
 for arg in "$@"; do
@@ -42,11 +42,11 @@ fi
 p() { printf "$@"; }
 
 marca() {
-  [ "$VIVO" = si ] || { p "LuxCore · instalador\n\n"; return; }
+  [ "$VIVO" = si ] || { p "Corvo · instalador\n\n"; return; }
   p "\n"
   p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n"
   p "   ${ACENTO}\\${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}/${FIN}\n"
-  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}LuxCore${FIN}\n"
+  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}Corvo${FIN}\n"
   p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
   p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n\n"
 }
@@ -111,7 +111,7 @@ for orden in curl tar java mvn; do
 done
 if [ -n "$falta" ]; then
   mal "falta:$falta"
-  p "\n  LuxCore necesita un ${FUERTE}JDK 21${FIN} o superior y ${FUERTE}Maven${FIN}.\n"
+  p "\n  Corvo necesita un ${FUERTE}JDK 21${FIN} o superior y ${FUERTE}Maven${FIN}.\n"
   case "$(uname -s)" in
     Darwin) p "  ${TENUE}brew install openjdk@21 maven${FIN}\n" ;;
     Linux)  p "  ${TENUE}sudo apt install openjdk-21-jdk maven${FIN}   ${TENUE}(o el gestor de tu distribución)${FIN}\n" ;;
@@ -121,7 +121,7 @@ fi
 
 JAVA_V=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
 if [ "${JAVA_V:-0}" -lt 21 ] 2>/dev/null; then
-  muere "LuxCore necesita Java 21 o superior — hilos virtuales. Tienes $JAVA_V."
+  muere "Corvo necesita Java 21 o superior — hilos virtuales. Tienes $JAVA_V."
 fi
 bien "entorno" "Java $JAVA_V · $(mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3) · $(uname -s) $(uname -m)"
 
@@ -132,11 +132,11 @@ VERSION=$(curl -fsSL --max-time 20 "$BASE/version" 2>/dev/null) || \
 case "$VERSION" in
   ''|*[!0-9.]*) muere "el servidor devolvió una versión rara: '$VERSION'" ;;
 esac
-bien "versión" "LuxCore $VERSION"
+bien "versión" "Corvo $VERSION"
 
 # ─── 3 · bajarlo ────────────────────────────────────────────────────────────────────────
-PAQUETE="luxcore-$VERSION.tar.gz"
-TMP=$(mktemp -d "${TMPDIR:-/tmp}/luxcore.XXXXXX")
+PAQUETE="corvo-$VERSION.tar.gz"
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/corvo.XXXXXX")
 trap 'limpiar; rm -rf "$TMP"' EXIT INT TERM
 
 paso "bajando el paquete"
@@ -169,11 +169,11 @@ fi
 
 # ─── 5 · extraer ────────────────────────────────────────────────────────────────────────
 paso "extrayendo"
-DESTINO="$RAIZ/luxcore-$VERSION"
+DESTINO="$RAIZ/corvo-$VERSION"
 mkdir -p "$RAIZ"
 rm -rf "$DESTINO"
 tar -xzf "$TMP/$PAQUETE" -C "$RAIZ" || muere "el paquete no se pudo extraer"
-[ -d "$DESTINO" ] || muere "el paquete no traía luxcore-$VERSION dentro"
+[ -d "$DESTINO" ] || muere "el paquete no traía corvo-$VERSION dentro"
 bien "extraído" "$DESTINO"
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
@@ -191,24 +191,24 @@ else
 fi
 
 # ─── 7 · dejar la orden a mano ──────────────────────────────────────────────────────────
-paso "instalando la orden lux"
+paso "instalando la orden corvo"
 ln -sfn "$DESTINO" "$RAIZ/actual"
 mkdir -p "$BIN"
-cat > "$BIN/lux" <<GUION
+cat > "$BIN/corvo" <<GUION
 #!/bin/sh
-# Generado por el instalador de LuxCore. Apunta siempre a la versión en uso.
-exec "$RAIZ/actual/lux" "\$@"
+# Generado por el instalador de Corvo. Apunta siempre a la versión en uso.
+exec "$RAIZ/actual/corvo" "\$@"
 GUION
-chmod +x "$BIN/lux"
-bien "orden lux" "$BIN/lux"
+chmod +x "$BIN/corvo"
+bien "orden corvo" "$BIN/corvo"
 
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
 paso "comprobando la instalación"
-"$BIN/lux" estado >/dev/null 2>&1 || muere "quedó instalado pero 'lux status' no responde"
-bien "comprobado" "lux status responde"
+"$BIN/corvo" estado >/dev/null 2>&1 || muere "quedó instalado pero 'corvo status' no responde"
+bien "comprobado" "corvo status responde"
 
 # ─── final ──────────────────────────────────────────────────────────────────────────────
-p "\n  ${VERDE}${FUERTE}LuxCore $VERSION instalado${FIN}\n\n"
+p "\n  ${VERDE}${FUERTE}Corvo $VERSION instalado${FIN}\n\n"
 
 case ":$PATH:" in
   *":$BIN:"*) ;;
@@ -219,6 +219,6 @@ case ":$PATH:" in
 esac
 
 p "  ${TENUE}Crear un proyecto y arrancarlo:${FIN}\n\n"
-p "      ${FUERTE}lux new mi-app${FIN}\n"
+p "      ${FUERTE}corvo new mi-app${FIN}\n"
 p "      ${FUERTE}cd mi-app && mvn -q package && java -jar target/mi-app.jar${FIN}\n\n"
 p "  ${TENUE}Guía completa:${FIN}  $BASE/empezar\n\n"
