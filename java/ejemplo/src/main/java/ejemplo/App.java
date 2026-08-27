@@ -1,15 +1,15 @@
 package ejemplo;
 
-import lux.core.Cors;
-import lux.core.Csrf;
-import lux.core.Lux;
-import lux.core.RateLimit;
-import lux.core.SecurityHeaders;
-import lux.data.DataSources;
-import lux.data.Pool;
-import lux.http.Server;
-import lux.http.StaticFiles;
-import lux.view.Templates;
+import corvo.core.Cors;
+import corvo.core.Csrf;
+import corvo.core.Corvo;
+import corvo.core.RateLimit;
+import corvo.core.SecurityHeaders;
+import corvo.data.DataSources;
+import corvo.data.Pool;
+import corvo.http.Server;
+import corvo.http.StaticFiles;
+import corvo.view.Templates;
 
 public final class App {
 
@@ -25,7 +25,7 @@ public final class App {
         DataSources.registerDefault(Pool.to(jdbc).maxSize(8).build());
         Tareas.crearEsquema();
 
-        return Lux.app()
+        return Corvo.app()
                 .port(puerto)
                 .views(Templates.fromClasspath("plantillas"))
                 .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))

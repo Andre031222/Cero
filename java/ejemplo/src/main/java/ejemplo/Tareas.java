@@ -1,9 +1,9 @@
 package ejemplo;
 
-import lux.core.Service;
-import lux.data.Db;
-import lux.data.Repository;
-import lux.data.Row;
+import corvo.core.Service;
+import corvo.data.Db;
+import corvo.data.Repository;
+import corvo.data.Row;
 
 import java.util.List;
 

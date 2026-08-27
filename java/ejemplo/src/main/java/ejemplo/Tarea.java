@@ -1,11 +1,11 @@
 package ejemplo;
 
-import lux.core.Length;
-import lux.core.OneOf;
-import lux.core.Required;
-import lux.data.Column;
-import lux.data.Id;
-import lux.data.Table;
+import corvo.core.Length;
+import corvo.core.OneOf;
+import corvo.core.Required;
+import corvo.data.Column;
+import corvo.data.Id;
+import corvo.data.Table;
 
 @Table("tareas")
 public record Tarea(
