@@ -23,7 +23,7 @@ public class GeneradorController {
         contexto.response()
                 .header("Content-Type", "application/zip")
                 .header("Content-Disposition",
-                        "attachment; filename=\"" + peticion.artefacto() + "-luxcore.zip\"")
+                        "attachment; filename=\"" + peticion.artefacto() + "-corvo.zip\"")
                 .send(zip);
         return Result.noContent();
     }

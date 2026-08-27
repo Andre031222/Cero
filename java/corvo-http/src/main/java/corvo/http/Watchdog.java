@@ -29,7 +29,7 @@ final class Watchdog implements AutoCloseable {
             return;
         }
         long tick = Math.max(25, Math.min(500, timeoutMillis / 4L));
-        barrendero = new Thread(() -> barrer(tick), "lux-watchdog");
+        barrendero = new Thread(() -> barrer(tick), "corvo-watchdog");
         barrendero.setDaemon(true);
         barrendero.start();
     }

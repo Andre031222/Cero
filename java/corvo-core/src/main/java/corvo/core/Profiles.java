@@ -11,7 +11,7 @@ import java.util.Set;
  *   corvo.profiles = prod,metricas
  * </pre>
  *
- * <p>Se puede pisar por propiedad del sistema (<code>-Dlux.profiles=dev</code>) o por entorno
+ * <p>Se puede pisar por propiedad del sistema (<code>-Dcorvo.profiles=dev</code>) o por entorno
  * (<code>CORVO_PROFILES=dev</code>), en ese orden de prioridad. Sin nada configurado el perfil es
  * <code>default</code>.
  *
@@ -43,7 +43,7 @@ public final class Profiles {
         return new Profiles(normalizar(String.join(",", nombres)));
     }
 
-    /** Perfiles de la configuración, pisados por {@code -Dlux.profiles} y por {@code CORVO_PROFILES}. */
+    /** Perfiles de la configuración, pisados por {@code -Dcorvo.profiles} y por {@code CORVO_PROFILES}. */
     public static Profiles from(Config config) {
         String declarado = System.getProperty("corvo.profiles");
         if (declarado == null) {

@@ -19,7 +19,7 @@
             <version>0.4.0</version>
         </dependency>
 
-        <!-- solo para las pruebas contra motores reales; lux-data no depende de ningún driver -->
+        <!-- solo para las pruebas contra motores reales; corvo-data no depende de ningún driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

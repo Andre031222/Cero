@@ -33,7 +33,7 @@ CSV="$HERE/../results/raw-docker.csv"
 
 # Orden: jxmvc primero, luego los rivales. El contexto de build de jxmvc es el REPO
 # (necesita compilar JxMVC.Core); el de los demás es su propia carpeta.
-APPS=(luxcore jxmvc spring quarkus micronaut javalin)
+APPS=(corvo jxmvc spring quarkus micronaut javalin)
 # BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 
@@ -84,7 +84,7 @@ for fw in "${APPS[@]}"; do
   img="bench-$fw"
   blog="/tmp/bench-build-$fw.log"
   bok=1
-  if [ "$fw" = "jxmvc" ] || [ "$fw" = "luxcore" ]; then
+  if [ "$fw" = "jxmvc" ] || [ "$fw" = "corvo" ]; then
     docker build -t "$img" -f "$HERE/apps/$fw/Dockerfile" "$REPO" >"$blog" 2>&1 || bok=0
   elif [ "$fw" = "quarkus-native" ]; then
     docker build -t "$img" -f "$HERE/apps/quarkus/Dockerfile.native" "$HERE/apps/quarkus" >"$blog" 2>&1 || bok=0

@@ -6,7 +6,7 @@
     <artifactId>corvo-parent</artifactId>
     <version>0.4.0</version>
     <packaging>pom</packaging>
-    <name>LuxCore</name>
+    <name>Corvo</name>
 
     <modules>
         <module>corvo-http</module>

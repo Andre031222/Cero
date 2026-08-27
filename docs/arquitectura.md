@@ -212,7 +212,7 @@ almacén de sesiones en tabla, la base opcional de controladores y la confianza 
 
 Eso es lo que convierte «paridad» en algo comprobado: no la lista de casillas, sino que alguien
 de fuera intentara construir encima y anotara lo que le faltaba. Ver
-[versiones.md](versiones.md) y las [observaciones del portal](observaciones-portal-finesi.md).
+[versiones.md](versiones.md).
 
 Lo que **no** se hizo, y a propósito: portar literalmente las 347 pruebas heredadas. Se comparó
 cobertura una a una, que es lo que aportaban, y aparecieron dos fallos reales.
