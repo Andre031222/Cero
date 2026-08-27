@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>lux</groupId>
-        <artifactId>lux-parent</artifactId>
-        <version>0.3.0</version>
+        <groupId>dev.ginit.corvo</groupId>
+        <artifactId>corvo-parent</artifactId>
+        <version>0.4.0</version>
     </parent>
 
     <artifactId>ejemplo</artifactId>
@@ -14,19 +14,19 @@
 
     <dependencies>
         <dependency>
-            <groupId>lux</groupId>
-            <artifactId>lux-core</artifactId>
-            <version>0.3.0</version>
+            <groupId>dev.ginit.corvo</groupId>
+            <artifactId>corvo-core</artifactId>
+            <version>0.4.0</version>
         </dependency>
         <dependency>
-            <groupId>lux</groupId>
-            <artifactId>lux-view</artifactId>
-            <version>0.3.0</version>
+            <groupId>dev.ginit.corvo</groupId>
+            <artifactId>corvo-view</artifactId>
+            <version>0.4.0</version>
         </dependency>
         <dependency>
-            <groupId>lux</groupId>
-            <artifactId>lux-data</artifactId>
-            <version>0.3.0</version>
+            <groupId>dev.ginit.corvo</groupId>
+            <artifactId>corvo-data</artifactId>
+            <version>0.4.0</version>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

@@ -2,21 +2,21 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>lux</groupId>
-    <artifactId>lux-parent</artifactId>
-    <version>0.3.0</version>
+    <groupId>dev.ginit.corvo</groupId>
+    <artifactId>corvo-parent</artifactId>
+    <version>0.4.0</version>
     <packaging>pom</packaging>
     <name>LuxCore</name>
 
     <modules>
-        <module>lux-http</module>
-        <module>lux-core</module>
-        <module>lux-view</module>
-        <module>lux-data</module>
-        <module>lux-adapter-servlet</module>
+        <module>corvo-http</module>
+        <module>corvo-core</module>
+        <module>corvo-view</module>
+        <module>corvo-data</module>
+        <module>corvo-adapter-servlet</module>
         <module>ejemplo</module>
-        <module>lux-launcher</module>
-        <module>lux-web</module>
+        <module>corvo-launcher</module>
+        <module>corvo-web</module>
     </modules>
 
     <properties>
