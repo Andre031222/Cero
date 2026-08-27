@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 public final class Registry {
 
     private final Map<Class<?>, Object> instances = new ConcurrentHashMap<>();
+    private final Map<Class<?>, Object> cerrojos = new ConcurrentHashMap<>();
     private final ThreadLocal<Deque<Class<?>>> building = ThreadLocal.withInitial(ArrayDeque::new);
 
     public <T> Registry add(T instance) {
@@ -41,11 +42,29 @@ public final class Registry {
         if (found != null) {
             return (T) found;
         }
-        if (type.isAnnotationPresent(Service.class)) {
-            return (T) instances.computeIfAbsent(type, this::build);
+        if (!type.isAnnotationPresent(Service.class)) {
+            throw new IllegalStateException("no hay un servicio registrado para " + type.getName()
+                    + "; regístralo con add() o anótalo con @Service");
         }
-        throw new IllegalStateException("no hay un servicio registrado para " + type.getName()
-                + "; regístralo con add() o anótalo con @Service");
+
+        // La construcción va FUERA del mapa, a propósito. build() vuelve a entrar en get() por
+        // cada dependencia del constructor, así que resolver dentro de computeIfAbsent anida
+        // llamadas sobre el mismo ConcurrentHashMap: en cuanto dos eslabones de la cadena caen
+        // en el mismo bin, lanza IllegalStateException("Recursive update"). No era un límite de
+        // profundidad, era una colisión de bins que con cadenas largas deja de ser casualidad.
+        //
+        // El cerrojo por tipo conserva lo que daba computeIfAbsent —una sola instancia aunque
+        // dos hilos pidan el mismo servicio a la vez— sin meter la recursión dentro del mapa.
+        Object cerrojo = cerrojos.computeIfAbsent(type, clave -> new Object());
+        synchronized (cerrojo) {
+            Object yaEstaba = instances.get(type);
+            if (yaEstaba != null) {
+                return (T) yaEstaba;
+            }
+            Object recien = build(type);
+            instances.put(type, recien);
+            return (T) recien;
+        }
     }
 
     public <T> T create(Class<T> type) {
