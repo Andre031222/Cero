@@ -56,7 +56,7 @@ public class InstalarController {
 
     private static String leerVersion() {
         try (InputStream entrada = InstalarController.class.getClassLoader()
-                .getResourceAsStream("luxcore.properties")) {
+                .getResourceAsStream("corvo.properties")) {
             if (entrada == null) {
                 return "0.0.0";
             }

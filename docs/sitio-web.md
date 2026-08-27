@@ -1,5 +1,9 @@
 # El sitio web
 
+> **Este documento describe el sitio anterior al renombrado**, el que sigue en vivo en
+> `luxcore.ginit.dev`. El sitio de Corvo se rehace desde cero en carpeta aparte, y esta guía se
+> reescribirá con él. Lo que sí sigue valiendo son las trampas de CSS y de captura del final.
+
 Cómo se construye, se traduce y se despliega **luxcore.ginit.dev**, y las trampas que ya han
 costado un rato encontrar.
 

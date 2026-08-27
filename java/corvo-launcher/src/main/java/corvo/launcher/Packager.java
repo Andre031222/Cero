@@ -69,7 +69,7 @@ public final class Packager {
         Manifest manifiesto = new Manifest();
         manifiesto.getMainAttributes().putValue("Manifest-Version", "1.0");
         manifiesto.getMainAttributes().putValue("Main-Class", mainClass);
-        manifiesto.getMainAttributes().putValue("Created-By", "lux-launcher");
+        manifiesto.getMainAttributes().putValue("Created-By", "corvo-launcher");
 
         Set<String> vistas = new HashSet<>();
         if (destino.getParent() != null) {

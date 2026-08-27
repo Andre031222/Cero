@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-/** {@code lux new} — el mismo generador del sitio, pero escribiendo en disco. */
+/** {@code corvo new} — el mismo generador del sitio, pero escribiendo en disco. */
 public final class Nuevo {
 
     private static final java.util.Set<String> MOTORES =
