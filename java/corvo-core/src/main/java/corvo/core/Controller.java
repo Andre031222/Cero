@@ -31,7 +31,7 @@ import java.util.List;
  * que esto existe. Las dos formas conviven en la misma aplicación.
  *
  * <p><b>Por qué no guarda la petición en un campo.</b> Del controlador hay una sola instancia,
- * compartida por todas las peticiones, y LuxCore atiende cada conexión en su propio hilo virtual.
+ * compartida por todas las peticiones, y Corvo atiende cada conexión en su propio hilo virtual.
  * Un campo con la petición dentro sería una carrera: dos peticiones a la vez se lo pisarían y una
  * acabaría respondiendo con los datos de la otra. Por eso todo sale de {@link Current}, que es por
  * hilo. Es la diferencia entre esta base y la de un framework pensado para un hilo por petición.

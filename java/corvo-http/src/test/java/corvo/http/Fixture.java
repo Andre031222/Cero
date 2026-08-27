@@ -122,7 +122,7 @@ final class Fixture {
                 Path.of(System.getProperty("java.home"), "bin", "keytool").toString(),
                 "-genkeypair", "-alias", "lux", "-keyalg", "RSA", "-keysize", "2048",
                 "-validity", "365", "-storetype", "PKCS12",
-                "-keystore", path.toString(), "-storepass", "luxtest", "-keypass", "luxtest",
+                "-keystore", path.toString(), "-storepass", "corvotest", "-keypass", "corvotest",
                 "-dname", "CN=localhost", "-ext", "SAN=dns:localhost,ip:127.0.0.1")
                 .redirectErrorStream(true)
                 .start();

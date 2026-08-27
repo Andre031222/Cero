@@ -6,10 +6,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Arma un proyecto LuxCore listo para arrancar y lo devuelve como ZIP en memoria.
+ * Arma un proyecto Corvo listo para arrancar y lo devuelve como ZIP en memoria.
  *
  * <p>El generador anterior emitía un WAR con {@code web.xml} y JSP, que era lo que JxMVC
- * necesitaba. Este emite lo que necesita LuxCore: un jar que arranca solo.
+ * necesitaba. Este emite lo que necesita Corvo: un jar que arranca solo.
  */
 public final class GeneradorProyecto {
 
@@ -72,13 +72,13 @@ public final class GeneradorProyecto {
 
                     <dependencies>
                         <dependency>
-                            <groupId>lux</groupId>
-                            <artifactId>lux-core</artifactId>
+                            <groupId>dev.ginit.corvo</groupId>
+                            <artifactId>corvo-core</artifactId>
                             <version>0.3.0</version>
                         </dependency>
                         <dependency>
-                            <groupId>lux</groupId>
-                            <artifactId>lux-view</artifactId>
+                            <groupId>dev.ginit.corvo</groupId>
+                            <artifactId>corvo-view</artifactId>
                             <version>0.3.0</version>
                         </dependency>
                 %s    </dependencies>
@@ -138,8 +138,8 @@ public final class GeneradorProyecto {
         }
         String datos = """
                         <dependency>
-                            <groupId>lux</groupId>
-                            <artifactId>lux-data</artifactId>
+                            <groupId>dev.ginit.corvo</groupId>
+                            <artifactId>corvo-data</artifactId>
                             <version>0.3.0</version>
                         </dependency>
                 """;
@@ -254,7 +254,7 @@ public final class GeneradorProyecto {
 
                 {%% block contenido %%}
                 <h1>%s</h1>
-                <p>Funcionando sobre LuxCore, sin contenedor y sin dependencias externas.</p>
+                <p>Funcionando sobre Corvo, sin contenedor y sin dependencias externas.</p>
                 <p>Edita <code>InicioController.java</code> y recarga.</p>
                 {%% end %%}
                 """.formatted(p.nombre());
@@ -273,7 +273,7 @@ public final class GeneradorProyecto {
         return """
                 # %s
 
-                Proyecto generado con LuxCore.
+                Proyecto generado con Corvo.
 
                 ```bash
                 mvn package
@@ -283,10 +283,10 @@ public final class GeneradorProyecto {
                 Arranca en el puerto 8080. Sin contenedor de servlets y sin dependencias
                 externas más allá del driver JDBC si usas base de datos.
 
-                Necesita LuxCore en tu repositorio local de Maven:
+                Necesita Corvo en tu repositorio local de Maven:
 
                 ```bash
-                curl -fsSL https://luxcore.ginit.dev/instalar | sh
+                curl -fsSL https://corvo.ginit.dev/instalar | sh
                 ```
                 """.formatted(p.nombre(), p.artefacto(), p.artefacto());
     }

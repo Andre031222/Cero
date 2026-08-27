@@ -14,7 +14,7 @@ public final class Csrf implements Middleware {
     public static final String HEADER = "X-CSRF-Token";
     public static final String FIELD = "_csrf";
 
-    private static final String SESSION_KEY = "lux.csrf";
+    private static final String SESSION_KEY = "corvo.csrf";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final List<String> exempt = new ArrayList<>();

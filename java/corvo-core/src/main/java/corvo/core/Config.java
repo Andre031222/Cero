@@ -11,6 +11,11 @@ import java.util.Properties;
 
 public final class Config {
 
+    /** El prefijo y su longitud van juntos a propósito: al renombrar el framework, un
+     *  substring con el número escrito a mano se desincroniza en silencio. */
+    private static final String PREFIJO_ENTORNO = "CORVO_";
+    private static final String PREFIJO_PROPIEDAD = "corvo.";
+
     private final Map<String, String> values = new LinkedHashMap<>();
 
     private Config() {
@@ -108,17 +113,34 @@ public final class Config {
 
     private void readEnvironment() {
         System.getenv().forEach((name, value) -> {
-            if (name.startsWith("LUX_")) {
-                values.put(name.substring(4).toLowerCase().replace('_', '.'), value);
+            String clave = claveDeEntorno(name);
+            if (clave != null) {
+                values.put(clave, value);
             }
         });
+    }
+
+    /**
+     * Traduce una variable de entorno a clave de configuración, o devuelve {@code null} si no
+     * lleva el prefijo. {@code CORVO_SERVER_PORT} pasa a ser {@code server.port}.
+     *
+     * <p>Está aparte para poder probarlo: {@code System.getenv()} no se puede tocar dentro del
+     * proceso, así que si la traducción vive dentro del bucle no la cubre ninguna prueba. Ahí se
+     * escondió un fallo al renombrar el framework — el prefijo pasó de cuatro letras a seis y el
+     * recorte seguía escrito a mano.
+     */
+    static String claveDeEntorno(String nombre) {
+        if (nombre == null || !nombre.startsWith(PREFIJO_ENTORNO)) {
+            return null;
+        }
+        return nombre.substring(PREFIJO_ENTORNO.length()).toLowerCase().replace('_', '.');
     }
 
     private void readSystemProperties() {
         System.getProperties().forEach((key, value) -> {
             String name = String.valueOf(key);
-            if (name.startsWith("lux.")) {
-                values.put(name.substring(4), String.valueOf(value));
+            if (name.startsWith(PREFIJO_PROPIEDAD)) {
+                values.put(name.substring(PREFIJO_PROPIEDAD.length()), String.valueOf(value));
             }
         });
     }

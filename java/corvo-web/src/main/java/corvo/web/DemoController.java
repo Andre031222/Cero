@@ -17,7 +17,7 @@ public class DemoController {
 
     @Get("")
     public Result index() {
-        return Result.html("Demo de LuxCore — <b>funcionando</b>");
+        return Result.html("Demo de Corvo — <b>funcionando</b>");
     }
 
     @Get("/saludo")

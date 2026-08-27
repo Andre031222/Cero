@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 final class Sessions {
 
-    static final String COOKIE = "LUXSESSION";
+    static final String COOKIE = "CORVOSESSION";
 
     private static final int SWEEP_EVERY = 256;
 

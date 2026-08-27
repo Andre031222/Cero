@@ -14,7 +14,7 @@ final class TlsTests {
     static void run() throws Exception {
         Check.group("TLS");
 
-        SSLContext context = Tls.fromKeystore(Fixture.keystore(), "luxtest".toCharArray());
+        SSLContext context = Tls.fromKeystore(Fixture.keystore(), "corvotest".toCharArray());
 
         ServerOptions options = ServerOptions.builder()
                 .port(0)
@@ -67,7 +67,7 @@ final class TlsTests {
         java.nio.file.Files.deleteIfExists(keystore);
         generar(keystore, "CN=primero.local");
 
-        Tls.Certificado certificado = Tls.reloadable(keystore, "luxtest".toCharArray());
+        Tls.Certificado certificado = Tls.reloadable(keystore, "corvotest".toCharArray());
         ServerOptions options = ServerOptions.builder()
                 .port(0).host("127.0.0.1").tls(certificado.context()).build();
 
@@ -112,7 +112,7 @@ final class TlsTests {
                 java.nio.file.Path.of(System.getProperty("java.home"), "bin", "keytool").toString(),
                 "-genkeypair", "-alias", "lux", "-keyalg", "RSA", "-keysize", "2048",
                 "-validity", "365", "-storetype", "PKCS12",
-                "-keystore", destino.toString(), "-storepass", "luxtest", "-keypass", "luxtest",
+                "-keystore", destino.toString(), "-storepass", "corvotest", "-keypass", "corvotest",
                 "-dname", dn, "-ext", "SAN=dns:localhost,ip:127.0.0.1")
                 .redirectErrorStream(true).start();
         if (!keytool.waitFor(30, java.util.concurrent.TimeUnit.SECONDS) || keytool.exitValue() != 0) {

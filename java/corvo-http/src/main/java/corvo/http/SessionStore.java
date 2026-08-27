@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Por defecto, en la memoria del proceso: rápido y suficiente para una sola instancia. Detrás
  * de un balanceador con varias instancias hace falta un almacén compartido, y ese es el hueco que
- * cubre esta interfaz — Redis, una tabla, lo que sea. LuxCore no trae ninguna implementación
+ * cubre esta interfaz — Redis, una tabla, lo que sea. Corvo no trae ninguna implementación
  * remota porque eso significaría una dependencia externa, que es justo lo que el proyecto evita.
  *
  * <pre>

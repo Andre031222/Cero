@@ -130,13 +130,13 @@ final class ObservabilidadTests {
     }
 
     private static void metricas() throws Exception {
-        Metrics metricas = Metrics.enabled().ignore("/lux/");
+        Metrics metricas = Metrics.enabled().ignore("/corvo/");
 
         Server servidor = Corvo.app().port(0).quiet().reporter(ErrorReporter.silent())
                 .use(metricas)
                 .controllers(TiendaController.class)
-                .routes(r -> r.get("/lux/metrics", metricas.endpoint())
-                              .get("/lux/metrics/prometheus", metricas.prometheusEndpoint()))
+                .routes(r -> r.get("/corvo/metrics", metricas.endpoint())
+                              .get("/corvo/metrics/prometheus", metricas.prometheusEndpoint()))
                 .start();
         try {
             String base = "http://127.0.0.1:" + servidor.port();
@@ -172,22 +172,22 @@ final class ObservabilidadTests {
             Check.that("y sus percentiles", lenta.p95() >= 25);
 
             Check.that("las rutas ignoradas no se cuentan",
-                    resumen.rutas().stream().noneMatch(r -> r.ruta().contains("/lux/")));
+                    resumen.rutas().stream().noneMatch(r -> r.ruta().contains("/corvo/")));
 
-            String json = Cliente.get(base + "/lux/metrics").body();
+            String json = Cliente.get(base + "/corvo/metrics").body();
             Check.that("el endpoint JSON expone el total", json.contains("\"peticiones\":"));
             Check.that("y el detalle por ruta", json.contains("GET /tienda"));
             Check.equal("con tipo JSON",
-                    Cliente.get(base + "/lux/metrics").headers().firstValue("content-type").orElse(null),
+                    Cliente.get(base + "/corvo/metrics").headers().firstValue("content-type").orElse(null),
                     "application/json");
 
-            String prometheus = Cliente.get(base + "/lux/metrics/prometheus").body();
+            String prometheus = Cliente.get(base + "/corvo/metrics/prometheus").body();
             Check.that("Prometheus declara el tipo de métrica",
-                    prometheus.contains("# TYPE lux_requests_total counter"));
+                    prometheus.contains("# TYPE corvo_requests_total counter"));
             Check.that("expone el contador por ruta",
-                    prometheus.contains("lux_requests_total{ruta=\"GET /tienda\"} 2"));
+                    prometheus.contains("corvo_requests_total{ruta=\"GET /tienda\"} 2"));
             Check.that("y los cuantiles", prometheus.contains("quantile=\"0.99\""));
-            Check.that("y el tiempo activo", prometheus.contains("lux_uptime_ms"));
+            Check.that("y el tiempo activo", prometheus.contains("corvo_uptime_ms"));
 
             metricas.reset();
             Check.equal("reset vacía el registro", metricas.snapshot().peticiones(), 0L);

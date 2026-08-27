@@ -121,7 +121,7 @@ public final class Log {
     }
 
     private static Nivel nivelInicial() {
-        String declarado = System.getProperty("lux.log", System.getenv("LUX_LOG"));
+        String declarado = System.getProperty("corvo.log", System.getenv("CORVO_LOG"));
         if (declarado == null) {
             return Nivel.INFO;
         }
