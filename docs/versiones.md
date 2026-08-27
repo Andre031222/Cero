@@ -10,6 +10,47 @@ señaló la auditoría del portal FINESI, y de ahí sale esta regla.
 
 ---
 
+## 0.4.0 · sin publicar
+
+**LuxCore pasa a llamarse Corvo.** El nombre chocaba con un framework PHP del mismo entorno y se
+confundían constantemente. *Corvo* significa cuervo —la marca que el proyecto ya llevaba— y
+conserva el «cor» de LuxCore, que en latín es corazón, la misma raíz de *core*.
+
+Es un cambio rompiente, y por eso va en una versión propia. Las anteriores no se tocan: `0.2.0` y
+`0.3.0` siguen siendo exactamente lo que eran, y las aplicaciones que las usan no se enteran.
+
+### Qué cambia
+
+- Paquetes `lux.*` → `corvo.*`. Clases `Lux` → `Corvo` y `LuxServlet` → `CorvoServlet`.
+- Coordenadas `lux:lux-*` → `dev.ginit.corvo:corvo-*`. El `groupId` pasa a ser un dominio propio,
+  que es lo que exige Maven Central y antes no cumplíamos.
+- La orden `./lux` pasa a `./corvo`.
+- Configuración: `lux.*` → `corvo.*`, `LUX_*` → `CORVO_*`.
+- Cookie de sesión `LUXSESSION` → `CORVOSESSION`.
+- Métricas `lux_*` → `corvo_*`, y los endpoints `/lux/metrics` → `/corvo/metrics`.
+- Tablas por defecto `lux_migraciones` y `lux_sesiones` → `corvo_*`.
+
+### Cómo migrar
+
+`./corvo migrar <ruta>` convierte una aplicación entera. Ver [migrar-a-corvo.md](migrar-a-corvo.md),
+que además explica las tres cosas que ninguna herramienta puede hacer sola: renombrar las tablas
+antes de arrancar, que la cookie cierra todas las sesiones al desplegar, y que los paneles de
+Grafana se quedan vacíos —sin dar error— hasta que se actualicen las métricas.
+
+**No hay capa de compatibilidad, a propósito.** Solo seis aplicaciones usan el framework y son
+todas nuestras: aceptar los dos nombres significaría arrastrar código muerto para siempre.
+
+### Arreglado por el camino
+
+- `Registry.get` resolvía dentro de `computeIfAbsent` y `build()` vuelve a entrar en `get()`, así
+  que las cadenas de servicios hondas lanzaban `IllegalStateException: Recursive update`.
+- `Config` recortaba el prefijo de las variables de entorno con la longitud escrita a mano. Al
+  pasar de `LUX_` (4) a `CORVO_` (6), `CORVO_SERVER_PORT` se leía como `o.server.port` y la
+  aplicación arrancaba con los valores por defecto en silencio. Ese camino no lo cubría ninguna
+  prueba; ahora sí.
+
+---
+
 ## 0.3.0 · 4 de agosto de 2026
 
 Cierra la **fase 2** y recoge la auditoría externa completa. Es la primera versión que se

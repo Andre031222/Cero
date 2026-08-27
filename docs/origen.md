@@ -1,6 +1,6 @@
 # Origen de este repositorio
 
-LuxCore parte del código de **JxMVC 3.4.0**, copiado el **1 de agosto de 2026**.
+Corvo —que hasta la versión 0.4.0 se llamó LuxCore— parte del código de **JxMVC 3.4.0**, copiado el **1 de agosto de 2026**.
 
 ## De dónde viene
 
@@ -15,7 +15,7 @@ La copia se hizo con:
 
 ```bash
 rsync -a --exclude '.git' --exclude 'target/' --exclude '.DS_Store' \
-  <origen>/ LuxCore/
+  <origen>/ Corvo/
 ```
 
 Verificada con `diff -r`: **94 archivos `.java`** en ambos lados, sin diferencias de contenido.
@@ -34,7 +34,7 @@ autoría/ORCID) que siguen su curso sin relación con este repositorio.
 Tampoco se copió el `.git` del origen: su `origin` apunta al repositorio del artículo, y bastaría
 un `git push` distraído desde aquí para reescribirlo. Este repositorio arranca con historial propio.
 
-**Regla de trabajo: `19.Soft_JXMVC` es de solo lectura.** Nada de lo que ocurra en LuxCore se
+**Regla de trabajo: `19.Soft_JXMVC` es de solo lectura.** Nada de lo que ocurra en Corvo se
 propaga hacia allá.
 
 ## Qué se hereda y qué cambia
@@ -44,7 +44,7 @@ Se hereda el núcleo: 54 clases en `jxmvc/core/`, de las cuales **40 no importan
 (`benchmarks/`), con Spring, Quarkus, Micronaut y Javalin ya configurados en Docker — es la línea
 base contra la que se mide la arquitectura nueva.
 
-Lo que cambia es el modelo de ejecución. JxMVC es un WAR que necesita Tomcat 10.1+. LuxCore
+Lo que cambia es el modelo de ejecución. JxMVC es un WAR que necesita Tomcat 10.1+. Corvo
 arranca solo, con servidor HTTP propio, cero dependencias externas, y con la mira puesta en dejar
 de ser únicamente un framework de Java.
 
