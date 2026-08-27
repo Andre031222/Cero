@@ -59,6 +59,20 @@ final class RegistryTests {
         CicloA otro;
     }
 
+    // Cadena honda de servicios. El fallo de "Recursive update" no depende de la
+    // profundidad en sí, sino de que dos eslabones caigan en el mismo bin del
+    // ConcurrentHashMap; con la cadena larga la colisión deja de ser cuestión de suerte.
+    @Service static final class N1 { }
+    @Service static final class N2 { @Inject N2(N1 a) { } }
+    @Service static final class N3 { @Inject N3(N2 a) { } }
+    @Service static final class N4 { @Inject N4(N3 a) { } }
+    @Service static final class N5 { @Inject N5(N4 a) { } }
+    @Service static final class N6 { @Inject N6(N5 a) { } }
+    @Service static final class N7 { @Inject N7(N6 a) { } }
+    @Service static final class N8 { @Inject N8(N7 a) { } }
+    @Service static final class N9 { @Inject N9(N8 a) { } }
+    @Service static final class N10 { @Inject N10(N9 a) { } }
+
     static final class SinAnotar {
     }
 
@@ -96,5 +110,14 @@ final class RegistryTests {
         Registry aislado = new Registry();
         Check.that("create() no cachea",
                 aislado.create(Repositorio.class) != aislado.create(Repositorio.class));
+
+        // Regresión: get() resolvía dentro de computeIfAbsent y build() vuelve a entrar en
+        // get() por cada dependencia. Un computeIfAbsent anidado sobre el mismo mapa lanza
+        // IllegalStateException("Recursive update").
+        Registry hondo = new Registry();
+        Check.that("resuelve cadenas hondas sin 'Recursive update'",
+                hondo.get(N10.class) != null);
+        Check.that("y siguen siendo singleton en toda la cadena",
+                hondo.get(N5.class) == hondo.get(N5.class));
     }
 }
