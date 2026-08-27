@@ -16,12 +16,12 @@ import java.util.function.UnaryOperator;
  *
  * <pre>{@code
  * ServerOptions.builder()
- *     .sessionStore(JdbcSessions.of("lux_sesiones").createTable())
+ *     .sessionStore(JdbcSessions.of("corvo_sesiones").createTable())
  *     .build();
  * }</pre>
  *
  * <p>Los valores se guardan como JSON, así que tienen que ser cosas que el {@link Json} de
- * LuxCore sepa escribir y volver a leer: texto, números, booleanos, listas y mapas. Al releerlos
+ * Corvo sepa escribir y volver a leer: texto, números, booleanos, listas y mapas. Al releerlos
  * vuelven como esos tipos, no como la clase original — guardar un objeto propio y esperar
  * recuperarlo tal cual no funciona. Es la misma regla de cualquier sesión distribuida.
  *

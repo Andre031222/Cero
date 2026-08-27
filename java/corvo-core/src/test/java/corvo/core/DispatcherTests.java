@@ -212,9 +212,9 @@ final class DispatcherTests {
                 Cliente.get(base + "/api/articulos/abc").statusCode(), 400);
 
         Check.equal("parámetro de consulta",
-                Cliente.get(base + "/api/buscar?q=lux&pagina=4").body(), "{\"q\":\"lux\",\"pagina\":4}");
+                Cliente.get(base + "/api/buscar?q=corvo&pagina=4").body(), "{\"q\":\"corvo\",\"pagina\":4}");
         Check.equal("parámetro con valor por defecto",
-                Cliente.get(base + "/api/buscar?q=lux").body(), "{\"q\":\"lux\",\"pagina\":1}");
+                Cliente.get(base + "/api/buscar?q=corvo").body(), "{\"q\":\"corvo\",\"pagina\":1}");
 
         HttpResponse<String> creado = Cliente.post(base + "/api/articulos",
                 "{\"titulo\":\"nuevo\",\"paginas\":7}");

@@ -13,7 +13,7 @@ import corvo.http.ServerOptions;
 import corvo.http.StaticFiles;
 import corvo.view.Templates;
 
-/** El sitio de LuxCore: portada, documentación, demostraciones, acceso y generador. */
+/** El sitio de Corvo: portada, documentación, demostraciones, acceso y generador. */
 public final class App {
 
     private App() {

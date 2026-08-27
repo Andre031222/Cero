@@ -100,35 +100,35 @@ public final class Metrics implements Middleware {
         Resumen resumen = snapshot();
         StringBuilder salida = new StringBuilder(512);
 
-        salida.append("# HELP lux_requests_total Peticiones atendidas\n");
-        salida.append("# TYPE lux_requests_total counter\n");
+        salida.append("# HELP corvo_requests_total Peticiones atendidas\n");
+        salida.append("# TYPE corvo_requests_total counter\n");
         for (Ruta ruta : resumen.rutas()) {
-            salida.append("lux_requests_total{ruta=\"").append(escapar(ruta.ruta())).append("\"} ")
+            salida.append("corvo_requests_total{ruta=\"").append(escapar(ruta.ruta())).append("\"} ")
                     .append(ruta.peticiones()).append('\n');
         }
 
-        salida.append("# HELP lux_request_errors_total Respuestas con estado 5xx o 4xx\n");
-        salida.append("# TYPE lux_request_errors_total counter\n");
+        salida.append("# HELP corvo_request_errors_total Respuestas con estado 5xx o 4xx\n");
+        salida.append("# TYPE corvo_request_errors_total counter\n");
         for (Ruta ruta : resumen.rutas()) {
-            salida.append("lux_request_errors_total{ruta=\"").append(escapar(ruta.ruta())).append("\"} ")
+            salida.append("corvo_request_errors_total{ruta=\"").append(escapar(ruta.ruta())).append("\"} ")
                     .append(ruta.errores()).append('\n');
         }
 
-        salida.append("# HELP lux_request_duration_ms Latencia por ruta en milisegundos\n");
-        salida.append("# TYPE lux_request_duration_ms summary\n");
+        salida.append("# HELP corvo_request_duration_ms Latencia por ruta en milisegundos\n");
+        salida.append("# TYPE corvo_request_duration_ms summary\n");
         for (Ruta ruta : resumen.rutas()) {
             String etiqueta = escapar(ruta.ruta());
-            salida.append("lux_request_duration_ms{ruta=\"").append(etiqueta).append("\",quantile=\"0.5\"} ")
+            salida.append("corvo_request_duration_ms{ruta=\"").append(etiqueta).append("\",quantile=\"0.5\"} ")
                     .append(ruta.p50()).append('\n');
-            salida.append("lux_request_duration_ms{ruta=\"").append(etiqueta).append("\",quantile=\"0.95\"} ")
+            salida.append("corvo_request_duration_ms{ruta=\"").append(etiqueta).append("\",quantile=\"0.95\"} ")
                     .append(ruta.p95()).append('\n');
-            salida.append("lux_request_duration_ms{ruta=\"").append(etiqueta).append("\",quantile=\"0.99\"} ")
+            salida.append("corvo_request_duration_ms{ruta=\"").append(etiqueta).append("\",quantile=\"0.99\"} ")
                     .append(ruta.p99()).append('\n');
         }
 
-        salida.append("# HELP lux_uptime_ms Tiempo desde el arranque\n");
-        salida.append("# TYPE lux_uptime_ms gauge\n");
-        salida.append("lux_uptime_ms ").append(resumen.tiempoActivoMillis()).append('\n');
+        salida.append("# HELP corvo_uptime_ms Tiempo desde el arranque\n");
+        salida.append("# TYPE corvo_uptime_ms gauge\n");
+        salida.append("corvo_uptime_ms ").append(resumen.tiempoActivoMillis()).append('\n');
         return salida.toString();
     }
 

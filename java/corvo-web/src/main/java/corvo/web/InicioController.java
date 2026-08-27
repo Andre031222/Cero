@@ -24,32 +24,32 @@ public class InicioController {
 
     @Get("")
     public Result index(Context contexto) {
-        return pagina(contexto, "inicio", "LuxCore — Framework Java");
+        return pagina(contexto, "inicio", "Corvo — Framework Java");
     }
 
     @Get("/descargas")
     public Result descargas(Context contexto) {
-        return pagina(contexto, "descargas", "Descargas · LuxCore");
+        return pagina(contexto, "descargas", "Descargas · Corvo");
     }
 
     @Get("/empezar")
     public Result empezar(Context contexto) {
-        return pagina(contexto, "empezar", "Empezar · LuxCore");
+        return pagina(contexto, "empezar", "Empezar · Corvo");
     }
 
     @Get("/guia")
     public Result guia(Context contexto) {
-        return pagina(contexto, "guia", "Guía · LuxCore");
+        return pagina(contexto, "guia", "Guía · Corvo");
     }
 
     @Get("/modulos")
     public Result modulos(Context contexto) {
-        return pagina(contexto, "modulos", "Módulos · LuxCore");
+        return pagina(contexto, "modulos", "Módulos · Corvo");
     }
 
     @Get("/referencia")
     public Result referencia(Context contexto) {
-        return pagina(contexto, "referencia", "Referencia · LuxCore");
+        return pagina(contexto, "referencia", "Referencia · Corvo");
     }
 
     // ── inglés ──────────────────────────────────────────────────────────────
@@ -58,37 +58,37 @@ public class InicioController {
 
     @Get("/en")
     public Result indexEn(Context contexto) {
-        return pagina(contexto, "en/inicio", "LuxCore — Java framework");
+        return pagina(contexto, "en/inicio", "Corvo — Java framework");
     }
 
     @Get("/en/descargas")
     public Result descargasEn(Context contexto) {
-        return pagina(contexto, "en/descargas", "Downloads · LuxCore");
+        return pagina(contexto, "en/descargas", "Downloads · Corvo");
     }
 
     @Get("/en/empezar")
     public Result empezarEn(Context contexto) {
-        return pagina(contexto, "en/empezar", "Get started · LuxCore");
+        return pagina(contexto, "en/empezar", "Get started · Corvo");
     }
 
     @Get("/en/guia")
     public Result guiaEn(Context contexto) {
-        return pagina(contexto, "en/guia", "Guide · LuxCore");
+        return pagina(contexto, "en/guia", "Guide · Corvo");
     }
 
     @Get("/en/modulos")
     public Result modulosEn(Context contexto) {
-        return pagina(contexto, "en/modulos", "Modules · LuxCore");
+        return pagina(contexto, "en/modulos", "Modules · Corvo");
     }
 
     @Get("/en/referencia")
     public Result referenciaEn(Context contexto) {
-        return pagina(contexto, "en/referencia", "Reference · LuxCore");
+        return pagina(contexto, "en/referencia", "Reference · Corvo");
     }
 
     @Get("/panel")
     public Result panel(Context contexto) {
-        return pagina(contexto, "panel", "Panel en vivo · LuxCore");
+        return pagina(contexto, "panel", "Panel en vivo · Corvo");
     }
 
     /**
@@ -126,7 +126,7 @@ public class InicioController {
                 fila(2, "Bruno", "Editor"),
                 fila(3, "Carla", "Viewer"));
 
-        Map<String, Object> modelo = Vista.modelo(contexto, "Datos · LuxCore");
+        Map<String, Object> modelo = Vista.modelo(contexto, "Datos · Corvo");
         modelo.put("estadoConexion", "Conectado");
         modelo.put("filas", filas);
         modelo.put("hayFilas", !filas.isEmpty());
@@ -135,7 +135,7 @@ public class InicioController {
 
     @Get("/errores")
     public Result errores(Context contexto) {
-        return pagina(contexto, "errores", "Pruebas de errores · LuxCore");
+        return pagina(contexto, "errores", "Pruebas de errores · Corvo");
     }
 
     @Get("/ping")
@@ -145,7 +145,7 @@ public class InicioController {
 
     @Get("/grabar/{valor}")
     public Result grabar(Context contexto, String valor) {
-        Map<String, Object> modelo = Vista.modelo(contexto, "Argumentos de ruta · LuxCore");
+        Map<String, Object> modelo = Vista.modelo(contexto, "Argumentos de ruta · Corvo");
         modelo.put("ruta", "/grabar/" + valor);
         modelo.put("valor", valor);
         return Result.view("grabar", modelo);

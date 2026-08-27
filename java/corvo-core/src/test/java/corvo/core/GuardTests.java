@@ -198,7 +198,7 @@ final class GuardTests {
             String cookie = emision.headers().firstValue("set-cookie").orElse("");
             String token = emision.body();
             Check.that("se emite un token", token.length() >= 40);
-            Check.that("y una sesión", cookie.contains("LUXSESSION"));
+            Check.that("y una sesión", cookie.contains("CORVOSESSION"));
 
             String sesion = cookie.substring(0, cookie.indexOf(';'));
 

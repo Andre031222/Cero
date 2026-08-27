@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 
 public final class FakeDb implements java.sql.Driver {
 
-    public static final String URL = "jdbc:luxtest:memoria";
+    public static final String URL = "jdbc:corvotest:memoria";
 
     static final List<Executed> log = Collections.synchronizedList(new ArrayList<>());
     static final Deque<List<Map<String, Object>>> results = new ArrayDeque<>();
@@ -102,7 +102,7 @@ public final class FakeDb implements java.sql.Driver {
 
     @Override
     public boolean acceptsURL(String url) {
-        return url != null && url.startsWith("jdbc:luxtest:");
+        return url != null && url.startsWith("jdbc:corvotest:");
     }
 
     @Override

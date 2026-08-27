@@ -41,7 +41,7 @@ public final class Tasks implements AutoCloseable {
 
     private Tasks() {
         reloj = Executors.newSingleThreadScheduledExecutor(tarea -> {
-            Thread hilo = new Thread(tarea, "lux-tasks");
+            Thread hilo = new Thread(tarea, "corvo-tasks");
             hilo.setDaemon(true);
             return hilo;
         });

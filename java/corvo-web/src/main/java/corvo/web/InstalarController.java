@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
- * Lo que hace que {@code curl -fsSL https://luxcore.ginit.dev/instalar | sh} funcione.
+ * Lo que hace que {@code curl -fsSL https://corvo.ginit.dev/instalar | sh} funcione.
  *
  * <p>Los guiones se sirven como texto plano a propósito: si el navegador se los descargara,
  * nadie podría leerlos antes de ejecutarlos, y eso es justo lo que hay que poder hacer.

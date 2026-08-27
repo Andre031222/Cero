@@ -27,7 +27,7 @@ public class AuthController {
         if (Autenticacion.actual(contexto) != null) {
             return Result.redirect("/auth/perfil");
         }
-        Map<String, Object> modelo = Vista.modelo(contexto, "Iniciar sesión · LuxCore");
+        Map<String, Object> modelo = Vista.modelo(contexto, "Iniciar sesión · Corvo");
         modelo.put("googleDisponible", auth.googleDisponible());
         modelo.put("error", mensajeDeError(contexto.query("error")));
         return Result.view("login", modelo);
@@ -86,7 +86,7 @@ public class AuthController {
     @RequireAuth
     @Get("/perfil")
     public Result perfil(Context contexto) {
-        Map<String, Object> modelo = Vista.modelo(contexto, "Mi perfil · LuxCore");
+        Map<String, Object> modelo = Vista.modelo(contexto, "Mi perfil · Corvo");
         modelo.put("usuario", Autenticacion.actual(contexto));
         return Result.view("perfil", modelo);
     }

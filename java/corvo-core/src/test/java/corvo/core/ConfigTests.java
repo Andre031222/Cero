@@ -17,7 +17,7 @@ final class ConfigTests {
                 .set("app.debug", "true")
                 .set("app.reintentos", "3")
                 .set("app.timeout", "5000")
-                .set("db.url", "jdbc:postgresql://localhost/lux")
+                .set("db.url", "jdbc:postgresql://localhost/corvo")
                 .set("db.usuario", "andre")
                 .set("db.pool", "10");
 
@@ -31,21 +31,31 @@ final class ConfigTests {
         Check.that("has() detecta la clave", config.has("app.debug") && !config.has("app.nada"));
 
         Check.equal("under() recorta el prefijo", config.under("db").get("url"),
-                "jdbc:postgresql://localhost/lux");
+                "jdbc:postgresql://localhost/corvo");
         Check.equal("under() no incluye otras secciones", config.under("db").size(), 3);
 
         Datos datos = config.bind(Datos.class, "db");
-        Check.equal("bind: url", datos.url(), "jdbc:postgresql://localhost/lux");
+        Check.equal("bind: url", datos.url(), "jdbc:postgresql://localhost/corvo");
         Check.equal("bind: usuario", datos.usuario(), "andre");
         Check.equal("bind: pool convertido a int", datos.pool(), 10);
 
-        System.setProperty("lux.prueba.valor", "desde-propiedad");
+        System.setProperty("corvo.prueba.valor", "desde-propiedad");
         try {
-            Check.equal("las propiedades del sistema con prefijo lux. se cargan",
+            Check.equal("las propiedades del sistema con prefijo corvo. se cargan",
                     Config.load("no-existe.properties").get("prueba.valor"), "desde-propiedad");
         } finally {
-            System.clearProperty("lux.prueba.valor");
+            System.clearProperty("corvo.prueba.valor");
         }
+
+        // Regresión: el prefijo pasó de LUX_ (4) a CORVO_ (6) y el recorte estaba escrito a
+        // mano, así que CORVO_SERVER_PORT se leía como "o.server.port". No lo cazó nadie porque
+        // System.getenv() no se puede tocar en el proceso y este camino no tenía prueba.
+        Check.equal("CORVO_ se recorta por la longitud del prefijo, no a mano",
+                Config.claveDeEntorno("CORVO_SERVER_PORT"), "server.port");
+        Check.equal("y un solo tramo también",
+                Config.claveDeEntorno("CORVO_PUERTO"), "puerto");
+        Check.that("lo que no lleva el prefijo se ignora",
+                Config.claveDeEntorno("PATH") == null && Config.claveDeEntorno("LUX_PUERTO") == null);
 
         Check.equal("cargar un recurso inexistente no falla",
                 Config.load("no-existe.properties").get("nada"), null);

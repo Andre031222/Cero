@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
  * }
  * }</pre>
  *
- * <p>El hilo se queda dentro del bucle, y eso está bien: LuxCore atiende cada conexión en su
+ * <p>El hilo se queda dentro del bucle, y eso está bien: Corvo atiende cada conexión en su
  * propio hilo virtual, así que mil paneles abiertos son mil hilos virtuales, no mil del sistema.
  * Con hilos de plataforma esto no se podría hacer así — es la diferencia que trae Java 21.
  *

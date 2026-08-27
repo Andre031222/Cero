@@ -135,7 +135,7 @@ public final class Corvo {
         Server server = Server.start(options, handler, reporter);
         if (banner) {
             long millis = (System.nanoTime() - began) / 1_000_000;
-            System.out.printf("lux · %s://%s:%d · %d rutas · %d ms%n",
+            System.out.printf("corvo · %s://%s:%d · %d rutas · %d ms%n",
                     options.secure() ? "https" : "http", options.host(), server.port(),
                     router.size(), millis);
         }

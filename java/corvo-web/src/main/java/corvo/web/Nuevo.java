@@ -22,7 +22,7 @@ public final class Nuevo {
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].startsWith("-")) {
             System.err.println("""
-                    uso:  lux new <nombre> [grupo] [motor] [--front]
+                    uso:  corvo new <nombre> [grupo] [motor] [--front]
 
                       nombre   nombre del proyecto y de la carpeta      (mi-app)
                       grupo    groupId de Maven                         (com.ejemplo)
@@ -30,10 +30,10 @@ public final class Nuevo {
                       --front  separa en backend/ y frontend/, listo para React,
                                Svelte o Vue, con la API sirviendo JSON
 
-                      lux new tienda                       sin base de datos
-                      lux new tienda h2                    con H2
-                      lux new tienda pe.unap mysql         grupo propio y MySQL
-                      lux new tienda h2 --front            con carpeta para el frontend""");
+                      corvo new tienda                       sin base de datos
+                      corvo new tienda h2                    con H2
+                      corvo new tienda pe.unap mysql         grupo propio y MySQL
+                      corvo new tienda h2 --front            con carpeta para el frontend""");
             System.exit(1);
         }
 
@@ -51,7 +51,7 @@ public final class Nuevo {
         String grupo = libres.size() > 1 ? libres.get(1) : "com.ejemplo";
         String motor = libres.size() > 2 ? libres.get(2) : "ninguno";
 
-        // "lux new tienda h2" es lo que sale solo; sin esto, h2 acabaría siendo el groupId.
+        // "corvo new tienda h2" es lo que sale solo; sin esto, h2 acabaría siendo el groupId.
         if (libres.size() == 2 && MOTORES.contains(libres.get(1))) {
             grupo = "com.ejemplo";
             motor = libres.get(1);

@@ -363,7 +363,7 @@ final class TransversalesTests {
         Check.that("y is(default) es cierto", vacio.is("default"));
         Check.that("no es dev", !vacio.dev());
 
-        Profiles desdeConfig = Profiles.from(Config.empty().set("lux.profiles", "Prod, metricas"));
+        Profiles desdeConfig = Profiles.from(Config.empty().set("corvo.profiles", "Prod, metricas"));
         Check.equal("coge el primero como activo", desdeConfig.active(), "prod");
         Check.that("normaliza mayúsculas y espacios", desdeConfig.is("METRICAS"));
         Check.that("reconoce producción", desdeConfig.prod());
@@ -377,12 +377,12 @@ final class TransversalesTests {
         Check.that("y no ejecuta si no está", !dev.onlyIn("prod", () -> hecho.add("no")));
         Check.equal("solo corrió una vez", hecho, List.of("sí"));
 
-        System.setProperty("lux.profiles", "pisado");
+        System.setProperty("corvo.profiles", "pisado");
         try {
             Check.equal("la propiedad del sistema manda sobre la configuración",
-                    Profiles.from(Config.empty().set("lux.profiles", "delArchivo")).active(), "pisado");
+                    Profiles.from(Config.empty().set("corvo.profiles", "delArchivo")).active(), "pisado");
         } finally {
-            System.clearProperty("lux.profiles");
+            System.clearProperty("corvo.profiles");
         }
     }
 }

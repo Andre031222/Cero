@@ -32,9 +32,9 @@ public final class Autenticacion {
 
     /** Lee la configuración de Google; sin credenciales el botón sale desactivado. */
     public static Autenticacion desde(Config config) {
-        String id = config.get("lux.oauth.google.id", "");
-        String secreto = config.get("lux.oauth.google.secreto", "");
-        String redireccion = config.get("lux.oauth.google.redireccion",
+        String id = config.get("corvo.oauth.google.id", "");
+        String secreto = config.get("corvo.oauth.google.secreto", "");
+        String redireccion = config.get("corvo.oauth.google.redireccion",
                 "http://localhost:8080/auth/google/callback");
         return new Autenticacion(id.isBlank() || secreto.isBlank()
                 ? null
@@ -71,7 +71,7 @@ public final class Autenticacion {
                 identidad.foto(), "google", "USER");
     }
 
-    /** Lo que LuxCore llama en cada petición para saber quién viene. */
+    /** Lo que Corvo llama en cada petición para saber quién viene. */
     public Principal identificar(Context contexto) {
         Session sesion = contexto.session(false);
         return sesion != null && sesion.get(CLAVE_USUARIO) instanceof Usuario usuario

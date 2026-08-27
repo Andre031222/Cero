@@ -45,7 +45,7 @@ public final class Migrations {
 
     private final String fuente;
     private final Origen origen;
-    private String tabla = "lux_migraciones";
+    private String tabla = "corvo_migraciones";
 
     private Migrations(String fuente, Origen origen) {
         this.fuente = fuente;

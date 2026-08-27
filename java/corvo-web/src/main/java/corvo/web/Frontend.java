@@ -109,7 +109,7 @@ final class Frontend {
         return """
                 # %s
 
-                    backend/     LuxCore — la API, en Java
+                    backend/     Corvo — la API, en Java
                     frontend/    tu interfaz — React, Svelte, Vue, lo que prefieras
 
                 ## Desarrollo

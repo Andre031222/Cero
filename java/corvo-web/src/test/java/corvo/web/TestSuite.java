@@ -56,7 +56,7 @@ public final class TestSuite {
         comprobar("se sirve como HTML",
                 portada.headers().firstValue("content-type").orElse("").startsWith("text/html"));
         comprobar("el layout se aplica", portada.body().startsWith("<!doctype html>"));
-        comprobar("con el título de la página", portada.body().contains("<title>LuxCore —"));
+        comprobar("con el título de la página", portada.body().contains("<title>Corvo —"));
         comprobar("la barra trae la navegación", portada.body().contains("nav-sitio"));
         comprobar("la barra no anuncia el acceso", !portada.body().contains("href=\"/auth/login\""));
         comprobar("y no enseña un perfil", !portada.body().contains("href=\"/auth/perfil\""));
@@ -252,7 +252,7 @@ public final class TestSuite {
         comprobar("y comprueba la huella también", windows.body().contains("Get-FileHash"));
     }
 
-    /** {@code lux new … --front} tiene que dejar un backend que ya hable con un frontend aparte. */
+    /** {@code corvo new … --front} tiene que dejar un backend que ya hable con un frontend aparte. */
     private static void generadorConFrontend() throws Exception {
         java.nio.file.Path base = java.nio.file.Files.createTempDirectory("lux-front");
         java.nio.file.Path proyecto = base.resolve("demo");

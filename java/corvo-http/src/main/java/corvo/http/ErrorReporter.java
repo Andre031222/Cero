@@ -10,7 +10,7 @@ public interface ErrorReporter {
         return new ErrorReporter() {
             @Override
             public void handler(Request request, Throwable failure) {
-                System.err.println("lux-http: fallo en " + request.method() + " " + request.path());
+                System.err.println("corvo-http: fallo en " + request.method() + " " + request.path());
                 failure.printStackTrace(System.err);
             }
 

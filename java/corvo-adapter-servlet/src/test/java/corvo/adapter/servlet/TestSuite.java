@@ -151,14 +151,14 @@ public final class TestSuite {
                 llamar(servlet, peticion("GET", "/api/notas/7")).texto().contains("nota 7"));
 
         Doble.Peticion conConsulta = peticion("GET", "/api/buscar");
-        conConsulta.consulta = "q=lux&p=4";
+        conConsulta.consulta = "q=corvo&p=4";
         check("los parámetros de consulta llegan",
-                llamar(servlet, conConsulta).texto().equals("lux|4"));
+                llamar(servlet, conConsulta).texto().equals("corvo|4"));
 
         Doble.Peticion sinPagina = peticion("GET", "/api/buscar");
-        sinPagina.consulta = "q=lux";
+        sinPagina.consulta = "q=corvo";
         check("y el valor por defecto se aplica",
-                llamar(servlet, sinPagina).texto().equals("lux|1"));
+                llamar(servlet, sinPagina).texto().equals("corvo|1"));
 
         Doble.Peticion conCabecera = peticion("GET", "/api/cabecera");
         conCabecera.cabecera("X-Prueba", "valor");
