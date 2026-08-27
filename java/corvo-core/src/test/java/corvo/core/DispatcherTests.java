@@ -13,6 +13,17 @@ final class DispatcherTests {
     private DispatcherTests() {
     }
 
+    /** Los 256 valores de un byte, con el 0 y el 0xFF dentro a propósito. */
+    private static final byte[] TODOS_LOS_BYTES = todosLosBytes();
+
+    private static byte[] todosLosBytes() {
+        byte[] datos = new byte[256];
+        for (int i = 0; i < 256; i++) {
+            datos[i] = (byte) i;
+        }
+        return datos;
+    }
+
     record Articulo(String titulo, int paginas) {
     }
 
@@ -35,6 +46,23 @@ final class DispatcherTests {
         @Get
         public Object index() {
             return "raíz";
+        }
+
+        /** Los 256 bytes posibles: si algo se codifica por el camino, aquí se nota. */
+        @Get("/binario")
+        public Object binario() {
+            return Result.bytes(TODOS_LOS_BYTES, "application/octet-stream");
+        }
+
+        @Get("/descarga")
+        public Object descarga() {
+            return Result.download(TODOS_LOS_BYTES, "informe final.bin", "application/octet-stream");
+        }
+
+        @Get("/descarga-con-trampa")
+        public Object descargaConTrampa() {
+            return Result.download(new byte[] {1, 2, 3},
+                    "a\"b\r\nSet-Cookie: sesion=robada", "application/octet-stream");
         }
 
         @Get("/texto")
@@ -182,6 +210,7 @@ final class DispatcherTests {
             enrutado(base);
             binding(base);
             resultados(base);
+            binarios(base);
             seguridad(base);
             errores(base);
             middleware(base, traza);
@@ -290,6 +319,36 @@ final class DispatcherTests {
         HttpResponse<String> ausente = Cliente.get(base + "/api/no-esta");
         Check.equal("HttpException conserva el estado", ausente.statusCode(), 404);
         Check.that("y el mensaje", ausente.body().contains("el artículo no existe"));
+    }
+
+    /**
+     * El binario tiene que llegar byte a byte.
+     *
+     * <p>Se comprueba con los 256 valores posibles porque el modo de fallar es sutil: si el
+     * cuerpo pasa por un String, los bytes sobre 0x7F se convierten en el carácter de sustitución
+     * y el archivo llega con un tamaño parecido pero corrupto. Un «hola» en ASCII pasaría la
+     * prueba sin enterarse de nada.
+     */
+    private static void binarios(String base) throws Exception {
+        HttpResponse<byte[]> crudo = Cliente.bytes(base + "/api/binario");
+        Check.equal("el binario responde 200", crudo.statusCode(), 200);
+        Check.equal("y con su tipo",
+                crudo.headers().firstValue("Content-Type").orElse(""), "application/octet-stream");
+        Check.equal("llegan todos los bytes", crudo.body().length, 256);
+        Check.that("y sin tocar ninguno", java.util.Arrays.equals(crudo.body(), TODOS_LOS_BYTES));
+
+        HttpResponse<byte[]> descarga = Cliente.bytes(base + "/api/descarga");
+        Check.equal("download nombra el archivo",
+                descarga.headers().firstValue("Content-Disposition").orElse(""),
+                "attachment; filename=\"informe final.bin\"");
+
+        // Un nombre con comillas y un salto de línea podría cerrar la cabecera y colar otra.
+        HttpResponse<byte[]> trampa = Cliente.bytes(base + "/api/descarga-con-trampa");
+        String disposicion = trampa.headers().firstValue("Content-Disposition").orElse("");
+        Check.equal("el nombre de archivo sale saneado",
+                disposicion, "attachment; filename=\"a_b__Set-Cookie: sesion=robada\"");
+        Check.that("y no aparece una cookie inyectada",
+                trampa.headers().firstValue("Set-Cookie").isEmpty());
     }
 
     private static void middleware(String base, List<String> traza) throws Exception {

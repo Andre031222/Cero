@@ -139,6 +139,8 @@ final class Dispatcher implements Handler {
             case REDIRECT -> response.redirect(result.payload());
             case REDIRECT_EXTERNAL -> response.redirectExternal(result.payload());
             case EMPTY -> response.send(new byte[0]);
+            // El Content-Type ya viaja en las cabeceras del Result, puestas más arriba.
+            case BINARY -> response.send(result.bytes());
             case VIEW -> {
                 if (views == null) {
                     throw new HttpException(501, "no hay motor de vistas configurado");
