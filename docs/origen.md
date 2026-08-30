@@ -1,5 +1,26 @@
 # Origen de este repositorio
 
+> **Estado a 30 de agosto de 2026 — medido, no recordado.**
+>
+> Este documento describe cómo arrancó el repositorio el 1 de agosto. **Ya no describe el
+> código.** Se comparó clase por clase el árbol actual contra `legacy/jxmvc-core`, normalizando
+> paquetes, importaciones, comentarios, espacios y los nombres del framework, para que un
+> renombrado no contara como reescritura:
+>
+> | | |
+> |---|---|
+> | Clases de Corvo hoy | **153** |
+> | Idénticas a alguna de JxMVC | **0** |
+> | Con parecido superior al 55 % | **2**, y las dos son `@FunctionalInterface` de un método — cualquier par se parece |
+>
+> **No sobrevive ninguna clase heredada.** El servidor HTTP —4 410 líneas, 39 clases— no existía
+> en JxMVC: allí el servidor era Tomcat.
+>
+> Este documento se conserva igualmente. Es el registro de procedencia de un repositorio que
+> acompaña artículos: que hoy no quede código heredado es una conclusión que se sostiene porque
+> está medida y porque el punto de partida está escrito, no porque se haya borrado la página.
+
+
 Corvo —que hasta la versión 0.4.0 se llamó LuxCore— parte del código de **JxMVC 3.4.0**, copiado el **1 de agosto de 2026**.
 
 ## De dónde viene
