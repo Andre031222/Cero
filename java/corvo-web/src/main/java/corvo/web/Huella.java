@@ -16,7 +16,7 @@ import java.util.HexFormat;
  */
 final class Huella {
 
-    private static final String[] RECURSOS = {"estaticos/lux.css", "estaticos/lux.js",
+    private static final String[] RECURSOS = {"estaticos/corvo.css", "estaticos/corvo.js",
             "estaticos/terminal.js"};
 
     static final String ACTUAL = calcular();
