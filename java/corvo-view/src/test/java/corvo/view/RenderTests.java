@@ -19,6 +19,9 @@ final class RenderTests {
         Check.group("interpolación");
         interpolacion();
 
+        Check.group("globales");
+        globales();
+
         Check.group("escapado");
         escapado();
 
@@ -27,6 +30,33 @@ final class RenderTests {
 
         Check.group("bucles");
         bucles();
+    }
+
+    private static String render(String plantilla, Object modelo, Map<String, Object> globales) {
+        return Template.compile("prueba", plantilla)
+                .render(modelo, Templates.from(java.nio.file.Path.of(".")), globales);
+    }
+
+    /**
+     * Los globales son lo que permite que una plantilla escriba {{ t.guardar }} sin que cada
+     * controlador meta los textos en su modelo. Y el modelo gana sobre un global del mismo
+     * nombre: al revés, añadir un global nuevo taparía en silencio un dato de una plantilla
+     * que ya funcionaba.
+     */
+    private static void globales() {
+        Check.equal("un global se resuelve como una variable más",
+                render("{{ saludo }}", Map.of(), Map.of("saludo", "hola")), "hola");
+        Check.equal("y convive con el modelo",
+                render("{{ saludo }} {{ nombre }}", Map.of("nombre", "Ana"), Map.of("saludo", "hola")),
+                "hola Ana");
+        Check.equal("el modelo gana cuando los dos traen la misma clave",
+                render("{{ x }}", Map.of("x", "del modelo"), Map.of("x", "del global")),
+                "del modelo");
+        Check.equal("un mapa global se recorre con punto",
+                render("{{ t.guardar }}", Map.of(), Map.of("t", Map.of("guardar", "Guardar"))),
+                "Guardar");
+        Check.equal("sin globales, todo sigue igual",
+                render("{{ nombre }}", Map.of("nombre", "Ana")), "Ana");
     }
 
     private static String render(String plantilla, Object modelo) {

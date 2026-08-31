@@ -33,6 +33,8 @@ public final class Corvo {
         return app().port(port).controllers(controllers).start();
     }
 
+    private Messages messages;
+
     public Corvo config(Config value) {
         config = value;
         options = applyConfig(options, value);
@@ -119,6 +121,12 @@ public final class Corvo {
         return this;
     }
 
+    /** Los textos de la aplicación, para {@code context.t(...)} y para las plantillas. */
+    public Corvo messages(Messages value) {
+        messages = value;
+        return this;
+    }
+
     public Corvo quiet() {
         banner = false;
         return this;
@@ -137,7 +145,7 @@ public final class Corvo {
     }
 
     public Handler handler() {
-        Handler dispatcher = new Dispatcher(router, registry, middleware, authenticator, views);
+        Handler dispatcher = new Dispatcher(router, registry, middleware, authenticator, views, messages);
         return fallback == null ? dispatcher : withFallback(dispatcher);
     }
 

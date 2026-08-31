@@ -14,6 +14,7 @@ public final class TestSuite {
         ValidationTests.run();
         GuardTests.run();
         ObservabilidadTests.run();
+        MensajesTests.run();
         AsincronoTests.run();
         AutenticacionTests.run();
         TransversalesTests.run();
