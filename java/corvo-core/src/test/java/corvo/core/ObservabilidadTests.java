@@ -3,6 +3,7 @@ package corvo.core;
 import corvo.http.ErrorReporter;
 import corvo.http.Server;
 
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,61 @@ final class ObservabilidadTests {
         Check.group("log de acceso");
         acceso();
         estadoRealAunqueFalleLaVista();
+
+        Check.group("salud");
+        salud();
+    }
+
+    /**
+     * Vivo y listo no son lo mismo, y la prueba existe para fijar esa diferencia: con una
+     * comprobación caída, vivo sigue dando 200 y listo pasa a 503. Si alguien los uniera por
+     * comodidad, esto se pone en rojo.
+     */
+    private static void salud() throws Exception {
+        java.util.concurrent.atomic.AtomicBoolean bdEnPie =
+                new java.util.concurrent.atomic.AtomicBoolean(true);
+
+        Server servidor = Corvo.app().port(0).quiet().reporter(ErrorReporter.silent())
+                .health(Health.checks()
+                        .ready("bd", bdEnPie::get)
+                        .ready("disco", () -> true))
+                .start();
+        String base = "http://127.0.0.1:" + servidor.port();
+        try {
+            HttpResponse<String> vivo = Cliente.get(base + "/corvo/vivo");
+            Check.equal("vivo responde 200", vivo.statusCode(), 200);
+            Check.that("y dice cuánto lleva en pie", vivo.body().contains("activoMs"));
+
+            HttpResponse<String> listo = Cliente.get(base + "/corvo/listo");
+            Check.equal("con todo en pie, listo responde 200", listo.statusCode(), 200);
+            Check.that("y nombra cada comprobación", listo.body().contains("\"bd\":\"bien\""));
+
+            bdEnPie.set(false);
+            HttpResponse<String> caido = Cliente.get(base + "/corvo/listo");
+            Check.equal("con una comprobación caída, listo responde 503", caido.statusCode(), 503);
+            Check.that("y dice cuál", caido.body().contains("\"bd\":\"mal\""));
+            Check.that("sin ocultar las que sí van", caido.body().contains("\"disco\":\"bien\""));
+
+            Check.equal("pero vivo sigue en 200: el proceso responde",
+                    Cliente.get(base + "/corvo/vivo").statusCode(), 200);
+
+            // Una comprobación que lanza es un fallo, no un 500: el supervisor tiene que poder
+            // leer qué se rompió.
+            Server conFallo = Corvo.app().port(0).quiet().reporter(ErrorReporter.silent())
+                    .health(Health.checks().ready("remoto", () -> {
+                        throw new IllegalStateException("no responde el host");
+                    }))
+                    .start();
+            try {
+                HttpResponse<String> r = Cliente.get("http://127.0.0.1:" + conFallo.port() + "/corvo/listo");
+                Check.equal("una comprobación que lanza da 503, no 500", r.statusCode(), 503);
+                Check.that("y el mensaje llega entero", r.body().contains("no responde el host"));
+            } finally {
+                conFallo.stop();
+            }
+        } finally {
+            servidor.stop();
+        }
     }
 
     /**

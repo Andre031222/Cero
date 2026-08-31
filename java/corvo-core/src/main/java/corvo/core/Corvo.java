@@ -106,6 +106,19 @@ public final class Corvo {
         return this;
     }
 
+    /**
+     * Publica {@code /corvo/vivo} y {@code /corvo/listo}.
+     *
+     * <p>Las rutas se registran aquí y no en {@code start()} para que cuenten en el número de
+     * rutas del arranque: un endpoint que no aparece donde aparecen los demás es un endpoint que
+     * nadie recuerda que existe.
+     */
+    public Corvo health(Health checks) {
+        router.get("/corvo/vivo", checks.liveEndpoint());
+        router.get("/corvo/listo", checks.readyEndpoint());
+        return this;
+    }
+
     public Corvo quiet() {
         banner = false;
         return this;
