@@ -91,7 +91,7 @@ public final class TestSuite {
         comprobar("y trae una CSP",
                 portada.headers().firstValue("content-security-policy").orElse("").contains("default-src"));
 
-        HttpResponse<String> css = get(base + "/estaticos/lux.css");
+        HttpResponse<String> css = get(base + "/estaticos/corvo.css");
         comprobar("sirve la hoja de estilo", css.statusCode() == 200);
         comprobar("con su tipo",
                 css.headers().firstValue("content-type").orElse("").startsWith("text/css"));

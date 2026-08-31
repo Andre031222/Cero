@@ -20,7 +20,7 @@ AQUI = pathlib.Path(__file__).resolve().parent
 def _huella():
     import hashlib
     datos = b"".join((AQUI / "assets" / n).read_bytes()
-                      for n in ("lux.css", "lux.js", "terminal.js"))
+                      for n in ("corvo.css", "corvo.js", "terminal.js"))
     return hashlib.sha256(datos).hexdigest()[:8]
 
 PAGINAS = [
@@ -201,8 +201,8 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 <meta name="twitter:title" content="{completo}">
 <meta name="twitter:description" content="{entradilla}">
 <meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
-<link rel="stylesheet" href="{raiz}/assets/lux.css?v={_huella()}">
-<script src="{raiz}/assets/lux.js?v={_huella()}"></script>{guion_terminal}
+<link rel="stylesheet" href="{raiz}/assets/corvo.css?v={_huella()}">
+<script src="{raiz}/assets/corvo.js?v={_huella()}"></script>{guion_terminal}
 </head>
 <body>
 
@@ -274,8 +274,8 @@ def unico() -> int:
     en dos idiomas doblaría un archivo que ya pesa 155 KB.
     """
     t = TEXTOS["es"]
-    estilo = (AQUI / "assets" / "lux.css").read_text(encoding="utf-8")
-    guion = (AQUI / "assets" / "lux.js").read_text(encoding="utf-8")
+    estilo = (AQUI / "assets" / "corvo.css").read_text(encoding="utf-8")
+    guion = (AQUI / "assets" / "corvo.js").read_text(encoding="utf-8")
     terminal = (AQUI / "assets" / "terminal.js").read_text(encoding="utf-8")
     icono = favicon_incrustado()
 

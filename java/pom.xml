@@ -7,6 +7,36 @@
     <version>0.4.0</version>
     <packaging>pom</packaging>
     <name>Corvo</name>
+    <description>Framework web para Java 21. Servidor HTTP propio, un hilo virtual por conexión y cero dependencias en ejecución.</description>
+    <url>https://corvo.ginit.dev</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Richar Andre Vilca-Solorzano</name>
+            <url>https://orcid.org/0009-0003-2385-5263</url>
+            <organization>Universidad Nacional del Altiplano</organization>
+        </developer>
+        <developer>
+            <name>Ramiro Pedro Laura-Murillo</name>
+            <url>https://orcid.org/0000-0003-1837-4871</url>
+            <organization>Universidad Nacional del Altiplano</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/Andre031222/Corvo.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Andre031222/Corvo.git</developerConnection>
+        <url>https://github.com/Andre031222/Corvo</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <modules>
         <module>corvo-http</module>
@@ -46,4 +76,80 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <!-- Publicar en Maven Central pide cuatro cosas que el build normal no hace: jar de fuentes,
+         jar de javadoc, firma GPG y el plugin de publicación. Van en un perfil y no en el build
+         de siempre porque firmar exige una clave privada: fuera de una publicación, cada `mvn
+         install` pediría la contraseña, y en integración continua fallaría directamente.
+
+             mvn -Ppublicar deploy
+
+         Lo que no puede estar aquí y hay que tener puesto una vez: la cuenta en Central, la clave
+         GPG publicada en un servidor de claves, y las credenciales en ~/.m2/settings.xml bajo el
+         id `central`. -->
+    <profiles>
+        <profile>
+            <id>publicar</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>adjuntar-fuentes</id>
+                                <goals><goal>jar-no-fork</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.11.2</version>
+                        <executions>
+                            <execution>
+                                <id>adjuntar-javadoc</id>
+                                <goals><goal>jar</goal></goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <!-- El javadoc está en castellano y con acentos: sin esto, en una
+                                 máquina con otra configuración regional sale con caracteres rotos. -->
+                            <encoding>UTF-8</encoding>
+                            <docencoding>UTF-8</docencoding>
+                            <charset>UTF-8</charset>
+                            <locale>es_ES</locale>
+                            <doclint>none</doclint>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions>
+                            <execution>
+                                <id>firmar</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.7.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <!-- Sin autoPublish: sube al portal y espera. La primera vez conviene
+                                 mirar lo que se subió antes de que sea irreversible — una versión
+                                 publicada en Central no se puede borrar ni rehacer. -->
+                            <autoPublish>false</autoPublish>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
