@@ -20,6 +20,8 @@ public final class Context {
     private final Map<String, Object> attributes = new HashMap<>(4);
 
     private Principal principal;
+    private Messages messages;
+    private String idioma;
 
     Context(Request request, Response response, Map<String, String> pathVariables, RouteEntry route,
             boolean methodNotAllowed) {
@@ -147,6 +149,41 @@ public final class Context {
 
     public boolean authenticated() {
         return principal != null;
+    }
+
+    /**
+     * El texto de una clave en el idioma de esta petición.
+     *
+     * <p>Sin {@code Corvo.app().messages(...)} configurado devuelve la clave tal cual, en vez de
+     * lanzar: una plantilla que se traduce a medias sigue sirviendo la página, y un
+     * {@code NullPointerException} en producción por un texto que falta no lo arregla nadie a
+     * las tres de la mañana.
+     */
+    public String t(String clave, Object... argumentos) {
+        return messages == null ? clave : messages.get(idioma(), clave, argumentos);
+    }
+
+    /**
+     * El idioma negociado para esta petición.
+     *
+     * <p>Se resuelve una vez y se guarda: {@code Accept-Language} no cambia a mitad de petición,
+     * y una plantilla puede llamar a {@code t()} decenas de veces.
+     */
+    public String idioma() {
+        if (idioma == null) {
+            idioma = messages == null ? "" : messages.negociar(header("Accept-Language"));
+        }
+        return idioma;
+    }
+
+    /** Fija el idioma a mano, por encima de lo que diga la cabecera. */
+    public Context idioma(String value) {
+        idioma = value;
+        return this;
+    }
+
+    void messages(Messages value) {
+        messages = value;
     }
 
     public Object attribute(String name) {

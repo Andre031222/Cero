@@ -27,8 +27,11 @@ final class Dispatcher implements Handler {
     /** Armada una sola vez: la terminal lee la ruta del contexto en lugar de capturarla. */
     private final Middleware.Chain chain;
 
+    private final Messages messages;
+
     Dispatcher(Router router, Registry registry, List<Middleware> middleware,
-               Authenticator authenticator, ViewRenderer views) {
+               Authenticator authenticator, ViewRenderer views, Messages messages) {
+        this.messages = messages;
         this.router = router;
         this.registry = registry;
         this.middleware = List.copyOf(middleware);
@@ -45,6 +48,7 @@ final class Dispatcher implements Handler {
                 match == null ? Map.of() : match.pathVariables(),
                 match == null ? null : match.route(),
                 match != null && match.methodNotAllowed());
+        context.messages(messages);
         Current.enter(context);
         try {
             if (authenticator != null && match != null && !match.methodNotAllowed()) {
@@ -145,7 +149,12 @@ final class Dispatcher implements Handler {
                 if (views == null) {
                     throw new HttpException(501, "no hay motor de vistas configurado");
                 }
-                response.html(views.render(result.payload(), result.model()));
+                // El mapa `t` va como global, no dentro del modelo: así una plantilla escribe
+                // {{ t.guardar }} sin que cada controlador se acuerde de meterlo, y olvidarlo
+                // en uno solo dejaría esa página sin traducir.
+                response.html(views.render(result.payload(), result.model(),
+                        messages == null ? java.util.Map.of()
+                                         : java.util.Map.of("t", new Textos(messages, context.idioma()))));
             }
         }
     }

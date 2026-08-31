@@ -10,19 +10,25 @@ public final class Scope {
 
     private final Scope parent;
     private final Object model;
+    private final Map<String, Object> globals;
     private final Map<String, Object> locals = new HashMap<>(4);
 
     Scope(Object model) {
-        this(null, model);
+        this(null, model, Map.of());
     }
 
-    private Scope(Scope parent, Object model) {
+    Scope(Object model, Map<String, Object> globals) {
+        this(null, model, globals);
+    }
+
+    private Scope(Scope parent, Object model, Map<String, Object> globals) {
         this.parent = parent;
         this.model = model;
+        this.globals = globals;
     }
 
     Scope child() {
-        return new Scope(this, model);
+        return new Scope(this, model, globals);
     }
 
     void put(String name, Object value) {
@@ -35,7 +41,11 @@ public final class Scope {
                 return scope.locals.get(name);
             }
         }
-        return property(model, name);
+        Object delModelo = property(model, name);
+        // Los globales van los ÚLTIMOS a propósito: si una plantilla recibe un modelo con un
+        // campo que se llama igual que un global, gana el modelo. Al revés, añadir un global
+        // nuevo podría tapar en silencio un dato de una plantilla que ya funcionaba.
+        return delModelo != null ? delModelo : globals.get(name);
     }
 
     static Object property(Object target, String name) {

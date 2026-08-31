@@ -37,6 +37,10 @@ public final class Template {
     }
 
     String render(Object model, Templates templates) {
+        return render(model, templates, java.util.Map.of());
+    }
+
+    String render(Object model, Templates templates, Map<String, Object> globals) {
         Map<String, List<Node>> inherited = new HashMap<>(blocks);
         Set<String> visited = new LinkedHashSet<>();
         visited.add(name);
@@ -51,7 +55,7 @@ public final class Template {
         }
 
         StringBuilder out = new StringBuilder(512);
-        Nodes.renderAll(root.body, out, new Scope(model), new Node.Render(templates, inherited));
+        Nodes.renderAll(root.body, out, new Scope(model, globals), new Node.Render(templates, inherited));
         return out.toString();
     }
 }

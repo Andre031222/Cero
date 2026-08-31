@@ -56,6 +56,19 @@ public final class Templates implements ViewRenderer {
         return load(template).render(model, this);
     }
 
+    /**
+     * Rinde con valores disponibles en toda la plantilla sin pasar por el modelo.
+     *
+     * <p>Lo usa el despachador para poner {@code t}, el mapa de textos de la petición: una
+     * plantilla escribe {@code &#123;&#123; t.guardar &#125;&#125;} sin que cada controlador
+     * tenga que acordarse de meterlo en su modelo — y olvidarlo en uno solo deja esa página sin
+     * traducir.
+     */
+    @Override
+    public String render(String template, Object model, java.util.Map<String, Object> globals) {
+        return load(template).render(model, this, globals);
+    }
+
     Template load(String template) {
         String key = template.endsWith(suffix) ? template : template + suffix;
         Cached found = cache.get(key);
