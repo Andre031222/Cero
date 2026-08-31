@@ -29,7 +29,7 @@ public class DemoController {
     public Result ping() {
         Map<String, Object> cuerpo = new LinkedHashMap<>();
         cuerpo.put("pong", true);
-        cuerpo.put("version", "0.3.0");
+        cuerpo.put("version", GeneradorProyecto.VERSION);
         return Result.json(cuerpo);
     }
 

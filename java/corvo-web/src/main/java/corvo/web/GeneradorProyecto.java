@@ -13,6 +13,15 @@ import java.util.zip.ZipOutputStream;
  */
 public final class GeneradorProyecto {
 
+    /**
+     * La versión que se escribe en el pom de cada proyecto nuevo.
+     *
+     * <p>Estaba escrita a mano en tres sitios y se quedó en 0.3.0 al renombrar el framework:
+     * cada `corvo new` generaba un proyecto que no resolvía sus dependencias. En una constante
+     * y en un solo sitio.
+     */
+    static final String VERSION = "0.4.0";
+
     public record Peticion(String grupo, String artefacto, String paquete, String nombre, String motor) {
 
         /** Limpia lo que venga del formulario y rellena lo que falte. */
@@ -74,12 +83,12 @@ public final class GeneradorProyecto {
                         <dependency>
                             <groupId>dev.ginit.corvo</groupId>
                             <artifactId>corvo-core</artifactId>
-                            <version>0.3.0</version>
+                            <version>@VERSION@</version>
                         </dependency>
                         <dependency>
                             <groupId>dev.ginit.corvo</groupId>
                             <artifactId>corvo-view</artifactId>
-                            <version>0.3.0</version>
+                            <version>@VERSION@</version>
                         </dependency>
                 %s    </dependencies>
 
@@ -129,7 +138,8 @@ public final class GeneradorProyecto {
                     </build>
                 </project>
                 """.formatted(p.grupo(), p.artefacto(), p.nombre(), dependenciasDeDatos(p.motor()),
-                p.artefacto(), p.paquete());
+                p.artefacto(), p.paquete())
+                .replace("@VERSION@", VERSION);
     }
 
     private static String dependenciasDeDatos(String motor) {
@@ -140,7 +150,7 @@ public final class GeneradorProyecto {
                         <dependency>
                             <groupId>dev.ginit.corvo</groupId>
                             <artifactId>corvo-data</artifactId>
-                            <version>0.3.0</version>
+                            <version>@VERSION@</version>
                         </dependency>
                 """;
         return datos + switch (motor) {

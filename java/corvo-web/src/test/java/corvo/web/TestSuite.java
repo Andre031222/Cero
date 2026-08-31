@@ -37,7 +37,8 @@ public final class TestSuite {
             acceso(base);
             generador(base);
             instalador(base);
-            generadorConFrontend();
+            versionDelProyectoGenerado();
+        generadorConFrontend();
         } finally {
             servidor.stop();
         }
@@ -250,6 +251,41 @@ public final class TestSuite {
         HttpResponse<String> windows = get(base + "/instalar.ps1");
         comprobar("/instalar.ps1 responde 200", windows.statusCode() == 200);
         comprobar("y comprueba la huella también", windows.body().contains("Get-FileHash"));
+    }
+
+    /**
+     * El pom generado tiene que pedir la versión que existe.
+     *
+     * <p>Estuvo clavado a mano en «0.3.0» y sobrevivió al renombrado: cada `corvo new` creaba
+     * un proyecto que no resolvía sus dependencias, y no fallaba aquí sino en la máquina de
+     * quien lo estrenaba — que es el peor sitio posible para descubrirlo.
+     *
+     * <p>Se comprueba contra la versión del pom padre y no contra una constante escrita otra
+     * vez: una prueba que repite el valor a mano se queda desfasada junto con el código.
+     */
+    private static void versionDelProyectoGenerado() throws Exception {
+        var peticion = GeneradorProyecto.Peticion.de("com.acme", "demo", "Demo", "ninguno");
+        java.nio.file.Path base = java.nio.file.Files.createTempDirectory("corvo-version");
+        escribirZip(GeneradorProyecto.construir(peticion), base);
+        String pom = java.nio.file.Files.readString(base.resolve("pom.xml"));
+
+        String esperada = versionDelPadre();
+        comprobar("el pom generado pide la versión actual de corvo-core",
+                pom.contains("<artifactId>corvo-core</artifactId>\n            <version>" + esperada));
+        comprobar("y no deja marcadores sin sustituir", !pom.contains("@VERSION@"));
+        comprobar("ni trozos de código Java sueltos", !pom.contains("VERSION +"));
+    }
+
+    /** La versión del pom padre del framework: la única fuente de verdad. */
+    private static String versionDelPadre() throws Exception {
+        java.nio.file.Path padre = java.nio.file.Path.of("..", "pom.xml").toAbsolutePath().normalize();
+        for (String linea : java.nio.file.Files.readAllLines(padre)) {
+            String t = linea.trim();
+            if (t.startsWith("<version>") && t.endsWith("</version>")) {
+                return t.substring(9, t.length() - 10);
+            }
+        }
+        throw new IllegalStateException("no se encontró la versión en " + padre);
     }
 
     /** {@code corvo new … --front} tiene que dejar un backend que ya hable con un frontend aparte. */
