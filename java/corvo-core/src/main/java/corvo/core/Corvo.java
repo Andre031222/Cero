@@ -34,6 +34,7 @@ public final class Corvo {
     }
 
     private Messages messages;
+    private Live live;
 
     public Corvo config(Config value) {
         config = value;
@@ -118,6 +119,28 @@ public final class Corvo {
     public Corvo health(Health checks) {
         router.get("/corvo/vivo", checks.liveEndpoint());
         router.get("/corvo/listo", checks.readyEndpoint());
+        return this;
+    }
+
+    /**
+     * Habilita las zonas que el servidor vuelve a pintar solo.
+     *
+     * <p>Registra el canal en {@code /corvo/live} y el cliente en {@code /corvo/live.js}. Se
+     * pide el motor de vistas aquí y no al empujar porque, si falta, es mejor enterarse al
+     * arrancar que la primera vez que alguien intente pintar una zona.
+     */
+    public Corvo live(Live value) {
+        if (views == null) {
+            throw new IllegalStateException("live() necesita un motor de vistas: llama antes a views(...)");
+        }
+        value.views(views);
+        live = value;
+        router.get("/corvo/live", context -> {
+            corvo.http.WebSockets.accept(context.request(), context.response(), value.handler());
+            return null;
+        });
+        router.get("/corvo/live.js", context ->
+                Result.text(Live.GUION).header("Content-Type", "text/javascript; charset=utf-8"));
         return this;
     }
 
