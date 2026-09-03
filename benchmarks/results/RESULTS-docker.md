@@ -21,7 +21,7 @@ errores o respuestas no-2xx: esa fila NO es válida.
 
 | Framework | Imagen (MB) | Arranque (ms) | RSS (MB) | rps /plaintext (mediana) | rps /json (mediana) | rps /db (mediana) |
 |---|---|---|---|---|---|---|
-| corvo | 110.3 | 106 | 136.4 | 26425.5 | 25431.0 | 25931.0 |
+| cero | 110.3 | 106 | 136.4 | 26425.5 | 25431.0 | 25931.0 |
 | jxmvc | 110.1 | 698 | 191.5 | 24239.5 | 23307.4 | 18771.2 |
 | spring | 127.3 | 1467 | 352.5 | 19808.9 | 20431.6 | 20087.8 |
 | quarkus | 123.2 | 707 | 259.8 | 25515.2 | 22744.2 | 21258.1 |

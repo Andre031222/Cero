@@ -1,0 +1,698 @@
+{% extends "base" %}
+
+{% block contenido %}
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Guía</h1>
+    <p class="entradilla">Todo lo que hace falta para escribir una aplicación: rutas, parámetros, respuestas, inyección, validación, errores, sesiones, acceso, tareas, métricas y despliegue detrás de un proxy.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#rutas"><span class="n">01</span> Rutas</a></li>
+        <li><a href="#parametros"><span class="n">02</span> Parámetros</a></li>
+        <li><a href="#respuestas"><span class="n">03</span> Respuestas</a></li>
+        <li><a href="#inyeccion"><span class="n">04</span> Inyección</a></li>
+        <li><a href="#validacion"><span class="n">05</span> Validación</a></li>
+        <li><a href="#errores"><span class="n">06</span> Errores</a></li>
+        <li><a href="#base"><span class="n">07</span> Clase base opcional</a></li>
+        <li><a href="#sesiones"><span class="n">08</span> Sesiones y acceso</a></li>
+        <li><a href="#tareas"><span class="n">09</span> Tareas y caché</a></li>
+        <li><a href="#observar"><span class="n">10</span> Métricas y OpenAPI</a></li>
+        <li><a href="#proxy"><span class="n">11</span> Detrás de un proxy</a></li>
+        <li><a href="#frontend"><span class="n">12</span> Con React, Svelte o Vue</a></li>
+        <li><a href="#tiempo-real"><span class="n">13</span> Tiempo real</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="rutas">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Rutas</h2></div>
+
+        <p>
+          <code>@Route</code> sobre la clase fija la base; los verbos sobre los métodos añaden el
+          resto. Una regla, sin excepciones: <strong>un valor vacío mapea a la ruta base.</strong>
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>Ruta resultante</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Route("/api/tareas")</td><td class="mono">/api/tareas</td><td>Base de la clase</td></tr>
+              <tr><td class="mono-clave">@Get</td><td class="mono">/api/tareas</td><td>Valor vacío = la base</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}")</td><td class="mono">/api/tareas/{id}</td><td>Variable de ruta</td></tr>
+              <tr><td class="mono-clave">@Get("/{id}/notas/{n}")</td><td class="mono">…/{id}/notas/{n}</td><td>Varias variables</td></tr>
+              <tr><td class="mono-clave">@Get("/archivos/*")</td><td class="mono">/api/tareas/archivos/*</td><td>Comodín, solo al final</td></tr>
+              <tr><td class="mono-clave">@Post @Put @Patch @Delete</td><td class="mono">—</td><td>Mismo criterio</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="prosa">
+          <li><strong>Lo literal gana a lo variable.</strong> <code>/tareas/nueva</code> se resuelve antes que <code>/tareas/{id}</code>, sin importar el orden en que se declaren.</li>
+          <li><strong>Sin <code>@Route</code></strong>, la base sale del nombre de la clase: <code>ReporteController</code> → <code>/reporte</code>.</li>
+          <li><strong>Las rutas duplicadas fallan al arrancar</strong>, no en la primera petición.</li>
+          <li><strong>405 con <code>Allow</code>.</strong> Si la ruta existe pero el verbo no, la respuesta enumera los verbos válidos.</li>
+          <li><strong>HEAD se resuelve contra GET</strong> automáticamente, sin cuerpo.</li>
+        </ul>
+
+        <h3>Rutas sueltas, sin controlador</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Lambdas</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r
+    .get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
+    .get(<span class="st">"/version"</span>, ctx -&gt; Map.of(<span class="st">"version"</span>, <span class="st">"0.3.0"</span>))
+    .post(<span class="st">"/eco"</span>, ctx -&gt; ctx.bodyText()))</pre>
+        </div>
+      </section>
+<section id="parametros">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Parámetros</h2></div>
+
+        <p>
+          Los argumentos del método se resuelven por anotación o por tipo. La conversión a
+          <code>int</code>, <code>long</code>, <code>boolean</code>, enumeraciones o fechas es
+          automática; si el valor no convierte, la respuesta es un 400.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>De dónde sale</th><th>Ejemplo</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Path("id")</td><td>Variable de la ruta</td><td class="mono">@Path("id") long id</td></tr>
+              <tr><td class="mono-clave">@Query("q")</td><td>Cadena de consulta</td><td class="mono">@Query(value="p", orElse="1") int p</td></tr>
+              <tr><td class="mono-clave">@Form("titulo")</td><td>Formulario HTML</td><td class="mono">@Form("titulo") String t</td></tr>
+              <tr><td class="mono-clave">@Body</td><td>Cuerpo JSON</td><td class="mono">@Body Tarea tarea</td></tr>
+              <tr><td class="mono-clave">@Body @Valid</td><td>JSON + validación</td><td class="mono">responde 422 si falla</td></tr>
+              <tr><td class="mono-clave">@Header("X-Traza")</td><td>Cabecera</td><td class="mono">@Header("X-Traza") String t</td></tr>
+              <tr><td class="mono-clave">@CookieValue("sesion")</td><td>Cookie</td><td class="mono">@CookieValue("s") String s</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Por tipo, sin anotación</h3>
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Tipo</th><th>Qué recibe</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">Context</td><td>Todo el contexto de la petición</td></tr>
+              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de cero-http</td></tr>
+              <tr><td class="mono-clave">Session</td><td>La sesión, creándola si no existe</td></tr>
+              <tr><td class="mono-clave">Principal</td><td>Quien haya autenticado el <code>Authenticator</code></td></tr>
+              <tr><td class="mono-clave">Part</td><td>Un archivo del multipart, por nombre del parámetro</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>El contexto, si lo prefieres a mano</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Context</span><span class="etiqueta">Java</span></div>
+<pre>ctx.pathVariable(<span class="st">"id"</span>)      ctx.query(<span class="st">"q"</span>, <span class="st">"por-defecto"</span>)   ctx.queryAll(<span class="st">"tag"</span>)
+ctx.form(<span class="st">"titulo"</span>)         ctx.header(<span class="st">"Accept"</span>)             ctx.cookie(<span class="st">"sesion"</span>)
+ctx.body(Tarea.class)      ctx.bodyText()                  ctx.bodyBytes()
+ctx.part(<span class="st">"archivo"</span>)        ctx.field(<span class="st">"nota"</span>)               ctx.parts()
+ctx.session()              ctx.principal()                 ctx.authenticated()
+ctx.attribute(<span class="st">"clave"</span>, valor)                                 ctx.route()</pre>
+        </div>
+      </section>
+<section id="respuestas">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Respuestas</h2></div>
+
+        <p>Lo que devuelve una acción decide el formato, sin anotaciones:</p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Devuelves</th><th>Sale</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">String</td><td>text/plain</td><td class="mono">200</td></tr>
+              <tr><td class="mono">null</td><td>sin cuerpo</td><td class="mono">204</td></tr>
+              <tr><td class="mono">cualquier objeto</td><td>application/json</td><td class="mono">200</td></tr>
+              <tr><td class="mono">Result</td><td>lo que declare</td><td class="mono">el que fijes</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Result</span><span class="etiqueta">Java</span></div>
+<pre>Result.text(<span class="st">"hola"</span>)                     Result.html(<span class="st">"&lt;h1&gt;hola&lt;/h1&gt;"</span>)
+Result.json(objeto)                    Result.raw(<span class="st">"{\"ya\":\"serializado\"}"</span>)
+Result.view(<span class="st">"lista.html"</span>, modelo)    Result.redirect(<span class="st">"/"</span>)
+Result.created(objeto)                 Result.noContent()
+Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
+
+<span class="cm">// encadenable</span>
+<span class="kw">return</span> Result.json(tarea)
+             .status(<span class="st">201</span>)
+             .header(<span class="st">"Location"</span>, <span class="st">"/api/tareas/"</span> + tarea.id());</pre>
+        </div>
+      </section>
+<section id="inyeccion">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Inyección</h2></div>
+
+        <p>
+          Marca un servicio con <code>@Service</code> y se construye la primera vez que alguien lo
+          pide. Los controladores lo reciben con <code>@Inject</code>, por campo o por constructor.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Servicios</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Service</span>
+<span class="kw">public class</span> Catalogo {
+    <span class="an">@Inject</span> Repositorio repositorio;      <span class="cm">// por campo</span>
+}
+
+<span class="an">@Service</span>
+<span class="kw">public class</span> Facturas {
+    <span class="kw">private final</span> Catalogo catalogo;
+    <span class="an">@Inject</span> Facturas(Catalogo catalogo) {   <span class="cm">// por constructor</span>
+        <span class="kw">this</span>.catalogo = catalogo;
+    }
+}
+
+<span class="cm">// o a mano, útil para sustituir en pruebas</span>
+Cero.app().service(Reloj.class, () -&gt; Instant.now())</pre>
+        </div>
+
+        <ul class="prosa">
+          <li>Los servicios son <strong>singleton</strong>: una instancia por aplicación.</li>
+          <li>Se registran también <strong>por sus interfaces</strong>, así que puedes pedir el contrato.</li>
+          <li>Las <strong>dependencias circulares</strong> se detectan y el error nombra la cadena completa.</li>
+        </ul>
+      </section>
+<section id="validacion">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Validación</h2></div>
+
+        <p>
+          Las anotaciones van sobre los componentes de un <code>record</code> o los campos de una
+          clase. <code>@Valid</code> junto a <code>@Body</code> valida antes de entrar al método.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Anotación</th><th>Comprueba</th><th>Mensaje por defecto</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-clave">@Required</td><td>No nulo, no vacío, no en blanco</td><td>es obligatorio</td></tr>
+              <tr><td class="mono-clave">@Length(min, max)</td><td>Longitud del texto</td><td>debe tener entre N y M caracteres</td></tr>
+              <tr><td class="mono-clave">@Range(min, max)</td><td>Rango numérico</td><td>debe estar entre N y M</td></tr>
+              <tr><td class="mono-clave">@Email</td><td>Formato de correo</td><td>no es un correo válido</td></tr>
+              <tr><td class="mono-clave">@Match("regex")</td><td>Expresión regular</td><td>no tiene el formato esperado</td></tr>
+              <tr><td class="mono-clave">@OneOf({"a","b"})</td><td>Valor de una lista</td><td>debe ser uno de: a, b</td></tr>
+              <tr><td class="mono-clave">@Satisfies(Regla.class)</td><td>Tu propia regla</td><td>el de la regla</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tarea.java</span><span class="etiqueta">Java</span></div>
+<pre><span class="kw">public record</span> Tarea(
+        <span class="an">@Id</span> <span class="kw">long</span> id,
+        <span class="an">@Required @Length</span>(min = <span class="st">3</span>, max = <span class="st">120</span>) String titulo,
+        <span class="an">@OneOf</span>({<span class="st">"baja"</span>, <span class="st">"media"</span>, <span class="st">"alta"</span>}) String prioridad) {}
+
+<span class="cm">// una regla propia</span>
+<span class="kw">public class</span> Ruc <span class="kw">implements</span> Rule&lt;String&gt; {
+    <span class="kw">public boolean</span> test(String v) { <span class="kw">return</span> v.length() == <span class="st">11</span> &amp;&amp; v.startsWith(<span class="st">"20"</span>); }
+    <span class="kw">public</span> String message()    { <span class="kw">return</span> <span class="st">"no es un RUC válido"</span>; }
+}</pre>
+        </div>
+
+        <p>Cuando algo falla, la respuesta es un 422 con el mapa de campos, sin escribirlo:</p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">422 Unprocessable Content</span><span class="etiqueta">JSON</span></div>
+<pre>{
+  <span class="st">"error"</span>: <span class="st">"Unprocessable Content"</span>,
+  <span class="st">"message"</span>: <span class="st">"hay 2 campo(s) inválido(s)"</span>,
+  <span class="st">"path"</span>: <span class="st">"/api/tareas"</span>,
+  <span class="st">"fields"</span>: {
+    <span class="st">"titulo"</span>: <span class="st">"debe tener entre 3 y 120 caracteres"</span>,
+    <span class="st">"prioridad"</span>: <span class="st">"debe ser uno de: baja, media, alta"</span>
+  }
+}</pre>
+        </div>
+
+        <p>Fuera de una ruta, la misma comprobación a mano:</p>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Validation</span><span class="etiqueta">Java</span></div>
+<pre>Validation.check(tarea);                <span class="cm">// lanza ValidationException (422)</span>
+Validation.valid(tarea);                <span class="cm">// true / false</span>
+Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
+        </div>
+      </section>
+<section id="errores">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Errores</h2></div>
+
+        <p>
+          Lanza <code>HttpException</code> con el estado que quieras, o registra un manejador con
+          <code>@OnError</code> para una excepción de tu dominio.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Manejo de errores</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/{id}"</span>)
+<span class="kw">public</span> Object ver(<span class="an">@Path</span>(<span class="st">"id"</span>) <span class="kw">long</span> id) {
+    Tarea t = tareas.findById(id);
+    <span class="kw">if</span> (t == <span class="kw">null</span>) <span class="kw">throw new</span> HttpException(<span class="st">404</span>, <span class="st">"no existe la tarea "</span> + id);
+    <span class="kw">return</span> t;
+}
+
+<span class="an">@OnError</span>(SaldoInsuficiente.class)
+<span class="kw">public</span> Object saldo(SaldoInsuficiente fallo) {
+    <span class="kw">return</span> Result.json(Map.of(<span class="st">"motivo"</span>, fallo.getMessage())).status(<span class="st">422</span>);
+}</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Las excepciones no controladas nunca filtran detalles</div>
+          <p>
+            Cualquier excepción que no sea <code>HttpException</code> devuelve un 500 con el
+            mensaje genérico «error interno». La traza va al <code>ErrorReporter</code>, no a la
+            respuesta.
+          </p>
+        </div>
+      </section>
+
+      <section id="base">
+        <div class="titulo-seccion"><span class="indice-num">07</span><h2>Clase base opcional</h2></div>
+
+        <p class="medida">
+          Un controlador de Cero no hereda de nada: es una clase normal con anotaciones, y el
+          <code>Context</code> llega por parámetro cuando hace falta. Si un controlador lo usa en
+          casi todos sus métodos, puedes heredar de <code>Controller</code> y ahorrártelo.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Con la base</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Route</span>(<span class="st">"/panel"</span>)
+<span class="kw">public class</span> PanelController <span class="kw">extends</span> Controller {
+
+    <span class="an">@Get</span>(<span class="st">"/perfil"</span>)
+    <span class="kw">public</span> Result perfil() {
+        <span class="kw">if</span> (!autenticado()) <span class="kw">return</span> redirect(<span class="st">"/auth/login"</span>);
+        <span class="kw">return</span> view(<span class="st">"perfil"</span>, Map.of(<span class="st">"usuario"</span>, usuario().name()));
+    }
+
+    <span class="an">@Get</span>(<span class="st">"/informe/{id}"</span>)
+    <span class="kw">public</span> Result informe() {
+        <span class="kw">var</span> informe = informes.porId(param(<span class="st">"id"</span>));
+        <span class="kw">if</span> (informe == <span class="kw">null</span>) <span class="kw">throw</span> fallo(<span class="st">404</span>, <span class="st">"no existe"</span>);
+        <span class="kw">return</span> json(informe);
+    }
+}</pre>
+        </div>
+
+        <p class="medida">
+          Trae <code>param</code>, <code>query</code>, <code>form</code>, <code>header</code>,
+          <code>cookie</code>, <code>body</code>, <code>session</code>, <code>usuario</code>,
+          <code>autenticado</code>, y del lado de la respuesta <code>view</code>,
+          <code>json</code>, <code>text</code>, <code>html</code>, <code>redirect</code>,
+          <code>created</code>, <code>noContent</code>, <code>status</code> y <code>fallo</code>.
+          Para todo lo demás, <code>ctx()</code> devuelve el <code>Context</code> entero.
+        </p>
+
+        <p class="medida">
+          <b>Es opcional de verdad.</b> Los dos estilos conviven en la misma aplicación: quien no
+          hereda sigue recibiendo el <code>Context</code> por parámetro y no se entera de que esto
+          existe.
+        </p>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Por qué no guarda la petición en un campo</div>
+          <p>
+            Del controlador hay <b>una sola instancia</b>, compartida por todas las peticiones, y
+            Cero atiende cada conexión en su propio hilo virtual. Un campo con la petición
+            dentro sería una carrera: dos peticiones a la vez se lo pisarían y una acabaría
+            respondiendo con los datos de la otra. Por eso las ayudas leen de un portador por hilo.
+            Hay una prueba que lanza 200 peticiones simultáneas y comprueba que cada respuesta
+            trae lo suyo; con un campo compartido, falla.
+          </p>
+        </div>
+      </section>
+
+      <section id="sesiones">
+        <div class="titulo-seccion"><span class="indice-num">08</span><h2>Sesiones y acceso</h2></div>
+
+        <p class="medida">
+          La sesión se pide del contexto. Nace cuando se usa por primera vez, y la cookie sale
+          <code>HttpOnly</code>, <code>SameSite=Lax</code> y <code>Secure</code> si la petición
+          venía por HTTPS.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Sesión</span><span class="etiqueta">Java</span></div>
+<pre>Session sesion = ctx.session();
+sesion.set(<span class="st">"usuario"</span>, correo);
+String quien = sesion.get(<span class="st">"usuario"</span>, String.class);
+sesion.invalidate();                     <span class="cm">// al salir</span></pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Rota el identificador al identificarte</div>
+          <p>
+            El identificador que el visitante tiene <b>antes</b> de entrar no puede seguir valiendo
+            <b>después</b>: quien lo hubiera fijado en su navegador se quedaría con una sesión
+            autenticada. Es fijación de sesión, y se evita con una línea:
+          </p>
+<pre><span class="kw">if</span> (Passwords.matches(clave, usuario.hash())) {
+    ctx.session().regenerateId();        <span class="cm">// ← justo aquí, antes de guardar nada</span>
+    ctx.session().set(<span class="st">"usuario"</span>, usuario.correo());
+}</pre>
+          <p>
+            Conserva el contenido —incluido el token CSRF—, a diferencia de
+            <code>invalidate()</code>, que lo borra todo.
+          </p>
+        </div>
+
+        <p class="medida">
+          Las contraseñas se guardan con <code>Passwords</code>: PBKDF2-HMAC-SHA256 a 210 000
+          iteraciones, sal por contraseña y comparación en tiempo constante. El formato lleva
+          dentro el coste, así que se puede subir sin invalidar lo guardado.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Contraseñas</span><span class="etiqueta">Java</span></div>
+<pre>String guardado = Passwords.hash(clave);
+<span class="kw">boolean</span> vale = Passwords.matches(clave, guardado);
+<span class="kw">if</span> (Passwords.needsRehash(guardado)) {   <span class="cm">// subió el coste desde que se guardó</span>
+    usuarios.actualizarHash(id, Passwords.hash(clave));
+}</pre>
+        </div>
+
+        <p class="medida">
+          Y para entrar con Google, Microsoft o GitHub, <code>OAuth</code> trae el flujo completo
+          con PKCE y verificación de la firma del <code>id_token</code>.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">OAuth 2.0</span><span class="etiqueta">Java</span></div>
+<pre>OAuth google = OAuth.google(id, secreto, <span class="st">"https://mi-sitio/auth/google/vuelta"</span>);
+
+<span class="an">@Get</span>(<span class="st">"/auth/google"</span>)
+<span class="kw">public</span> Result entrar(Context ctx) {
+    <span class="kw">var</span> salida = google.comenzar();
+    ctx.session().set(<span class="st">"oauth.estado"</span>, salida.estado());
+    <span class="kw">return</span> Result.redirectExternal(salida.url());
+}
+
+<span class="an">@Get</span>(<span class="st">"/auth/google/vuelta"</span>)
+<span class="kw">public</span> Result vuelta(Context ctx) {
+    <span class="kw">var</span> identidad = google.completar(ctx.query(<span class="st">"code"</span>), ctx.query(<span class="st">"state"</span>),
+                                     ctx.session().get(<span class="st">"oauth.estado"</span>, String.class));
+    ctx.session().regenerateId();
+    ctx.session().set(<span class="st">"usuario"</span>, identidad.correo());
+    <span class="kw">return</span> Result.redirect(<span class="st">"/panel"</span>);
+}</pre>
+        </div>
+
+        <p class="medida">
+          Para varias instancias o para que las sesiones sobrevivan al despliegue, el almacén va a
+          una tabla. Con el de memoria —el de por defecto— cada despliegue echa a todo el mundo.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Sesiones compartidas</span><span class="etiqueta">Java</span></div>
+<pre>ServerOptions.builder()
+    .sessionStore(JdbcSessions.of(<span class="st">"cero_sesiones"</span>).createTable())
+    .sessionMaxLifetime(Duration.ofHours(<span class="st">12</span>))   <span class="cm">// tope de vida, no solo inactividad</span>
+    .build();</pre>
+        </div>
+      </section>
+
+      <section id="tareas">
+        <div class="titulo-seccion"><span class="indice-num">09</span><h2>Tareas y caché</h2></div>
+
+        <p class="medida">
+          Trabajo fuera de la petición: lanzar y olvidar, esperar un resultado, repetir cada tanto
+          o seguir una expresión cron. Cada tarea corre en su propio hilo virtual, así que
+          bloquearse dentro no cuesta un hilo del sistema.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Tasks</span><span class="etiqueta">Java</span></div>
+<pre>Tasks tareas = Tasks.start();
+
+tareas.run(() -&gt; correo.enviar(aviso));                  <span class="cm">// y olvidarse</span>
+<span class="kw">var</span> futuro = tareas.submit(() -&gt; informe.generar());       <span class="cm">// con resultado</span>
+tareas.every(Duration.ofMinutes(<span class="st">5</span>), () -&gt; sondear());
+tareas.cron(<span class="st">"0 3 * * *"</span>, () -&gt; respaldo());                <span class="cm">// a las 3 de la mañana</span></pre>
+        </div>
+
+        <p class="medida">
+          Y para lo que cuesta calcular y cambia poco, una caché con caducidad por entrada:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Cache y Events</span><span class="etiqueta">Java</span></div>
+<pre>Cache&lt;String, List&lt;Noticia&gt;&gt; portada = Cache.of(Duration.ofMinutes(<span class="st">10</span>));
+List&lt;Noticia&gt; ultimas = portada.get(<span class="st">"portada"</span>, clave -&gt; noticias.ultimas(<span class="st">6</span>));
+
+<span class="cm">// Bus de eventos: quien publica no sabe quién escucha.</span>
+eventos.publish(<span class="kw">new</span> NoticiaPublicada(id));
+
+<span class="an">@Listens</span>
+<span class="kw">public void</span> alPublicar(NoticiaPublicada evento) {
+    portada.invalidate(<span class="st">"portada"</span>);
+}</pre>
+        </div>
+      </section>
+
+      <section id="observar">
+        <div class="titulo-seccion"><span class="indice-num">10</span><h2>Métricas y OpenAPI</h2></div>
+
+        <p class="medida">
+          <code>Metrics</code> cuenta peticiones y tiempos por ruta, con percentiles, y sabe
+          escribirse en el formato que lee Prometheus.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Observabilidad</span><span class="etiqueta">Java</span></div>
+<pre>Metrics metricas = Metrics.enabled().ignore(<span class="st">"/estaticos"</span>);
+
+Cero.app()
+   .service(metricas)
+   .use(metricas)
+   .use(AccessLog.combined())
+   .routes(r -&gt; r.get(<span class="st">"/cero/metrics"</span>, metricas.endpoint()))
+   .start();</pre>
+        </div>
+
+        <p class="medida">
+          <code>OpenApi</code> describe las rutas registradas —parámetros, tipos, qué exige
+          autenticación— sin anotar nada aparte. Sirve para generar el cliente TypeScript del
+          frontend a partir del servidor, en vez de escribirlo dos veces.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">OpenAPI</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.get(<span class="st">"/openapi.json"</span>, ctx -&gt; OpenApi.of(<span class="st">"Mi API"</span>, <span class="st">"1.0"</span>).json()))</pre>
+        </div>
+      </section>
+
+      <section id="proxy">
+        <div class="titulo-seccion"><span class="indice-num">11</span><h2>Detrás de un proxy</h2></div>
+
+        <p class="medida">
+          Cero habla <b>HTTP/1.1</b>. Para HTTP/2, HTTP/3 y certificados automáticos se le pone
+          delante nginx o Caddy, que además absorbe las conexiones lentas. Es la forma
+          recomendada de desplegarlo.
+        </p>
+
+        <div class="aviso">
+          <div class="etiqueta">Dos cosas que hay que declarar</div>
+          <p>
+            Detrás de un proxy, la petición llega desde el propio proxy y en texto plano. Si no se
+            le dice, la aplicación se cree que nadie usa HTTPS —y no marca la cookie de sesión como
+            <code>Secure</code>— y ve a todo el mundo con la misma dirección, con lo que el
+            limitador de peticiones cuenta a todos juntos y el primero que llegue al tope bloquea
+            el sitio entero.
+          </p>
+<pre>ServerOptions.builder()
+    .behindProxy(<span class="kw">true</span>)                  <span class="cm">// hace caso a X-Forwarded-Proto</span>
+    .trustProxy(<span class="st">"127.0.0.1"</span>, <span class="st">"::1"</span>)       <span class="cm">// y a X-Forwarded-For, solo desde ahí</span>
+    .build();</pre>
+          <p>
+            La lista de confianza no es opcional ni cosmética: creerse esas cabeceras vengan de
+            donde vengan deja que cualquiera diga que es otra dirección, y con eso se salta el
+            limitador y se ensucian los registros.
+          </p>
+        </div>
+
+        <p class="medida">
+          Y los estáticos con su directiva de caché, que si no el navegador revalida de más:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Estáticos</span><span class="etiqueta">Java</span></div>
+<pre>StaticFiles.from(raiz, <span class="st">"/medios"</span>)
+    .cacheControl(<span class="st">"public, max-age=3600"</span>);
+
+<span class="cm">// Para recursos con huella en el nombre — estilo.a1b2c3.css — se puede ir a por todas:</span>
+StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
+    .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>);</pre>
+        </div>
+      </section>
+
+      <section id="frontend">
+        <div class="titulo-seccion"><span class="indice-num">12</span><h2>Con React, Svelte o Vue</h2></div>
+
+        <p class="medida">
+          Cero no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
+          dejar que el frontend lo pinte, que es lo normal hoy. Las dos formas conviven en la misma
+          aplicación: unas rutas devuelven vistas y otras JSON.
+        </p>
+
+        <h3>En desarrollo · dos servidores</h3>
+
+        <p class="medida">
+          El frontend en su servidor —<code>5173</code> para Vite, <code>3000</code> para Next— y
+          Cero en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
+          solo para ese:
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Desarrollo</span><span class="etiqueta">Java</span></div>
+<pre>Cero.app()
+   .use(Cors.allowing(<span class="st">"http://localhost:5173"</span>))
+   .controllers(ApiController.class)
+   .start();</pre>
+        </div>
+
+        <h3>En producción · un solo artefacto</h3>
+
+        <p class="medida">
+          Se compila el frontend, su salida se copia a los recursos, y sale <b>un jar</b> que sirve
+          las dos cosas. Sin nginx delante para unirlos, sin dos despliegues.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Un jar con todo</span><span class="etiqueta">Java</span></div>
+<pre>Cero.app()
+   .controllers(ApiController.class)          <span class="cm">// /api/... devuelve JSON</span>
+   .fallback(StaticFiles.fromClasspath(<span class="st">"front"</span>).spa()
+                        .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>))
+   .start();</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Qué hace spa() y por qué hace falta</div>
+          <p>
+            Una aplicación que enruta en el cliente —React Router, el router de Svelte— <b>no tiene
+            un archivo por ruta</b>: solo existe <code>index.html</code>. Sin
+            <code>spa()</code>, entrar directo en <code>/panel/usuarios/7</code> daría 404 y la
+            aplicación solo funcionaría navegando desde la portada.
+          </p>
+          <p>
+            Con <code>spa()</code>, una ruta que no existe como archivo devuelve el
+            <code>index.html</code> y el navegador decide qué pintar. <b>Pero solo para rutas de
+            página:</b> un <code>.css</code> o un <code>.png</code> que falten siguen dando 404 —
+            devolverles el HTML de la portada convierte un error evidente en uno que se tarda una
+            hora en encontrar.
+          </p>
+        </div>
+
+        <p class="medida">
+          Si tu frontend genera un archivo por ruta —la exportación estática de Next.js, Astro,
+          Hugo—, no hace falta <code>spa()</code>: <code>/nosotros</code> encuentra
+          <code>nosotros/index.html</code> por su cuenta.
+        </p>
+
+        <h3>Cómo queda el proyecto</h3>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Estructura</span><span class="etiqueta">Texto</span></div>
+<pre>mi-proyecto/
+├── backend/            <span class="cm"># Cero — Maven, Java 21</span>
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/...
+│       └── resources/front/     <span class="cm"># ← aquí se copia lo compilado del frontend</span>
+└── frontend/           <span class="cm"># React, Svelte, Vue, lo que sea</span>
+    ├── package.json
+    └── src/...</pre>
+        </div>
+
+        <p class="medida">
+          El paso de copiar la salida del frontend a <code>resources/front/</code> lo hace tu guion
+          de compilación o el <code>maven-resources-plugin</code>. A partir de ahí,
+          <code>mvn package</code> y tienes un jar con todo dentro.
+        </p>
+      </section>
+
+      <section id="tiempo-real">
+        <div class="titulo-seccion"><span class="indice-num">13</span><h2>Tiempo real</h2></div>
+
+        <p class="medida">
+          Dos formas, y casi siempre quieres la primera.
+        </p>
+
+        <h3>Eventos del servidor · una dirección</h3>
+
+        <p class="medida">
+          El servidor manda cuando hay algo, en vez de que el navegador pregunte cada dos
+          segundos. Es HTTP normal: atraviesa proxies sin configurar nada y el navegador se
+          reconecta solo. Para un panel, un progreso o un aviso, es exactamente lo que hace falta.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Servidor</span><span class="etiqueta">Java</span></div>
+<pre><span class="an">@Get</span>(<span class="st">"/eventos"</span>)
+<span class="kw">public void</span> eventos(Context ctx) <span class="kw">throws</span> InterruptedException {
+    <span class="kw">try</span> (Sse eventos = Sse.open(ctx.response())) {
+        <span class="kw">while</span> (eventos.abierto()) {
+            eventos.send(Json.write(metricas.snapshot()));
+            Thread.sleep(<span class="st">1000</span>);
+        }
+    }
+}</pre>
+        </div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Navegador</span><span class="etiqueta">JavaScript</span></div>
+<pre><span class="kw">const</span> eventos = <span class="kw">new</span> EventSource(<span class="st">'/eventos'</span>);
+eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
+        </div>
+
+        <div class="aviso">
+          <div class="etiqueta">Por qué el bucle no es un problema</div>
+          <p>
+            Ese <code>while</code> deja el hilo dentro mientras el panel esté abierto. Con hilos
+            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero Cero atiende
+            cada conexión en su <b>propio hilo virtual</b>: cien paneles son cien hilos virtuales,
+            que cuestan unos cientos de bytes cada uno. Es la razón por la que aquí se puede
+            escribir código que bloquea sin pagar por ello.
+          </p>
+        </div>
+
+        <p class="medida">
+          El <a href="/panel">panel de este sitio</a> lo usa: los números que ves los empuja el
+          servidor cada segundo.
+        </p>
+
+        <h3>WebSocket · las dos direcciones</h3>
+
+        <p class="medida">
+          Cuando el navegador también tiene que hablar — un chat, un editor compartido, un juego.
+          Cuesta un protocolo aparte y un proxy configurado; si solo necesitas recibir, no lo uses.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">WebSocket</span><span class="etiqueta">Java</span></div>
+<pre>.routes(r -&gt; r.ws(<span class="st">"/chat"</span>, socket -&gt; {
+    socket.onMessage(texto -&gt; socket.send(<span class="st">"eco: "</span> + texto));
+    socket.onClose(() -&gt; log.info(<span class="st">"se fue"</span>));
+}))</pre>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Sobre «programación reactiva»</div>
+          <p>
+            Cero <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
+            Ese estilo existe para no bloquear hilos del sistema, que son caros. Con los hilos
+            virtuales de Java 21 dejan de serlo: puedes escribir código normal, de arriba abajo,
+            que bloquea — y el rendimiento es el mismo sin el coste de encadenar operadores ni de
+            depurar trazas de pila ilegibles. Es la misma capacidad, por otro camino.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+{% end %}

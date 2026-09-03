@@ -1,9 +1,10 @@
-# Contexto de build = raíz del repo (bench.sh lo invoca así), para compilar JxMVC.Core.
+# Contexto de build = un directorio temporal que arma bench.sh con dos cosas: el código de
+# JxMVC (JXMVC_SRC, que vive fuera de este repositorio) y la aplicación del banco.
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /src
-COPY legacy/jxmvc-core /src/jxmvc-core
+COPY jxmvc-core /src/jxmvc-core
 RUN cd /src/jxmvc-core && mvn -q -DskipTests install
-COPY benchmarks/docker/apps/jxmvc/app /src/app
+COPY app /src/app
 RUN cd /src/app && mvn -q -DskipTests package
 
 FROM tomcat:10.1-jre21

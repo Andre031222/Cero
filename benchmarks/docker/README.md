@@ -33,15 +33,15 @@ Salida:
 ## Apps (mismos endpoints: `/plaintext`, `/json` y, con `BENCH_DB=1`, `/db`)
 | Framework | Versión | Runtime |
 |---|---|---|
-| **Corvo** | 0.3.0 | servidor propio, un hilo virtual por conexión |
+| **Cero** | 0.3.0 | servidor propio, un hilo virtual por conexión |
 | JxMVC | 3.4.0 | Tomcat 10.1 (WAR, core compilado desde el repo) |
 | Spring Boot | 3.3.4 | Tomcat embebido |
 | Quarkus | 3.11.3 (JVM) | fast-jar |
 | Micronaut | 4.5.3 | Netty |
 | Javalin | 6.3.0 | Jetty |
 
-La app de Corvo toma la versión del framework de `java/pom.xml` en tiempo de build, no de un
-número escrito a mano: fijarla fue justo lo que dejó a Corvo fuera de la tabla durante días.
+La app de Cero toma la versión del framework de `java/pom.xml` en tiempo de build, no de un
+número escrito a mano: fijarla fue justo lo que dejó a Cero fuera de la tabla durante días.
 
 `bench.sh` es **resiliente**: si una imagen no construye o no arranca, lo registra (con sus logs)
 y continúa con las demás.

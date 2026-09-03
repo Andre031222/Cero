@@ -1,6 +1,6 @@
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Módulos</h1>
-    <p class="entradilla">Cinco piezas que se toman por separado. Si solo necesitas atender HTTP, lux-http basta y son 64 KB.</p>
+    <p class="entradilla">Cinco piezas que se toman por separado. Si solo necesitas atender HTTP, cero-http basta y son 64 KB.</p>
   </header>
 
   <div class="cuerpo">
@@ -19,7 +19,7 @@
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cinco módulos</h2></div>
 
         <p>
-          Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>lux-http</code>
+          Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>cero-http</code>
           basta y son 64 KB.
         </p>
 
@@ -30,24 +30,24 @@
             </thead>
             <tbody>
               <tr>
-                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS recargable, sesiones enchufables, multipart, gzip, estáticos con rangos, WebSocket</span></td>
+                <td><span class="mono">cero-http</span><span class="detalle">Servidor HTTP/1.1, TLS recargable, sesiones enchufables, multipart, gzip, estáticos con rangos, WebSocket</span></td>
                 <td>—</td><td class="cifra">38</td><td class="cifra">3860</td><td class="cifra">229</td><td class="cifra">81 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, clase base opcional, JSON, validación, seguridad, métricas, caché, eventos, tareas, OpenAPI</span></td>
-                <td>lux-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
+                <td><span class="mono">cero-core</span><span class="detalle">Rutas, inyección, clase base opcional, JSON, validación, seguridad, métricas, caché, eventos, tareas, OpenAPI</span></td>
+                <td>cero-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
-                <td>lux-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
+                <td><span class="mono">cero-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
+                <td>cero-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones, repositorios y sesiones en tabla</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
+                <td><span class="mono">cero-data</span><span class="detalle">JDBC, pool, transacciones, repositorios y sesiones en tabla</span></td>
+                <td>cero-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
-                <td>lux-core</td><td class="cifra">4</td><td class="cifra">588</td><td class="cifra">35</td><td class="cifra">13 KB</td>
+                <td><span class="mono">cero-adapter-servlet</span><span class="detalle">Desplegar una aplicación Cero dentro de Tomcat 10.1+</span></td>
+                <td>cero-core</td><td class="cifra">4</td><td class="cifra">588</td><td class="cifra">35</td><td class="cifra">13 KB</td>
               </tr>
               <tr class="total">
                 <td>Los cinco</td><td>—</td><td class="cifra">126</td><td class="cifra">11 759</td><td class="cifra">1 047</td><td class="cifra">310 KB</td>
@@ -62,11 +62,11 @@
         </p>
       </section>
 <section id="servidor">
-        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Servidor · lux-http</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Servidor · cero-http</h2></div>
 
         <p>
           HTTP/1.1 con un hilo virtual por conexión. Se puede usar suelto, sin
-          <code>lux-core</code>, si lo único que quieres es atender peticiones.
+          <code>cero-core</code>, si lo único que quieres es atender peticiones.
         </p>
 
         <div class="codigo">
@@ -114,7 +114,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">
         </p>
       </section>
 <section id="vistas">
-        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Vistas · lux-view</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Vistas · cero-view</h2></div>
 
         <p>
           Plantillas compiladas y cacheadas, con herencia. El escapado HTML es el comportamiento
@@ -188,7 +188,7 @@ Templates.from(Path.of(<span class="st">"plantillas"</span>))          <span cla
         </div>
       </section>
 <section id="datos">
-        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Datos · lux-data</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Datos · cero-data</h2></div>
 
         <p>
           JDBC directo, sin ORM. Todo pasa por sentencias preparadas; los nombres de tabla y
@@ -321,7 +321,7 @@ tareas.count()           tareas.existsById(<span class="st">7L</span>)</pre>
         <p>
           <code>loadConfig()</code> lee <code>application.properties</code> del classpath y del
           directorio actual, y encima aplica las variables de entorno con prefijo
-          <code>LUX_</code> y las propiedades del sistema con prefijo <code>lux.</code>
+          <code>CERO_</code> y las propiedades del sistema con prefijo <code>cero.</code>
         </p>
 
         <div class="codigo">
@@ -331,7 +331,7 @@ server.maxConnections=5000
 server.gzipMinBytes=512
 
 db.url=jdbc:postgresql://localhost/tareas
-db.usuario=lux
+db.usuario=cero
 db.pool=10</pre>
         </div>
 
@@ -349,7 +349,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 
         <p>
           Las claves <code>server.*</code> configuran el servidor sin escribir código:
-          <code>LUX_SERVER_PORT=9000</code> en el entorno cambia el puerto.
+          <code>CERO_SERVER_PORT=9000</code> en el entorno cambia el puerto.
         </p>
       </section>
     </main>

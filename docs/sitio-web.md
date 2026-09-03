@@ -1,29 +1,30 @@
-# El sitio web
+# El sitio de demostración
 
-> **Este documento describe el sitio anterior al renombrado**, el que sigue en vivo en
-> `luxcore.ginit.dev`. El sitio de Corvo se rehace desde cero en carpeta aparte, y esta guía se
-> reescribirá con él. Lo que sí sigue valiendo son las trampas de CSS y de captura del final.
+> **Esto no es el sitio público.** `cero.ginit.dev` lo sirve un repositorio aparte —
+> `~/Research/Software/51.Soft_Cero-Web`, React más un backend Java en un solo jar. Lo que se
+> documenta aquí es `docs/web` y las plantillas de `cero-web`: la **aplicación de demostración**
+> que vive dentro del framework y que sus pruebas usan para comprobar que todo encaja de punta a
+> punta. Las trampas de CSS y de captura del final siguen valiendo para los dos.
 
-Cómo se construye, se traduce y se despliega **luxcore.ginit.dev**, y las trampas que ya han
-costado un rato encontrar.
+Cómo se construye y se traduce la demo, y las trampas que ya han costado un rato encontrar.
 
-## Hay un solo sitio, y lo sirve Java
+## La demo la sirve Java, no un servidor de estáticos
 
 Esto es lo primero que hay que entender, porque no es evidente:
 
-- **`luxcore.ginit.dev` lo sirve `lux-web`**, la aplicación Java, con una ruta por página en
+- **La demo la sirve `cero-web`**, la aplicación Java, con una ruta por página en
   `InicioController`. Comprobación rápida: `/guia` responde 200 y `/guia.html` responde 404.
 - **`docs/web` no está publicado en ninguna parte.** No hay flujo de GitHub Pages. Es la
-  *fuente*: de ahí salen las plantillas que sirve `lux-web`.
+  *fuente*: de ahí salen las plantillas que sirve `cero-web`.
 
-O sea que un cambio que solo toque `docs/web` y no llegue a `java/lux-web` **no se ve en
+O sea que un cambio que solo toque `docs/web` y no llegue a `java/cero-web` **no se ve en
 producción**.
 
 ## La cadena de construcción
 
 ```bash
 python3 docs/web/construir.py     # contenido/ + assets/ → HTML completo en docs/web/
-python3 docs/web/a-plantillas.py  # ese HTML → plantillas de lux-web + copia de recursos
+python3 docs/web/a-plantillas.py  # ese HTML → plantillas de cero-web + copia de recursos
 ```
 
 Siempre en ese orden, y siempre las dos. `construir.py` genera además `completo.html`, el sitio
@@ -33,15 +34,15 @@ entero en un archivo para leerlo sin conexión (solo en castellano: duplicarlo d
 |---|---|
 | `docs/web/contenido/*.html` | El cuerpo de cada página, en castellano. **Aquí se escribe.** |
 | `docs/web/contenido/en/*.html` | Lo mismo en inglés. |
-| `docs/web/assets/lux.css` · `lux.js` · `terminal.js` | Estilos y guiones. **Aquí se escribe.** |
+| `docs/web/assets/cero.css` · `cero.js` · `terminal.js` | Estilos y guiones. **Aquí se escribe.** |
 | `docs/web/marca/` | Favicon, imagen social y su plantilla. |
 | `docs/web/*.html` y `docs/web/en/*.html` | **Generados.** No editar. |
-| `java/lux-web/…/plantillas/*.html` | **Generados**, menos `base.html`. |
-| `java/lux-web/…/estaticos/` | **Copiados** desde `assets/` y `marca/`. |
+| `java/cero-web/…/plantillas/*.html` | **Generados**, menos `base.html`. |
+| `java/cero-web/…/estaticos/` | **Copiados** desde `assets/` y `marca/`. |
 
 ### Trampa: `base.html` se mantiene a mano
 
-`java/lux-web/src/main/resources/plantillas/base.html` es la única plantilla que **no** se
+`java/cero-web/src/main/resources/plantillas/base.html` es la única plantilla que **no** se
 genera: lleva la barra, el pie y el `<head>` del sitio dinámico. `a-plantillas.py` no la toca.
 
 Ya mordió una vez: se cambió el logo en `construir.py`, se regeneró todo, y la barra de
@@ -132,7 +133,7 @@ papel es negro puro (`#000000`).
 
 ## Trampas de CSS que ya costaron caro
 
-Están comentadas en `lux.css`, pero conviene tenerlas juntas:
+Están comentadas en `cero.css`, pero conviene tenerlas juntas:
 
 - **Ítems de grid que no encogen.** `.cuerpo` es un grid y sus ítems tienen `min-width: auto`, así
   que no bajan del ancho de su contenido. Con `table { min-width: 32rem }` la columna se plantaba
@@ -154,7 +155,7 @@ Están comentadas en `lux.css`, pero conviene tenerlas juntas:
 Todas bajo `@media (prefers-reduced-motion: no-preference)`:
 
 - Entrada escalonada en la portada y aterrizaje del cuervo en Empezar, por CSS.
-- Revelado al hacer scroll. **La clase `.revelar` la pone `lux.js`, nunca el HTML**: si el guion no
+- Revelado al hacer scroll. **La clase `.revelar` la pone `cero.js`, nunca el HTML**: si el guion no
   corre, el contenido se ve igual. Y lo que ya está en pantalla al cargar no se anima, que si no
   parpadea bajo el pulgar.
 
@@ -181,5 +182,6 @@ y esconde a los culpables. Lo que funciona es buscar `scrollWidth > clientWidth`
 ## Desplegar
 
 Ver [produccion.md](produccion.md) y el guion
-`~/Research/Contabo/GinitDev/apps/luxcore/desplegar.sh`. Empaqueta con `./lux paquete`, que corre
-la batería completa de todos los módulos (~400 s) antes de subir nada.
+La demo **no se despliega en ninguna parte**: existe para que las pruebas la ejerciten. El que se
+despliega es el sitio público, desde el repositorio 51, con
+`~/Research/Contabo/GinitDev/apps/cero/desplegar.sh`.

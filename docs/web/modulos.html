@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LuxCore — Módulos</title>
+<title>Cero — Módulos</title>
 <meta name="description" content="Qué trae cada uno y cómo se usan por separado.">
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGltYWdlIGhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRUFBQUFCQUNBTUFBQUNkdDRIc0FBQUNZVkJNVkVYbUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDRYa2VscUFBQUF5blJTVGxNQUJBSVlxdnY4c3pRQkdUOWhmSktveWV0OVZidjBuLzRER2p4a2pxVzh6ZUw5cHpqbjloeE1aY2VzZWJaS3JsclBmK01KeUE0ZStVOVNrQVc5N2dzRzE2SW4zMW5DTGt1NGM0TUs1UWQ3eFc2dnFXMHBJWXpCUFZOQSt0WXJ2M2hZbnBlTnRYQmZLTW9rZXFDRVY5cG44c3YzVWU5dmlmak9EOUE1N1RiQUVJSFlONVdDc0VoZHVoY3ZHNjJ4RkdhS0prZEZZcFRoNkNPV3NzYm1pTjR5WEhLTGhoWnBuQWpnN0MzUzAxYWR4QXgxb3p2d21wRXE5WGZ6MmJmZGZpQSthc1BSWXgwUzFUR3IvdWFITUFBQUJDeEpSRUZVV01QZFYrdC8xRVFVUFlrbUdNRmloWklvYmVuYVdxbFFFWVN1RWxrUXFBS2w0SU9pZFdzdHRGSlFxVldVMHRieUVCRzBpaUlpS0NLSUx4UmZLT0w3L2NMelYzbVRiTExic3NsdStzbWY4MlVuTzVrejk1NXo3c3dFK0g4MFJjMTBMcnBZb3pSOTNDV0FFUXZpMHZFVExpdVplSGtwL1haRkxJUkprOHN5OC9UZ1p3clU0Z0g4WlhYZDc1a2F4OE1xR3VES3E2YVdWMVJPcXlJVFBvTEdxMk1BK0Z4VzF3UUlKcStwTFQ0SjFWSVVSVFVNWEVzOUc4SjBLREVqTUJUVUJRZzZyeHRERHBoQkxRQ1lHVWNIcjFtb3o0bmcrckZFTUN1SUlNRWJZcHJSQlppZEF6RG54dGdJQnVZR0taZ3NuUmNYUUVWRFVpYU94UWcraHpkbGZTQzltK01hUVVGNVFJSGpwUG13NDZad1MwNEVKaGVrc0RBbWk0dXkxZVRrY0t2ajhqZ0JMRFlERGowbGx5eEZEQjRVVE0raElMT3ZOTjVXUEJFS3Bvd0NZRUtqZmp1c0l1MWdZVmtPaDRFV1hBNjFLQVFEeGdnTy9TQk1yaWdPd1VEVHloRWMrbkxxZ21BVWdXQ2d1U3BQQk80R3V3cDJFWElhV0gwaEJ4bUVPMFRsZ29WaDRjN1JLZ1NtTk8rcUJ1d0NlU2k0T3dUQXBXYnlta0ttVXRHU3lNZWlKNmNNclUwVlJMZ25Qd20rSTJydWpkNG1GYlNHNWVEbWtTVHZpMFp3NmprQ2dXbTJGZExoZm9heTRCWlhPNVJJS1d3OElNdUVKOEZrQjZJM1NoWHJxSmtSQ0Z3ZmpTRHhkZEpNaENQbzdJb3VEQmw4a0ZGTUpwM0NpRVN3MEdwR0VDSGhiWUFWS2FhTjdrVk1oeEloQTZzS21OcEcwOGFJTkFSaDQ2Wm9PUVgrSVYyQzljZzB0VkdrU25tbk4wU0xJV01ORDd2TzhYeVZHRmtpbXBqNkVVUzYya2hoTTN0NkhFODgybDNlTmdLaVZ3SktKMWxYNk1CWXlSWTh4c2ZaS2YwdGpjRWQxT1FUVDI2dElmdFlHWEx1R1lxY0E2bnF0ZHkyR1AwRDVJQXIrK0JNNnA0d0NUNDFoRW5icFZjWjVrVnBPOWFScXpzVTdDUjNXYXJoNkw3Qzk3aUVJaFErdlhzQjgweTNGdUtaUGM4MkFYdTV6M21XMEtjNVFhbHlvUy9KeHNDS1p1QzU1L012UC94Q1Q4K3lGK1Y2c1g5b3drc3Y3K0syQTY4NHV0Z3F0anFuVEViSGNYbVBUQU1IWjc4NmRlK2hySkdyeXJnVHJ4MnVPT0pBWUhsUVowbStqZ3NoRE5TK2NUU3Q4YzJLWTN6citJbTNUNzd6N2hxbU54OXNlYStOKzFxQlp0bTJzeDhFNzRkWThJT1VnU09uUHZ6SSsyT0d5RlZtWTlacDh1TjZjYzRuOU9zc3pVL3phaUFlUFA0WkIvWTdKZEg4T2Jya3hmYmhCdUNNelBsQ1l2N3lMRFZwdW02bXVTZXZqQmErT3RjTmZEM1VMdzh0MzdCeFRoOTVFa1BVSGVZa3k3bFpTNGZVZ2VHY2c5OSt4KzkvbVAraisxNzdUMHQvN2hYeGtteDB6UGZMcnlYSHVuN3JLejI4UHN6RTh1bGdZMVBuMGJNeStmYy9UaHlRV2FkYzh0S3NzNVNNZ2YvOEt4VmVCcDRiQi84V3ZjKzczZHBlcnlyN2VNNTFtK0xlZXF6dytmUHFPODY0ZTBvN2JFVnVldWZMUEFDVFpic1BiWEZYVU1PM1ZnUDlwNzBkMk9TZ3M0eUZmM3p4WEpqdHcvRS9CUDdMN1Y4V3hZbzdvV2ZqQXdBQUFBQkpSVTVFcmtKZ2dnPT0iIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIvPjwvc3ZnPgo=">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LuxCore">
-<meta property="og:title" content="LuxCore — Módulos">
+<meta property="og:site_name" content="Cero">
+<meta property="og:title" content="Cero — Módulos">
 <meta property="og:description" content="Qué trae cada uno y cómo se usan por separado.">
-<meta property="og:url" content="https://luxcore.ginit.dev/modulos">
-<link rel="alternate" hreflang="es" href="https://luxcore.ginit.dev/modulos">
-<link rel="alternate" hreflang="en" href="https://luxcore.ginit.dev/en/modulos">
-<link rel="alternate" hreflang="x-default" href="https://luxcore.ginit.dev/modulos">
-<meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<meta property="og:url" content="https://cero.ginit.dev/modulos">
+<link rel="alternate" hreflang="es" href="https://cero.ginit.dev/modulos">
+<link rel="alternate" hreflang="en" href="https://cero.ginit.dev/en/modulos">
+<link rel="alternate" hreflang="x-default" href="https://cero.ginit.dev/modulos">
+<meta property="og:image" content="https://cero.ginit.dev/marca/enlace.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.">
+<meta property="og:image:alt" content="Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 390 KB.">
 <meta property="og:locale" content="es_ES">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="LuxCore — Módulos">
+<meta name="twitter:title" content="Cero — Módulos">
 <meta name="twitter:description" content="Qué trae cada uno y cómo se usan por separado.">
-<meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
-<link rel="stylesheet" href="./assets/corvo.css?v=81b1bc9c">
-<script src="./assets/corvo.js?v=81b1bc9c"></script>
+<meta name="twitter:image" content="https://cero.ginit.dev/marca/enlace.jpg">
+<link rel="stylesheet" href="./assets/cero.css?v=81b1bc9c">
+<script src="./assets/cero.js?v=81b1bc9c"></script>
 </head>
 <body>
 
@@ -32,7 +32,7 @@
   <div class="marco">
     <a class="marca-sitio" href="./index.html">
       <span class="logo" aria-hidden="true"></span>
-      <span class="palabra">Lux<em>Core</em></span>
+      <span class="palabra">Cero<em>Core</em></span>
     </a>
     <nav class="nav-sitio" aria-label="Secciones del sitio">
         <a href="./index.html">Inicio</a>
@@ -60,7 +60,7 @@
 <div class="marco">
   <header class="cabecera-pagina">
     <h1 class="titulo-pagina">Módulos</h1>
-    <p class="entradilla">Cinco piezas que se toman por separado. Si solo necesitas atender HTTP, lux-http basta y son 64 KB.</p>
+    <p class="entradilla">Cinco piezas que se toman por separado. Si solo necesitas atender HTTP, cero-http basta y son 64 KB.</p>
   </header>
 
   <div class="cuerpo">
@@ -79,7 +79,7 @@
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Los cinco módulos</h2></div>
 
         <p>
-          Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>lux-http</code>
+          Cada módulo se toma por separado. Si solo necesitas atender HTTP, <code>cero-http</code>
           basta y son 64 KB.
         </p>
 
@@ -90,24 +90,24 @@
             </thead>
             <tbody>
               <tr>
-                <td><span class="mono">lux-http</span><span class="detalle">Servidor HTTP/1.1, TLS recargable, sesiones enchufables, multipart, gzip, estáticos con rangos, WebSocket</span></td>
+                <td><span class="mono">cero-http</span><span class="detalle">Servidor HTTP/1.1, TLS recargable, sesiones enchufables, multipart, gzip, estáticos con rangos, WebSocket</span></td>
                 <td>—</td><td class="cifra">38</td><td class="cifra">3860</td><td class="cifra">229</td><td class="cifra">81 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-core</span><span class="detalle">Rutas, inyección, clase base opcional, JSON, validación, seguridad, métricas, caché, eventos, tareas, OpenAPI</span></td>
-                <td>lux-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
+                <td><span class="mono">cero-core</span><span class="detalle">Rutas, inyección, clase base opcional, JSON, validación, seguridad, métricas, caché, eventos, tareas, OpenAPI</span></td>
+                <td>cero-http</td><td class="cifra">63</td><td class="cifra">5473</td><td class="cifra">459</td><td class="cifra">147 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
-                <td>lux-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
+                <td><span class="mono">cero-view</span><span class="detalle">Plantillas con herencia, bucles y escapado por defecto</span></td>
+                <td>cero-core</td><td class="cifra">9</td><td class="cifra">974</td><td class="cifra">88</td><td class="cifra">38 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-data</span><span class="detalle">JDBC, pool, transacciones, repositorios y sesiones en tabla</span></td>
-                <td>lux-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
+                <td><span class="mono">cero-data</span><span class="detalle">JDBC, pool, transacciones, repositorios y sesiones en tabla</span></td>
+                <td>cero-core</td><td class="cifra">14</td><td class="cifra">1233</td><td class="cifra">286</td><td class="cifra">35 KB</td>
               </tr>
               <tr>
-                <td><span class="mono">lux-adapter-servlet</span><span class="detalle">Desplegar una aplicación LuxCore dentro de Tomcat 10.1+</span></td>
-                <td>lux-core</td><td class="cifra">4</td><td class="cifra">588</td><td class="cifra">35</td><td class="cifra">13 KB</td>
+                <td><span class="mono">cero-adapter-servlet</span><span class="detalle">Desplegar una aplicación Cero dentro de Tomcat 10.1+</span></td>
+                <td>cero-core</td><td class="cifra">4</td><td class="cifra">588</td><td class="cifra">35</td><td class="cifra">13 KB</td>
               </tr>
               <tr class="total">
                 <td>Los cinco</td><td>—</td><td class="cifra">126</td><td class="cifra">11 759</td><td class="cifra">1 047</td><td class="cifra">310 KB</td>
@@ -122,11 +122,11 @@
         </p>
       </section>
 <section id="servidor">
-        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Servidor · lux-http</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Servidor · cero-http</h2></div>
 
         <p>
           HTTP/1.1 con un hilo virtual por conexión. Se puede usar suelto, sin
-          <code>lux-core</code>, si lo único que quieres es atender peticiones.
+          <code>cero-core</code>, si lo único que quieres es atender peticiones.
         </p>
 
         <div class="codigo">
@@ -174,7 +174,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">
         </p>
       </section>
 <section id="vistas">
-        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Vistas · lux-view</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Vistas · cero-view</h2></div>
 
         <p>
           Plantillas compiladas y cacheadas, con herencia. El escapado HTML es el comportamiento
@@ -248,7 +248,7 @@ Templates.from(Path.of(<span class="st">"plantillas"</span>))          <span cla
         </div>
       </section>
 <section id="datos">
-        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Datos · lux-data</h2></div>
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>Datos · cero-data</h2></div>
 
         <p>
           JDBC directo, sin ORM. Todo pasa por sentencias preparadas; los nombres de tabla y
@@ -381,7 +381,7 @@ tareas.count()           tareas.existsById(<span class="st">7L</span>)</pre>
         <p>
           <code>loadConfig()</code> lee <code>application.properties</code> del classpath y del
           directorio actual, y encima aplica las variables de entorno con prefijo
-          <code>LUX_</code> y las propiedades del sistema con prefijo <code>lux.</code>
+          <code>CERO_</code> y las propiedades del sistema con prefijo <code>cero.</code>
         </p>
 
         <div class="codigo">
@@ -391,7 +391,7 @@ server.maxConnections=5000
 server.gzipMinBytes=512
 
 db.url=jdbc:postgresql://localhost/tareas
-db.usuario=lux
+db.usuario=cero
 db.pool=10</pre>
         </div>
 
@@ -409,7 +409,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
 
         <p>
           Las claves <code>server.*</code> configuran el servidor sin escribir código:
-          <code>LUX_SERVER_PORT=9000</code> en el entorno cambia el puerto.
+          <code>CERO_SERVER_PORT=9000</code> en el entorno cambia el puerto.
         </p>
       </section>
     </main>
@@ -422,7 +422,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.3.0 · Licencia MIT<br>
+      Cero 0.3.0 · Licencia MIT<br>
       Medido el 2 de agosto de 2026
     </div>
   </footer>

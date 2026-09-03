@@ -26,11 +26,11 @@ echo "compilando…"
 (cd "$REPO/java" && mvn -B -q -DskipTests install)
 [ -f "$AQUI/load/LoadClient.class" ] || (cd "$AQUI/load" && javac LoadClient.java)
 
-cp=$(ls -d "$REPO"/java/corvo-*/target/corvo-*.jar | tr '\n' ':')
+cp=$(ls -d "$REPO"/java/cero-*/target/cero-*.jar | tr '\n' ':')
 tmp=$(mktemp -d)
 cat > "$tmp/Sostenido.java" <<'JAVA'
-import corvo.core.Lux;
-import corvo.core.Result;
+import cero.core.Lux;
+import cero.core.Result;
 
 public class Sostenido {
     public static void main(String[] args) throws Exception {

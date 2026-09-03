@@ -1,23 +1,23 @@
-Corvo
+Cero
 Copyright (c) 2026 Richar Andre Vilca-Solorzano
 y Ramiro Pedro Laura-Murillo
 
 Distribuido bajo licencia MIT. Ver LICENSE.
 
-Corvo parte del código de JxMVC 3.4.0, publicado bajo licencia MIT con el
+Cero parte del código de JxMVC 3.4.0, publicado bajo licencia MIT con el
 mismo autor principal. Ver docs/origen.md.
 
-Los cuatro módulos del núcleo -- corvo-http, corvo-core, corvo-view y corvo-data --
+Los cuatro módulos del núcleo -- cero-http, cero-core, cero-view y cero-data --
 no dependen de nada fuera del JDK, así que ningún jar de terceros se
 redistribuye con ellos.
 
-corvo-adapter-servlet declara jakarta.servlet-api en ámbito «provided»: lo pone
+cero-adapter-servlet declara jakarta.servlet-api en ámbito «provided»: lo pone
 el contenedor, no se empaqueta ni se redistribuye.
 
 Los drivers JDBC de PostgreSQL, MySQL y H2 se usan solo en las pruebas
 (ámbito «test»). El de MySQL es GPL-2.0 con excepción FOSS; como no se
 distribuye, no afecta a la licencia de este software. Si empaquetas una
-aplicación con «corvo fatjar», los jar que tú declares -- incluido el driver de
+aplicación con «cero fatjar», los jar que tú declares -- incluido el driver de
 tu base de datos -- van dentro, y sus licencias son cosa tuya. La aplicación
 de ejemplo incluye H2 (MPL-2.0 / EPL-1.0) por ese motivo.
 

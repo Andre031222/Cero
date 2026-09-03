@@ -1,32 +1,34 @@
-# Corvo
+# Cero
 
 Framework web para Java que arranca solo, sin contenedor de servlets y sin una sola dependencia
 externa. Pensado desde el principio para vivir en más de un lenguaje.
 
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-15803d?style=flat-square)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-21%2B-007396?style=flat-square)](https://openjdk.org/)
+[![Java](https://img.shields.io/badge/Java-25%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-1342-15803d?style=flat-square)](#estado)
-[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.3.0-6d28d9?style=flat-square)](docs/versiones.md)
-[![En vivo](https://img.shields.io/badge/En_vivo-corvo.ginit.dev-0f2444?style=flat-square)](https://corvo.ginit.dev)
+[![Pruebas](https://img.shields.io/badge/Pruebas-1584-15803d?style=flat-square)](#estado)
+[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.5.0-6d28d9?style=flat-square)](docs/versiones.md)
+[![En vivo](https://img.shields.io/badge/En_vivo-cero.ginit.dev-0f2444?style=flat-square)](https://cero.ginit.dev)
 
-> **Antes se llamaba LuxCore.** Cambió en la versión 0.4.0 para no confundirse con un framework
-> PHP del mismo entorno. Si vienes de una versión anterior, la conversión es una orden:
-> [`docs/migrar-a-corvo.md`](docs/migrar-a-corvo.md).
+> **Antes se llamó LuxCore y luego Corvo.** *LuxCore* chocaba con un framework PHP del mismo
+> entorno; *Corvo* resolvió la confusión pero no decía nada del framework. **Cero** sí: cero
+> dependencias, cero configuración, cero contenedor. Si vienes de cualquiera de los dos, la
+> conversión es una orden y el guion acepta los dos:
+> [`docs/migrar-a-cero.md`](docs/migrar-a-cero.md).
 
-**En producción:** [corvo.ginit.dev](https://corvo.ginit.dev) — el sitio de este proyecto,
+**En producción:** [cero.ginit.dev](https://cero.ginit.dev) — el sitio de este proyecto,
 servido por el propio framework, sin Tomcat detrás.
 
-![Corvo — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB](docs/imagenes/portada.png)
+![Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 390 KB](docs/imagenes/portada.png)
 
 * * *
 
 ## Qué es
 
-Corvo nace de [JxMVC 3.4.0](docs/origen.md), un framework MVC en Java con cero dependencias que
+Cero nace de [JxMVC 3.4.0](docs/origen.md), un framework MVC en Java con cero dependencias que
 funciona y está en producción — pero que necesita Tomcat para arrancar y solo existe para Java.
 
-Corvo cambia esas dos cosas:
+Cero cambia esas dos cosas:
 
 1. **Arranca solo.** Servidor HTTP/1.1 propio con un hilo virtual por conexión. `java -jar app.jar`
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
@@ -46,21 +48,21 @@ Corvo cambia esas dos cosas:
 
 ## Rendimiento
 
-![Arranque en frío y memoria: Corvo frente a Javalin, JxMVC, Quarkus, Micronaut y Spring Boot](docs/imagenes/banco.png)
+![Arranque en frío y memoria: Cero frente a Javalin, JxMVC, Quarkus, Micronaut y Spring Boot](docs/imagenes/banco.png)
 
 *Los seis en contenedores idénticos, misma corrida, 90 mediciones sin un solo error.
 [Tabla completa y salvedades](benchmarks/results/RESULTS-docker.md).*
 
 | Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
 |---|---|---|---|---|---|---|
-| **Corvo** | **106 ms** | 110,3 MB | **136,4 MB** | **26 425** | **25 431** | **25 931** |
+| **Cero** | **106 ms** | 110,3 MB | **136,4 MB** | **26 425** | **25 431** | **25 931** |
 | Javalin | 451 ms | 115,2 MB | 285,7 MB | 21 994 | 25 125 | 24 459 |
 | JxMVC | 698 ms | **110,1 MB** | 191,5 MB | 24 240 | 23 307 | 18 771 |
 | Quarkus | 707 ms | 123,2 MB | 259,8 MB | 25 515 | 22 744 | 21 258 |
 | Micronaut | 838 ms | 120,7 MB | 201,2 MB | 18 381 | 19 088 | 17 213 |
 | Spring Boot | 1467 ms | 127,3 MB | 352,5 MB | 19 809 | 20 432 | 20 088 |
 
-Corvo gana en todo menos en tamaño de imagen, y ahí pierde por 0,2 MB. Arranca 4,3× más rápido
+Cero gana en todo menos en tamaño de imagen, y ahí pierde por 0,2 MB. Arranca 4,3× más rápido
 que el siguiente, gasta la menor memoria de los seis y lidera los tres endpoints. En `/db` —el que
 mide el framework haciendo trabajo de aplicación— saca un 38 % al JxMVC del que viene.
 
@@ -70,42 +72,42 @@ Linux sin virtualizar antes de citarse.
 
 ## Instalar
 
-Java 21 o superior (hilos virtuales) y Maven. Nada más.
+Java 25 o superior (hilos virtuales) y Maven. Nada más.
 
-![Una orden instala Corvo, crea un proyecto y lo arranca en 10 ms](docs/imagenes/instalar.gif)
+![Una orden instala Cero, crea un proyecto y lo arranca en 10 ms](docs/imagenes/instalar.gif)
 
 ```bash
-curl -fsSL https://corvo.ginit.dev/instalar | sh          # macOS y Linux
-irm https://corvo.ginit.dev/instalar.ps1 | iex            # Windows (PowerShell)
+curl -fsSL https://cero.ginit.dev/instalar | sh          # macOS y Linux
+irm https://cero.ginit.dev/instalar.ps1 | iex            # Windows (PowerShell)
 ```
 
 Baja el paquete, comprueba su `sha256`, lo compila, deja los artefactos en tu `~/.m2` y te pone la
-orden `corvo` en el PATH. No pide contraseña y no escribe fuera de tu carpeta personal. Los dos
-guiones se sirven como texto plano a propósito —[instalar](https://corvo.ginit.dev/instalar) ·
-[instalar.ps1](https://corvo.ginit.dev/instalar.ps1)— para que puedas leerlos antes de ejecutarlos.
+orden `cero` en el PATH. No pide contraseña y no escribe fuera de tu carpeta personal. Los dos
+guiones se sirven como texto plano a propósito —[instalar](https://cero.ginit.dev/instalar) ·
+[instalar.ps1](https://cero.ginit.dev/instalar.ps1)— para que puedas leerlos antes de ejecutarlos.
 
 Después:
 
 ```bash
-corvo new mi-app
+cero new mi-app
 cd mi-app && mvn -q package && java -jar target/mi-app.jar
 ```
 
 Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
-git clone https://github.com/Andre031222/Corvo.git && cd Corvo
-cd java && mvn install     # 1 342 pruebas, runner propio (sin JUnit)
-./corvo fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
+git clone https://github.com/Andre031222/Cero.git && cd Cero
+cd java && mvn install     # 1 584 pruebas, runner propio (sin JUnit)
+./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
-Las pruebas de `corvo-data` contra motores reales necesitan PostgreSQL y MySQL escuchando; sin ellos
+Las pruebas de `cero-data` contra motores reales necesitan PostgreSQL y MySQL escuchando; sin ellos
 se omiten esos grupos y el resto sigue corriendo:
 
 ```bash
-docker run -d --name corvo-pg -e POSTGRES_PASSWORD=corvo -e POSTGRES_DB=corvopruebas \
+docker run -d --name cero-pg -e POSTGRES_PASSWORD=cero -e POSTGRES_DB=ceropruebas \
        -p 55432:5432 postgres:16-alpine
-docker run -d --name corvo-my -e MYSQL_ROOT_PASSWORD=corvo -e MYSQL_DATABASE=corvopruebas \
+docker run -d --name cero-my -e MYSQL_ROOT_PASSWORD=cero -e MYSQL_DATABASE=ceropruebas \
        -p 53306:3306 mysql:8
 ```
 
@@ -137,18 +139,18 @@ la reflexión.
 
 | Módulo | Pruebas | Qué trae |
 |---|---|---|
-| [`corvo-http`](java/corvo-http) | 272 | Servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE) y confianza en proxy configurable |
-| [`corvo-core`](java/corvo-core) | 492 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP** y OpenAPI |
-| [`corvo-view`](java/corvo-view) | 88 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
-| [`corvo-data`](java/corvo-data) | 318 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
-| [`corvo-adapter-servlet`](java/corvo-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
-| [`corvo-launcher`](java/corvo-launcher) | 10 | Empaqueta aplicación y framework en un jar ejecutable, con `java.util.jar` y sin plugins de terceros |
-| [`corvo-web`](java/corvo-web) | 89 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
+| [`cero-http`](java/cero-http) | 272 | Servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE) y confianza en proxy configurable |
+| [`cero-core`](java/cero-core) | 492 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP** y OpenAPI |
+| [`cero-view`](java/cero-view) | 88 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
+| [`cero-data`](java/cero-data) | 318 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
+| [`cero-adapter-servlet`](java/cero-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
+| [`cero-launcher`](java/cero-launcher) | 10 | Empaqueta aplicación y framework en un jar ejecutable, con `java.util.jar` y sin plugins de terceros |
+| [`cero-web`](java/cero-web) | 89 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
 | [`ejemplo`](java/ejemplo) | 43 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
 
-Los cuatro del núcleo —`corvo-http`, `corvo-core`, `corvo-view` y `corvo-data`— suman **308 KB** y no
+Los cuatro del núcleo —`cero-http`, `cero-core`, `cero-view` y `cero-data`— suman **368 KB** y no
 declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo el proyecto está en
-`corvo-adapter-servlet`, en *scope* `provided`.
+`cero-adapter-servlet`, en *scope* `provided`.
 
 ## Estado
 
@@ -162,7 +164,7 @@ prueba propia. Ver [versiones.md](docs/versiones.md).
 
 Lo verificado, y cómo:
 
-- **1 342 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
+- **1 584 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.
@@ -179,12 +181,11 @@ Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaci
 
 ```text
 java/         Los ocho módulos
-legacy/       jxmvc-core — origen de la migración y línea base del banco
 benchmarks/   Harness comparativo y prueba de carga sostenida
 docs/         Documentación y el sitio estático
 spec/         Contrato del kernel, neutral respecto al lenguaje   (fase 3)
 rust/  cpp/   Implementaciones adicionales                        (fase 3)
-corvo         Órdenes del proyecto: ./corvo test, portal, fatjar…
+cero         Órdenes del proyecto: ./cero test, portal, fatjar…
 ```
 
 ## Documentación
@@ -192,7 +193,7 @@ corvo         Órdenes del proyecto: ./corvo test, portal, fatjar…
 | Documento | Qué responde |
 |---|---|
 | [produccion.md](docs/produccion.md) | ¿Está listo para producción? (respuesta corta: todavía no, y ahí está la lista) |
-| [sitio-web.md](docs/sitio-web.md) | Cómo se construye, se traduce y se despliega corvo.ginit.dev |
+| [sitio-web.md](docs/sitio-web.md) | Cómo se construye, se traduce y se despliega cero.ginit.dev |
 | [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
 | [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Comparación con JxMVC, capa por capa |
 | [versiones.md](docs/versiones.md) | Qué cambió en cada versión, y por qué una publicada no se toca |
@@ -201,7 +202,7 @@ corvo         Órdenes del proyecto: ./corvo test, portal, fatjar…
 | [autores.md](docs/autores.md) | Autoría y atribución |
 
 El sitio del proyecto vive en [`docs/web/`](docs/web/) —ocho páginas, sin npm ni paso de
-compilación de terceros— y se regenera con `./corvo build`. El mismo generador produce
+compilación de terceros— y se regenera con `./cero build`. El mismo generador produce
 `completo.html`: el sitio entero en un archivo, sin recursos externos.
 
 ## Licencia
@@ -212,10 +213,10 @@ Autores: **Richar Andre Vilca-Solorzano** y **Ramiro Pedro Laura-Murillo**.
 Universidad Nacional del Altiplano, Puno, Perú.
 
 ```bibtex
-@software{vilcasolorzano2026corvo,
-  title  = {Corvo: núcleo de framework web poliglota sin dependencias},
+@software{vilcasolorzano2026cero,
+  title  = {Cero: núcleo de framework web poliglota sin dependencias},
   author = {Vilca-Solorzano, Richar Andre and Laura-Murillo, Ramiro Pedro},
   year   = {2026},
-  url    = {https://github.com/Andre031222/Corvo}
+  url    = {https://github.com/Andre031222/Cero}
 }
 ```

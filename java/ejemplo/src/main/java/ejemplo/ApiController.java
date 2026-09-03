@@ -1,17 +1,17 @@
 package ejemplo;
 
-import corvo.core.Body;
-import corvo.core.CsrfExempt;
-import corvo.core.Delete;
-import corvo.core.Get;
-import corvo.core.Inject;
-import corvo.core.Path;
-import corvo.core.Post;
-import corvo.core.Query;
-import corvo.core.Result;
-import corvo.core.Route;
-import corvo.core.Valid;
-import corvo.http.HttpException;
+import cero.core.Body;
+import cero.core.CsrfExempt;
+import cero.core.Delete;
+import cero.core.Get;
+import cero.core.Inject;
+import cero.core.Path;
+import cero.core.Post;
+import cero.core.Query;
+import cero.core.Result;
+import cero.core.Route;
+import cero.core.Valid;
+import cero.http.HttpException;
 
 @Route("/api/tareas")
 public class ApiController {

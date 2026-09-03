@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LuxCore — Guía</title>
+<title>Cero — Guía</title>
 <meta name="description" content="Rutas, parámetros, respuestas, inyección, validación y errores.">
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGltYWdlIGhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRUFBQUFCQUNBTUFBQUNkdDRIc0FBQUNZVkJNVkVYbUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDdtR0g3bUdIN21HSDRYa2VscUFBQUF5blJTVGxNQUJBSVlxdnY4c3pRQkdUOWhmSktveWV0OVZidjBuLzRER2p4a2pxVzh6ZUw5cHpqbjloeE1aY2VzZWJaS3JsclBmK01KeUE0ZStVOVNrQVc5N2dzRzE2SW4zMW5DTGt1NGM0TUs1UWQ3eFc2dnFXMHBJWXpCUFZOQSt0WXJ2M2hZbnBlTnRYQmZLTW9rZXFDRVY5cG44c3YzVWU5dmlmak9EOUE1N1RiQUVJSFlONVdDc0VoZHVoY3ZHNjJ4RkdhS0prZEZZcFRoNkNPV3NzYm1pTjR5WEhLTGhoWnBuQWpnN0MzUzAxYWR4QXgxb3p2d21wRXE5WGZ6MmJmZGZpQSthc1BSWXgwUzFUR3IvdWFITUFBQUJDeEpSRUZVV01QZFYrdC8xRVFVUFlrbUdNRmloWklvYmVuYVdxbFFFWVN1RWxrUXFBS2w0SU9pZFdzdHRGSlFxVldVMHRieUVCRzBpaUlpS0NLSUx4UmZLT0w3L2NMelYzbVRiTExic3NsdStzbWY4MlVuTzVrejk1NXo3c3dFK0g4MFJjMTBMcnBZb3pSOTNDV0FFUXZpMHZFVExpdVplSGtwL1haRkxJUkprOHN5OC9UZ1p3clU0Z0g4WlhYZDc1a2F4OE1xR3VES3E2YVdWMVJPcXlJVFBvTEdxMk1BK0Z4VzF3UUlKcStwTFQ0SjFWSVVSVFVNWEVzOUc4SjBLREVqTUJUVUJRZzZyeHRERHBoQkxRQ1lHVWNIcjFtb3o0bmcrckZFTUN1SUlNRWJZcHJSQlppZEF6RG54dGdJQnVZR0taZ3NuUmNYUUVWRFVpYU94UWcraHpkbGZTQzltK01hUVVGNVFJSGpwUG13NDZad1MwNEVKaGVrc0RBbWk0dXkxZVRrY0t2ajhqZ0JMRFlERGowbGx5eEZEQjRVVE0raElMT3ZOTjVXUEJFS3Bvd0NZRUtqZmp1c0l1MWdZVmtPaDRFV1hBNjFLQVFEeGdnTy9TQk1yaWdPd1VEVHloRWMrbkxxZ21BVWdXQ2d1U3BQQk80R3V3cDJFWElhV0gwaEJ4bUVPMFRsZ29WaDRjN1JLZ1NtTk8rcUJ1d0NlU2k0T3dUQXBXYnlta0ttVXRHU3lNZWlKNmNNclUwVlJMZ25Qd20rSTJydWpkNG1GYlNHNWVEbWtTVHZpMFp3NmprQ2dXbTJGZExoZm9heTRCWlhPNVJJS1d3OElNdUVKOEZrQjZJM1NoWHJxSmtSQ0Z3ZmpTRHhkZEpNaENQbzdJb3VEQmw4a0ZGTUpwM0NpRVN3MEdwR0VDSGhiWUFWS2FhTjdrVk1oeEloQTZzS21OcEcwOGFJTkFSaDQ2Wm9PUVgrSVYyQzljZzB0VkdrU25tbk4wU0xJV01ORDd2TzhYeVZHRmtpbXBqNkVVUzYya2hoTTN0NkhFODgybDNlTmdLaVZ3SktKMWxYNk1CWXlSWTh4c2ZaS2YwdGpjRWQxT1FUVDI2dElmdFlHWEx1R1lxY0E2bnF0ZHkyR1AwRDVJQXIrK0JNNnA0d0NUNDFoRW5icFZjWjVrVnBPOWFScXpzVTdDUjNXYXJoNkw3Qzk3aUVJaFErdlhzQjgweTNGdUtaUGM4MkFYdTV6M21XMEtjNVFhbHlvUy9KeHNDS1p1QzU1L012UC94Q1Q4K3lGK1Y2c1g5b3drc3Y3K0syQTY4NHV0Z3F0anFuVEViSGNYbVBUQU1IWjc4NmRlK2hySkdyeXJnVHJ4MnVPT0pBWUhsUVowbStqZ3NoRE5TK2NUU3Q4YzJLWTN6citJbTNUNzd6N2hxbU54OXNlYStOKzFxQlp0bTJzeDhFNzRkWThJT1VnU09uUHZ6SSsyT0d5RlZtWTlacDh1TjZjYzRuOU9zc3pVL3phaUFlUFA0WkIvWTdKZEg4T2Jya3hmYmhCdUNNelBsQ1l2N3lMRFZwdW02bXVTZXZqQmErT3RjTmZEM1VMdzh0MzdCeFRoOTVFa1BVSGVZa3k3bFpTNGZVZ2VHY2c5OSt4KzkvbVAraisxNzdUMHQvN2hYeGtteDB6UGZMcnlYSHVuN3JLejI4UHN6RTh1bGdZMVBuMGJNeStmYy9UaHlRV2FkYzh0S3NzNVNNZ2YvOEt4VmVCcDRiQi84V3ZjKzczZHBlcnlyN2VNNTFtK0xlZXF6dytmUHFPODY0ZTBvN2JFVnVldWZMUEFDVFpic1BiWEZYVU1PM1ZnUDlwNzBkMk9TZ3M0eUZmM3p4WEpqdHcvRS9CUDdMN1Y4V3hZbzdvV2ZqQXdBQUFBQkpSVTVFcmtKZ2dnPT0iIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIvPjwvc3ZnPgo=">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LuxCore">
-<meta property="og:title" content="LuxCore — Guía">
+<meta property="og:site_name" content="Cero">
+<meta property="og:title" content="Cero — Guía">
 <meta property="og:description" content="Rutas, parámetros, respuestas, inyección, validación y errores.">
-<meta property="og:url" content="https://luxcore.ginit.dev/guia">
-<link rel="alternate" hreflang="es" href="https://luxcore.ginit.dev/guia">
-<link rel="alternate" hreflang="en" href="https://luxcore.ginit.dev/en/guia">
-<link rel="alternate" hreflang="x-default" href="https://luxcore.ginit.dev/guia">
-<meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<meta property="og:url" content="https://cero.ginit.dev/guia">
+<link rel="alternate" hreflang="es" href="https://cero.ginit.dev/guia">
+<link rel="alternate" hreflang="en" href="https://cero.ginit.dev/en/guia">
+<link rel="alternate" hreflang="x-default" href="https://cero.ginit.dev/guia">
+<meta property="og:image" content="https://cero.ginit.dev/marca/enlace.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.">
+<meta property="og:image:alt" content="Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 390 KB.">
 <meta property="og:locale" content="es_ES">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="LuxCore — Guía">
+<meta name="twitter:title" content="Cero — Guía">
 <meta name="twitter:description" content="Rutas, parámetros, respuestas, inyección, validación y errores.">
-<meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
-<link rel="stylesheet" href="./assets/corvo.css?v=81b1bc9c">
-<script src="./assets/corvo.js?v=81b1bc9c"></script>
+<meta name="twitter:image" content="https://cero.ginit.dev/marca/enlace.jpg">
+<link rel="stylesheet" href="./assets/cero.css?v=81b1bc9c">
+<script src="./assets/cero.js?v=81b1bc9c"></script>
 </head>
 <body>
 
@@ -32,7 +32,7 @@
   <div class="marco">
     <a class="marca-sitio" href="./index.html">
       <span class="logo" aria-hidden="true"></span>
-      <span class="palabra">Lux<em>Core</em></span>
+      <span class="palabra">Cero<em>Core</em></span>
     </a>
     <nav class="nav-sitio" aria-label="Secciones del sitio">
         <a href="./index.html">Inicio</a>
@@ -151,7 +151,7 @@
             <thead><tr><th>Tipo</th><th>Qué recibe</th></tr></thead>
             <tbody>
               <tr><td class="mono-clave">Context</td><td>Todo el contexto de la petición</td></tr>
-              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de lux-http</td></tr>
+              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de cero-http</td></tr>
               <tr><td class="mono-clave">Session</td><td>La sesión, creándola si no existe</td></tr>
               <tr><td class="mono-clave">Principal</td><td>Quien haya autenticado el <code>Authenticator</code></td></tr>
               <tr><td class="mono-clave">Part</td><td>Un archivo del multipart, por nombre del parámetro</td></tr>
@@ -225,7 +225,7 @@ Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
 }
 
 <span class="cm">// o a mano, útil para sustituir en pruebas</span>
-Lux.app().service(Reloj.class, () -&gt; Instant.now())</pre>
+Cero.app().service(Reloj.class, () -&gt; Instant.now())</pre>
         </div>
 
         <ul class="prosa">
@@ -331,7 +331,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
         <div class="titulo-seccion"><span class="indice-num">07</span><h2>Clase base opcional</h2></div>
 
         <p class="medida">
-          Un controlador de LuxCore no hereda de nada: es una clase normal con anotaciones, y el
+          Un controlador de Cero no hereda de nada: es una clase normal con anotaciones, y el
           <code>Context</code> llega por parámetro cuando hace falta. Si un controlador lo usa en
           casi todos sus métodos, puedes heredar de <code>Controller</code> y ahorrártelo.
         </p>
@@ -375,7 +375,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
           <div class="etiqueta">Por qué no guarda la petición en un campo</div>
           <p>
             Del controlador hay <b>una sola instancia</b>, compartida por todas las peticiones, y
-            LuxCore atiende cada conexión en su propio hilo virtual. Un campo con la petición
+            Cero atiende cada conexión en su propio hilo virtual. Un campo con la petición
             dentro sería una carrera: dos peticiones a la vez se lo pisarían y una acabaría
             respondiendo con los datos de la otra. Por eso las ayudas leen de un portador por hilo.
             Hay una prueba que lanza 200 peticiones simultáneas y comprueba que cada respuesta
@@ -467,7 +467,7 @@ sesion.invalidate();                     <span class="cm">// al salir</span></pr
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Sesiones compartidas</span><span class="etiqueta">Java</span></div>
 <pre>ServerOptions.builder()
-    .sessionStore(JdbcSessions.of(<span class="st">"lux_sesiones"</span>).createTable())
+    .sessionStore(JdbcSessions.of(<span class="st">"cero_sesiones"</span>).createTable())
     .sessionMaxLifetime(Duration.ofHours(<span class="st">12</span>))   <span class="cm">// tope de vida, no solo inactividad</span>
     .build();</pre>
         </div>
@@ -523,11 +523,11 @@ eventos.publish(<span class="kw">new</span> NoticiaPublicada(id));
           <div class="barra"><span class="etiqueta">Observabilidad</span><span class="etiqueta">Java</span></div>
 <pre>Metrics metricas = Metrics.enabled().ignore(<span class="st">"/estaticos"</span>);
 
-Lux.app()
+Cero.app()
    .service(metricas)
    .use(metricas)
    .use(AccessLog.combined())
-   .routes(r -&gt; r.get(<span class="st">"/lux/metrics"</span>, metricas.endpoint()))
+   .routes(r -&gt; r.get(<span class="st">"/cero/metrics"</span>, metricas.endpoint()))
    .start();</pre>
         </div>
 
@@ -547,7 +547,7 @@ Lux.app()
         <div class="titulo-seccion"><span class="indice-num">11</span><h2>Detrás de un proxy</h2></div>
 
         <p class="medida">
-          LuxCore habla <b>HTTP/1.1</b>. Para HTTP/2, HTTP/3 y certificados automáticos se le pone
+          Cero habla <b>HTTP/1.1</b>. Para HTTP/2, HTTP/3 y certificados automáticos se le pone
           delante nginx o Caddy, que además absorbe las conexiones lentas. Es la forma
           recomendada de desplegarlo.
         </p>
@@ -591,7 +591,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
         <div class="titulo-seccion"><span class="indice-num">12</span><h2>Con React, Svelte o Vue</h2></div>
 
         <p class="medida">
-          LuxCore no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
+          Cero no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
           dejar que el frontend lo pinte, que es lo normal hoy. Las dos formas conviven en la misma
           aplicación: unas rutas devuelven vistas y otras JSON.
         </p>
@@ -600,13 +600,13 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
 
         <p class="medida">
           El frontend en su servidor —<code>5173</code> para Vite, <code>3000</code> para Next— y
-          LuxCore en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
+          Cero en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
           solo para ese:
         </p>
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Desarrollo</span><span class="etiqueta">Java</span></div>
-<pre>Lux.app()
+<pre>Cero.app()
    .use(Cors.allowing(<span class="st">"http://localhost:5173"</span>))
    .controllers(ApiController.class)
    .start();</pre>
@@ -621,7 +621,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Un jar con todo</span><span class="etiqueta">Java</span></div>
-<pre>Lux.app()
+<pre>Cero.app()
    .controllers(ApiController.class)          <span class="cm">// /api/... devuelve JSON</span>
    .fallback(StaticFiles.fromClasspath(<span class="st">"front"</span>).spa()
                         .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>))
@@ -656,7 +656,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Estructura</span><span class="etiqueta">Texto</span></div>
 <pre>mi-proyecto/
-├── backend/            <span class="cm"># LuxCore — Maven, Java 21</span>
+├── backend/            <span class="cm"># Cero — Maven, Java 21</span>
 │   ├── pom.xml
 │   └── src/main/
 │       ├── java/...
@@ -711,7 +711,7 @@ eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
           <div class="etiqueta">Por qué el bucle no es un problema</div>
           <p>
             Ese <code>while</code> deja el hilo dentro mientras el panel esté abierto. Con hilos
-            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero LuxCore atiende
+            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero Cero atiende
             cada conexión en su <b>propio hilo virtual</b>: cien paneles son cien hilos virtuales,
             que cuestan unos cientos de bytes cada uno. Es la razón por la que aquí se puede
             escribir código que bloquea sin pagar por ello.
@@ -741,7 +741,7 @@ eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
         <div class="aviso nota">
           <div class="etiqueta">Sobre «programación reactiva»</div>
           <p>
-            LuxCore <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
+            Cero <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
             Ese estilo existe para no bloquear hilos del sistema, que son caros. Con los hilos
             virtuales de Java 21 dejan de serlo: puedes escribir código normal, de arriba abajo,
             que bloquea — y el rendimiento es el mismo sin el coste de encadenar operadores ni de
@@ -759,7 +759,7 @@ eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
       Universidad Nacional del Altiplano · Puno, Perú
     </div>
     <div class="etiqueta" style="text-align:right">
-      LuxCore 0.3.0 · Licencia MIT<br>
+      Cero 0.3.0 · Licencia MIT<br>
       Medido el 2 de agosto de 2026
     </div>
   </footer>

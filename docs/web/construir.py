@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera el sitio de LuxCore a partir de los fragmentos de contenido/.
+"""Genera el sitio de Cero a partir de los fragmentos de contenido/.
 
 Cada página es un fragmento con su cuerpo; este guion le pone la cabecera, la
 navegación, el pie y los enlaces a los recursos compartidos. Así la navegación
@@ -20,12 +20,12 @@ AQUI = pathlib.Path(__file__).resolve().parent
 def _huella():
     import hashlib
     datos = b"".join((AQUI / "assets" / n).read_bytes()
-                      for n in ("corvo.css", "corvo.js", "terminal.js"))
+                      for n in ("cero.css", "cero.js", "terminal.js"))
     return hashlib.sha256(datos).hexdigest()[:8]
 
 PAGINAS = [
     # archivo,           título,                        entradilla,                                                        en el menú
-    ("index.html",       "LuxCore",                     "Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.", "Inicio"),
+    ("index.html",       "Cero",                     "Framework web para Java que arranca solo, sin contenedor y sin una sola dependencia externa.", "Inicio"),
     ("descargas.html",   "Descargas",                   "Los cinco módulos con su tamaño, huella y coordenadas de Maven.",  "Descargas"),
     ("empezar.html",     "Empezar",                     "De cero a un servidor respondiendo, en cuatro órdenes.",           "Empezar"),
     ("guia.html",        "Guía",                        "Rutas, parámetros, respuestas, inyección, validación y errores.",  "Guía"),
@@ -42,7 +42,7 @@ IDIOMAS = ("es", "en")
 
 # archivo -> (título, entradilla, etiqueta de menú) en inglés
 EN = {
-    "index.html":      ("LuxCore",
+    "index.html":      ("Cero",
                         "Web framework for Java that boots on its own, with no servlet container "
                         "and not a single external dependency.",
                         "Home"),
@@ -73,10 +73,10 @@ TEXTOS = {
         "otro_idioma": "English",
         "otro_titulo": "Read this page in English",
         "pie_sede": "Universidad Nacional del Altiplano · Puno, Perú",
-        "pie_licencia": "LuxCore 0.3.0 · Licencia MIT",
+        "pie_licencia": "Cero 0.3.0 · Licencia MIT",
         "pie_medido": "Medido el 2 de agosto de 2026",
         "movil": ("Inicio", "Bajar", "Guía", "Módulos"),
-        "og_alt": "LuxCore — framework web para Java. 106 ms de arranque, 0 dependencias, 308 KB.",
+        "og_alt": "Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 390 KB.",
     },
     "en": {
         "locale": "en_US",
@@ -86,10 +86,10 @@ TEXTOS = {
         "otro_idioma": "Español",
         "otro_titulo": "Leer esta página en español",
         "pie_sede": "Universidad Nacional del Altiplano · Puno, Peru",
-        "pie_licencia": "LuxCore 0.3.0 · MIT licence",
+        "pie_licencia": "Cero 0.3.0 · MIT licence",
         "pie_medido": "Measured on 2 August 2026",
         "movil": ("Home", "Get", "Guide", "Modules"),
-        "og_alt": "LuxCore — web framework for Java. 106 ms boot, 0 dependencies, 308 KB.",
+        "og_alt": "Cero — web framework for Java. 106 ms boot, 0 dependencies, 390 KB.",
     },
 }
 
@@ -103,13 +103,13 @@ def textos(idioma: str, archivo: str):
 
 
 def ruta_publica(archivo: str, idioma: str) -> str:
-    """La URL que sirve lux-web: /guia, no /guia.html; y /en/guia en inglés."""
+    """La URL que sirve cero-web: /guia, no /guia.html; y /en/guia en inglés."""
     hoja = "" if archivo == "index.html" else "/" + archivo.replace(".html", "")
     return ("/en" + hoja) if idioma == "en" else (hoja or "/")
 
 
 def alternativas(archivo: str) -> str:
-    base = "https://luxcore.ginit.dev"
+    base = "https://cero.ginit.dev"
     filas = [
         f'<link rel="alternate" hreflang="{i}" href="{base}{ruta_publica(archivo, i)}">'
         for i in IDIOMAS
@@ -127,7 +127,7 @@ def conmutador(archivo: str, idioma: str) -> str:
 
 
 def logo_svg() -> str:
-    """La marca de la barra: el cuervo como máscara CSS.
+    """La marca de la barra: el isotipo como máscara CSS.
 
     Va por máscara y no incrustado para que tome el color del tema con un solo archivo,
     en claro y en oscuro.
@@ -171,7 +171,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
     # los recursos viven en la raíz del sitio; desde /en/ hay que subir un nivel
     raiz = ".." if idioma != "es" else "."
     t = TEXTOS[idioma]
-    completo = "LuxCore" if archivo == "index.html" else f"LuxCore — {titulo}"
+    completo = "Cero" if archivo == "index.html" else f"Cero — {titulo}"
     lleva_terminal = 'id="pantalla"' in cuerpo
 
     guion_terminal = (
@@ -187,12 +187,12 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 <meta name="description" content="{entradilla}">
 <link rel="icon" href="data:image/svg+xml;base64,{icono}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LuxCore">
+<meta property="og:site_name" content="Cero">
 <meta property="og:title" content="{completo}">
 <meta property="og:description" content="{entradilla}">
-<meta property="og:url" content="https://luxcore.ginit.dev{ruta_publica(archivo, idioma)}">
+<meta property="og:url" content="https://cero.ginit.dev{ruta_publica(archivo, idioma)}">
 {alternativas(archivo)}
-<meta property="og:image" content="https://luxcore.ginit.dev/estaticos/social.png">
+<meta property="og:image" content="https://cero.ginit.dev/marca/enlace.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="{t['og_alt']}">
@@ -200,9 +200,9 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{completo}">
 <meta name="twitter:description" content="{entradilla}">
-<meta name="twitter:image" content="https://luxcore.ginit.dev/estaticos/social.png">
-<link rel="stylesheet" href="{raiz}/assets/corvo.css?v={_huella()}">
-<script src="{raiz}/assets/corvo.js?v={_huella()}"></script>{guion_terminal}
+<meta name="twitter:image" content="https://cero.ginit.dev/marca/enlace.jpg">
+<link rel="stylesheet" href="{raiz}/assets/cero.css?v={_huella()}">
+<script src="{raiz}/assets/cero.js?v={_huella()}"></script>{guion_terminal}
 </head>
 <body>
 
@@ -210,7 +210,7 @@ def envolver(archivo: str, titulo: str, entradilla: str, cuerpo: str, icono: str
   <div class="marco">
     <a class="marca-sitio" href="./index.html">
       {logo_svg()}
-      <span class="palabra">Lux<em>Core</em></span>
+      <span class="palabra">Cero<em>Core</em></span>
     </a>
     <nav class="nav-sitio" aria-label="{t['secciones']}">
         {navegacion(archivo, idioma)}
@@ -274,8 +274,8 @@ def unico() -> int:
     en dos idiomas doblaría un archivo que ya pesa 155 KB.
     """
     t = TEXTOS["es"]
-    estilo = (AQUI / "assets" / "corvo.css").read_text(encoding="utf-8")
-    guion = (AQUI / "assets" / "corvo.js").read_text(encoding="utf-8")
+    estilo = (AQUI / "assets" / "cero.css").read_text(encoding="utf-8")
+    guion = (AQUI / "assets" / "cero.js").read_text(encoding="utf-8")
     terminal = (AQUI / "assets" / "terminal.js").read_text(encoding="utf-8")
     icono = favicon_incrustado()
 
@@ -334,8 +334,8 @@ def unico() -> int:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LuxCore — framework web para Java sin dependencias</title>
-<meta name="description" content="LuxCore: framework web para Java que arranca solo, sin contenedor y sin dependencias externas.">
+<title>Cero — framework web para Java sin dependencias</title>
+<meta name="description" content="Cero: framework web para Java que arranca solo, sin contenedor y sin dependencias externas.">
 <link rel="icon" href="data:image/svg+xml;base64,{icono}">
 <style>
 {estilo}
@@ -348,7 +348,7 @@ def unico() -> int:
   <div class="marco">
     <a class="marca-sitio" href="#p-index" data-hoja="p-index">
       {logo_svg()}
-      <span class="palabra">Lux<em>Core</em></span>
+      <span class="palabra">Cero<em>Core</em></span>
     </a>
     <nav class="nav-sitio" aria-label="Secciones del sitio">
         {chr(10).join("        " + t for t in pestanas).strip()}

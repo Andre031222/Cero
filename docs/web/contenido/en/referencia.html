@@ -16,8 +16,8 @@
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Databases</h2></div>
 
         <p>
-          <code>lux-data</code> speaks JDBC and nothing else. Any engine with a JDBC driver works —
-          the driver comes from your application, which is the only external dependency LuxCore
+          <code>cero-data</code> speaks JDBC and nothing else. Any engine with a JDBC driver works —
+          the driver comes from your application, which is the only external dependency Cero
           allows.
         </p>
 
@@ -83,16 +83,16 @@
         <div class="titulo-seccion"><span class="indice-num">03</span><h2>Against Tomcat</h2></div>
 
         <p>
-          LuxCore grew out of JxMVC 3.4.0, an MVC framework that works and is in production, but
+          Cero grew out of JxMVC 3.4.0, an MVC framework that works and is in production, but
           that needs Tomcat to start. The comparison is against its own predecessor.
         </p>
 
         <div class="envoltura">
           <table>
-            <thead><tr><th>Metric</th><th class="cifra">JxMVC on Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <thead><tr><th>Metric</th><th class="cifra">JxMVC on Tomcat</th><th class="cifra">Cero</th></tr></thead>
             <tbody>
               <tr><td>Boot</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
-              <tr><td>Artefact</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td></tr>
+              <tr><td>Artefact</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">390 KB</td></tr>
               <tr><td>Needs a container</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Runtime dependencies</td><td class="cifra">Jakarta EE 10</td><td class="cifra">none</td></tr>
               <tr><td>Production lines</td><td class="cifra">10,379</td><td class="cifra">12,784</td></tr>
@@ -115,7 +115,7 @@
           <table>
             <thead><tr><th>Framework</th><th class="cifra">Boot</th><th class="cifra">Image</th><th class="cifra">RSS</th><th class="cifra">/plaintext</th><th class="cifra">/json</th><th class="cifra">/db</th></tr></thead>
             <tbody>
-              <tr><td><b>LuxCore</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110.3 MB</td><td class="cifra"><b>136.4 MB</b></td><td class="cifra"><b>26,425</b></td><td class="cifra"><b>25,431</b></td><td class="cifra"><b>25,931</b></td></tr>
+              <tr><td><b>Cero</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110.3 MB</td><td class="cifra"><b>136.4 MB</b></td><td class="cifra"><b>26,425</b></td><td class="cifra"><b>25,431</b></td><td class="cifra"><b>25,931</b></td></tr>
               <tr><td>Javalin</td><td class="cifra">451 ms</td><td class="cifra">115.2 MB</td><td class="cifra">285.7 MB</td><td class="cifra">21,994</td><td class="cifra">25,125</td><td class="cifra">24,459</td></tr>
               <tr><td>JxMVC</td><td class="cifra">698 ms</td><td class="cifra"><b>110.1 MB</b></td><td class="cifra">191.5 MB</td><td class="cifra">24,240</td><td class="cifra">23,307</td><td class="cifra">18,771</td></tr>
               <tr><td>Quarkus</td><td class="cifra">707 ms</td><td class="cifra">123.2 MB</td><td class="cifra">259.8 MB</td><td class="cifra">25,515</td><td class="cifra">22,744</td><td class="cifra">21,258</td></tr>
@@ -128,7 +128,7 @@
         <div class="aviso nota">
           <div class="etiqueta">What this table says, and what it does not</div>
           <p>
-            It says LuxCore <b>wins on everything except image size</b>, and there it loses by
+            It says Cero <b>wins on everything except image size</b>, and there it loses by
             0.2 MB. It boots 4.3 times faster than the next one, uses the least memory of the six
             and leads on all three endpoints. On <code>/db</code> —the one that measures the
             framework doing real work— it beats the JxMVC it came from by 38 %.

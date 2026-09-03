@@ -1,15 +1,15 @@
 package ejemplo;
 
-import corvo.core.Cors;
-import corvo.core.Csrf;
-import corvo.core.Corvo;
-import corvo.core.RateLimit;
-import corvo.core.SecurityHeaders;
-import corvo.data.DataSources;
-import corvo.data.Pool;
-import corvo.http.Server;
-import corvo.http.StaticFiles;
-import corvo.view.Templates;
+import cero.core.Cors;
+import cero.core.Csrf;
+import cero.core.Cero;
+import cero.core.RateLimit;
+import cero.core.SecurityHeaders;
+import cero.data.DataSources;
+import cero.data.Pool;
+import cero.http.Server;
+import cero.http.StaticFiles;
+import cero.view.Templates;
 
 public final class App {
 
@@ -25,7 +25,7 @@ public final class App {
         DataSources.registerDefault(Pool.to(jdbc).maxSize(8).build());
         Tareas.crearEsquema();
 
-        return Corvo.app()
+        return Cero.app()
                 .port(puerto)
                 .views(Templates.fromClasspath("plantillas"))
                 .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))

@@ -1,11 +1,11 @@
 # Plan de publicación
 
-De Corvo salen **tres artículos**, y salen en orden porque cada uno depende del anterior.
+De Cero salen **tres artículos**, y salen en orden porque cada uno depende del anterior.
 
 ## Lo ya publicado: el paper de JxMVC
 
 `main.pdf` en la raíz del repositorio (sin versionar) es el artículo del **predecesor**, no de
-Corvo:
+Cero:
 
 > *JxMVC: A Zero-Dependency, Security-by-Default MVC Framework for Jakarta EE — Design,
 > Implementation Experience, and Empirical Evaluation*
@@ -17,7 +17,7 @@ Comparado contra Spring Boot, Quarkus y Micronaut con un harness contenedorizado
 comando, sobre **Linux bare-metal con aislamiento de núcleos**.
 
 Ese último detalle importa: **la metodología de medición ya está escrita y validada**. El primer
-paper de Corvo solo tiene que repetirla.
+paper de Cero solo tiene que repetirla.
 
 ---
 

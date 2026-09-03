@@ -1,18 +1,18 @@
 #!/bin/sh
-# Instalador de Corvo para macOS y Linux.
+# Instalador de Cero para macOS y Linux.
 #
-#   curl -fsSL https://corvo.ginit.dev/instalar | sh
+#   curl -fsSL https://cero.ginit.dev/instalar | sh
 #
 # Baja el paquete, comprueba su huella, lo compila, deja los artefactos en ~/.m2 y la orden
-# `corvo` en el PATH. No pide contraseña y no escribe fuera de $HOME.
+# `cero` en el PATH. No pide contraseña y no escribe fuera de $HOME.
 #
-#   --con-pruebas   corre las 1 238 pruebas durante la instalación (~90 s más)
+#   --con-pruebas   corre las 1 584 pruebas durante la instalación (~90 s más)
 #   --sin-color     salida plana, para registros y CI
 set -eu
 
-BASE="${CORVO_BASE:-https://corvo.ginit.dev}"
-RAIZ="${CORVO_HOME:-$HOME/.corvo}"
-BIN="${CORVO_BIN:-$HOME/.local/bin}"
+BASE="${CERO_BASE:-https://cero.ginit.dev}"
+RAIZ="${CERO_HOME:-$HOME/.cero}"
+BIN="${CERO_BIN:-$HOME/.local/bin}"
 PRUEBAS=no
 
 for arg in "$@"; do
@@ -42,11 +42,11 @@ fi
 p() { printf "$@"; }
 
 marca() {
-  [ "$VIVO" = si ] || { p "Corvo · instalador\n\n"; return; }
+  [ "$VIVO" = si ] || { p "Cero · instalador\n\n"; return; }
   p "\n"
   p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n"
   p "   ${ACENTO}\\${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}/${FIN}\n"
-  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}Corvo${FIN}\n"
+  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}Cero${FIN}\n"
   p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
   p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n\n"
 }
@@ -111,17 +111,17 @@ for orden in curl tar java mvn; do
 done
 if [ -n "$falta" ]; then
   mal "falta:$falta"
-  p "\n  Corvo necesita un ${FUERTE}JDK 21${FIN} o superior y ${FUERTE}Maven${FIN}.\n"
+  p "\n  Cero necesita un ${FUERTE}JDK 25${FIN} o superior y ${FUERTE}Maven${FIN}.\n"
   case "$(uname -s)" in
-    Darwin) p "  ${TENUE}brew install openjdk@21 maven${FIN}\n" ;;
-    Linux)  p "  ${TENUE}sudo apt install openjdk-21-jdk maven${FIN}   ${TENUE}(o el gestor de tu distribución)${FIN}\n" ;;
+    Darwin) p "  ${TENUE}brew install openjdk@25 maven${FIN}\n" ;;
+    Linux)  p "  ${TENUE}sudo apt install openjdk-25-jdk maven${FIN}   ${TENUE}(o el gestor de tu distribución)${FIN}\n" ;;
   esac
   exit 1
 fi
 
 JAVA_V=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
-if [ "${JAVA_V:-0}" -lt 21 ] 2>/dev/null; then
-  muere "Corvo necesita Java 21 o superior — hilos virtuales. Tienes $JAVA_V."
+if [ "${JAVA_V:-0}" -lt 25 ] 2>/dev/null; then
+  muere "Cero necesita Java 25 o superior — hilos virtuales. Tienes $JAVA_V."
 fi
 bien "entorno" "Java $JAVA_V · $(mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3) · $(uname -s) $(uname -m)"
 
@@ -132,11 +132,11 @@ VERSION=$(curl -fsSL --max-time 20 "$BASE/version" 2>/dev/null) || \
 case "$VERSION" in
   ''|*[!0-9.]*) muere "el servidor devolvió una versión rara: '$VERSION'" ;;
 esac
-bien "versión" "Corvo $VERSION"
+bien "versión" "Cero $VERSION"
 
 # ─── 3 · bajarlo ────────────────────────────────────────────────────────────────────────
-PAQUETE="corvo-$VERSION.tar.gz"
-TMP=$(mktemp -d "${TMPDIR:-/tmp}/corvo.XXXXXX")
+PAQUETE="cero-$VERSION.tar.gz"
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/cero.XXXXXX")
 trap 'limpiar; rm -rf "$TMP"' EXIT INT TERM
 
 paso "bajando el paquete"
@@ -169,11 +169,11 @@ fi
 
 # ─── 5 · extraer ────────────────────────────────────────────────────────────────────────
 paso "extrayendo"
-DESTINO="$RAIZ/corvo-$VERSION"
+DESTINO="$RAIZ/cero-$VERSION"
 mkdir -p "$RAIZ"
 rm -rf "$DESTINO"
 tar -xzf "$TMP/$PAQUETE" -C "$RAIZ" || muere "el paquete no se pudo extraer"
-[ -d "$DESTINO" ] || muere "el paquete no traía corvo-$VERSION dentro"
+[ -d "$DESTINO" ] || muere "el paquete no traía cero-$VERSION dentro"
 bien "extraído" "$DESTINO"
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
@@ -191,24 +191,24 @@ else
 fi
 
 # ─── 7 · dejar la orden a mano ──────────────────────────────────────────────────────────
-paso "instalando la orden corvo"
+paso "instalando la orden cero"
 ln -sfn "$DESTINO" "$RAIZ/actual"
 mkdir -p "$BIN"
-cat > "$BIN/corvo" <<GUION
+cat > "$BIN/cero" <<GUION
 #!/bin/sh
-# Generado por el instalador de Corvo. Apunta siempre a la versión en uso.
-exec "$RAIZ/actual/corvo" "\$@"
+# Generado por el instalador de Cero. Apunta siempre a la versión en uso.
+exec "$RAIZ/actual/cero" "\$@"
 GUION
-chmod +x "$BIN/corvo"
-bien "orden corvo" "$BIN/corvo"
+chmod +x "$BIN/cero"
+bien "orden cero" "$BIN/cero"
 
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
 paso "comprobando la instalación"
-"$BIN/corvo" estado >/dev/null 2>&1 || muere "quedó instalado pero 'corvo status' no responde"
-bien "comprobado" "corvo status responde"
+"$BIN/cero" estado >/dev/null 2>&1 || muere "quedó instalado pero 'cero status' no responde"
+bien "comprobado" "cero status responde"
 
 # ─── final ──────────────────────────────────────────────────────────────────────────────
-p "\n  ${VERDE}${FUERTE}Corvo $VERSION instalado${FIN}\n\n"
+p "\n  ${VERDE}${FUERTE}Cero $VERSION instalado${FIN}\n\n"
 
 case ":$PATH:" in
   *":$BIN:"*) ;;
@@ -219,6 +219,6 @@ case ":$PATH:" in
 esac
 
 p "  ${TENUE}Crear un proyecto y arrancarlo:${FIN}\n\n"
-p "      ${FUERTE}corvo new mi-app${FIN}\n"
+p "      ${FUERTE}cero new mi-app${FIN}\n"
 p "      ${FUERTE}cd mi-app && mvn -q package && java -jar target/mi-app.jar${FIN}\n\n"
 p "  ${TENUE}Guía completa:${FIN}  $BASE/empezar\n\n"

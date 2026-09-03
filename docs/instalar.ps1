@@ -1,24 +1,24 @@
 <#
-    Instalador de Corvo para Windows.
+    Instalador de Cero para Windows.
 
-        irm https://corvo.ginit.dev/instalar.ps1 | iex
+        irm https://cero.ginit.dev/instalar.ps1 | iex
 
     Baja el paquete, comprueba su huella, lo compila, deja los artefactos en ~\.m2 y la orden
-    `corvo` en el PATH del usuario. No necesita administrador y no escribe fuera de tu perfil.
+    `cero` en el PATH del usuario. No necesita administrador y no escribe fuera de tu perfil.
 
-    Con pruebas:  & ([scriptblock]::Create((irm https://corvo.ginit.dev/instalar.ps1))) -ConPruebas
+    Con pruebas:  & ([scriptblock]::Create((irm https://cero.ginit.dev/instalar.ps1))) -ConPruebas
 #>
 [CmdletBinding()]
 param(
     [switch] $ConPruebas,
     [switch] $SinColor,
-    [string] $Base = $(if ($env:CORVO_BASE) { $env:CORVO_BASE } else { 'https://corvo.ginit.dev' })
+    [string] $Base = $(if ($env:CERO_BASE) { $env:CERO_BASE } else { 'https://cero.ginit.dev' })
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'   # la barra nativa de Invoke-WebRequest la frena mucho
 
-$Raiz = if ($env:CORVO_HOME) { $env:CORVO_HOME } else { Join-Path $env:LOCALAPPDATA 'Corvo' }
+$Raiz = if ($env:CERO_HOME) { $env:CERO_HOME } else { Join-Path $env:LOCALAPPDATA 'Cero' }
 $Bin  = Join-Path $Raiz 'bin'
 
 # ─── pintura ────────────────────────────────────────────────────────────────────────────
@@ -54,11 +54,11 @@ function Muere([string] $t, [string] $registro) {
 }
 
 function Marca {
-    if (-not $Vivo) { Escribe "Corvo - instalador`n"; return }
+    if (-not $Vivo) { Escribe "Cero - instalador`n"; return }
     Escribe ''
     Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Acento, $Fin)
     Escribe ("   {0}\{1}    {0}.{1}     {0}.{1}    {0}/{1}" -f $Acento, $Fin)
-    Escribe (" {0}-{1}   {0}.{1}   {0}{2}###{1}   {0}.{1}   {0}-{1}      {2}Corvo{1}" -f $Acento, $Fin, $Fuerte)
+    Escribe (" {0}-{1}   {0}.{1}   {0}{2}###{1}   {0}.{1}   {0}-{1}      {2}Cero{1}" -f $Acento, $Fin, $Fuerte)
     Escribe ("   {0}/{1}    {0}.{1}     {0}.{1}    {0}\{1}      {2}framework web para Java{1}" -f $Acento, $Fin, $Tenue)
     Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Acento, $Fin)
     Escribe ''
@@ -99,8 +99,8 @@ if ($falta) {
     Borra
     Write-Host ("  {0}X   falta: {1}{2}" -f $Rojo, ($falta -join ' '), $Fin)
     Escribe ''
-    Escribe "  Corvo necesita un ${Fuerte}JDK 21${Fin} o superior y ${Fuerte}Maven${Fin}."
-    Escribe "  ${Tenue}winget install EclipseAdoptium.Temurin.21.JDK${Fin}"
+    Escribe "  Cero necesita un ${Fuerte}JDK 25${Fin} o superior y ${Fuerte}Maven${Fin}."
+    Escribe "  ${Tenue}winget install EclipseAdoptium.Temurin.25.JDK${Fin}"
     Escribe "  ${Tenue}winget install Apache.Maven${Fin}"
     Escribe ''
     Escribe "  ${Tenue}Cierra y abre PowerShell despues de instalarlos, para que entren en el PATH.${Fin}"
@@ -110,7 +110,7 @@ if ($falta) {
 $javaV = 0
 $linea = (& java -version 2>&1 | Select-Object -First 1)
 if ("$linea" -match '"(\d+)') { $javaV = [int]$Matches[1] }
-if ($javaV -lt 21) { Muere "Corvo necesita Java 21 o superior - hilos virtuales. Tienes $javaV." }
+if ($javaV -lt 25) { Muere "Cero necesita Java 25 o superior - hilos virtuales. Tienes $javaV." }
 Bien 'entorno' "Java $javaV - Windows $([Environment]::OSVersion.Version.Major) - $env:PROCESSOR_ARCHITECTURE"
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
@@ -118,11 +118,11 @@ Paso 'consultando la version'
 try { $version = (Invoke-RestMethod -Uri "$Base/version" -TimeoutSec 20).ToString().Trim() }
 catch { Muere "no se pudo hablar con $Base - hay conexion?" }
 if ($version -notmatch '^[0-9][0-9.]*$') { Muere "el servidor devolvio una version rara: '$version'" }
-Bien 'version' "Corvo $version"
+Bien 'version' "Cero $version"
 
 # ─── 3 · bajarlo ────────────────────────────────────────────────────────────────────────
-$paquete = "corvo-$version.zip"
-$tmp = Join-Path ([IO.Path]::GetTempPath()) ("corvo-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
+$paquete = "cero-$version.zip"
+$tmp = Join-Path ([IO.Path]::GetTempPath()) ("cero-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 $zip = Join-Path $tmp $paquete
 
@@ -143,11 +143,11 @@ Bien 'huella' "sha256 $($real.Substring(0,16))..."
 
 # ─── 5 · extraer ────────────────────────────────────────────────────────────────────────
 Paso 'extrayendo'
-$destino = Join-Path $Raiz "corvo-$version"
+$destino = Join-Path $Raiz "cero-$version"
 if (Test-Path $destino) { Remove-Item $destino -Recurse -Force }
 New-Item -ItemType Directory -Path $Raiz -Force | Out-Null
 Expand-Archive -Path $zip -DestinationPath $Raiz -Force
-if (-not (Test-Path $destino)) { Muere "el paquete no traia corvo-$version dentro" }
+if (-not (Test-Path $destino)) { Muere "el paquete no traia cero-$version dentro" }
 Bien 'extraido' $destino
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
@@ -162,16 +162,16 @@ if ($codigo -ne 0) { Muere 'la compilacion fallo' $registro }
 Bien 'compilado' "ocho modulos en ~\.m2 - $script:Segundos s"
 
 # ─── 7 · dejar la orden a mano ──────────────────────────────────────────────────────────
-Paso 'instalando la orden corvo'
+Paso 'instalando la orden cero'
 $actual = Join-Path $Raiz 'actual'
 if (Test-Path $actual) { Remove-Item $actual -Recurse -Force }
 Copy-Item -Path $destino -Destination $actual -Recurse
 New-Item -ItemType Directory -Path $Bin -Force | Out-Null
 @"
 @echo off
-rem Generado por el instalador de Corvo. Apunta siempre a la version en uso.
-call "$actual\corvo.cmd" %*
-"@ | Set-Content -Path (Join-Path $Bin 'corvo.cmd') -Encoding ASCII
+rem Generado por el instalador de Cero. Apunta siempre a la version en uso.
+call "$actual\cero.cmd" %*
+"@ | Set-Content -Path (Join-Path $Bin 'cero.cmd') -Encoding ASCII
 
 $pathUsuario = [Environment]::GetEnvironmentVariable('Path', 'User')
 if ($pathUsuario -notlike "*$Bin*") {
@@ -179,17 +179,17 @@ if ($pathUsuario -notlike "*$Bin*") {
     $script:PathTocado = $true
 }
 $env:Path = "$env:Path;$Bin"
-Bien 'orden corvo' (Join-Path $Bin 'corvo.cmd')
+Bien 'orden cero' (Join-Path $Bin 'cero.cmd')
 
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
 Paso 'comprobando la instalacion'
-& cmd.exe /c "`"$Bin\corvo.cmd`" estado" *> $null
-if ($LASTEXITCODE -ne 0) { Muere "quedo instalado pero 'corvo status' no responde" }
-Bien 'comprobado' 'corvo status responde'
+& cmd.exe /c "`"$Bin\cero.cmd`" estado" *> $null
+if ($LASTEXITCODE -ne 0) { Muere "quedo instalado pero 'cero status' no responde" }
+Bien 'comprobado' 'cero status responde'
 
 # ─── final ──────────────────────────────────────────────────────────────────────────────
 Escribe ''
-Escribe "  ${Verde}${Fuerte}Corvo $version instalado${Fin}"
+Escribe "  ${Verde}${Fuerte}Cero $version instalado${Fin}"
 Escribe ''
 if ($script:PathTocado) {
     Escribe "  ${Acento}Abre una terminal nueva${Fin} para que el PATH se entere de la orden ${Fuerte}lux${Fin}."
@@ -197,7 +197,7 @@ if ($script:PathTocado) {
 }
 Escribe "  ${Tenue}Crear un proyecto y arrancarlo:${Fin}"
 Escribe ''
-Escribe "      ${Fuerte}corvo new mi-app${Fin}"
+Escribe "      ${Fuerte}cero new mi-app${Fin}"
 Escribe "      ${Fuerte}cd mi-app && mvn -q package && java -jar target\mi-app.jar${Fin}"
 Escribe ''
 Escribe "  ${Tenue}Guia completa:${Fin}  $Base/empezar"

@@ -1,0 +1,262 @@
+{% extends "base" %}
+
+{% block contenido %}
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Downloads</h1>
+    <p class="entradilla">
+      Five modules you take separately. Take only what you use: if all you need is to answer
+      HTTP, that is 88 KB and you drag in nothing else.
+    </p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="On this page">
+      <ol>
+        <li><a href="#artefactos"><span class="n">01</span> Artefacts</a></li>
+        <li><a href="#maven"><span class="n">02</span> Maven</a></li>
+        <li><a href="#elegir"><span class="n">03</span> What to take</a></li>
+        <li><a href="#fuente"><span class="n">04</span> From source</a></li>
+        <li><a href="#requisitos"><span class="n">05</span> Requirements</a></li>
+        <li><a href="#licencia"><span class="n">06</span> Licence and authorship</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <section id="artefactos">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Artefacts · 0.3.0</h2></div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">No published binaries yet</div>
+          <p>
+            Cero is not on Maven Central yet. The artefacts are produced by building, which is
+            one command. The fingerprints below are the ones for this version, so you can check
+            that what you built matches.
+          </p>
+        </div>
+
+        <div class="envoltura">
+          <table>
+            <thead>
+              <tr>
+                <th>Module</th><th>Needs</th>
+                <th class="cifra">Classes</th><th class="cifra">Size</th><th>SHA-256</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mono">cero-http</span><span class="detalle">HTTP/1.1 server, TLS, cookies, sessions, multipart, gzip, static files, WebSocket</span></td>
+                <td>—</td><td class="cifra">38</td><td class="cifra">88 KB</td>
+                <td class="mono huella">c01fd6e53dc881f0…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">cero-core</span><span class="detalle">Routes, injection, optional base class, JSON, validation, security, metrics, cache, events, tasks, OpenAPI</span></td>
+                <td>cero-http</td><td class="cifra">63</td><td class="cifra">147 KB</td>
+                <td class="mono huella">d14f56c376466651…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">cero-view</span><span class="detalle">Templates with inheritance, loops and escaping by default</span></td>
+                <td>cero-core</td><td class="cifra">9</td><td class="cifra">38 KB</td>
+                <td class="mono huella">5cb873be733207d1…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">cero-data</span><span class="detalle">JDBC, pool, transactions, repositories and table-backed sessions</span></td>
+                <td>cero-core</td><td class="cifra">14</td><td class="cifra">36 KB</td>
+                <td class="mono huella">415d5f62c17bdd1f…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">cero-adapter-servlet</span><span class="detalle">Deploy a Cero application inside Tomcat 10.1+</span></td>
+                <td>cero-core</td><td class="cifra">4</td><td class="cifra">13 KB</td>
+                <td class="mono huella">e6dd080d6915585a…</td>
+              </tr>
+              <tr>
+                <td><span class="mono">cero-launcher</span><span class="detalle">Package the application and the framework into an executable jar</span></td>
+                <td>—</td><td class="cifra">1</td><td class="cifra">7 KB</td>
+                <td class="mono huella">1d7a0cef8c4efd98…</td>
+              </tr>
+              <tr class="total">
+                <td>All six</td><td>—</td><td class="cifra">129</td><td class="cifra">328 KB</td><td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="medida">
+          None of them drags in external dependencies. The only foreign JAR you will see in your
+          application is your database's JDBC driver, and you put that there yourself.
+        </p>
+      </section>
+
+      <section id="maven">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Maven</h2></div>
+
+        <p class="medida">
+          After <code>./cero install</code>, the artefacts sit in your local repository and are
+          declared like any other.
+        </p>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">pom.xml</span><span class="etiqueta">XML</span></div>
+<pre><span class="cm">&lt;!-- the minimum for an API: pulls in cero-http --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">cero</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">cero-core</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- if you serve HTML --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">cero</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">cero-view</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- if you talk to a database --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">cero</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">cero-data</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">0.3.0</span>&lt;/version&gt;
+&lt;/dependency&gt;
+
+<span class="cm">&lt;!-- the driver is yours to add: this is the only external one --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;<span class="st">org.postgresql</span>&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="st">postgresql</span>&lt;/artifactId&gt;
+    &lt;version&gt;<span class="st">42.7.4</span>&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+        </div>
+      </section>
+
+      <section id="elegir">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>What to take</h2></div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">HTTP only</div>
+            <div><span class="mono">cero-http</span> · <b>88 KB</b><br>
+              A server with hand-written handlers, no routing and no injection. For a webhook, a
+              health check or a small proxy.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">A JSON API</div>
+            <div><span class="mono">cero-core</span> · <b>235 KB</b><br>
+              Routes, injection, validation, security and metrics. The usual choice for a service.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">A site with HTML</div>
+            <div><span class="mono">+ cero-view</span> · <b>273 KB</b><br>
+              Adds templates with inheritance and escaping by default.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">With a database</div>
+            <div><span class="mono">+ cero-data</span> · <b>390 KB</b><br>
+              JDBC, pool, transactions, repositories and table-backed sessions. Plus your engine's driver.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Migrating from Tomcat</div>
+            <div><span class="mono">+ cero-adapter-servlet</span> · <b>321 KB</b><br>
+              Deploys the same application inside Tomcat while you make the switch, and lets you
+              go back if you need to.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fuente">
+        <div class="titulo-seccion"><span class="indice-num">04</span><h2>From source</h2></div>
+
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Build and install</span><span class="etiqueta">Shell</span></div>
+<pre>git clone git@github.com:Andre031222/Cero.git
+<span class="kw">cd</span> Cero
+
+./cero install     <span class="cm"># builds, tests and installs into ~/.m2</span>
+./cero package     <span class="cm"># the JARs only, with their sizes</span>
+./cero test        <span class="cm"># all 1,342 tests</span>
+./cero run         <span class="cm"># the example application on :8080</span>
+./cero new mi-app  <span class="cm"># a new project, ready to run</span>
+./cero docs        <span class="cm"># this documentation, served by Cero</span>
+./cero cache       <span class="cm"># what it takes up, and --purge to empty it</span>
+./cero clean       <span class="cm"># removes what was generated</span></pre>
+        </div>
+
+        <p class="medida">
+          The example application lives in <code>java/ejemplo</code>: a complete task manager with
+          views, forms, a database and a REST API, plus 36 end-to-end tests. It is the best place
+          to start reading.
+        </p>
+
+        <h3>Checking what you built</h3>
+        <div class="codigo">
+          <div class="barra"><span class="etiqueta">Fingerprints</span><span class="etiqueta">Shell</span></div>
+<pre>shasum -a 256 java/cero-core/target/cero-core-0.3.0.jar
+
+<span class="cm"># should start with 5309738f66a6fbde</span></pre>
+        </div>
+      </section>
+
+      <section id="requisitos">
+        <div class="titulo-seccion"><span class="indice-num">05</span><h2>Requirements</h2></div>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>What</th><th>Version</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">JDK</td><td class="mono">21 or newer</td>
+                  <td>Virtual threads: the server assigns one per connection, and without them the model does not hold up. Developed and measured with OpenJDK 25.</td></tr>
+              <tr><td class="mono">Maven</td><td class="mono">3.9+</td>
+                  <td>Only to build. Not needed at runtime.</td></tr>
+              <tr><td class="mono">System</td><td class="mono">any</td>
+                  <td>No native code and no system paths. Tested on macOS and Linux; not verified on Windows.</td></tr>
+              <tr><td class="mono">JDBC driver</td><td class="mono">your engine's</td>
+                  <td>Only if you use <code>cero-data</code>. Verified with PostgreSQL 16, MySQL 8 and H2.</td></tr>
+              <tr><td class="mono">Tomcat</td><td class="mono">10.1+</td>
+                  <td>Only if you deploy with <code>cero-adapter-servlet</code>. Not used in normal mode.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="licencia">
+        <div class="titulo-seccion"><span class="indice-num">06</span><h2>Licence and authorship</h2></div>
+
+        <p class="medida">
+          <b>MIT.</b> You may use it, modify it, distribute it and sell it, with or without
+          changes, in open or closed projects. The only condition is keeping the copyright notice.
+        </p>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Authors</div>
+            <div>
+              <b>Richar Andre Vilca-Solorzano</b><br>
+              <span class="mono">ORCID</span>
+              <a href="https://orcid.org/0009-0003-2385-5263">0009-0003-2385-5263</a><br>
+              <br>
+              <b>Ramiro Pedro Laura-Murillo</b><br>
+              <span class="mono">ORCID</span>
+              <a href="https://orcid.org/0000-0003-1837-4871">0000-0003-1837-4871</a>
+            </div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Affiliation</div>
+            <div>
+              Universidad Nacional del Altiplano<br>
+              Puno, Peru
+            </div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Provenance</div>
+            <div>Derived from JxMVC 3.4.0, also MIT and with the same copyright holder.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Citation</div>
+            <div><span class="mono">Vilca-Solorzano, R. A. &amp; Laura-Murillo, R. P. (2026). Cero: a dependency-free
+              polyglot web framework core. v0.3.0.</span></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+{% end %}
