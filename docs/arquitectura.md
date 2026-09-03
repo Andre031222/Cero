@@ -1,4 +1,4 @@
-# Arquitectura de Corvo
+# Arquitectura de Cero
 
 Este documento describe hacia dónde va el código. **Las fases 1 y 2 están cerradas**: siete
 módulos, el sitio de referencia sobre el propio framework y 1 227 pruebas. Lo que sigue es la
@@ -9,7 +9,7 @@ fase 3. Ver [origen.md](origen.md) para de dónde viene todo.
 Antes de diseñar nada se midió el acoplamiento real del núcleo heredado al contenedor de servlets.
 El resultado es mejor de lo que sugiere el README de JxMVC:
 
-- De **54 clases** en `legacy/jxmvc-core/src/main/java/jxmvc/core/`, **40 no importan nada de `jakarta.*`**.
+- De **54 clases** en el núcleo de JxMVC 3.4.0, **40 no importan nada de `jakarta.*`**.
   `JxDB`, `JxJson`, `JxRepository`, `JxValidation`, `JxOAuth`, `JxCache`, `JxScheduler`, `JxPool`,
   `JxMetrics`, `JxOpenApi`, `JxServiceRegistry`, `JxTransaction`… todo eso es Java puro.
 - Las **14 clases restantes** tocan Jakarta con 1–4 referencias cada una, salvo dos:
@@ -32,19 +32,17 @@ aplicación nueva.
 ```text
 spec/                     Contrato del kernel, versionado, neutral respecto al lenguaje
 java/
-  corvo-http/               Servidor HTTP/1.1 propio (hilos virtuales). Cero deps.
-  corvo-core/               Router, pipeline, DI, configuración, resultados. Cero deps.
-  corvo-view/               Motor de plantillas propio (sustituye a JSP)
-  corvo-data/               JxDB, JxRepository, JxPool, JxTransaction — se mudan casi tal cual
-  corvo-adapter-servlet/    Compatibilidad Jakarta/Tomcat para las apps AUR ya desplegadas
-  corvo-web/                Sitio oficial: acceso, demos y generador de proyectos
+  cero-http/               Servidor HTTP/1.1 propio (hilos virtuales). Cero deps.
+  cero-core/               Router, pipeline, DI, configuración, resultados. Cero deps.
+  cero-view/               Motor de plantillas propio (sustituye a JSP)
+  cero-data/               JxDB, JxRepository, JxPool, JxTransaction — se mudan casi tal cual
+  cero-adapter-servlet/    Compatibilidad Jakarta/Tomcat para las apps AUR ya desplegadas
+  cero-web/                Sitio oficial: acceso, demos y generador de proyectos
   ejemplo/                Aplicación pequeña de punta a punta
-  corvo-launcher/           Fat-jar: java -jar app.jar   (pendiente)
-legacy/
-  jxmvc-core/             Núcleo heredado — origen de la migración
+  cero-launcher/           Fat-jar: java -jar app.jar   (pendiente)
 rust/                     Segunda implementación
 cpp/                      Tercera implementación
-benchmarks/               Harness comparativo (heredado, + Corvo)
+benchmarks/               Harness comparativo
 ```
 
 ## Estilo del código
@@ -59,9 +57,9 @@ benchmarks/               Harness comparativo (heredado, + Corvo)
 
 ## Fase 1 — El núcleo que se levanta solo
 
-### 1.1 `corvo-http` — el servidor · **completo**
+### 1.1 `cero-http` — el servidor · **completo**
 
-HTTP/1.1 con un hilo virtual por conexión (Java 21+). 31 clases, cero dependencias, 144 pruebas.
+HTTP/1.1 con un hilo virtual por conexión (Java 25+). 31 clases, cero dependencias, 144 pruebas.
 
 Cubre: parseo de línea de petición y cabeceras, keep-alive con reutilización de conexión,
 `Content-Length` y `Transfer-Encoding: chunked` en ambos sentidos, `Expect: 100-continue`,
@@ -100,11 +98,11 @@ es un proyecto aparte y que un proxy inverso resuelve mientras tanto.
 
 ### 1.2 La costura
 
-Definir `corvo.http.Request` y `corvo.http.Response` como interfaces puras del JDK. `JxRequest` y
+Definir `cero.http.Request` y `cero.http.Response` como interfaces puras del JDK. `JxRequest` y
 `JxResponse` pasan a envolver esas interfaces en lugar de las de Jakarta. Este es el cambio que
 desbloquea todo lo demás.
 
-### 1.3 `MainLxServlet` → `corvo-core` · **hecho**
+### 1.3 `MainLxServlet` → `cero-core` · **hecho**
 
 Las 1041 líneas del pipeline de 15 etapas no se transliteraron: se rehicieron como 11 clases con
 una responsabilidad cada una. El pipeline quedó en seis pasos que se leen de corrido:
@@ -124,7 +122,7 @@ autenticar → middleware → autorizar → vincular → invocar → renderizar
 - `Json` — escritura, lectura y vinculación a records, beans, enums, `Optional` y tipos de
   `java.time`. Detecta ciclos al serializar.
 - `Result` — `text`, `html`, `json`, `view`, `redirect`, `noContent`, con estado y cabeceras.
-- `Config` — properties del classpath y del disco, variables `CORVO_*` y propiedades `corvo.*`.
+- `Config` — properties del classpath y del disco, variables `CERO_*` y propiedades `cero.*`.
 
 **Autenticar va antes del middleware, autorizar después.** Así el middleware ve el `Principal`
 —que es lo que casi siempre necesita— y a la vez puede envolver los 401 y 403 para registrarlos.
@@ -135,7 +133,7 @@ medio.
 
 ### 1.4 Adiós JSP
 
-`JxTagFor` y `JxTagIf` dependen de `jakarta.servlet.jsp` y se eliminan. Los sustituye `corvo-view`:
+`JxTagFor` y `JxTagIf` dependen de `jakarta.servlet.jsp` y se eliminan. Los sustituye `cero-view`:
 plantillas compiladas a Java en el arranque, cero dependencias, sin motor de JSP detrás.
 
 ### 1.5 El lanzador · **hecho**
@@ -157,12 +155,12 @@ Lux.app()
    .start();
 ```
 
-Imprime host, puerto, número de rutas y tiempo de arranque. `corvo-launcher` como módulo aparte
+Imprime host, puerto, número de rutas y tiempo de arranque. `cero-launcher` como módulo aparte
 —empaquetado fat-jar— queda para la fase 2; para arrancar ya no hace falta.
 
 ### 1.6 No romper lo que ya está en producción
 
-`corvo-adapter-servlet` implementa `corvo.http.Request`/`Response` sobre `HttpServletRequest`/`Response`.
+`cero-adapter-servlet` implementa `cero.http.Request`/`Response` sobre `HttpServletRequest`/`Response`.
 Las apps AUR que hoy dependen de JxMVC (Academia, Intranet, NFC Intranet) siguen desplegando en
 Tomcat sin cambiar una línea, mientras el modo standalone es el camino nuevo.
 
@@ -177,7 +175,7 @@ porque los absolutos dependen de la máquina.
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
 | Arranque | < 150 ms | **106 ms** | javalin 451 ms | **sí**, y por 4,3× |
-| JAR runtime | ≤ 400 KB | **308 KB** | — | **sí** |
+| JAR runtime | ≤ 400 KB | **368 KB** | — | **sí** |
 | Dependencias | 0 | **0** | spring: decenas | **sí** |
 | rps `/json` | batir al mejor rival | **25 431** | javalin 25 125 | **sí** |
 | RSS | < 120 MB | 136,4 MB | micronaut 201,2 MB | **no**, aunque es el más bajo |
@@ -192,7 +190,7 @@ Desktop. Ver [docs/mediciones-locales.md](mediciones-locales.md).
 ## Fase 2 — Paridad
 
 Migrar las 41 clases puras a los módulos nuevos — hecho, las 14 transversales incluidas.
-WebSockets propios sobre `corvo-http` sustituyendo `jakarta.websocket` — hecho. `corvo-view`
+WebSockets propios sobre `cero-http` sustituyendo `jakarta.websocket` — hecho. `cero-view`
 cubriendo todo lo que hacía JSP en el sitio de referencia — hecho.
 
 De las 347 pruebas heredadas no se hizo un port literal: se compararon una a una contra las
@@ -201,7 +199,7 @@ reales —una redirección abierta y una carrera que hacía al pool pasarse de s
 están corregidos con prueba propia.
 
 **Criterio de cierre — cumplido el 2 de agosto de 2026.** El sitio de referencia corre entero en
-modo standalone: es `java/corvo-web`, con 82 pruebas de punta a punta que lo comprueban. Sustituye
+modo standalone: es `java/cero-web`, con 82 pruebas de punta a punta que lo comprueban. Sustituye
 al `jxmvc2x` heredado, que se ha retirado del repositorio.
 
 **Cerrada del todo el 4 de agosto de 2026, con la versión 0.3.0.** El 3 de agosto el framework
@@ -223,9 +221,9 @@ cobertura una a una, que es lo que aportaban, y aparecieron dos fallos reales.
 cerrada. Un spec escrito antes de tener una implementación completa describe lo que uno imagina,
 no lo que el framework necesita.
 
-Aquí Corvo deja de ser «JxMVC v4».
+Aquí Cero deja de ser «JxMVC v4».
 
-`SPEC/corvo-kernel.md` define el contrato en lenguaje neutro: modelo de rutas, forma del
+`SPEC/cero-kernel.md` define el contrato en lenguaje neutro: modelo de rutas, forma del
 request/response, ciclo del pipeline, contrato de middleware, inyección de dependencias,
 configuración, formato de errores. Acompañado de un banco de pruebas de conformidad —peticiones
 HTTP y respuestas esperadas— que **cualquier** implementación debe pasar.
@@ -245,5 +243,5 @@ framework de Java.
 ## Fuera de alcance
 
 `19.Soft_JXMVC` y `AUP_Papers/13.-JxMVC_SPE/` no se tocan. Los pendientes del artículo (benchmark
-`/db` en Arch, DOI de Zenodo, autoría y ORCID) siguen su curso aparte; Corvo no los bloquea ni
+`/db` en Arch, DOI de Zenodo, autoría y ORCID) siguen su curso aparte; Cero no los bloquea ni
 depende de ellos.

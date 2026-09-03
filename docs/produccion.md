@@ -5,8 +5,8 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 342 pruebas en verde**, cero dependencias en el núcleo verificadas en cada corrida de CI.
-- Arranca en ~100 ms dentro de un contenedor y pesa 308 KB. El resto de contendientes, medidos
+- **1 584 pruebas en verde**, cero dependencias en el núcleo verificadas en cada corrida de CI.
+- Arranca en ~100 ms dentro de un contenedor y pesa 368 KB. El resto de contendientes, medidos
   a la vez y en las mismas condiciones, tardan entre 4 y 13 veces más.
 - El endurecimiento HTTP es explícito y está probado: rechaza cabeceras plegadas,
   `Content-Length` duplicado, `Content-Length` junto a `Transfer-Encoding`, `Host` ausente o
@@ -16,7 +16,7 @@ funcionalidad y bastante en confianza.
 - Observabilidad mínima: métricas por ruta con percentiles, log y log de acceso.
 - Autenticación: OAuth 2.0 / OIDC con PKCE y verificación real de firma, y PBKDF2 para
   contraseñas.
-- **Corre en Linux en cada push**, con PostgreSQL y MySQL levantados, sobre JDK 21 y 25.
+- **Corre en Linux en cada push**, con PostgreSQL y MySQL levantados, sobre JDK 25.
 
 ## Lo que falta para poder decir que sí
 
@@ -29,7 +29,7 @@ base de datos y API REST, cubierta por 43 pruebas de punta a punta— y destapó
 lista de casillas no veía. Eso convierte «paridad» en algo verificado, no declarado.
 
 Lo que sigue sin ocurrir es tráfico real: nadie ha desplegado esto y lo ha dejado correr semanas.
-Y el sitio de referencia ya no depende de Tomcat: es `corvo-web`.
+Y el sitio de referencia ya no depende de Tomcat: es `cero-web`.
 
 **Criterio:** una aplicación pequeña en producción de verdad, con tráfico real, durante semanas.
 
@@ -48,7 +48,7 @@ Los cuatro corregidos.
 **Lo que falta:** una suite reconocida de terceros. No existe libre para HTTP/1.1, así que la
 alternativa realista es ampliar los vectores propios.
 
-### 3. `corvo-data` contra motores reales · **hecho**
+### 3. `cero-data` contra motores reales · **hecho**
 
 Los 47 casos de `MotorTests` corren contra **H2, PostgreSQL 16 y MySQL 8** en Docker: claves
 generadas, decimales exactos, booleanos, fechas, paginación con `LIMIT`/`OFFSET`, alias en
@@ -64,7 +64,7 @@ debían coincidir y no coincidían. Corregido haciendo que ambos usen el mismo r
 ### 4. Los números de rendimiento · **medidos, y no dicen lo que se creía**
 
 Los 94 610 rps de la medición casera no valían: cliente y servidor en la misma máquina, con `ab`,
-sin aislamiento. Ya están sustituidos por una corrida del harness con Corvo como sexto
+sin aislamiento. Ya están sustituidos por una corrida del harness con Cero como sexto
 contendiente, `/plaintext`, `/json` y `/db`, 5 repeticiones de 30 s y cero errores
 ([tabla](../benchmarks/results/RESULTS-docker.md)).
 
@@ -116,10 +116,10 @@ sesiones compartido** para varias instancias.
 En orden, porque cada paso informa al siguiente. Tachado lo que ya está:
 
 1. ~~Migrar métricas y logger~~ — hecho, con log de acceso incluido.
-2. ~~Correr `corvo-data` contra PostgreSQL y MySQL reales~~ — hecho, y encontró un fallo.
+2. ~~Correr `cero-data` contra PostgreSQL y MySQL reales~~ — hecho, y encontró un fallo.
 3. ~~Fuzzing dirigido del parser~~ — hecho; falta el banco de **conformidad** HTTP/1.1.
 4. ~~Correr la suite en Linux~~ — hecho, en cada push, sobre JDK 21 y 25.
-5. ~~Levantar el sitio de referencia en standalone~~ — hecho: es `corvo-web`.
+5. ~~Levantar el sitio de referencia en standalone~~ — hecho: es `cero-web`.
 6. Benchmark en Arch bare-metal, con los números buenos.
 7. Prueba de carga sostenida con conexiones hostiles.
 8. Elegir **una** app pequeña y de bajo riesgo, ponerla en producción detrás de un proxy inverso,
@@ -129,4 +129,4 @@ En orden, porque cada paso informa al siguiente. Tachado lo que ya está:
 
 Aunque todo lo anterior se cumpla, el primer despliegue debería ir **detrás de nginx o Caddy**, no
 expuesto directo. El proxy absorbe TLS, slowloris, HTTP/2 y el log de acceso — que son justo los
-cinco puntos donde Corvo es más joven. Cuando lleve meses de tráfico real, se discute quitarlo.
+cinco puntos donde Cero es más joven. Cuando lleve meses de tráfico real, se discute quitarlo.

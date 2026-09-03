@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convierte los fragmentos del sitio en plantillas de lux-web.
+"""Convierte los fragmentos del sitio en plantillas de cero-web.
 
 El sitio se escribe una sola vez, en `contenido/`. De ahí salen dos cosas: las páginas estáticas
 de `docs/web/` —que las hace `construir.py`— y las plantillas del sitio dinámico, que las hace
@@ -14,11 +14,11 @@ import sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 FRAGMENTOS = AQUI / "contenido"
-RECURSOS = AQUI.parent.parent / "java" / "lux-web" / "src" / "main" / "resources"
+RECURSOS = AQUI.parent.parent / "java" / "cero-web" / "src" / "main" / "resources"
 PLANTILLAS = RECURSOS / "plantillas"
 ESTATICOS = RECURSOS / "estaticos"
 
-# lux-web sirve su propia copia de los recursos, así que hay que copiarlos.
+# cero-web sirve su propia copia de los recursos, así que hay que copiarlos.
 #
 # Esto NO es una lista a mano a propósito. Hubo tres: terminal.js anunciando 1 241 pruebas tres
 # cambios después, social.png con la paleta vieja, y el favicon dorado mucho después de que la
@@ -30,8 +30,8 @@ CARPETAS = ("assets", "marca")
 # Y lo que vive en subcarpetas: las fuentes alojadas.
 SUBCARPETAS = ("assets/fuentes",)
 
-# Lo que arma ./lux dist y no viene de aquí: no se toca al sincronizar.
-GENERADOS = ("luxcore-",)
+# Lo que arma ./cero dist y no viene de aquí: no se toca al sincronizar.
+GENERADOS = ("cero-",)
 
 # fragmento -> plantilla
 PAGINAS = {
@@ -43,7 +43,7 @@ PAGINAS = {
     "referencia.html": "referencia",
 }
 
-# ./pagina.html -> ruta que sirve lux-web
+# ./pagina.html -> ruta que sirve cero-web
 RUTAS = {f"./{f}": ("/" if p == "inicio" else f"/{p}") for f, p in PAGINAS.items()}
 
 # Lo que solo existe en el sitio dinámico, porque necesita un servidor detrás.
@@ -53,7 +53,7 @@ EXTRAS = {
         <div class="titulo-seccion"><span class="indice-num">07</span><h2>Generar un proyecto</h2></div>
 
         <p class="medida">
-          Esta página la sirve LuxCore, así que el formulario funciona de verdad: rellena y te
+          Esta página la sirve Cero, así que el formulario funciona de verdad: rellena y te
           descargas un proyecto Maven listo para arrancar — clase principal, un controlador,
           plantillas y hoja de estilo. Sin contenedor y sin <code>web.xml</code>.
         </p>
@@ -95,7 +95,7 @@ INDICE_EXTRA = {
 
 
 def preparar(cuerpo: str, idioma: str = "es") -> str:
-    """Escapa la sintaxis de plantilla de los ejemplos y reescribe los enlaces a rutas de lux-web."""
+    """Escapa la sintaxis de plantilla de los ejemplos y reescribe los enlaces a rutas de cero-web."""
     cuerpo = cuerpo.replace("{%", "&#123;&#37;").replace("%}", "&#37;&#125;")
     cuerpo = cuerpo.replace("{{", "&#123;&#123;").replace("}}", "&#125;&#125;")
     prefijo = "" if idioma == "es" else "/en"
@@ -108,7 +108,7 @@ def preparar(cuerpo: str, idioma: str = "es") -> str:
 
 
 def sincronizar() -> int:
-    """Copia a lux-web todo recurso del sitio, y avisa de lo que sobra por allí."""
+    """Copia a cero-web todo recurso del sitio, y avisa de lo que sobra por allí."""
     ESTATICOS.mkdir(parents=True, exist_ok=True)
     origenes = {}
     for carpeta in CARPETAS:
@@ -134,7 +134,7 @@ def sincronizar() -> int:
             continue
         if servido.is_dir():
             continue
-        print(f"  ¡ojo! {servido.name} lo sirve lux-web y no tiene original en docs/web")
+        print(f"  ¡ojo! {servido.name} lo sirve cero-web y no tiene original en docs/web")
 
     return len(origenes)
 
@@ -175,7 +175,7 @@ def main() -> int:
             hechas += 1
 
     copiados = sincronizar()
-    print(f"\n{hechas} plantillas y {copiados} recursos copiados a lux-web")
+    print(f"\n{hechas} plantillas y {copiados} recursos copiados a cero-web")
     return 0
 
 

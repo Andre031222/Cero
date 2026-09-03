@@ -1,9 +1,9 @@
 package ejemplo;
 
-import corvo.core.Service;
-import corvo.data.Db;
-import corvo.data.Repository;
-import corvo.data.Row;
+import cero.core.Service;
+import cero.data.Db;
+import cero.data.Repository;
+import cero.data.Row;
 
 import java.util.List;
 

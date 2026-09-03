@@ -41,7 +41,7 @@ target/
 *.class
 .mvn/wrapper/maven-wrapper.jar
 # jar que arma el guion de despliegue en la raíz
-/corvo-web.jar
+/cero-web.jar
 /lux-web.jar
 /ejemplo.jar
 
@@ -99,10 +99,10 @@ Thumbs.db
 desktop.ini
 *.swp
 
-# === Paquetes que arma ./corvo paquete (se rehacen; no se versionan) ===
-java/corvo-web/src/main/resources/estaticos/corvo-*.tar.gz
-java/corvo-web/src/main/resources/estaticos/corvo-*.zip
-java/corvo-web/src/main/resources/estaticos/corvo-*.sha256
+# === Paquetes que arma ./cero paquete (se rehacen; no se versionan) ===
+java/cero-web/src/main/resources/estaticos/cero-*.tar.gz
+java/cero-web/src/main/resources/estaticos/cero-*.zip
+java/cero-web/src/main/resources/estaticos/cero-*.sha256
 
 # El borrador del paper de JxMVC. No es de este repositorio y no se publica.
 main.pdf

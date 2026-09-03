@@ -1,5 +1,5 @@
   <section class="portada">
-    <span class="cuervo" aria-hidden="true"></span>
+    <span class="isotipo" aria-hidden="true"></span>
     <div class="portada-texto">
       <p class="antetitulo">
         <span class="nuevo">Nuevo</span>
@@ -21,14 +21,14 @@
       </div>
 
       <div class="chips">
-        <div class="chip"><b>308</b><span>KB</span><em>Desplegado</em></div>
+        <div class="chip"><b>390</b><span>KB</span><em>Desplegado</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
-        <div class="chip"><b>1342</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1584</b><span></span><em>Pruebas</em></div>
       </div>
 
-      <div class="orden" data-copiar="curl -fsSL https://luxcore.ginit.dev/instalar | sh">
-        <code><span class="senal">$</span> curl -fsSL https://luxcore.ginit.dev/instalar | sh</code>
+      <div class="orden" data-copiar="curl -fsSL https://cero.ginit.dev/instalar | sh">
+        <code><span class="senal">$</span> curl -fsSL https://cero.ginit.dev/instalar | sh</code>
         <button type="button" class="copiar" aria-label="Copiar la orden">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -38,8 +38,8 @@
         </button>
       </div>
       <p class="tras-orden">En Windows,
-        <code>irm https://luxcore.ginit.dev/instalar.ps1 | iex</code>. Requiere Maven y un
-        JDK 21. Después: <code>lux new mi-app</code>.</p>
+        <code>irm https://cero.ginit.dev/instalar.ps1 | iex</code>. Requiere Maven y un
+        JDK 21. Después: <code>cero new mi-app</code>.</p>
     </div>
 
     <div class="portada-codigo">
@@ -112,10 +112,10 @@
 
         <div class="panel" id="pn-arranque" role="tabpanel" hidden>
 <pre><span class="cm">// Una línea para lo simple…</span>
-Lux.run(<span class="st">8080</span>, TareaController.class);
+Cero.run(<span class="st">8080</span>, TareaController.class);
 
 <span class="cm">// …y todo declarado para lo serio.</span>
-Lux.app()
+Cero.app()
    .loadConfig()
    .views(Templates.fromClasspath(<span class="st">"plantillas"</span>))
    .fallback(StaticFiles.fromClasspath(<span class="st">"estaticos"</span>, <span class="st">"/estaticos"</span>))
@@ -128,7 +128,7 @@ Lux.app()
    .use(metricas)
    .controllers(TareaController.class, AdminController.class)
    .routes(r -&gt; r.get(<span class="st">"/salud"</span>, ctx -&gt; <span class="st">"ok"</span>)
-                 .get(<span class="st">"/lux/metrics"</span>, metricas.endpoint()))
+                 .get(<span class="st">"/cero/metrics"</span>, metricas.endpoint()))
    .start()
    .await();</pre>
         </div>
@@ -143,17 +143,17 @@ Lux.app()
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Por qué existe</h2></div>
 
         <p class="medida">
-          LuxCore nace de JxMVC, un framework MVC que funciona y está en producción — pero que
+          Cero nace de JxMVC, un framework MVC que funciona y está en producción — pero que
           necesita Tomcat para arrancar. Quitar el contenedor no era un capricho: era el 94 % del
           tiempo de arranque y el 98 % del peso desplegado.
         </p>
 
         <div class="envoltura">
           <table>
-            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th><th class="cifra">Diferencia</th></tr></thead>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">Cero</th><th class="cifra">Diferencia</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td><td class="cifra">6,6×</td></tr>
-              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td><td class="cifra">51×</td></tr>
+              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">390 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
               <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 342</td><td class="cifra">2,7×</td></tr>
@@ -162,8 +162,8 @@ Lux.app()
         </div>
 
         <p class="medida">
-          Y no hay que saltar de golpe: <code>lux-adapter-servlet</code> despliega una aplicación
-          LuxCore dentro de Tomcat, así que la migración es reversible.
+          Y no hay que saltar de golpe: <code>cero-adapter-servlet</code> despliega una aplicación
+          Cero dentro de Tomcat, así que la migración es reversible.
         </p>
       </section>
 

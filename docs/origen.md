@@ -1,15 +1,21 @@
 # Origen de este repositorio
 
+> **Dónde está JxMVC.** La copia de `jxmvc-core` que había en `legacy/` se retiró el 3 de
+> septiembre de 2026: este repositorio es solo Cero. El original vive en su propio repositorio
+> (`19.Soft_JXMVC`), el artefacto `jxmvc:jxmvc-core:3.4.0` es inmutable, y la copia sigue en el
+> historial de git de aquí. La medición de abajo se hizo contra ese árbol y se puede rehacer.
+
+
 > **Estado a 30 de agosto de 2026 — medido, no recordado.**
 >
 > Este documento describe cómo arrancó el repositorio el 1 de agosto. **Ya no describe el
-> código.** Se comparó clase por clase el árbol actual contra `legacy/jxmvc-core`, normalizando
+> código.** Se comparó clase por clase el árbol actual contra el núcleo de **JxMVC 3.4.0**, normalizando
 > paquetes, importaciones, comentarios, espacios y los nombres del framework, para que un
 > renombrado no contara como reescritura:
 >
 > | | |
 > |---|---|
-> | Clases de Corvo hoy | **153** |
+> | Clases de Cero hoy | **153** |
 > | Idénticas a alguna de JxMVC | **0** |
 > | Con parecido superior al 55 % | **2**, y las dos son `@FunctionalInterface` de un método — cualquier par se parece |
 >
@@ -21,7 +27,7 @@
 > está medida y porque el punto de partida está escrito, no porque se haya borrado la página.
 
 
-Corvo —que hasta la versión 0.4.0 se llamó LuxCore— parte del código de **JxMVC 3.4.0**, copiado el **1 de agosto de 2026**.
+Cero —que hasta la versión 0.4.0 se llamó LuxCore— parte del código de **JxMVC 3.4.0**, copiado el **1 de agosto de 2026**.
 
 ## De dónde viene
 
@@ -36,7 +42,7 @@ La copia se hizo con:
 
 ```bash
 rsync -a --exclude '.git' --exclude 'target/' --exclude '.DS_Store' \
-  <origen>/ Corvo/
+  <origen>/ Cero/
 ```
 
 Verificada con `diff -r`: **94 archivos `.java`** en ambos lados, sin diferencias de contenido.
@@ -55,7 +61,7 @@ autoría/ORCID) que siguen su curso sin relación con este repositorio.
 Tampoco se copió el `.git` del origen: su `origin` apunta al repositorio del artículo, y bastaría
 un `git push` distraído desde aquí para reescribirlo. Este repositorio arranca con historial propio.
 
-**Regla de trabajo: `19.Soft_JXMVC` es de solo lectura.** Nada de lo que ocurra en Corvo se
+**Regla de trabajo: `19.Soft_JXMVC` es de solo lectura.** Nada de lo que ocurra en Cero se
 propaga hacia allá.
 
 ## Qué se hereda y qué cambia
@@ -65,7 +71,7 @@ Se hereda el núcleo: 54 clases en `jxmvc/core/`, de las cuales **40 no importan
 (`benchmarks/`), con Spring, Quarkus, Micronaut y Javalin ya configurados en Docker — es la línea
 base contra la que se mide la arquitectura nueva.
 
-Lo que cambia es el modelo de ejecución. JxMVC es un WAR que necesita Tomcat 10.1+. Corvo
+Lo que cambia es el modelo de ejecución. JxMVC es un WAR que necesita Tomcat 10.1+. Cero
 arranca solo, con servidor HTTP propio, cero dependencias externas, y con la mira puesta en dejar
 de ser únicamente un framework de Java.
 

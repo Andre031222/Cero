@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>dev.ginit.corvo</groupId>
-        <artifactId>corvo-parent</artifactId>
-        <version>0.4.0</version>
+        <groupId>dev.ginit.cero</groupId>
+        <artifactId>cero-parent</artifactId>
+        <version>0.5.0</version>
     </parent>
 
     <artifactId>ejemplo</artifactId>
@@ -14,7 +14,7 @@
 
     <properties>
         <!-- Módulo interno: no va a Maven Central. `ejemplo` es la aplicación de
-             demostración y `corvo-web` el sitio viejo; publicar cualquiera de los dos
+             demostración y `cero-web` el sitio viejo; publicar cualquiera de los dos
              sería ofrecer como biblioteca algo que no lo es. -->
         <maven.deploy.skip>true</maven.deploy.skip>
         <skipPublishing>true</skipPublishing>
@@ -22,19 +22,19 @@
 
     <dependencies>
         <dependency>
-            <groupId>dev.ginit.corvo</groupId>
-            <artifactId>corvo-core</artifactId>
-            <version>0.4.0</version>
+            <groupId>dev.ginit.cero</groupId>
+            <artifactId>cero-core</artifactId>
+            <version>0.5.0</version>
         </dependency>
         <dependency>
-            <groupId>dev.ginit.corvo</groupId>
-            <artifactId>corvo-view</artifactId>
-            <version>0.4.0</version>
+            <groupId>dev.ginit.cero</groupId>
+            <artifactId>cero-view</artifactId>
+            <version>0.5.0</version>
         </dependency>
         <dependency>
-            <groupId>dev.ginit.corvo</groupId>
-            <artifactId>corvo-data</artifactId>
-            <version>0.4.0</version>
+            <groupId>dev.ginit.cero</groupId>
+            <artifactId>cero-data</artifactId>
+            <version>0.5.0</version>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

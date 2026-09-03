@@ -10,6 +10,106 @@ señaló la auditoría del portal FINESI, y de ahí sale esta regla.
 
 ---
 
+## 0.5.0 · sin publicar
+
+**El framework se llama Cero.** *LuxCore* chocaba con un framework PHP del mismo entorno.
+*Corvo* resolvió esa confusión pero no decía nada del framework: era un nombre correcto y mudo.
+**Cero** sí dice algo, y es lo mismo que dice la primera línea del LEEME —cero dependencias en
+ejecución, cero configuración para arrancar, cero contenedor de servlets—. No es una metáfora
+que haya que explicar: es la lista de lo que este framework no te obliga a tener.
+
+Se escribe **Cero**, con mayúscula, también a mitad de frase: es una palabra común del
+castellano y en minúscula desaparece dentro del texto. En artefactos y órdenes va en minúscula,
+como siempre: `cero-core`, `cero new`.
+
+### Qué cambia de nombre
+
+- Paquetes `corvo.*` → `cero.*`. Clases `Corvo` → `Cero` y `CorvoServlet` → `CeroServlet`.
+- Coordenadas `dev.ginit.corvo:corvo-*` → `dev.ginit.cero:cero-*`.
+- La orden `./corvo` pasa a `./cero`.
+- Configuración: `corvo.*` → `cero.*`, `CORVO_*` → `CERO_*`.
+- Cookie de sesión `CORVOSESSION` → `CEROSESSION`.
+- Métricas `corvo_*` → `cero_*`, y los endpoints `/corvo/*` → `/cero/*`.
+- Tablas por defecto `corvo_migraciones` y `corvo_sesiones` → `cero_*`.
+
+`./cero migrar <ruta>` convierte una aplicación entera, y **acepta los dos nombres viejos**: una
+aplicación que se quedó en LuxCore sin pasar por Corvo llega a Cero en un solo paso. Ver
+[migrar-a-cero.md](migrar-a-cero.md), que además explica las tres cosas que ninguna herramienta
+puede hacer sola: renombrar las tablas antes de arrancar, que la cookie cierra todas las sesiones
+al desplegar, y que los paneles de Grafana se quedan vacíos —sin dar error— hasta que se
+actualicen las métricas.
+
+**No hay capa de compatibilidad, a propósito.** Las aplicaciones que usan el framework son todas
+nuestras: aceptar los nombres viejos en tiempo de ejecución significaría arrastrar código muerto
+para siempre. El guion los acepta; el framework, no.
+
+### Seguridad
+
+Salen de una auditoría del código completo. Cuatro de los cinco hallazgos estaban en lo añadido
+en 0.4.0, que era lo menos rodado.
+
+- **`Sanitize.html` no saneaba.** Era una lista negra a base de expresiones regulares, y una
+  lista negra de HTML siempre tiene un agujero más: `<svg/onload=alert(1)>` salía intacto porque
+  el patrón de los manejadores exigía un espacio antes de `on…` y una barra no lo es.
+
+  Ahora **nada de la entrada llega a la salida tal cual**: se reconoce lo que hay y se reescribe
+  la salida solo con las etiquetas y los atributos de una lista de permitidos. Un atributo que no
+  está en la lista no se examina para ver si es peligroso — no se emite. Las direcciones se
+  juzgan tras deshacer las entidades y quitar los caracteres de control, porque el navegador
+  también las deshace. Hay **166 aserciones** con un corpus de vectores conocidos.
+
+- **`Live` repartía zonas privadas a cualquiera.** Una zona es un canal de difusión y el nombre
+  lo manda el navegador, así que `pedidos-42` se lo llevaba quien escribiera `pedidos-42`. Nuevo
+  `Live.autorizar((peticion, zona) -> …)`, que decide por conexión y por zona.
+
+- **El apretón de manos de WebSocket no miraba `Origin`.** Un WebSocket lleva las cookies del
+  sitio y la política del mismo origen no lo protege, así que cualquier web podía abrir el canal
+  con la sesión de quien la visitara. Ahora solo el mismo origen, más los que se declaren con
+  `Live.origenes(...)`.
+
+- **`Live` crecía sin freno.** Sin tope de zonas por conexión, y el conjunto vacío se quedaba en
+  el mapa para siempre. Tope de 32 zonas por socket, y la zona desaparece cuando se va el último
+  oyente.
+
+- **CORS admitía comodín con credenciales.** `Cors.anyOrigin().credentials(true)` devolvía el
+  `Origin` de quien preguntara junto a `Access-Control-Allow-Credentials: true`, que es
+  exactamente el agujero que el navegador prohíbe al vetar `*` con credenciales. Ahora falla al
+  construirse, no al ejecutarse.
+
+- **OAuth no comprobaba el `state`.** El javadoc mandaba guardarlo en la sesión y el ejemplo no
+  lo comparaba nunca. Nuevos `autorizar(ctx)` e `intercambiar(ctx)`: guardan el verificador de
+  PKCE y el estado en la sesión, los comparan en tiempo constante y los borran antes de canjear,
+  así que el retorno vale una vez y solo para la sesión que lo pidió.
+
+- **`Json` sin tope de anidamiento.** Un cuerpo de 50 KB de `[[[[…` agotaba la pila del hilo.
+  Tope de 64 niveles.
+
+- **`/corvo/listo` publicaba el mensaje del fallo**, que en un fallo de conexión lleva el host y
+  el puerto de la base de datos. Nuevo `Health.checks().publico()`: el código y el estado, nada
+  más.
+
+- **Un separador codificado en la ruta se decodificaba en silencio.** `/a%2Fb` se convertía en
+  `/a/b` *después* de enrutar, así que un filtro por prefijo veía una cosa y el sistema de
+  archivos otra. Ahora da 400.
+
+- **UTF-8 mal formado en un marco de texto** se sustituía en silencio en vez de cerrar con 1007,
+  y las longitudes de marco no exigían la forma más corta. Los dos según RFC 6455.
+
+### Arreglado por el camino
+
+- La versión que se escribía en el pom de cada proyecto nuevo estaba clavada en una constante y
+  se quedaba atrás en cada subida. Ahora sale del pom, filtrada por Maven, y no hay un segundo
+  número que acordarse de cambiar.
+- La prueba del log de acceso leía la línea sin esperarla y fallaba de vez en cuando con la
+  máquina cargada: el cliente puede volver antes de que el hilo que atendió acabe de desenrollar
+  la cadena.
+
+### Estado
+
+**1 584 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
+
+---
+
 ## 0.4.0 · sin publicar
 
 **LuxCore pasa a llamarse Corvo.** El nombre chocaba con un framework PHP del mismo entorno y se
@@ -19,7 +119,12 @@ conserva el «cor» de LuxCore, que en latín es corazón, la misma raíz de *co
 Es un cambio rompiente, y por eso va en una versión propia. Las anteriores no se tocan: `0.2.0` y
 `0.3.0` siguen siendo exactamente lo que eran, y las aplicaciones que las usan no se enteran.
 
-### Qué cambia
+> **Esta versión nunca se publicó.** El renombrado a Corvo se hizo y se probó, pero antes de
+> etiquetarla el nombre volvió a cambiar —ver [0.5.0](#050--sin-publicar)—. Se conserva la
+> entrada porque el trabajo existió y porque el guion de migración sigue aceptando este nombre:
+> hay aplicaciones que se quedaron aquí.
+
+### Qué cambió
 
 - Paquetes `lux.*` → `corvo.*`. Clases `Lux` → `Corvo` y `LuxServlet` → `CorvoServlet`.
 - Coordenadas `lux:lux-*` → `dev.ginit.corvo:corvo-*`. El `groupId` pasa a ser un dominio propio,
@@ -29,16 +134,6 @@ Es un cambio rompiente, y por eso va en una versión propia. Las anteriores no s
 - Cookie de sesión `LUXSESSION` → `CORVOSESSION`.
 - Métricas `lux_*` → `corvo_*`, y los endpoints `/lux/metrics` → `/corvo/metrics`.
 - Tablas por defecto `lux_migraciones` y `lux_sesiones` → `corvo_*`.
-
-### Cómo migrar
-
-`./corvo migrar <ruta>` convierte una aplicación entera. Ver [migrar-a-corvo.md](migrar-a-corvo.md),
-que además explica las tres cosas que ninguna herramienta puede hacer sola: renombrar las tablas
-antes de arrancar, que la cookie cierra todas las sesiones al desplegar, y que los paneles de
-Grafana se quedan vacíos —sin dar error— hasta que se actualicen las métricas.
-
-**No hay capa de compatibilidad, a propósito.** Solo seis aplicaciones usan el framework y son
-todas nuestras: aceptar los dos nombres significaría arrastrar código muerto para siempre.
 
 ### Añadido
 

@@ -1,15 +1,15 @@
 package ejemplo;
 
-import corvo.core.Context;
-import corvo.core.Csrf;
-import corvo.core.Form;
-import corvo.core.Get;
-import corvo.core.Inject;
-import corvo.core.Path;
-import corvo.core.Post;
-import corvo.core.Result;
-import corvo.core.Route;
-import corvo.core.Validation;
+import cero.core.Context;
+import cero.core.Csrf;
+import cero.core.Form;
+import cero.core.Get;
+import cero.core.Inject;
+import cero.core.Path;
+import cero.core.Post;
+import cero.core.Result;
+import cero.core.Route;
+import cero.core.Validation;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

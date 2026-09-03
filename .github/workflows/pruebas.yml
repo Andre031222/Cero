@@ -24,8 +24,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_PASSWORD: corvo
-          POSTGRES_DB: corvopruebas
+          POSTGRES_PASSWORD: cero
+          POSTGRES_DB: ceropruebas
         ports: ['55432:5432']
         options: >-
           --health-cmd pg_isready
@@ -36,11 +36,11 @@ jobs:
       mysql:
         image: mysql:8
         env:
-          MYSQL_ROOT_PASSWORD: corvo
-          MYSQL_DATABASE: corvopruebas
+          MYSQL_ROOT_PASSWORD: cero
+          MYSQL_DATABASE: ceropruebas
         ports: ['53306:3306']
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -pcorvo"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pcero"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 30
@@ -76,9 +76,9 @@ jobs:
       - name: Cero dependencias en runtime
         working-directory: java
         run: |
-          mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=dev.ginit.corvo \
-              -DoutputFile=target/deps.txt -pl corvo-http,corvo-core,corvo-view,corvo-data -am
-          fuera=$(grep -h ':jar:' corvo-*/target/deps.txt || true)
+          mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=dev.ginit.cero \
+              -DoutputFile=target/deps.txt -pl cero-http,cero-core,cero-view,cero-data -am
+          fuera=$(grep -h ':jar:' cero-*/target/deps.txt || true)
           if [ -n "$fuera" ]; then
             echo "::error::El núcleo arrastra dependencias externas:"; echo "$fuera"; exit 1
           fi
@@ -95,24 +95,6 @@ jobs:
           path: java/*/target/*.jar
           retention-days: 14
 
-  # El heredado sigue vivo mientras quede algo por migrar: si se rompe, nos enteramos.
-  heredado:
-    name: legacy/jxmvc-core
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Pruebas del núcleo heredado
-        working-directory: legacy/jxmvc-core
-        run: mvn -B test
-
   # El sitio se genera. Que nadie edite el HTML publicado a mano y se desincronice.
   sitio:
     name: docs/web al día
@@ -125,12 +107,12 @@ jobs:
         run: |
           python3 docs/web/construir.py
           python3 docs/web/a-plantillas.py
-          # Las plantillas y los recursos de corvo-web son copias de docs/web. Tres veces se
+          # Las plantillas y los recursos de cero-web son copias de docs/web. Tres veces se
           # quedaron atrás sin que nadie lo viera —terminal.js con el contador viejo, social.png
           # y el favicon con la paleta anterior—, así que ahora lo comprueba la máquina.
-          if ! git diff --quiet -- docs/web java/corvo-web/src/main/resources; then
-            echo "::error::El sitio o las copias de corvo-web están desincronizados. Corre ./corvo build y commitea."
-            git diff --stat -- docs/web java/corvo-web/src/main/resources
+          if ! git diff --quiet -- docs/web java/cero-web/src/main/resources; then
+            echo "::error::El sitio o las copias de cero-web están desincronizados. Corre ./cero build y commitea."
+            git diff --stat -- docs/web java/cero-web/src/main/resources
             exit 1
           fi
-          echo "El sitio publicado y las copias de corvo-web coinciden con sus fuentes."
+          echo "El sitio publicado y las copias de cero-web coinciden con sus fuentes."

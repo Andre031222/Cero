@@ -2,13 +2,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>dev.ginit.corvo</groupId>
-    <artifactId>corvo-parent</artifactId>
-    <version>0.4.0</version>
+    <groupId>dev.ginit.cero</groupId>
+    <artifactId>cero-parent</artifactId>
+    <version>0.5.0</version>
     <packaging>pom</packaging>
-    <name>Corvo</name>
+    <name>Cero</name>
     <description>Framework web para Java 21. Servidor HTTP propio, un hilo virtual por conexión y cero dependencias en ejecución.</description>
-    <url>https://corvo.ginit.dev</url>
+    <url>https://cero.ginit.dev</url>
 
     <licenses>
         <license>
@@ -32,26 +32,26 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/Andre031222/Corvo.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/Andre031222/Corvo.git</developerConnection>
-        <url>https://github.com/Andre031222/Corvo</url>
+        <connection>scm:git:https://github.com/Andre031222/Cero.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Andre031222/Cero.git</developerConnection>
+        <url>https://github.com/Andre031222/Cero</url>
         <tag>HEAD</tag>
     </scm>
 
     <modules>
-        <module>corvo-http</module>
-        <module>corvo-core</module>
-        <module>corvo-view</module>
-        <module>corvo-data</module>
-        <module>corvo-adapter-servlet</module>
+        <module>cero-http</module>
+        <module>cero-core</module>
+        <module>cero-view</module>
+        <module>cero-data</module>
+        <module>cero-adapter-servlet</module>
         <module>ejemplo</module>
-        <module>corvo-launcher</module>
-        <module>corvo-web</module>
+        <module>cero-launcher</module>
+        <module>cero-web</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <skipTests>false</skipTests>
     </properties>
 

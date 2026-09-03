@@ -91,7 +91,7 @@
             <thead><tr><th>Tipo</th><th>Qué recibe</th></tr></thead>
             <tbody>
               <tr><td class="mono-clave">Context</td><td>Todo el contexto de la petición</td></tr>
-              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de lux-http</td></tr>
+              <tr><td class="mono-clave">Request / Response</td><td>Los objetos crudos de cero-http</td></tr>
               <tr><td class="mono-clave">Session</td><td>La sesión, creándola si no existe</td></tr>
               <tr><td class="mono-clave">Principal</td><td>Quien haya autenticado el <code>Authenticator</code></td></tr>
               <tr><td class="mono-clave">Part</td><td>Un archivo del multipart, por nombre del parámetro</td></tr>
@@ -165,7 +165,7 @@ Result.status(<span class="st">404</span>, <span class="st">"no existe"</span>)
 }
 
 <span class="cm">// o a mano, útil para sustituir en pruebas</span>
-Lux.app().service(Reloj.class, () -&gt; Instant.now())</pre>
+Cero.app().service(Reloj.class, () -&gt; Instant.now())</pre>
         </div>
 
         <ul class="prosa">
@@ -271,7 +271,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
         <div class="titulo-seccion"><span class="indice-num">07</span><h2>Clase base opcional</h2></div>
 
         <p class="medida">
-          Un controlador de LuxCore no hereda de nada: es una clase normal con anotaciones, y el
+          Un controlador de Cero no hereda de nada: es una clase normal con anotaciones, y el
           <code>Context</code> llega por parámetro cuando hace falta. Si un controlador lo usa en
           casi todos sus métodos, puedes heredar de <code>Controller</code> y ahorrártelo.
         </p>
@@ -315,7 +315,7 @@ Map&lt;String,String&gt; p = Validation.problems(tarea);</pre>
           <div class="etiqueta">Por qué no guarda la petición en un campo</div>
           <p>
             Del controlador hay <b>una sola instancia</b>, compartida por todas las peticiones, y
-            LuxCore atiende cada conexión en su propio hilo virtual. Un campo con la petición
+            Cero atiende cada conexión en su propio hilo virtual. Un campo con la petición
             dentro sería una carrera: dos peticiones a la vez se lo pisarían y una acabaría
             respondiendo con los datos de la otra. Por eso las ayudas leen de un portador por hilo.
             Hay una prueba que lanza 200 peticiones simultáneas y comprueba que cada respuesta
@@ -407,7 +407,7 @@ sesion.invalidate();                     <span class="cm">// al salir</span></pr
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Sesiones compartidas</span><span class="etiqueta">Java</span></div>
 <pre>ServerOptions.builder()
-    .sessionStore(JdbcSessions.of(<span class="st">"lux_sesiones"</span>).createTable())
+    .sessionStore(JdbcSessions.of(<span class="st">"cero_sesiones"</span>).createTable())
     .sessionMaxLifetime(Duration.ofHours(<span class="st">12</span>))   <span class="cm">// tope de vida, no solo inactividad</span>
     .build();</pre>
         </div>
@@ -463,11 +463,11 @@ eventos.publish(<span class="kw">new</span> NoticiaPublicada(id));
           <div class="barra"><span class="etiqueta">Observabilidad</span><span class="etiqueta">Java</span></div>
 <pre>Metrics metricas = Metrics.enabled().ignore(<span class="st">"/estaticos"</span>);
 
-Lux.app()
+Cero.app()
    .service(metricas)
    .use(metricas)
    .use(AccessLog.combined())
-   .routes(r -&gt; r.get(<span class="st">"/lux/metrics"</span>, metricas.endpoint()))
+   .routes(r -&gt; r.get(<span class="st">"/cero/metrics"</span>, metricas.endpoint()))
    .start();</pre>
         </div>
 
@@ -487,7 +487,7 @@ Lux.app()
         <div class="titulo-seccion"><span class="indice-num">11</span><h2>Detrás de un proxy</h2></div>
 
         <p class="medida">
-          LuxCore habla <b>HTTP/1.1</b>. Para HTTP/2, HTTP/3 y certificados automáticos se le pone
+          Cero habla <b>HTTP/1.1</b>. Para HTTP/2, HTTP/3 y certificados automáticos se le pone
           delante nginx o Caddy, que además absorbe las conexiones lentas. Es la forma
           recomendada de desplegarlo.
         </p>
@@ -531,7 +531,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
         <div class="titulo-seccion"><span class="indice-num">12</span><h2>Con React, Svelte o Vue</h2></div>
 
         <p class="medida">
-          LuxCore no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
+          Cero no te obliga a usar su motor de plantillas. Puede servir <b>JSON y nada más</b> y
           dejar que el frontend lo pinte, que es lo normal hoy. Las dos formas conviven en la misma
           aplicación: unas rutas devuelven vistas y otras JSON.
         </p>
@@ -540,13 +540,13 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
 
         <p class="medida">
           El frontend en su servidor —<code>5173</code> para Vite, <code>3000</code> para Next— y
-          LuxCore en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
+          Cero en el suyo. Como son orígenes distintos, hay que abrir CORS para ese puerto y
           solo para ese:
         </p>
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Desarrollo</span><span class="etiqueta">Java</span></div>
-<pre>Lux.app()
+<pre>Cero.app()
    .use(Cors.allowing(<span class="st">"http://localhost:5173"</span>))
    .controllers(ApiController.class)
    .start();</pre>
@@ -561,7 +561,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
 
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Un jar con todo</span><span class="etiqueta">Java</span></div>
-<pre>Lux.app()
+<pre>Cero.app()
    .controllers(ApiController.class)          <span class="cm">// /api/... devuelve JSON</span>
    .fallback(StaticFiles.fromClasspath(<span class="st">"front"</span>).spa()
                         .cacheControl(<span class="st">"public, max-age=31536000, immutable"</span>))
@@ -596,7 +596,7 @@ StaticFiles.fromClasspath(<span class="st">"estaticos"</span>)
         <div class="codigo">
           <div class="barra"><span class="etiqueta">Estructura</span><span class="etiqueta">Texto</span></div>
 <pre>mi-proyecto/
-├── backend/            <span class="cm"># LuxCore — Maven, Java 21</span>
+├── backend/            <span class="cm"># Cero — Maven, Java 21</span>
 │   ├── pom.xml
 │   └── src/main/
 │       ├── java/...
@@ -651,7 +651,7 @@ eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
           <div class="etiqueta">Por qué el bucle no es un problema</div>
           <p>
             Ese <code>while</code> deja el hilo dentro mientras el panel esté abierto. Con hilos
-            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero LuxCore atiende
+            del sistema sería inviable —cien paneles, cien hilos bloqueados—, pero Cero atiende
             cada conexión en su <b>propio hilo virtual</b>: cien paneles son cien hilos virtuales,
             que cuestan unos cientos de bytes cada uno. Es la razón por la que aquí se puede
             escribir código que bloquea sin pagar por ello.
@@ -681,7 +681,7 @@ eventos.onmessage = e =&gt; pintar(JSON.parse(e.data));</pre>
         <div class="aviso nota">
           <div class="etiqueta">Sobre «programación reactiva»</div>
           <p>
-            LuxCore <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
+            Cero <b>no</b> tiene <i>Flux</i>, <i>Mono</i> ni nada parecido, y es una decisión.
             Ese estilo existe para no bloquear hilos del sistema, que son caros. Con los hilos
             virtuales de Java 21 dejan de serlo: puedes escribir código normal, de arriba abajo,
             que bloquea — y el rendimiento es el mismo sin el coste de encadenar operadores ni de

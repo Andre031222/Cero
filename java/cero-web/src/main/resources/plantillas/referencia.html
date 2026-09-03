@@ -1,0 +1,150 @@
+{% extends "base" %}
+
+{% block contenido %}
+  <header class="cabecera-pagina">
+    <h1 class="titulo-pagina">Referencia</h1>
+    <p class="entradilla">Motores de base de datos verificados, sistemas donde corre y comparación con su antecesor sobre Tomcat.</p>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="indice" aria-label="En esta página">
+      <ol>
+        <li><a href="#bases"><span class="n">01</span> Bases de datos</a></li>
+        <li><a href="#sistemas"><span class="n">02</span> Dónde corre</a></li>
+        <li><a href="#comparacion"><span class="n">03</span> Frente a Tomcat</a></li>
+      </ol>
+    </nav>
+    <main>
+<section id="bases">
+        <div class="titulo-seccion"><span class="indice-num">01</span><h2>Bases de datos</h2></div>
+
+        <p>
+          <code>cero-data</code> habla JDBC y nada más. Sirve cualquier motor con driver JDBC — el
+          driver lo pone tu aplicación, que es la única dependencia externa que Cero admite.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Motor</th><th>Estado</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">H2 2.2</td><td><span class="pastilla ok">Verificado</span></td><td>En memoria y en archivo. Motor de la aplicación de ejemplo y de sus 36 pruebas de punta a punta.</td></tr>
+              <tr><td class="mono">PostgreSQL 16</td><td><span class="pastilla ok">Verificado</span></td><td>47 casos en contenedor: <code>BIGSERIAL</code>, decimales exactos, booleanos nativos, fechas y <code>LIMIT/OFFSET</code>.</td></tr>
+              <tr><td class="mono">MySQL 8</td><td><span class="pastilla ok">Verificado</span></td><td>Los mismos 47 casos: <code>AUTO_INCREMENT</code>, booleanos sobre <code>TINYINT</code> y claves generadas.</td></tr>
+              <tr><td class="mono">MariaDB</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Comparte protocolo y dialecto con MySQL, así que debería comportarse igual.</td></tr>
+              <tr><td class="mono">SQL Server</td><td><span class="pastilla pend">Necesita trabajo</span></td><td>No admite <code>LIMIT/OFFSET</code>: usa <code>OFFSET … FETCH</code>. La paginación requiere un ajuste.</td></tr>
+              <tr><td class="mono">Oracle</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Devuelve las columnas en mayúsculas, que ya está contemplado desde que se corrigió ese fallo.</td></tr>
+              <tr><td class="mono">SQLite</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Sin concurrencia de escritura: el pool debería configurarse a 1.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Qué significa «verificado» aquí</div>
+          <p>
+            Los tres motores marcados pasan <b>la misma batería de 47 casos</b>, levantados en
+            contenedores: claves generadas, decimales exactos, booleanos, fechas, paginación,
+            alias en mayúsculas, transacciones confirmadas y deshechas, repositorios e inserción
+            por lotes. Esa batería encontró un fallo real —<code>Row.as()</code> ignoraba
+            <code>@Column</code> y devolvía los campos en null— que ninguna prueba con driver
+            simulado había detectado.
+          </p>
+        </div>
+      </section>
+<section id="sistemas">
+        <div class="titulo-seccion"><span class="indice-num">02</span><h2>Dónde corre</h2></div>
+
+        <p>
+          No hay código nativo ni nada específico de una plataforma. Donde haya un JDK 21 o
+          superior, corre igual.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 584 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 584 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
+              <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ficha">
+          <div class="campo">
+            <div class="etiqueta">Requisito real</div>
+            <div>Java 21 por los hilos virtuales: el servidor asigna uno por conexión, y sin ellos
+              el modelo no se sostiene. Se desarrolló y midió con OpenJDK 25.</div>
+          </div>
+          <div class="campo">
+            <div class="etiqueta">Sin código nativo</div>
+            <div>Ni JNI, ni bibliotecas del sistema, ni rutas absolutas. El JAR es el mismo en
+              todas partes.</div>
+          </div>
+        </div>
+      </section>
+<section id="comparacion">
+        <div class="titulo-seccion"><span class="indice-num">03</span><h2>Frente a Tomcat</h2></div>
+
+        <p>
+          Cero nace de JxMVC 3.4.0, un framework MVC que funciona y está en producción, pero
+          que necesita Tomcat para arrancar. La comparación es contra su propio antecesor.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">Cero</th></tr></thead>
+            <tbody>
+              <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">390 KB</td></tr>
+              <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
+              <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
+              <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
+              <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 342</td></tr>
+              <tr><td>Pruebas / código</td><td class="cifra">22 %</td><td class="cifra">54 %</td></tr>
+              <tr><td>rps <code>/json</code></td><td class="cifra">23 307</td><td class="cifra">25 431</td></tr>
+              <tr><td>Memoria (RSS)</td><td class="cifra">191 MB</td><td class="cifra">136 MB</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Contra los otros cinco</h3>
+
+        <p>
+          Los seis en contenedores idénticos, 64 conexiones, 30 segundos, mediana de cinco
+          repeticiones, cero errores. Ordenado por arranque.
+        </p>
+
+        <div class="envoltura">
+          <table>
+            <thead><tr><th>Framework</th><th class="cifra">Arranque</th><th class="cifra">Imagen</th><th class="cifra">RSS</th><th class="cifra">/plaintext</th><th class="cifra">/json</th><th class="cifra">/db</th></tr></thead>
+            <tbody>
+              <tr><td><b>Cero</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110,3 MB</td><td class="cifra"><b>136,4 MB</b></td><td class="cifra"><b>26 425</b></td><td class="cifra"><b>25 431</b></td><td class="cifra"><b>25 931</b></td></tr>
+              <tr><td>Javalin</td><td class="cifra">451 ms</td><td class="cifra">115,2 MB</td><td class="cifra">285,7 MB</td><td class="cifra">21 994</td><td class="cifra">25 125</td><td class="cifra">24 459</td></tr>
+              <tr><td>JxMVC</td><td class="cifra">698 ms</td><td class="cifra"><b>110,1 MB</b></td><td class="cifra">191,5 MB</td><td class="cifra">24 240</td><td class="cifra">23 307</td><td class="cifra">18 771</td></tr>
+              <tr><td>Quarkus</td><td class="cifra">707 ms</td><td class="cifra">123,2 MB</td><td class="cifra">259,8 MB</td><td class="cifra">25 515</td><td class="cifra">22 744</td><td class="cifra">21 258</td></tr>
+              <tr><td>Micronaut</td><td class="cifra">838 ms</td><td class="cifra">120,7 MB</td><td class="cifra">201,2 MB</td><td class="cifra">18 381</td><td class="cifra">19 088</td><td class="cifra">17 213</td></tr>
+              <tr><td>Spring Boot</td><td class="cifra">1467 ms</td><td class="cifra">127,3 MB</td><td class="cifra">352,5 MB</td><td class="cifra">19 809</td><td class="cifra">20 432</td><td class="cifra">20 088</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aviso nota">
+          <div class="etiqueta">Qué dice esta tabla, y qué no</div>
+          <p>
+            Dice que Cero <b>gana en todo menos en tamaño de imagen</b>, y ahí pierde por
+            0,2 MB. Arranca 4,3 veces más rápido que el siguiente, gasta la menor memoria de los
+            seis y lidera los tres endpoints. En <code>/db</code> —el que mide el framework
+            haciendo trabajo de verdad— saca un 38 % al JxMVC del que viene.
+          </p>
+          <p>
+            Y no dice cifras absolutas citables: se midió en Docker Desktop, dentro de una VM.
+            Las condiciones fueron idénticas para los seis, así que la comparación es justa; los
+            números sueltos hay que repetirlos en bare-metal antes de ponerlos en ningún sitio.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+{% end %}

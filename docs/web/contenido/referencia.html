@@ -16,8 +16,8 @@
         <div class="titulo-seccion"><span class="indice-num">01</span><h2>Bases de datos</h2></div>
 
         <p>
-          <code>lux-data</code> habla JDBC y nada más. Sirve cualquier motor con driver JDBC — el
-          driver lo pone tu aplicación, que es la única dependencia externa que LuxCore admite.
+          <code>cero-data</code> habla JDBC y nada más. Sirve cualquier motor con driver JDBC — el
+          driver lo pone tu aplicación, que es la única dependencia externa que Cero admite.
         </p>
 
         <div class="envoltura">
@@ -59,8 +59,8 @@
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 342 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 342 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 584 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 584 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 21 y 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -84,16 +84,16 @@
         <div class="titulo-seccion"><span class="indice-num">03</span><h2>Frente a Tomcat</h2></div>
 
         <p>
-          LuxCore nace de JxMVC 3.4.0, un framework MVC que funciona y está en producción, pero
+          Cero nace de JxMVC 3.4.0, un framework MVC que funciona y está en producción, pero
           que necesita Tomcat para arrancar. La comparación es contra su propio antecesor.
         </p>
 
         <div class="envoltura">
           <table>
-            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">LuxCore</th></tr></thead>
+            <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">Cero</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">308 KB</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">390 KB</td></tr>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
@@ -116,7 +116,7 @@
           <table>
             <thead><tr><th>Framework</th><th class="cifra">Arranque</th><th class="cifra">Imagen</th><th class="cifra">RSS</th><th class="cifra">/plaintext</th><th class="cifra">/json</th><th class="cifra">/db</th></tr></thead>
             <tbody>
-              <tr><td><b>LuxCore</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110,3 MB</td><td class="cifra"><b>136,4 MB</b></td><td class="cifra"><b>26 425</b></td><td class="cifra"><b>25 431</b></td><td class="cifra"><b>25 931</b></td></tr>
+              <tr><td><b>Cero</b></td><td class="cifra"><b>106 ms</b></td><td class="cifra">110,3 MB</td><td class="cifra"><b>136,4 MB</b></td><td class="cifra"><b>26 425</b></td><td class="cifra"><b>25 431</b></td><td class="cifra"><b>25 931</b></td></tr>
               <tr><td>Javalin</td><td class="cifra">451 ms</td><td class="cifra">115,2 MB</td><td class="cifra">285,7 MB</td><td class="cifra">21 994</td><td class="cifra">25 125</td><td class="cifra">24 459</td></tr>
               <tr><td>JxMVC</td><td class="cifra">698 ms</td><td class="cifra"><b>110,1 MB</b></td><td class="cifra">191,5 MB</td><td class="cifra">24 240</td><td class="cifra">23 307</td><td class="cifra">18 771</td></tr>
               <tr><td>Quarkus</td><td class="cifra">707 ms</td><td class="cifra">123,2 MB</td><td class="cifra">259,8 MB</td><td class="cifra">25 515</td><td class="cifra">22 744</td><td class="cifra">21 258</td></tr>
@@ -129,7 +129,7 @@
         <div class="aviso nota">
           <div class="etiqueta">Qué dice esta tabla, y qué no</div>
           <p>
-            Dice que LuxCore <b>gana en todo menos en tamaño de imagen</b>, y ahí pierde por
+            Dice que Cero <b>gana en todo menos en tamaño de imagen</b>, y ahí pierde por
             0,2 MB. Arranca 4,3 veces más rápido que el siguiente, gasta la menor memoria de los
             seis y lidera los tres endpoints. En <code>/db</code> —el que mide el framework
             haciendo trabajo de verdad— saca un 38 % al JxMVC del que viene.

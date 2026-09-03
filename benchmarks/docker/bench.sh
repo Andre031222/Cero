@@ -31,9 +31,20 @@ REPO="$(cd "$HERE/../.." && pwd)"
 OUT="$HERE/../results/RESULTS-docker.md"
 CSV="$HERE/../results/raw-docker.csv"
 
-# Orden: jxmvc primero, luego los rivales. El contexto de build de jxmvc es el REPO
-# (necesita compilar JxMVC.Core); el de los demás es su propia carpeta.
-APPS=(corvo jxmvc spring quarkus micronaut javalin)
+# Orden: jxmvc primero, luego los rivales. El contexto de build de cero es el REPO; el de los
+# demás es su propia carpeta.
+#
+# JxMVC ya no vive aquí: este repositorio es solo Cero. Para incluirlo en la comparación hay que
+# decir dónde está su código, y si no se dice, se salta diciéndolo — antes se intentaba compilar
+# y fallaba, que es la forma de perder un contendiente sin enterarse.
+#
+#   JXMVC_SRC=~/ruta/a/jxmvc-core ./bench.sh
+APPS=(cero spring quarkus micronaut javalin)
+if [ -n "${JXMVC_SRC:-}" ] && [ -f "${JXMVC_SRC}/pom.xml" ]; then
+  APPS=(cero jxmvc "${APPS[@]:1}")
+elif [ -n "${JXMVC_SRC:-}" ]; then
+  echo "JXMVC_SRC=$JXMVC_SRC no tiene pom.xml; se omite JxMVC de la comparación."
+fi
 # BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 
@@ -84,7 +95,15 @@ for fw in "${APPS[@]}"; do
   img="bench-$fw"
   blog="/tmp/bench-build-$fw.log"
   bok=1
-  if [ "$fw" = "jxmvc" ] || [ "$fw" = "corvo" ]; then
+  if [ "$fw" = "jxmvc" ]; then
+    # Un contexto de build sólo puede tener una raíz, así que se arma uno temporal con el
+    # código de JxMVC —que vive fuera— y la aplicación del banco, que vive aquí.
+    ctx="$(mktemp -d)"
+    cp -R "$JXMVC_SRC" "$ctx/jxmvc-core"
+    mkdir -p "$ctx/app" && cp -R "$HERE/apps/jxmvc/app/." "$ctx/app/"
+    docker build -t "$img" -f "$HERE/apps/jxmvc/Dockerfile" "$ctx" >"$blog" 2>&1 || bok=0
+    rm -rf "$ctx"
+  elif [ "$fw" = "cero" ]; then
     docker build -t "$img" -f "$HERE/apps/$fw/Dockerfile" "$REPO" >"$blog" 2>&1 || bok=0
   elif [ "$fw" = "quarkus-native" ]; then
     docker build -t "$img" -f "$HERE/apps/quarkus/Dockerfile.native" "$HERE/apps/quarkus" >"$blog" 2>&1 || bok=0

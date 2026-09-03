@@ -1,13 +1,13 @@
 # Resultados del benchmark — corrida bare-metal de julio de 2026
 
-> **Histórico, y sin Corvo.** Esta es la corrida en Arch bare-metal que sirvió de línea base al
-> paper, hecha antes de que Corvo existiera como contendiente. Se conserva porque es la única
+> **Histórico, y sin Cero.** Esta es la corrida en Arch bare-metal que sirvió de línea base al
+> paper, hecha antes de que Cero existiera como contendiente. Se conserva porque es la única
 > medición en hardware sin virtualizar que tenemos.
 >
-> La corrida **actual**, con los seis frameworks incluido Corvo, está en
+> La corrida **actual**, con los seis frameworks incluido Cero, está en
 > [`RESULTS-docker.md`](RESULTS-docker.md) — pero es Docker Desktop sobre macOS: comparación
 > justa entre ellos, cifras absolutas no citables. Repetir *esta* corrida en bare-metal, ya con
-> Corvo dentro, es lo que falta para tener números publicables.
+> Cero dentro, es lo que falta para tener números publicables.
 
 Acompañan: [`STATS.md`](STATS.md) (mediana + [min–max]), [`ENV.md`](ENV.md) (entorno),
 [`raw-docker.csv`](raw-docker.csv) (60 filas crudas). Metodología: [`../README.md`](../README.md).

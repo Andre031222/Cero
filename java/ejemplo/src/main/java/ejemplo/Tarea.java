@@ -1,11 +1,11 @@
 package ejemplo;
 
-import corvo.core.Length;
-import corvo.core.OneOf;
-import corvo.core.Required;
-import corvo.data.Column;
-import corvo.data.Id;
-import corvo.data.Table;
+import cero.core.Length;
+import cero.core.OneOf;
+import cero.core.Required;
+import cero.data.Column;
+import cero.data.Id;
+import cero.data.Table;
 
 @Table("tareas")
 public record Tarea(
