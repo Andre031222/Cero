@@ -75,6 +75,7 @@ final class MensajesTests {
         Check.group("textos");
         sinRed();
         sinLlamarABase();
+        elMapaDeLaPlantilla();
         baseEnOtroIdioma();
 
         Check.group("textos por HTTP");
@@ -135,6 +136,29 @@ final class MensajesTests {
                 t.get("qu", "saludo", "Richar"), "Rimaykullayki, Richar");
         Check.equal("el nuevo base es el último recurso de los demás",
                 t.get("en", "faltaEnIngles"), "Solo está en castellano");
+    }
+
+    /**
+     * El mapa que ve la plantilla tiene que ser un mapa de verdad, no solo responder a `get`.
+     * Con `containsKey` diciendo que sí a todo y `entrySet` vacío, un `if` sobre una clave que
+     * no existe era cierto y un `for` sobre los textos no recorría nada. Sin dar error.
+     */
+    private static void elMapaDeLaPlantilla() {
+        Messages t = Messages.from("textos", "en", "qu");
+        java.util.Map<String, String> mapa = new Textos(t, "es");
+
+        Check.that("una clave que existe está", mapa.containsKey("saludo"));
+        Check.that("una que no, no está", !mapa.containsKey("noExisteEstaClave"));
+        Check.that("el mapa no está vacío", !mapa.isEmpty());
+        Check.that("y su tamaño coincide con lo que recorre", mapa.size() == mapa.entrySet().size());
+        Check.that("recorrerlo da los textos, no las claves",
+                mapa.entrySet().stream().anyMatch(e -> "saludo".equals(e.getKey())
+                        && e.getValue().startsWith("Hola")));
+
+        java.util.Map<String, String> ingles = new Textos(t, "en");
+        Check.that("un idioma hereda las claves del base",
+                ingles.containsKey("faltaEnIngles"));
+        Check.equal("y su valor cae al base", ingles.get("faltaEnIngles"), "Solo está en castellano");
     }
 
     private static void sinRed() {
