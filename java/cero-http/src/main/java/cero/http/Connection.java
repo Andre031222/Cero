@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
 
 final class Connection implements Runnable, Watchdog.Vigilada {
 
@@ -14,15 +15,24 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     private final Socket socket;
     private final ServerContext context;
-    private final Runnable release;
+    private final Consumer<Connection> release;
 
     /** Instante en que vence la petición en vuelo, o 0 si no hay ninguna. Lo lee el watchdog. */
     private volatile long limiteNanos;
 
+    /**
+     * Cierto mientras la conexión solo espera la siguiente petición.
+     *
+     * <p>Lo lee el apagado, y por eso no vale reutilizar {@link #limiteNanos}: ese solo se marca
+     * cuando hay límite de manejador puesto, y con {@code handlerTimeoutMillis} a cero una
+     * petición en vuelo pasaría por ociosa y se le cortaría el socket a media respuesta.
+     */
+    private volatile boolean ociosa = true;
+
     /** Buffer de cabeceras compartido por todas las peticiones de esta conexión. */
     private AsciiBuffer head;
 
-    Connection(Socket socket, ServerContext context, Runnable release) {
+    Connection(Socket socket, ServerContext context, Consumer<Connection> release) {
         this.socket = socket;
         this.context = context;
         this.release = release;
@@ -55,7 +65,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
         } catch (IOException cause) {
             context.reporter().transport(cause);
         } finally {
-            release.run();
+            release.accept(this);
         }
     }
 
@@ -76,6 +86,8 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             if (request == null) {
                 return;
             }
+            // Desde aquí hay algo que terminar: el apagado ya no puede cortar esta conexión.
+            ociosa = false;
 
             boolean last = served + 1 == options.maxKeepAliveRequests();
             boolean keepAlive = wantsKeepAlive(request) && !last && context.accepting().getAsBoolean();
@@ -95,7 +107,30 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             if (!keepAlive || !drain(request)) {
                 return;
             }
+            ociosa = true;
         }
+    }
+
+    /**
+     * Cierra el socket si la conexión solo estaba esperando. Lo llama {@link Server#stop()}.
+     *
+     * <p>Una conexión con keep-alive que espera la siguiente petición está bloqueada leyendo, y
+     * {@code shutdown()} no la interrumpe. Sin esto, el apagado gasta la ventana de gracia entera
+     * en no esperar a nadie: diez segundos por despliegue, y otros diez por cada servidor que
+     * arranca y para la batería de pruebas.
+     *
+     * @return si se cerró, es decir, si no había nada en vuelo
+     */
+    boolean cerrarSiOciosa() {
+        if (!ociosa) {
+            return false;
+        }
+        try {
+            socket.close();
+        } catch (IOException ignorado) {
+            // Cerrando un socket que ya estaba roto: es justo lo que se quería.
+        }
+        return true;
     }
 
     private boolean guarded(IncomingRequest request, OutgoingResponse response, OutputStream out) {
