@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cero — órdenes de Cero. Sin dependencias más allá de Maven y un JDK 21.
+# cero — órdenes de Cero. Sin dependencias más allá de Maven y un JDK 25.
 #
 # Las órdenes van en inglés, que es lo que espera quien llega de fuera. Las de antes
 # —correr, probar, instalar…— siguen valiendo como alias y no se anuncian.
@@ -33,8 +33,10 @@ requisitos() {
   command -v java >/dev/null || { malo "falta un JDK"; exit 1; }
   local v
   v=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
-  if [ "${v:-0}" -lt 21 ] 2>/dev/null; then
-    malo "Cero necesita Java 21 o superior (hilos virtuales); tienes $v"
+  if [ "${v:-0}" -lt 25 ] 2>/dev/null; then
+    # 25 y no 21: el pom compila con `release 25`, así que dejar pasar un 21 solo cambia este
+    # mensaje por el de javac, que no dice qué hacer. Los instaladores de docs/ ya piden 25.
+    malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v"
     exit 1
   fi
 }
@@ -202,13 +204,13 @@ case "${1:-ayuda}" in
     cp=$(ls -d "$JAVA_DIR"/cero-*/target/cero-*.jar | tr '\n' ':')
     tmp=$(mktemp -d)
     cat > "$tmp/Sitio.java" <<'JAVA'
-import cero.core.Lux;
+import cero.core.Cero;
 import cero.http.StaticFiles;
 import java.nio.file.Path;
 
 public class Sitio {
     public static void main(String[] args) throws Exception {
-        Lux.app().port(Integer.parseInt(args[1]))
+        Cero.app().port(Integer.parseInt(args[1]))
            .fallback(StaticFiles.from(Path.of(args[0])))
            .start().await();
     }

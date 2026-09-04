@@ -7,7 +7,7 @@
     <version>0.5.0</version>
     <packaging>pom</packaging>
     <name>Cero</name>
-    <description>Framework web para Java 21. Servidor HTTP propio, un hilo virtual por conexión y cero dependencias en ejecución.</description>
+    <description>Web framework for Java 25. Its own HTTP server, one virtual thread per connection, and zero runtime dependencies.</description>
     <url>https://cero.ginit.dev</url>
 
     <licenses>
@@ -119,7 +119,11 @@
                             <encoding>UTF-8</encoding>
                             <docencoding>UTF-8</docencoding>
                             <charset>UTF-8</charset>
-                            <locale>es_ES</locale>
+                            <!-- Sin `locale`: la prosa del javadoc está en castellano y ahí no
+                                 hay nada que hacer, pero forzando es_ES también salían en
+                                 castellano la navegación y los títulos que genera la
+                                 herramienta. Quien llega desde Maven Central sin saber
+                                 castellano al menos puede recorrer la estructura. -->
                             <doclint>none</doclint>
                         </configuration>
                     </plugin>
