@@ -6,6 +6,8 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,6 +26,9 @@ public final class Server implements AutoCloseable {
     private final ServerContext context;
     private final AtomicInteger active = new AtomicInteger();
     private final CountDownLatch stopped = new CountDownLatch(1);
+
+    /** Las conexiones vivas, para poder cerrar en el apagado las que solo esperan. */
+    private final Set<Connection> abiertas = ConcurrentHashMap.newKeySet();
 
     private volatile boolean running = true;
 
@@ -80,6 +85,12 @@ public final class Server implements AutoCloseable {
         }
         running = false;
         closeQuietly(socket);
+        // Primero las que no tienen nada que terminar. Una conexión con keep-alive ociosa está
+        // bloqueada leyendo la siguiente petición y `shutdown()` no la interrumpe, así que sin
+        // esto el apagado se come la ventana de gracia entera sin esperar a nadie.
+        for (Connection conexion : abiertas) {
+            conexion.cerrarSiOciosa();
+        }
         connections.shutdown();
         try {
             if (!connections.awaitTermination(options.shutdownGraceMillis(), TimeUnit.MILLISECONDS)) {
@@ -131,14 +142,22 @@ public final class Server implements AutoCloseable {
                 closeQuietly(client);
                 continue;
             }
+            Connection conexion = new Connection(client, context, this::soltar);
+            abiertas.add(conexion);
             try {
-                connections.execute(new Connection(client, context, active::decrementAndGet));
+                connections.execute(conexion);
             } catch (RejectedExecutionException rejected) {
-                active.decrementAndGet();
+                soltar(conexion);
                 closeQuietly(client);
             }
         }
         stopped.countDown();
+    }
+
+    /** La conexión terminó: deja de contar y deja de ser candidata a cerrarse en el apagado. */
+    private void soltar(Connection conexion) {
+        abiertas.remove(conexion);
+        active.decrementAndGet();
     }
 
     private static void closeQuietly(AutoCloseable target) {

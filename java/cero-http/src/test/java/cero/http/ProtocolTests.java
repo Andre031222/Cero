@@ -44,6 +44,64 @@ final class ProtocolTests {
             malformedRequests(port);
             limits(port);
         }
+
+        apagadoConKeepAliveOcioso();
+        apagadoEsperaLoQueEstaEnVuelo();
+    }
+
+    /**
+     * Una conexión con keep-alive parada entre peticiones no tiene nada que terminar, así que el
+     * apagado no debe gastar en ella la ventana de gracia. Antes se la gastaba entera: diez
+     * segundos por cada `stop()`, con el socket abierto y sin una sola petición en vuelo.
+     */
+    private static void apagadoConKeepAliveOcioso() throws Exception {
+        ServerOptions options = ServerOptions.builder()
+                .port(0).shutdownGraceMillis(10_000).build();
+        Server server = Server.start(options, ProtocolTests::route, ErrorReporter.silent());
+        long millis;
+        try (Socket socket = new Socket("127.0.0.1", server.port())) {
+            socket.getOutputStream().write("GET / HTTP/1.1\r\nHost: x\r\n\r\n"
+                    .getBytes(StandardCharsets.ISO_8859_1));
+            socket.getOutputStream().flush();
+            Fixture.readHead(socket.getInputStream());
+
+            long comienzo = System.nanoTime();
+            server.stop();
+            millis = (System.nanoTime() - comienzo) / 1_000_000;
+        }
+        Check.that("el apagado no espera por una conexión ociosa (" + millis + " ms)", millis < 1_000);
+    }
+
+    /**
+     * Y el otro lado del trato: una petición a medias sí se termina. Cortarla para ahorrarse la
+     * espera convertiría el apagado ordenado en el desordenado que se quería evitar.
+     */
+    private static void apagadoEsperaLoQueEstaEnVuelo() throws Exception {
+        java.util.concurrent.CountDownLatch dentro = new java.util.concurrent.CountDownLatch(1);
+        ServerOptions options = ServerOptions.builder()
+                .port(0).shutdownGraceMillis(5_000).handlerTimeoutMillis(0).build();
+        Server server = Server.start(options, (peticion, respuesta) -> {
+            dentro.countDown();
+            try {
+                Thread.sleep(400);
+            } catch (InterruptedException cortado) {
+                Thread.currentThread().interrupt();
+            }
+            respuesta.text("terminada");
+        }, ErrorReporter.silent());
+
+        String base = "http://127.0.0.1:" + server.port();
+        var respuesta = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try {
+                return Fixture.get(base + "/").body();
+            } catch (Exception fallo) {
+                return "cortada: " + fallo.getClass().getSimpleName();
+            }
+        });
+
+        dentro.await();
+        server.stop();
+        Check.equal("el apagado sí espera a la petición en vuelo", respuesta.get(), "terminada");
     }
 
     private static void route(Request request, Response response) throws Exception {
