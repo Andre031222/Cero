@@ -51,26 +51,42 @@ public final class Messages {
      * <p>Los idiomas hay que nombrarlos: el classpath no se puede listar de forma fiable cuando
      * la aplicación va dentro de un jar, así que descubrirlos solos funcionaría en desarrollo y
      * fallaría al desplegar. Vale más pedirlos que fallar solo en producción.
+     *
+     * <p>El archivo sin sufijo entra directamente con el nombre del idioma base. Antes se
+     * guardaba bajo una clave vacía a la espera de {@link #base}, y quien no llamara a ese
+     * método se quedaba sin idioma base sin enterarse: la negociación lo elegía, la búsqueda no
+     * lo encontraba y la página salía con los nombres de las claves.
      */
     public static Messages from(String nombre, String... idiomas) {
         Messages m = new Messages();
-        m.cargar(nombre, "", "/" + nombre + ".properties");
+        m.cargar(m.base, "/" + nombre + ".properties", false);
         for (String idioma : idiomas) {
-            m.cargar(nombre, idioma, "/" + nombre + "." + idioma + ".properties");
+            m.cargar(idioma, "/" + nombre + "." + idioma + ".properties", true);
         }
         return m;
     }
 
-    /** El idioma del archivo sin sufijo, y el último recurso de la cadena. */
+    /**
+     * El idioma del archivo sin sufijo, y el último recurso de la cadena.
+     *
+     * <p>Solo hace falta si ese archivo no está en castellano, que es lo que se supone por
+     * defecto. Llamarlo con {@code "es"} no hace nada.
+     */
     public Messages base(String idioma) {
+        if (idioma.equals(base)) {
+            return this;
+        }
+        Properties delBase = porIdioma.remove(base);
         base = idioma;
-        Properties sinSufijo = porIdioma.remove("");
-        if (sinSufijo != null) {
-            porIdioma.merge(idioma, sinSufijo, (nuevo, viejo) -> {
-                viejo.putAll(nuevo);
-                return viejo;
+        if (delBase != null) {
+            // Si ya había un archivo con el nombre nuevo, ese manda: es más específico que el
+            // que venía sin sufijo.
+            porIdioma.merge(idioma, delBase, (existente, llegado) -> {
+                llegado.putAll(existente);
+                return llegado;
             });
         }
+        resueltos.clear();
         return this;
     }
 
@@ -174,10 +190,14 @@ public final class Messages {
         return valor;
     }
 
-    private void cargar(String nombre, String idioma, String recurso) {
+    /**
+     * @param obligatorio un idioma que se pidió por nombre y no está es un error; el archivo sin
+     *                    sufijo, en cambio, puede no existir si todo va con sufijo
+     */
+    private void cargar(String idioma, String recurso, boolean obligatorio) {
         try (InputStream entrada = Messages.class.getResourceAsStream(recurso)) {
             if (entrada == null) {
-                if (!idioma.isEmpty()) {
+                if (obligatorio) {
                     throw new IllegalArgumentException("no se encontró " + recurso);
                 }
                 return;
@@ -186,7 +206,12 @@ public final class Messages {
             // UTF-8 explícito. Java lee .properties en UTF-8 desde la 9, pero decirlo aquí
             // quita la duda: estos archivos llevan acentos y eñes en todas las líneas.
             p.load(new InputStreamReader(entrada, StandardCharsets.UTF_8));
-            porIdioma.put(idioma, p);
+            // Puede haber ya algo con ese nombre: el archivo sin sufijo entró con el del idioma
+            // base. Entre los dos, lo que viene con sufijo manda.
+            porIdioma.merge(idioma, p, (existente, llegado) -> {
+                existente.putAll(llegado);
+                return existente;
+            });
         } catch (IOException cause) {
             throw new IllegalStateException("no se pudo leer " + recurso, cause);
         }
