@@ -149,9 +149,9 @@ def main() -> int:
         print("    mvn test              # y que siga pasando")
         print("    git checkout .        # si algo no cuadra, se deshace entero\n")
         print("  Ojo con lo que este guion NO puede saber por ti:")
-        print("    · la cookie de sesión pasó a llamarse CORVOSESSION — al desplegar,")
+        print("    · la cookie de sesión pasó a llamarse CEROSESSION — al desplegar,")
         print("      quien estuviera dentro tendrá que volver a entrar")
-        print("    · las métricas ahora son corvo_requests_total y /corvo/metrics:")
+        print("    · las métricas ahora son cero_requests_total y /cero/metrics:")
         print("      hay que actualizar el scrapeo de Prometheus y los paneles\n")
     return 0
 

@@ -18,7 +18,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: ['21', '25']
+        # Solo 25: el pom compila con `release 25` y el javac de 21 no acepta un objetivo
+        # mayor que el suyo, así que ese trabajo fallaba al compilar antes de la primera
+        # prueba. Queda la matriz por si vuelve a haber más de una versión que sostener.
+        jdk: ['25']
 
     services:
       postgres:
@@ -89,7 +92,7 @@ jobs:
         run: mvn -B -DskipTests package
 
       - uses: actions/upload-artifact@v4
-        if: matrix.jdk == '21'
+        if: matrix.jdk == '25'
         with:
           name: jars
           path: java/*/target/*.jar
