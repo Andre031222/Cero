@@ -11,6 +11,7 @@
     <artifactId>cero-http</artifactId>
     <packaging>jar</packaging>
     <name>cero-http</name>
+    <description>HTTP/1.1 server with one virtual thread per connection: keep-alive, chunked, reloadable TLS, cookies, sessions, multipart, gzip, static files with Range, WebSocket and SSE. No dependencies outside the JDK.</description>
 
     <build>
         <plugins>

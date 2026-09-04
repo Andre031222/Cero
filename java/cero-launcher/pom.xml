@@ -11,6 +11,7 @@
     <artifactId>cero-launcher</artifactId>
     <packaging>jar</packaging>
     <name>cero-launcher</name>
+    <description>Packages an application and its dependencies into an executable jar using only java.util.jar, with no third-party plugins.</description>
 
     <dependencies>
         <dependency>

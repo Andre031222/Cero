@@ -11,6 +11,7 @@
     <artifactId>cero-view</artifactId>
     <packaging>jar</packaging>
     <name>cero-view</name>
+    <description>Template engine with inheritance, loops and conditionals, and HTML escaping on by default. No dependencies outside the JDK.</description>
 
     <dependencies>
         <dependency>

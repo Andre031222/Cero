@@ -11,6 +11,7 @@
     <artifactId>cero-core</artifactId>
     <packaging>jar</packaging>
     <name>cero-core</name>
+    <description>Router, middleware, dependency injection, its own JSON, declarative validation, CORS, CSRF, rate limiting, security headers, metrics, OAuth 2.0 with PKCE, W3C tracing, i18n and OpenAPI. No dependencies outside the JDK.</description>
 
     <dependencies>
         <dependency>

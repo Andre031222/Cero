@@ -11,6 +11,7 @@
     <artifactId>cero-data</artifactId>
     <packaging>jar</packaging>
     <name>cero-data</name>
+    <description>JDBC data access without an ORM: Row, Db, Pool, Tx, Repository, schema migrations and table-backed sessions. Tested against real H2, PostgreSQL and MySQL.</description>
 
     <dependencies>
         <dependency>
