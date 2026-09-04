@@ -19,6 +19,14 @@ public final class StaticFiles implements Handler {
     private final String mount;
     private final String indexFile;
     private volatile String cacheControl;
+
+    /**
+     * Los documentos HTML se revalidan siempre salvo que se diga otra cosa.
+     *
+     * <p>El valor por defecto no es {@code null} a propósito: sin él, el navegador aplica su
+     * heurística y un {@code index.html} servido sin cabecera puede quedarse cacheado horas.
+     */
+    private volatile String cacheControlDocumento = "no-cache";
     private volatile String spaPagina;
     /**
      * Recursos del classpath ya leídos. Solo entran los que existen y caben: la clave la elige
@@ -55,6 +63,27 @@ public final class StaticFiles implements Handler {
      */
     public StaticFiles cacheControl(String valor) {
         this.cacheControl = valor;
+        return this;
+    }
+
+    /**
+     * Valor de {@code Cache-Control} para los documentos HTML, que no es el mismo.
+     *
+     * <p>Por defecto {@code "no-cache"}: el navegador guarda el documento pero pregunta antes de
+     * usarlo, y el {@code ETag} hace que la respuesta sea un 304 vacío mientras no cambie. El
+     * coste es una ida y vuelta; lo que evita es que un despliegue sea invisible.
+     *
+     * <p><b>Por qué se separa del resto.</b> Un asset con huella en el nombre puede ser
+     * {@code immutable} un año porque, si cambia, cambia su nombre. Un {@code index.html} no
+     * tiene huella: su nombre es siempre el mismo y dentro van los nombres de los assets. Servir
+     * ese documento como inmutable congela la página entera — el navegador nunca vuelve a
+     * pedirlo, así que nunca se entera de que existen assets nuevos, y quien ya visitó el sitio
+     * sigue viendo la versión vieja hasta que caduque el plazo. Con un año, para siempre.
+     *
+     * <p>Pasa sobre todo con {@link #spa()}, donde el mismo documento responde a todas las rutas.
+     */
+    public StaticFiles cacheControlDocumento(String valor) {
+        this.cacheControlDocumento = valor;
         return this;
     }
 
@@ -116,7 +145,9 @@ public final class StaticFiles implements Handler {
             if (respaldoSpa(request, relative)) {
                 target = resolve(spaPagina);
                 if (target != null && Files.isRegularFile(target)) {
-                    response.type(MimeTypes.of(spaPagina));
+                    String tipo = MimeTypes.of(spaPagina);
+                    cabeceraDeCache(response, tipo);
+                    response.type(tipo);
                     response.send(Files.readAllBytes(target));
                     return;
                 }
@@ -152,10 +183,9 @@ public final class StaticFiles implements Handler {
         response.header("ETag", etag);
         response.header("Last-Modified", HttpDate.format(modified));
         response.header("Accept-Ranges", "bytes");
-        if (cacheControl != null) {
-            response.header("Cache-Control", cacheControl);
-        }
-        response.type(MimeTypes.of(target.getFileName().toString()));
+        String tipo = MimeTypes.of(target.getFileName().toString());
+        cabeceraDeCache(response, tipo);
+        response.type(tipo);
 
         long tamano = attributes.size();
         Ranges pedido = rangoPedido(request, etag, tamano);
@@ -188,6 +218,19 @@ public final class StaticFiles implements Handler {
     }
 
     /** El intervalo pedido, o {@code null} si hay que servir el recurso entero. */
+    /**
+     * El documento y el asset no se guardan igual, y confundirlos deja el sitio congelado.
+     *
+     * @param tipo el MIME ya resuelto, que es lo que distingue un documento de un recurso
+     */
+    private void cabeceraDeCache(Response response, String tipo) {
+        boolean documento = tipo != null && tipo.startsWith("text/html");
+        String valor = documento ? cacheControlDocumento : cacheControl;
+        if (valor != null) {
+            response.header("Cache-Control", valor);
+        }
+    }
+
     private static Ranges rangoPedido(Request request, String etag, long tamano) {
         String condicion = request.header("If-Range");
         if (condicion != null && !condicion.trim().equals(etag)) {
@@ -244,7 +287,9 @@ public final class StaticFiles implements Handler {
             name = withIndex;
         } else if (!classpathExists(name)) {
             if (respaldoSpa(request, relative) && classpathExists(spaPagina)) {
-                response.type(MimeTypes.of(spaPagina));
+                String tipo = MimeTypes.of(spaPagina);
+                cabeceraDeCache(response, tipo);
+                response.type(tipo);
                 response.send(cachear(spaPagina));
                 return;
             }
@@ -259,10 +304,9 @@ public final class StaticFiles implements Handler {
         }
         response.header("ETag", etag);
         response.header("Accept-Ranges", "bytes");
-        if (cacheControl != null) {
-            response.header("Cache-Control", cacheControl);
-        }
-        response.type(MimeTypes.of(name));
+        String tipo = MimeTypes.of(name);
+        cabeceraDeCache(response, tipo);
+        response.type(tipo);
 
         Ranges pedido = rangoPedido(request, etag, content.length);
         if (pedido == Ranges.NO_SATISFACIBLE) {

@@ -15,6 +15,8 @@ final class StaticFilesTests {
     static void run() throws Exception {
         Check.group("archivos estáticos");
 
+        cacheDelDocumentoYDelAsset();
+
         Path root = Files.createTempDirectory("lux-static");
         Files.writeString(root.resolve("index.html"), "<h1>inicio</h1>");
         Files.writeString(root.resolve("estilo.css"), "body{margin:0}");
@@ -224,5 +226,51 @@ final class StaticFilesTests {
         Check.equal("mayúsculas", MimeTypes.of("A.PNG"), "image/png");
         Check.equal("sin extensión", MimeTypes.of("LICENSE"), "application/octet-stream");
         Check.equal("extensión desconocida", MimeTypes.of("a.xyz"), "application/octet-stream");
+    }
+
+    /**
+     * El documento y el asset no se cachean igual, y confundirlos congela el sitio.
+     *
+     * <p>Esto salió de un fallo en producción: el sitio servía su `index.html` con
+     * `max-age=31536000, immutable`, así que quien ya había entrado no volvía a pedirlo nunca.
+     * Como los nombres de los assets van dentro de ese HTML, tampoco se enteraba de que existían
+     * versiones nuevas. Cada despliegue era invisible para todo visitante que repitiera.
+     */
+    private static void cacheDelDocumentoYDelAsset() throws Exception {
+        Path raiz = Files.createTempDirectory("cero-cache");
+        Files.writeString(raiz.resolve("index.html"), "<h1>portada</h1>");
+        Files.createDirectory(raiz.resolve("assets"));
+        Files.writeString(raiz.resolve("assets").resolve("app-a1b2c3.css"), "body{}");
+
+        ServerOptions opciones = ServerOptions.builder().port(0).build();
+        try (Server servidor = Server.start(opciones,
+                StaticFiles.from(raiz).spa().cacheControl("public, max-age=31536000, immutable"),
+                ErrorReporter.silent())) {
+            String base = "http://127.0.0.1:" + servidor.port();
+
+            Check.equal("el asset con huella sí es inmutable",
+                    Fixture.get(base + "/assets/app-a1b2c3.css").headers()
+                            .firstValue("Cache-Control").orElse("-"),
+                    "public, max-age=31536000, immutable");
+
+            Check.equal("el documento se revalida, no se congela",
+                    Fixture.get(base + "/index.html").headers()
+                            .firstValue("Cache-Control").orElse("-"),
+                    "no-cache");
+
+            Check.equal("y la ruta de la SPA, que devuelve ese mismo documento, tampoco",
+                    Fixture.get(base + "/una/ruta/del/cliente").headers()
+                            .firstValue("Cache-Control").orElse("-"),
+                    "no-cache");
+        }
+
+        try (Server servidor = Server.start(opciones,
+                StaticFiles.from(raiz).spa().cacheControlDocumento("max-age=60"),
+                ErrorReporter.silent())) {
+            Check.equal("y se puede decir otra cosa si se quiere",
+                    Fixture.get("http://127.0.0.1:" + servidor.port() + "/").headers()
+                            .firstValue("Cache-Control").orElse("-"),
+                    "max-age=60");
+        }
     }
 }
