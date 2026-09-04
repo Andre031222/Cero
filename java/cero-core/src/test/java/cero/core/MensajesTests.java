@@ -74,6 +74,8 @@ final class MensajesTests {
     static void run() throws Exception {
         Check.group("textos");
         sinRed();
+        sinLlamarABase();
+        baseEnOtroIdioma();
 
         Check.group("textos por HTTP");
         porHttp();
@@ -104,6 +106,35 @@ final class MensajesTests {
         } finally {
             servidor.stop();
         }
+    }
+
+    /**
+     * El camino que nadie cubría: `from(...)` a secas, sin encadenar `base(...)`. El archivo sin
+     * sufijo se guardaba bajo una clave vacía mientras el idioma base ya valía «es», así que la
+     * negociación elegía «es» y la búsqueda no encontraba nada — la página salía con los nombres
+     * de las claves y solo un aviso por consola lo decía.
+     */
+    private static void sinLlamarABase() {
+        Messages t = Messages.from("textos", "en", "qu");
+
+        Check.equal("el idioma base responde sin tener que declararlo",
+                t.get("es", "saludo", "Richar"), "Hola, Richar");
+        Check.that("y aparece entre los idiomas cargados", t.idiomas().contains("es"));
+        Check.that("sin dejar la clave vacía suelta", !t.idiomas().contains(""));
+        Check.equal("los demás idiomas siguen en su sitio",
+                t.get("qu", "saludo", "Richar"), "Rimaykullayki, Richar");
+    }
+
+    /** Y si el archivo sin sufijo no está en castellano, `base(...)` lo mueve sin perder nada. */
+    private static void baseEnOtroIdioma() {
+        Messages t = Messages.from("textos", "en", "qu").base("qu");
+
+        Check.equal("el archivo sin sufijo pasa a llamarse como se le diga",
+                t.get("qu", "faltaEnIngles"), "Solo está en castellano");
+        Check.equal("y lo que ya tenía ese nombre manda sobre él",
+                t.get("qu", "saludo", "Richar"), "Rimaykullayki, Richar");
+        Check.equal("el nuevo base es el último recurso de los demás",
+                t.get("en", "faltaEnIngles"), "Solo está en castellano");
     }
 
     private static void sinRed() {
