@@ -173,6 +173,25 @@ public final class Messages {
         return base;
     }
 
+    /** Las claves visibles en un idioma: las suyas más las que hereda del base. */
+    Set<String> claves(String idioma) {
+        Set<String> todas = new java.util.LinkedHashSet<>();
+        Properties b = porIdioma.get(base);
+        if (b != null) {
+            b.stringPropertyNames().forEach(todas::add);
+        }
+        Properties p = porIdioma.get(idioma);
+        if (p != null) {
+            p.stringPropertyNames().forEach(todas::add);
+        }
+        return todas;
+    }
+
+    /** Si la clave existe de verdad, sin el respaldo de devolverla como texto. */
+    boolean tiene(String idioma, String clave) {
+        return buscar(idioma, clave) != null;
+    }
+
     private String buscar(String idioma, String clave) {
         String cacheado = resueltos.get(idioma + "|" + clave);
         if (cacheado != null) {

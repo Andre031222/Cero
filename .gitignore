@@ -42,7 +42,6 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 # jar que arma el guion de despliegue en la raíz
 /cero-web.jar
-/lux-web.jar
 /ejemplo.jar
 
 # === Rust (fase 3) ===
