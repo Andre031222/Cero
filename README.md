@@ -3,7 +3,7 @@
 Framework web para Java que arranca solo, sin contenedor de servlets y sin una sola dependencia
 externa. Pensado desde el principio para vivir en más de un lenguaje.
 
-[![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-15803d?style=flat-square)](LICENSE)
+[![Licencia: Apache 2.0](https://img.shields.io/badge/Licencia-Apache_2.0-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-25%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
 [![Pruebas](https://img.shields.io/badge/Pruebas-1624-15803d?style=flat-square)](#estado)
@@ -212,7 +212,8 @@ compilación de terceros— y se regenera con `./cero build`. El mismo generador
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
+Apache 2.0 — ver [LICENSE](LICENSE) y [NOTICE](NOTICE). El código heredado de JxMVC 3.4.0
+conserva su aviso MIT original dentro de [NOTICE](NOTICE), como exige Apache 2.0.
 
 Autores: **Richar Andre Vilca-Solorzano** y **Ramiro Pedro Laura-Murillo**.
 Universidad Nacional del Altiplano, Puno, Perú.
