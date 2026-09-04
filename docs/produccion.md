@@ -5,8 +5,8 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 584 pruebas en verde**, cero dependencias en el núcleo verificadas en cada corrida de CI.
-- Arranca en ~100 ms dentro de un contenedor y pesa 368 KB. El resto de contendientes, medidos
+- **1 624 pruebas en verde**, cero dependencias en el núcleo verificadas en cada corrida de CI.
+- Arranca en ~100 ms dentro de un contenedor y pesa 372 KB. El resto de contendientes, medidos
   a la vez y en las mismas condiciones, tardan entre 4 y 13 veces más.
 - El endurecimiento HTTP es explícito y está probado: rechaza cabeceras plegadas,
   `Content-Length` duplicado, `Content-Length` junto a `Transfer-Encoding`, `Host` ausente o
@@ -33,7 +33,26 @@ Y el sitio de referencia ya no depende de Tomcat: es `cero-web`.
 
 **Criterio:** una aplicación pequeña en producción de verdad, con tráfico real, durante semanas.
 
-### 2. El parser HTTP tiene dos días
+### 2. No hay HTTP/2, y el despliegue lo da por supuesto
+
+El servidor habla HTTP/1.1 y nada más. El vhost de `cero.ginit.dev` pone nginx delante y lo dice
+por escrito: absorbe TLS, slowloris y HTTP/2, «los tres puntos donde el servidor propio de Cero es
+más joven».
+
+Mientras eso sea así, **«sin contenedor» lleva nota al pie**: no hace falta Tomcat, pero sí un
+proxy. Para un despliegue real eso está bien —casi nadie expone un proceso de aplicación
+directamente a internet— pero no es lo que promete la portada, y conviene no confundir las dos
+cosas.
+
+**Por qué no está hecho:** un HTTP/2 correcto es capa de tramas, HPACK con Huffman y tabla
+dinámica, multiplexación de flujos y control de ventana. Son unas dos mil líneas dentro del
+módulo más sensible del proyecto, y hacerlo a medias ahí es peor que no tenerlo: los fallos de un
+parser de tramas mal cerrado no se ven, se explotan.
+
+**Criterio:** o se implementa entero con su propio banco de conformidad, o la documentación dice
+en primera línea que el despliegue recomendado lleva un proxy delante. Hoy vale la segunda.
+
+### 3. El parser HTTP tiene dos días
 
 Tomcat lleva 25 años recibiendo tráfico hostil y tiene un historial de CVEs ya corregidos que
 nosotros vamos a redescubrir por nuestra cuenta. Que la auditoría encontrara una inyección CRLF a
@@ -48,7 +67,7 @@ Los cuatro corregidos.
 **Lo que falta:** una suite reconocida de terceros. No existe libre para HTTP/1.1, así que la
 alternativa realista es ampliar los vectores propios.
 
-### 3. `cero-data` contra motores reales · **hecho**
+### 4. `cero-data` contra motores reales · **hecho**
 
 Los 47 casos de `MotorTests` corren contra **H2, PostgreSQL 16 y MySQL 8** en Docker: claves
 generadas, decimales exactos, booleanos, fechas, paginación con `LIMIT`/`OFFSET`, alias en
@@ -61,7 +80,7 @@ debían coincidir y no coincidían. Corregido haciendo que ambos usen el mismo r
 
 **Pendiente aquí:** SQL Server y Oracle, y el comportamiento ante caída y reconexión del motor.
 
-### 4. Los números de rendimiento · **medidos, y no dicen lo que se creía**
+### 5. Los números de rendimiento · **medidos, y no dicen lo que se creía**
 
 Los 94 610 rps de la medición casera no valían: cliente y servidor en la misma máquina, con `ab`,
 sin aislamiento. Ya están sustituidos por una corrida del harness con Cero como sexto
@@ -83,7 +102,7 @@ Lo medido es en Docker Desktop: los números relativos son justos, los absolutos
 programaba una tarea por petición que al cancelarse no salía de la cola; con eso corregido bajó a
 136,4 MB. Sigue por encima de la meta absoluta de 120 MB, pero ya es el más bajo de los seis.
 
-### 5. Las pruebas adversariales son ráfagas, no maratones · **parcialmente hecho**
+### 6. Las pruebas adversariales son ráfagas, no maratones · **parcialmente hecho**
 
 `HostileTests` ya cubre lo que faltaba en ráfaga: conexiones lentas que caducan, 20 sockets mudos
 a la vez, `Content-Length` que miente, un chunk de 4 GB declarado, 15 clientes cortando a media
@@ -100,7 +119,7 @@ descriptores e hilos. Una corrida de 30 minutos con 64 conexiones: RSS de 382,6 
 
 **Lo que falta:** días, no minutos, y con conexiones hostiles mezcladas.
 
-### 6. Huecos operativos conocidos
+### 7. Huecos operativos conocidos
 
 | Hueco | Impacto |
 |---|---|
