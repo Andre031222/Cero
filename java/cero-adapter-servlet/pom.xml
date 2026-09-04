@@ -11,6 +11,7 @@
     <artifactId>cero-adapter-servlet</artifactId>
     <packaging>jar</packaging>
     <name>cero-adapter-servlet</name>
+    <description>Adapter to deploy a Cero application inside a servlet container (Tomcat 10.1+) without touching its code, so migrating stays reversible.</description>
 
     <dependencies>
         <dependency>
