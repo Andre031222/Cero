@@ -169,6 +169,17 @@ public final class Context {
      * <p>Se resuelve una vez y se guarda: {@code Accept-Language} no cambia a mitad de petición,
      * y una plantilla puede llamar a {@code t()} decenas de veces.
      */
+    /**
+     * La traza de esta petición, o {@code null} si no hay trazado puesto.
+     *
+     * <p>Casi nunca hace falta: el log y las llamadas salientes ya la llevan solas. Sirve para
+     * enseñarle el número a quien está mirando la pantalla — «error, referencia 4bf92f35…»— para
+     * que lo pueda pegar en un ticket.
+     */
+    public Trace trace() {
+        return Trace.actual();
+    }
+
     public String idioma() {
         if (idioma == null) {
             idioma = messages == null ? "" : messages.negociar(header("Accept-Language"));

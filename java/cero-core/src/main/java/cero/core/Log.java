@@ -76,8 +76,15 @@ public final class Log {
         StringBuilder linea = new StringBuilder(96)
                 .append(RELOJ.format(Instant.now()))
                 .append("  ").append(etiqueta(candidato))
-                .append("  ").append(nombre)
-                .append("  ").append(interpolar(mensaje, datos));
+                .append("  ").append(nombre);
+
+        // La traza va aquí y no la pone quien llama: un identificador que hay que acordarse de
+        // pasar en cada log es un identificador que falta justo en la línea que hacía falta.
+        String traza = Trace.idActual();
+        if (traza != null) {
+            linea.append("  ").append(traza);
+        }
+        linea.append("  ").append(interpolar(mensaje, datos));
 
         if (fallo != null) {
             linea.append("  ").append(fallo.getClass().getSimpleName())

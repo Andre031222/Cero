@@ -72,11 +72,14 @@ public final class AccessLog implements Middleware {
                 + (context.request().rawQuery() == null ? "" : "?" + context.request().rawQuery());
 
         if (!combinado) {
-            return String.format("%s  %-6s %-3d %5d ms  %s",
-                    RELOJ.format(Instant.now()), context.method(), estado, millis, destinoPeticion);
+            return String.format("%s  %-6s %-3d %5d ms  %s%s",
+                    RELOJ.format(Instant.now()), context.method(), estado, millis, destinoPeticion,
+                    traza());
         }
 
-        return String.format("%s - %s [%s] \"%s %s %s\" %d %d %d \"%s\" \"%s\"",
+        // La traza al final y no en medio: así una línea de un servicio sin trazado sigue
+        // pareciéndose a la de siempre, y las herramientas que ya leen «combined» no se rompen.
+        return String.format("%s - %s [%s] \"%s %s %s\" %d %d %d \"%s\" \"%s\"%s",
                 cliente(context),
                 context.principal() == null ? "-" : context.principal().id(),
                 RELOJ.format(Instant.now()),
@@ -84,7 +87,14 @@ public final class AccessLog implements Middleware {
                 estado, millis,
                 longitud(context),
                 valor(context.header("Referer")),
-                valor(context.header("User-Agent")));
+                valor(context.header("User-Agent")),
+                traza());
+    }
+
+    /** {@code "  <traza>"} si hay trazado puesto, y cadena vacía si no. */
+    private static String traza() {
+        String actual = Trace.idActual();
+        return actual == null ? "" : "  " + actual;
     }
 
     private String cliente(Context context) {
