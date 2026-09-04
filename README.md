@@ -22,7 +22,10 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 > [`docs/migrar-a-cero.md`](docs/migrar-a-cero.md).
 
 **En producción:** [cero.ginit.dev](https://cero.ginit.dev) — el sitio de este proyecto,
-servido por el propio framework, sin Tomcat detrás.
+servido por el propio framework, sin Tomcat detrás. Su código está abierto en
+[`cero-sitio`](https://github.com/Andre031222/cero-sitio): React con Vite delante, Cero detrás,
+los dos dentro del mismo jar. Es la aplicación de ejemplo más completa que hay, y se puede
+comprobar que la afirmación de arriba es cierta en vez de creerla.
 
 ![Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 372 KB](docs/imagenes/portada.png)
 
