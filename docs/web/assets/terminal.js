@@ -18,7 +18,7 @@
       titulo: 'Instalación',
       subtitulo: 'De cero a un servidor respondiendo, en cuatro órdenes.',
       repetir: 'Repetir',
-      nota: 'Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 21</code> o superior. Nada más — Cero no tiene dependencias externas.',
+      nota: 'Requisitos: <code>git</code>, <code>Maven</code> y un <code>JDK 25</code> o superior. Nada más — Cero no tiene dependencias externas.',
       pasos: [
         { n: '01', que: 'Clonar', cuanto: '~2 s' },
         { n: '02', que: 'Compilar y probar', cuanto: '~90 s' },
@@ -30,7 +30,7 @@
       titulo: 'Installation',
       subtitulo: 'From nothing to a running server, in four commands.',
       repetir: 'Replay',
-      nota: 'You need <code>git</code>, <code>Maven</code> and a <code>JDK 21</code> or newer. That is all — Cero has no external dependencies.',
+      nota: 'You need <code>git</code>, <code>Maven</code> and a <code>JDK 25</code> or newer. That is all — Cero has no external dependencies.',
       pasos: [
         { n: '01', que: 'Clone', cuanto: '~2 s' },
         { n: '02', que: 'Build and test', cuanto: '~90 s' },
@@ -70,9 +70,9 @@
       { t: 'giro', v: 'cero-web',  dur: 500,  fin: '[INFO] cero-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1584, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 390 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 390 KB', cls: 'ok' },
+      { t: 'contar', hasta: 1624, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 372 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 372 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },

@@ -22,6 +22,20 @@ Se escribe **Cero**, con mayúscula, también a mitad de frase: es una palabra c
 castellano y en minúscula desaparece dentro del texto. En artefactos y órdenes va en minúscula,
 como siempre: `cero-core`, `cero new`.
 
+### Java 25
+
+**Sube el mínimo de JDK 21 a JDK 25**, y es lo único de esta versión capaz de impedir que
+arranque una aplicación que hoy funciona. Va aquí arriba y no entre los arreglos por eso: el
+renombrado se resuelve con una orden, pero un servidor que corre un JRE 21 no ejecuta este jar
+—ni con el nombre viejo ni con el nuevo—.
+
+El motivo es de plataforma, no de código: nada del framework usa una función posterior a la 21.
+Se sube para no sostener dos objetivos de compilación a la vez, y porque el despliegue de
+referencia ya corre sobre Temurin 25.
+
+Comprueba las dos máquinas, que no son la misma: la que compila y la que ejecuta. Ver
+[migrar-a-cero.md](migrar-a-cero.md).
+
 ### Qué cambia de nombre
 
 - Paquetes `corvo.*` → `cero.*`. Clases `Corvo` → `Cero` y `CorvoServlet` → `CeroServlet`.
@@ -95,6 +109,29 @@ en 0.4.0, que era lo menos rodado.
 - **UTF-8 mal formado en un marco de texto** se sustituía en silencio en vez de cerrar con 1007,
   y las longitudes de marco no exigían la forma más corta. Los dos según RFC 6455.
 
+### Trazado distribuido
+
+**`Trace` — W3C Trace Context.** La cabecera `traceparent` entra, se hereda y sale:
+
+```java
+Cero.app().use(Trace.middleware()).start();
+```
+
+Desde ahí el identificador **aparece solo** en cada línea de `Log`, en el log de acceso y en las
+llamadas salientes de `Http`. Ese es el punto: un trazado que hay que pasar a mano de método en
+método se pierde en el primer método que no lo pasa, y entonces no sirve para nada.
+
+La respuesta lleva `Trace-Id`, que convierte «me dio error» en «me dio error, aquí tienes el
+número». `Trace.middlewareCallado()` lo omite si el servicio da a internet.
+
+Una cabecera inválida no tumba la petición: se descarta y se empieza traza propia — un proxy mal
+configurado no debe convertirse en una caída. Se validan versión, longitudes, hex en minúscula y
+los identificadores todo a ceros, con 10 vectores.
+
+**No trae exportador de tramos ni mide duraciones por operación.** Para eso está un agente de
+OpenTelemetry, que no es asunto de un framework sin dependencias. Cero pone lo que solo Cero
+puede poner: que el identificador entre, viaje y salga.
+
 ### Arreglado por el camino
 
 - La versión que se escribía en el pom de cada proyecto nuevo estaba clavada en una constante y
@@ -106,7 +143,7 @@ en 0.4.0, que era lo menos rodado.
 
 ### Estado
 
-**1 584 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
+**1 624 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
 
 ---
 
