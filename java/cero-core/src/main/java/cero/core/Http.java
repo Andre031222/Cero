@@ -191,6 +191,12 @@ public final class Http {
         if (acepta != null) {
             constructor.header("Accept", acepta);
         }
+        // La traza sigue a la llamada saliente. Va antes de las cabeceras de quien llama para
+        // que una `traceparent` puesta a mano gane: propagar es la ayuda, no la norma.
+        Trace traza = Trace.actual();
+        if (traza != null && !cabeceras.containsKey("traceparent")) {
+            constructor.header("traceparent", traza.traceparent());
+        }
         cabeceras.forEach(constructor::header);
         return constructor.build();
     }
