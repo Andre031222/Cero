@@ -143,7 +143,7 @@ puede poner: que el identificador entre, viaje y salga.
 
 ### Estado
 
-**1 624 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
+**1 718 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
 
 ---
 
