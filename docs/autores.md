@@ -9,7 +9,7 @@ Cero es obra de dos autores de la **Universidad Nacional del Altiplano**, Puno, 
 
 No se reparte el trabajo por partes: los dos figuran como autores del proyecto.
 
-Cero se distribuye bajo licencia MIT. El aviso de copyright está en [LICENSE](../LICENSE); la
+Cero se distribuye bajo licencia Apache 2.0. El aviso de copyright está en [LICENSE](../LICENSE); la
 procedencia del código heredado, en [origen.md](origen.md).
 
 ## Sobre las cabeceras del código

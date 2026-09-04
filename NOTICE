@@ -2,10 +2,16 @@ Cero
 Copyright (c) 2026 Richar Andre Vilca-Solorzano
 y Ramiro Pedro Laura-Murillo
 
-Distribuido bajo licencia MIT. Ver LICENSE.
+Distribuido bajo la licencia Apache 2.0. Ver LICENSE.
 
-Cero parte del código de JxMVC 3.4.0, publicado bajo licencia MIT con el
-mismo autor principal. Ver docs/origen.md.
+Cero parte del código de JxMVC 3.4.0, publicado bajo licencia MIT con el mismo
+autor principal. Esa licencia MIT sigue aplicando al código heredado y su aviso
+se conserva aquí porque Apache 2.0 lo exige: sublicenciar obra MIT no borra su
+aviso original. Ver docs/origen.md.
+
+    JxMVC 3.4.0
+    Copyright (c) 2025 Richar Andre Vilca-Solorzano
+    Publicado bajo licencia MIT.
 
 Los cuatro módulos del núcleo -- cero-http, cero-core, cero-view y cero-data --
 no dependen de nada fuera del JDK, así que ningún jar de terceros se
