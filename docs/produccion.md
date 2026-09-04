@@ -5,7 +5,10 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 624 pruebas en verde**, cero dependencias en el núcleo verificadas en cada corrida de CI.
+- **1 718 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
+  de CI. Esa cifra es la de la corrida con PostgreSQL y MySQL levantados, que es la de CI.
+  Sin ellos, `MotorTests` se omite —y lo dice— y salen 1 624: si mides en local y no
+  cuadra, es por eso.
 - Arranca en ~100 ms dentro de un contenedor y pesa 372 KB. El resto de contendientes, medidos
   a la vez y en las mismas condiciones, tardan entre 4 y 13 veces más.
 - El endurecimiento HTTP es explícito y está probado: rechaza cabeceras plegadas,

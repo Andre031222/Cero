@@ -70,7 +70,7 @@
       { t: 'giro', v: 'cero-web',  dur: 500,  fin: '[INFO] cero-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1624, dur: 900,
+      { t: 'contar', hasta: 1718, dur: 900,
         plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 372 KB'
                       : '        {n} tests · 0 failures · 0 dependencies · 372 KB', cls: 'ok' },
       { t: 'blank' },
