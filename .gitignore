@@ -105,3 +105,13 @@ java/cero-web/src/main/resources/estaticos/cero-*.sha256
 
 # El borrador del paper de JxMVC. No es de este repositorio y no se publica.
 main.pdf
+
+# === Credenciales, nunca ===
+# `settings.xml` es donde Maven guarda el usuario y la contraseña de publicación. Central lo
+# ofrece para descargar y es fácil dejarlo caer en la carpeta del proyecto en vez de en ~/.m2 —
+# pasó una vez. En un repositorio público eso es publicar la llave con la que se firman los
+# artefactos, así que se ignora aquí para que no exista ni la posibilidad.
+settings.xml
+**/settings.xml
+*.gpg
+secring.*
