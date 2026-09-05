@@ -180,7 +180,8 @@ Lo verificado, y cómo:
 - **Media hora de carga continua** sin fuga: el RSS acabó más bajo que al empezar y los
   descriptores no se movieron.
 
-Lo que falta está en [docs/produccion.md](docs/produccion.md), sin adornos. En una línea: **nadie
+Lo que falta está en [docs/produccion.md](docs/produccion.md), sin adornos. Cómo se publica
+una versión, en [docs/publicar.md](docs/publicar.md). En una línea: **nadie
 lo ha usado en producción con tráfico real durante meses**, y eso no se arregla programando.
 
 Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaciones en Rust y C++.
