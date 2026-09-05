@@ -237,3 +237,61 @@ mvn -Ppublicar -Dgpg.skip=true verify
 
 Eso genera los jar de fuentes y javadoc de los seis módulos y falla si falta algo de lo que Central
 exige. Es lo que se corrió al preparar la 0.6.0.
+
+---
+
+## La clave de este proyecto
+
+```
+rsa4096/5A1974A4F17D56AC
+Richar Andre Vilca-Solorzano <andrevilcasolorzano@gmail.com>
+```
+
+Ese identificador es **público** y no es ninguna contraseña: es lo que se manda a los servidores
+de claves para que Central pueda comprobar las firmas. Se puede enseñar en cualquier sitio.
+
+### Cambiar la contraseña de la clave
+
+Una contraseña de GPG **no se recupera**. No hay «la he olvidado»: si nadie la tiene, la clave se
+tira y se hace otra. Lo único que hay es una rendija — mientras `gpg-agent` la tenga en memoria,
+se puede poner una nueva **sin saber la vieja**.
+
+La memoria dura diez minutos desde el último uso, y se pierde entera al reiniciar el ordenador.
+Así que esto se hace en la misma sesión en la que se acaba de firmar algo, o ya no se puede.
+
+**Paso 1 — poner la nueva.** El `loopback` es para que pregunte en la terminal y no salte la
+ventana gris del sistema:
+
+```bash
+gpg --pinentry-mode loopback --passwd 5A1974A4F17D56AC
+```
+
+Pide la nueva dos veces. **Al escribir no se ve nada** —ni puntos ni asteriscos—; no está colgado.
+
+**Paso 2 — comprobarla de verdad:**
+
+```bash
+gpgconf --kill gpg-agent
+echo prueba | gpg --clearsign > /dev/null && echo "funciona"
+```
+
+El orden no es negociable: en el paso 1 todavía no hace falta saberla, y al llegar al 2 ya se
+sabe porque se acaba de poner. Al revés se puede uno quedar fuera de su propia clave.
+
+> **`gpg-connect-agent "clear_passphrase ..."` no vale para vaciar la memoria.** Contesta `OK` y
+> no vacía nada, así que la comprobación pasa sin haber escrito la contraseña y da un falso
+> «esa era». Lo único que la vacía es `gpgconf --kill gpg-agent`.
+
+### Si la ventana se cerró
+
+No es grave, y no afecta a nada ya publicado: las versiones firmadas siguen firmadas. Se genera
+una clave nueva, se sube a los servidores y se sigue publicando con ella.
+
+```bash
+gpg --full-generate-key
+gpg --list-secret-keys --keyid-format=long          # apuntar el nuevo identificador
+gpg --keyserver keyserver.ubuntu.com --send-keys EL-NUEVO
+```
+
+Conviene revocar la vieja para que quede claro que ya no se usa, pero eso hace falta la
+contraseña — si no se sabe, se queda sin revocar y no pasa nada mayor.
