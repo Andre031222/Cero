@@ -247,6 +247,10 @@ final class Hpack {
         List<Campo> decodificar(byte[] bloque) {
             List<Campo> campos = new ArrayList<>();
             Lector in = new Lector(bloque);
+            // §4.2: los cambios de tamaño de la tabla van al principio del bloque y en ningún
+            // otro sitio. Uno al final significaría que la tabla cambió a mitad de decodificar,
+            // y entonces los índices de este mismo bloque ya no querrían decir lo mismo.
+            boolean todaviaAlPrincipio = true;
             while (in.hay()) {
                 int b = in.leer();
                 if ((b & 0x80) != 0) {                       // §6.1 indexado
@@ -254,12 +258,17 @@ final class Hpack {
                     if (i == 0) {
                         throw new Rota("índice 0 no existe");
                     }
+                    todaviaAlPrincipio = false;
                     campos.add(enIndice(i));
                 } else if ((b & 0x40) != 0) {                // §6.2.1 literal, se indexa
+                    todaviaAlPrincipio = false;
                     Campo c = literal(in, 6);
                     indexar(c);
                     campos.add(c);
                 } else if ((b & 0x20) != 0) {                // §6.3 cambio de tamaño
+                    if (!todaviaAlPrincipio) {
+                        throw new Rota("cambio de tamaño de tabla fuera del principio del bloque");
+                    }
                     int nuevo = leerEntero(in, 5);
                     if (nuevo > topeMaximo) {
                         throw new Rota("la tabla dinámica pedida supera lo acordado");
@@ -267,6 +276,7 @@ final class Hpack {
                     tope = nuevo;
                     podar();
                 } else {                                      // §6.2.2 y §6.2.3 literal sin indexar
+                    todaviaAlPrincipio = false;
                     campos.add(literal(in, 4));
                 }
             }
