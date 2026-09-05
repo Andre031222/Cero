@@ -5,7 +5,7 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 826 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
+- **1 830 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
   de CI. Esa cifra es la de la corrida con PostgreSQL y MySQL levantados, que es la de CI.
   Sin ellos, `MotorTests` se omite —y lo dice— y salen 1 624: si mides en local y no
   cuadra, es por eso.
@@ -47,10 +47,16 @@ Están la capa de tramas, HPACK completo, multiplexación de verdad —24 petici
 saliendo en tramas según se escriben, CONTINUATION, trailers, SETTINGS negociados, PING,
 RST_STREAM y GOAWAY con el código exacto que pide el RFC en cada caso.
 
-Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **35 requisitos
+Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **39 requisitos
 numerados** en [spec/http2.md](../spec/http2.md), separando los que rompen la conexión de los que
 solo cortan un flujo — confundirlos convierte una petición mal formada en una caída de todo lo que
 ese cliente tuviera en vuelo.
+
+Entre ellos, **las cuatro inundaciones conocidas del protocolo**: CONTINUATION sin fin
+(CVE-2024-27316), Rapid Reset (CVE-2023-44487), amplificación por tramas de control y bombas de
+expansión en HPACK. Ninguna es una entrada malformada —cada trama es válida por separado— así que
+no las caza ningún control de sintaxis: hacen falta topes explícitos, y aquí están puestos y
+probados.
 
 **Lo que sigue faltando** está escrito allí: prioridad de escritura entre flujos,
 `SETTINGS_MAX_HEADER_LIST_SIZE` y vectores de expansión en HPACK. Nada de eso impide usarlo.

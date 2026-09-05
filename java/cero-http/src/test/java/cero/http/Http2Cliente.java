@@ -164,6 +164,40 @@ final class Http2Cliente implements AutoCloseable {
         return salida.toByteArray();
     }
 
+    /**
+     * Un bloque que se expande al descomprimirse: la bomba de HPACK.
+     *
+     * <p>Mete un valor grande en la tabla dinámica con un literal indexado, y luego lo referencia
+     * {@code veces} veces con un octeto por referencia. En el cable son unos pocos kilobytes; al
+     * salir son megabytes. Es el ataque que hace que limitar el bloque comprimido no baste.
+     */
+    byte[] bombaHpack(int tamanoValor, int veces) {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        byte[] nombre = "x-grande".getBytes(StandardCharsets.ISO_8859_1);
+        byte[] valor = "v".repeat(tamanoValor).getBytes(StandardCharsets.ISO_8859_1);
+
+        // 0x40: literal con indexación. Nombre nuevo, así que el índice va a cero.
+        salida.write(0x40);
+        salida.write(nombre.length);
+        salida.write(nombre, 0, nombre.length);
+        // Longitud del valor: entero de siete bits con continuación.
+        int resto = valor.length;
+        salida.write(0x7F);
+        resto -= 127;
+        while (resto >= 0x80) {
+            salida.write((resto & 0x7F) | 0x80);
+            resto >>>= 7;
+        }
+        salida.write(resto);
+        salida.write(valor, 0, valor.length);
+
+        // Y ahora la entrada recién añadida, que es el índice 62, repetida.
+        for (int i = 0; i < veces; i++) {
+            salida.write(0x80 | 62);
+        }
+        return salida.toByteArray();
+    }
+
     /** Abre un flujo con una petición sin cuerpo. Devuelve su identificador. */
     int pedir(String metodo, String ruta, String... cabecerasExtra) throws IOException {
         int flujo = siguienteFlujo;
