@@ -42,6 +42,13 @@ que ejecuta. Si el servidor arranca con un JRE viejo, súbelo **antes** de despl
 
 ### 1 · Instala Cero 0.6.0
 
+**Desde el 5 de septiembre de 2026 este paso te lo puedes saltar.** La 0.6.0 está en Maven
+Central, así que Maven se baja los artefactos solo al compilar la aplicación: no hay que clonar
+ni compilar el framework para migrar.
+
+Sigue haciendo falta si quieres la orden `cero` a mano —para `cero new` o `cero fatjar`— o si
+trabajas sin conexión:
+
 ```bash
 cd <el-repositorio-de-cero>
 ./cero install          # compila, prueba e instala en ~/.m2
