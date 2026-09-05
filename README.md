@@ -82,6 +82,23 @@ Linux sin virtualizar antes de citarse.
 
 Java 25 o superior (hilos virtuales) y Maven. Nada más.
 
+Está en Maven Central desde la 0.6.0. Tres líneas y ya está:
+
+```xml
+<dependency>
+    <groupId>dev.ginit.cero</groupId>
+    <artifactId>cero-core</artifactId>   <!-- arrastra cero-http -->
+    <version>0.6.0</version>
+</dependency>
+```
+
+`cero-view`, `cero-data`, `cero-adapter-servlet` y `cero-launcher` van aparte, y se toman solo si
+se usan. Ninguno arrastra nada de fuera.
+
+### El instalador
+
+Sirve para tener la orden `cero`, que es la que crea proyectos ya montados.
+
 ![Una orden instala Cero, crea un proyecto y lo arranca en 10 ms](docs/imagenes/instalar.gif)
 
 ```bash
