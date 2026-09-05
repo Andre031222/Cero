@@ -16,6 +16,11 @@ public record ServerOptions(
         long maxBodyBytes,
         int readBufferBytes,
         int maxKeepAliveRequests,
+        int http2MaxFlujos,
+        int http2MaxBloqueCabeceras,
+        int http2MaxListaCabeceras,
+        int http2MaxAnulados,
+        int http2MaxControlSeguidas,
         int sessionTimeoutMillis,
         long sessionMaxLifetimeMillis,
         SessionStore sessionStore,
@@ -62,7 +67,12 @@ public record ServerOptions(
                 .shutdownGraceMillis(shutdownGraceMillis).maxRequestLineBytes(maxRequestLineBytes)
                 .maxHeaderBytes(maxHeaderBytes).maxHeaderCount(maxHeaderCount)
                 .maxBodyBytes(maxBodyBytes).readBufferBytes(readBufferBytes)
-                .maxKeepAliveRequests(maxKeepAliveRequests).sessionTimeoutMillis(sessionTimeoutMillis)
+                .maxKeepAliveRequests(maxKeepAliveRequests)
+                .http2MaxFlujos(http2MaxFlujos).http2MaxBloqueCabeceras(http2MaxBloqueCabeceras)
+                .http2MaxListaCabeceras(http2MaxListaCabeceras)
+                .http2MaxAnulados(http2MaxAnulados)
+                .http2MaxControlSeguidas(http2MaxControlSeguidas)
+                .sessionTimeoutMillis(sessionTimeoutMillis)
                 .sessionMaxLifetime(sessionMaxLifetimeMillis)
                 .sessionStore(sessionStore)
                 .gzipMinBytes(gzipMinBytes).requireHost(requireHost).behindProxy(behindProxy).trustProxy(trustedProxies).tls(tls);
@@ -83,6 +93,15 @@ public record ServerOptions(
         private long maxBodyBytes = 10L << 20;
         private int readBufferBytes = 16_384;
         private int maxKeepAliveRequests = 1_000;
+
+        // ─── HTTP/2 ─────────────────────────────────────────────────────────────────────────
+        // Los cuatro últimos son topes contra inundaciones conocidas. Se pueden subir, pero
+        // conviene saber contra qué protege cada uno antes de tocarlos: ver el javadoc.
+        private int http2MaxFlujos = 128;
+        private int http2MaxBloqueCabeceras = 64 * 1024;
+        private int http2MaxListaCabeceras = 32 * 1024;
+        private int http2MaxAnulados = 100;
+        private int http2MaxControlSeguidas = 1_000;
         private int sessionTimeoutMillis = 30 * 60_000;
         private long sessionMaxLifetimeMillis;
         private SessionStore sessionStore;
@@ -149,6 +168,58 @@ public record ServerOptions(
 
         public Builder readBufferBytes(int value) {
             readBufferBytes = value;
+            return this;
+        }
+
+        /** Flujos abiertos a la vez por conexión. Se anuncia en SETTINGS. */
+        public Builder http2MaxFlujos(int value) {
+            http2MaxFlujos = value;
+            return this;
+        }
+
+        /**
+         * Tamaño máximo de un bloque de cabeceras comprimido, sumando sus CONTINUATION.
+         *
+         * <p>Protege contra CVE-2024-27316: HEADERS y luego CONTINUATION sin fin, que hace crecer
+         * la memoria hasta agotarla sin que ninguna trama sea inválida por separado.
+         */
+        public Builder http2MaxBloqueCabeceras(int value) {
+            http2MaxBloqueCabeceras = value;
+            return this;
+        }
+
+        /**
+         * Tamaño máximo de la lista de cabeceras <b>ya descomprimida</b>. Se anuncia además en
+         * {@code SETTINGS_MAX_HEADER_LIST_SIZE}.
+         *
+         * <p>Es distinto del anterior a propósito: HPACK comprime, así que tres kilobytes en el
+         * cable pueden ser trescientos al salir. Limitar solo lo comprimido no ve esa bomba.
+         */
+        public Builder http2MaxListaCabeceras(int value) {
+            http2MaxListaCabeceras = value;
+            return this;
+        }
+
+        /**
+         * Flujos anulados sin llegar a responder antes de cerrar la conexión.
+         *
+         * <p>Protege contra CVE-2023-44487, «Rapid Reset»: anular saca el flujo del tope de
+         * concurrencia al instante, así que abrir-y-anular en bucle pide trabajo sin límite.
+         */
+        public Builder http2MaxAnulados(int value) {
+            http2MaxAnulados = value;
+            return this;
+        }
+
+        /**
+         * Tramas de control seguidas sin que el cliente abra ningún flujo.
+         *
+         * <p>PING, SETTINGS, WINDOW_UPDATE y PRIORITY obligan al servidor a trabajar y no cuestan
+         * casi nada al cliente. Abrir un flujo reinicia la cuenta, así que el uso normal no la
+         * roza.
+         */
+        public Builder http2MaxControlSeguidas(int value) {
+            http2MaxControlSeguidas = value;
             return this;
         }
 
@@ -233,6 +304,8 @@ public record ServerOptions(
             return new ServerOptions(host, port, backlog, maxConnections, idleTimeoutMillis,
                     handlerTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
                     maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests,
+                    http2MaxFlujos, http2MaxBloqueCabeceras, http2MaxListaCabeceras,
+                    http2MaxAnulados, http2MaxControlSeguidas,
                     sessionTimeoutMillis, sessionMaxLifetimeMillis, sessionStore,
                     gzipMinBytes, requireHost, behindProxy, trustedProxies, tls);
         }

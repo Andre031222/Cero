@@ -68,13 +68,15 @@ final class Http2 {
     private static final int ERROR_INTERNO = 0x2;
     private static final int ERROR_CONTROL_FLUJO = 0x3;
     private static final int ERROR_TAMANO_TRAMA = 0x6;
+    private static final int ERROR_RECHAZADO = 0x7;
     private static final int ERROR_ANULADO = 0x8;
+    private static final int ERROR_FLUJO_CERRADO = 0x5;
     private static final int ERROR_COMPRESION = 0x9;
     private static final int ERROR_CALMA = 0xb;   // ENHANCE_YOUR_CALM
 
     private static final int TRAMA_MAXIMA = 16_384;
     private static final int VENTANA_INICIAL = 65_535;
-    private static final int MAX_FLUJOS = 128;
+
 
     // ─── topes contra las inundaciones conocidas de HTTP/2 ───────────────────────────────────
     //
@@ -82,24 +84,14 @@ final class Http2 {
     // pida trabajo al servidor sin coste propio, y sin topes eso es una negación de servicio con
     // una sola conexión.
 
-    /** Un bloque de cabeceras entero, sumando HEADERS y sus CONTINUATION. CVE-2024-27316. */
-    private static final int MAX_BLOQUE_CABECERAS = 64 * 1024;
-
-    /** Cuántas CONTINUATION se admiten seguidas antes de cortar. */
-    private static final int MAX_CONTINUACIONES = 64;
-
     /**
-     * Flujos anulados sin llegar a responder antes de cortar la conexión. CVE-2023-44487,
-     * «Rapid Reset»: abrir y anular no deja el flujo contando para el tope de concurrencia, así
-     * que un cliente puede pedir trabajo sin límite mientras parece respetar las reglas.
+     * Cuántas CONTINUATION se admiten seguidas.
+     *
+     * <p>No es configurable como las demás porque no es una cuestión de capacidad: un bloque de
+     * cabeceras legítimo cabe en unas pocas tramas, y sesenta y cuatro ya es holgado. El tope que
+     * sí conviene poder subir es el de bytes, y ese está en {@link ServerOptions}.
      */
-    private static final int MAX_ANULADOS = 100;
-
-    /** Tramas de control seguidas sin abrir un solo flujo. Cada una obliga a contestar. */
-    private static final int MAX_CONTROL_SEGUIDAS = 1_000;
-
-    /** Lo que se anuncia como tamaño máximo de la lista de cabeceras, y se hace cumplir. */
-    private static final int MAX_LISTA_CABECERAS = 32 * 1024;
+    private static final int MAX_CONTINUACIONES = 64;
 
     private final Socket socketCrudo;
     private final InputStream in;
@@ -119,10 +111,16 @@ final class Http2 {
 
     private int tramaMaxima = TRAMA_MAXIMA;
     private int ventanaInicialFlujo = VENTANA_INICIAL;
+    private final int maxFlujos;
+    private final int maxBloqueCabeceras;
+    private final int maxListaCabeceras;
+    private final int maxAnulados;
+    private final int maxControlSeguidas;
+
     private int ultimoFlujoVisto;
     private volatile boolean vivo = true;
 
-    /** Flujos que el cliente anuló antes de que se respondieran. Ver {@link #MAX_ANULADOS}. */
+    /** Flujos que el cliente anuló antes de que se respondieran. Ver {@link #maxAnulados}. */
     private int anulados;
 
     /** Tramas de control seguidas sin que el cliente abra un flujo. */
@@ -136,6 +134,12 @@ final class Http2 {
         this.context = context;
         this.remoto = remoto;
         this.hilos = hilos;
+        ServerOptions o = context.options();
+        this.maxFlujos = o.http2MaxFlujos();
+        this.maxBloqueCabeceras = o.http2MaxBloqueCabeceras();
+        this.maxListaCabeceras = o.http2MaxListaCabeceras();
+        this.maxAnulados = o.http2MaxAnulados();
+        this.maxControlSeguidas = o.http2MaxControlSeguidas();
     }
 
     /**
@@ -257,14 +261,21 @@ final class Http2 {
     // ─── el bucle ────────────────────────────────────────────────────────────────────────────
 
     private void correr(IncomingRequest deUpgrade) throws IOException {
-        byte[] esperado = new byte[PREAMBULO.length];
-        leerDelTodo(esperado);
-        if (!java.util.Arrays.equals(esperado, PREAMBULO)) {
-            throw new IOException("preámbulo HTTP/2 inválido");
-        }
-
-        // Nuestros SETTINGS van primero, antes que nada del cliente: §3.4 lo exige.
+        // Los SETTINGS van primero, antes incluso de leer el preámbulo: §3.4 dice que son la
+        // primera trama que manda el servidor, y un cliente puede estar esperándolos.
         escribirTrama(SETTINGS, 0, 0, ajustesPropios());
+
+        byte[] esperado = new byte[PREAMBULO.length];
+        try {
+            leerDelTodo(esperado);
+        } catch (java.io.EOFException cortado) {
+            return;
+        }
+        if (!java.util.Arrays.equals(esperado, PREAMBULO)) {
+            // Se despide antes de colgar: cerrar en seco deja al otro lado sin saber por qué.
+            adios(ERROR_PROTOCOLO, "preámbulo inválido");
+            return;
+        }
 
         if (deUpgrade != null) {
             ultimoFlujoVisto = 1;
@@ -296,6 +307,32 @@ final class Http2 {
         }
     }
 
+    /**
+     * El estado de un flujo según el RFC 9113 §5.1, deducido de lo que ya se sabe.
+     *
+     * <p>No hace falta un mapa de flujos cerrados: cualquier identificador mayor que el último
+     * visto está <b>ocioso</b> —nunca se abrió— y cualquiera menor o igual que ya no está en el
+     * mapa de abiertos está <b>cerrado</b>. Guardar los cerrados sería memoria que crece con cada
+     * petición y que un cliente podría hacer crecer a voluntad.
+     *
+     * <p>La distinción importa porque el RFC pide errores distintos: una trama sobre un flujo
+     * ocioso rompe la conexión —el cliente se está inventando el estado— mientras que sobre uno
+     * cerrado solo corta ese flujo, porque puede ser una carrera legítima con un RST_STREAM que
+     * se cruzó por el cable.
+     */
+    private enum Estado { OCIOSO, ABIERTO, MEDIO_CERRADO, CERRADO }
+
+    private Estado estadoDe(int idFlujo) {
+        if (idFlujo > ultimoFlujoVisto) {
+            return Estado.OCIOSO;
+        }
+        Flujo f = flujos.get(idFlujo);
+        if (f == null) {
+            return Estado.CERRADO;
+        }
+        return f.finEntrada ? Estado.MEDIO_CERRADO : Estado.ABIERTO;
+    }
+
     /** @return false cuando el cliente cerró */
     private boolean unaTrama() throws IOException {
         byte[] cabecera = new byte[9];
@@ -322,10 +359,31 @@ final class Http2 {
         switch (tipo) {
             case DATA -> datos(flujo, banderas, carga);
             case HEADERS -> cabeceras(flujo, banderas, carga);
-            case PRIORITY -> controlDeMas();
+            case PRIORITY -> {
+                // El RFC 9113 deprecó el esquema de prioridades y permite ignorar lo que dice.
+                // Ignorar el contenido no es ignorar la trama: su forma sigue siendo obligatoria,
+                // y una mal formada es un error como cualquier otra.
+                if (flujo == 0) {
+                    throw new ErrorConexion(ERROR_PROTOCOLO, "PRIORITY sobre el flujo 0");
+                }
+                if (largo != 5) {
+                    throw new ErrorConexion(ERROR_TAMANO_TRAMA, "PRIORITY mal medida");
+                }
+                if (dependeDeSiMismo(flujo, carga, 0)) {
+                    escribirTrama(RST_STREAM, 0, flujo, deEntero(ERROR_PROTOCOLO));
+                    return true;
+                }
+                controlDeMas();
+            }
             case RST_STREAM -> {
                 if (flujo == 0) {
                     throw new ErrorConexion(ERROR_PROTOCOLO, "RST_STREAM sobre el flujo 0");
+                }
+                if (largo != 4) {
+                    throw new ErrorConexion(ERROR_TAMANO_TRAMA, "RST_STREAM mal medido");
+                }
+                if (estadoDe(flujo) == Estado.OCIOSO) {
+                    throw new ErrorConexion(ERROR_PROTOCOLO, "RST_STREAM sobre un flujo ocioso");
                 }
                 Flujo f = flujos.remove(flujo);
                 if (f != null) {
@@ -334,7 +392,7 @@ final class Http2 {
                     // abrir-y-anular en bucle deja pedir trabajo sin límite mientras se aparenta
                     // respetar las reglas. Es el CVE-2023-44487. Anular es legítimo; hacerlo cien
                     // veces sin dejar responder ninguna, no.
-                    if (++anulados > MAX_ANULADOS) {
+                    if (++anulados > maxAnulados) {
                         throw new ErrorConexion(ERROR_CALMA,
                                 "demasiados flujos anulados sin responder");
                     }
@@ -353,6 +411,12 @@ final class Http2 {
                 }
             }
             case GOAWAY -> {
+                // Se acepta con cualquier código, incluidos los que no se conocen: §7 dice que
+                // un código desconocido no invalida la trama. Y se cierra por las buenas —media
+                // conexión primero— para que lo que ya se escribió llegue en vez de perderse en
+                // un reinicio de TCP.
+                vivo = false;
+                cerrarConSuavidad();
                 return false;
             }
             case WINDOW_UPDATE -> ventana(flujo, carga);
@@ -392,21 +456,48 @@ final class Http2 {
         if (idFlujo <= ultimoFlujoVisto) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "identificador de flujo hacia atrás");
         }
-        if (flujos.size() >= MAX_FLUJOS) {
-            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_CALMA));
+        if (flujos.size() >= maxFlujos) {
+            // REFUSED_STREAM y no ENHANCE_YOUR_CALM: le dice al cliente que puede reintentar
+            // ese flujo más tarde, que es exactamente lo que pasa. «Calma» significaría que se
+            // está portando mal, y pedir tantos como se anunciaron no es portarse mal.
+            ultimoFlujoVisto = Math.max(ultimoFlujoVisto, idFlujo);
+            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_RECHAZADO));
             return;
         }
         ultimoFlujoVisto = idFlujo;
         controlSeguidas = 0;   // abrir un flujo es progreso: la cuenta de control se reinicia
 
-        List<Hpack.Campo> campos = hpackIn.decodificar(
-                leerBloqueDeCabeceras(idFlujo, banderas, carga));
+        List<Hpack.Campo> campos;
+        try {
+            campos = hpackIn.decodificar(leerBloqueDeCabeceras(idFlujo, banderas, carga));
+        } catch (ErrorFlujo malFormada) {
+            ultimoFlujoVisto = idFlujo;
+            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
+            return;
+        }
         comprobarTamano(campos);
         Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo);
         flujos.put(idFlujo, flujo);
         if ((banderas & FIN_FLUJO) != 0) {
             flujo.finEntrada = true;
             flujo.cerrarEntrada();
+        }
+        for (Hpack.Campo c : campos) {
+            if (c.nombre().equals("content-length")) {
+                try {
+                    flujo.declarado = Long.parseLong(c.valor().trim());
+                } catch (NumberFormatException noEsUnNumero) {
+                    escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
+                    flujos.remove(idFlujo);
+                    return;
+                }
+            }
+        }
+        // Sin cuerpo declarado pero con content-length distinto de cero: tampoco cuadra.
+        if (flujo.finEntrada && flujo.declarado > 0) {
+            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
+            flujos.remove(idFlujo);
+            return;
         }
 
         IncomingRequest peticion;
@@ -434,6 +525,9 @@ final class Http2 {
             recorte = carga[pos++] & 0xFF;
         }
         if ((banderas & PRIORIDAD) != 0) {
+            if (dependeDeSiMismo(idFlujo, carga, pos)) {
+                throw new ErrorFlujo("un flujo no puede depender de sí mismo");
+            }
             pos += 5;
         }
         if (pos + recorte > carga.length) {
@@ -441,7 +535,7 @@ final class Http2 {
         }
         ByteArrayOutputStream bloque = new ByteArrayOutputStream();
         bloque.write(carga, pos, carga.length - pos - recorte);
-        if (bloque.size() > MAX_BLOQUE_CABECERAS) {
+        if (bloque.size() > maxBloqueCabeceras) {
             throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
         }
 
@@ -452,7 +546,7 @@ final class Http2 {
             // bloque crece en memoria hasta agotarla, y nada en el protocolo lo impide. Es el
             // CVE-2024-27316, que en 2024 afectó a media docena de servidores a la vez.
             if (++continuaciones > MAX_CONTINUACIONES
-                    || bloque.size() > MAX_BLOQUE_CABECERAS) {
+                    || bloque.size() > maxBloqueCabeceras) {
                 throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
             }
             byte[] cab = new byte[9];
@@ -468,7 +562,7 @@ final class Http2 {
                 throw new ErrorConexion(ERROR_PROTOCOLO, "se esperaba CONTINUATION");
             }
             bloque.write(trozo);
-            if (bloque.size() > MAX_BLOQUE_CABECERAS) {
+            if (bloque.size() > maxBloqueCabeceras) {
                 throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
             }
             completo = (flags & FIN_CABECERAS) != 0;
@@ -485,11 +579,11 @@ final class Http2 {
      *
      * <p>Se cuenta como manda el RFC 7541 §4.1: nombre + valor + 32 por campo.
      */
-    private static void comprobarTamano(List<Hpack.Campo> campos) {
+    private void comprobarTamano(List<Hpack.Campo> campos) {
         long total = 0;
         for (Hpack.Campo c : campos) {
             total += c.coste();
-            if (total > MAX_LISTA_CABECERAS) {
+            if (total > maxListaCabeceras) {
                 throw new ErrorConexion(ERROR_CALMA, "lista de cabeceras desmedida");
             }
         }
@@ -593,6 +687,21 @@ final class Http2 {
         if (idFlujo == 0) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "DATA sobre el flujo 0");
         }
+        switch (estadoDe(idFlujo)) {
+            case OCIOSO -> throw new ErrorConexion(ERROR_PROTOCOLO, "DATA sobre un flujo ocioso");
+            case MEDIO_CERRADO, CERRADO -> {
+                // El cliente ya dijo que había terminado de mandar, o el flujo ya no existe.
+                // La ventana se devuelve igual: esos octetos ya contaron contra la conexión y,
+                // si no se reponen, el cliente acaba bloqueado sin haber hecho nada mal.
+                if (carga.length > 0) {
+                    escribirTrama(WINDOW_UPDATE, 0, 0, deEntero(carga.length));
+                }
+                escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_FLUJO_CERRADO));
+                flujos.remove(idFlujo);
+                return;
+            }
+            default -> { }
+        }
         int pos = 0;
         int recorte = 0;
         if ((banderas & RELLENO) != 0) {
@@ -610,7 +719,19 @@ final class Http2 {
         if (f == null) {
             return;
         }
-        f.entrada.aportar(carga, pos, carga.length - pos - recorte);
+        int utiles = carga.length - pos - recorte;
+        // §8.1.2.6: si se declaró content-length, tiene que cuadrar con lo que llega. Un
+        // desajuste es la puerta de entrada al contrabando de peticiones cuando hay un proxy
+        // delante: dos intermediarios leen dos peticiones distintas de los mismos octetos.
+        long total = f.recibido.addAndGet(utiles);
+        if (f.declarado >= 0 && (total > f.declarado
+                || ((banderas & FIN_FLUJO) != 0 && total != f.declarado))) {
+            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
+            flujos.remove(idFlujo);
+            f.cerrarEntrada();
+            return;
+        }
+        f.entrada.aportar(carga, pos, utiles);
         if (carga.length > 0) {
             escribirTrama(WINDOW_UPDATE, 0, idFlujo, deEntero(carga.length));
         }
@@ -635,6 +756,9 @@ final class Http2 {
             throw new ErrorConexion(ERROR_PROTOCOLO, "SETTINGS sobre un flujo");
         }
         if ((banderas & RECONOCE) != 0) {
+            if (carga.length != 0) {
+                throw new ErrorConexion(ERROR_TAMANO_TRAMA, "SETTINGS con ACK y carga");
+            }
             return;
         }
         controlDeMas();
@@ -688,6 +812,9 @@ final class Http2 {
             escribirTrama(RST_STREAM, 0, flujo, deEntero(ERROR_PROTOCOLO));
             return;
         }
+        if (flujo != 0 && estadoDe(flujo) == Estado.OCIOSO) {
+            throw new ErrorConexion(ERROR_PROTOCOLO, "WINDOW_UPDATE sobre un flujo ocioso");
+        }
         controlDeMas();
         if (flujo == 0) {
             if (ventanaSalida.addAndGet(incremento) > 0x7FFFFFFFL) {
@@ -699,6 +826,13 @@ final class Http2 {
         } else {
             Flujo f = flujos.get(flujo);
             if (f != null) {
+                // La ventana de un flujo no puede pasar de 2^31-1. Es error de flujo y no de
+                // conexión: solo ese flujo queda en un estado imposible.
+                if ((long) f.ventana.get() + incremento > 0x7FFFFFFFL) {
+                    escribirTrama(RST_STREAM, 0, flujo, deEntero(ERROR_CONTROL_FLUJO));
+                    flujos.remove(flujo);
+                    return;
+                }
                 f.ventana.addAndGet(incremento);
                 synchronized (f.ventana) {
                     f.ventana.notifyAll();
@@ -710,13 +844,15 @@ final class Http2 {
     private byte[] ajustesPropios() {
         // MAX_CONCURRENT_STREAMS, INITIAL_WINDOW_SIZE, MAX_FRAME_SIZE y push desactivado.
         return new byte[] {
-                0, 0x3, 0, 0, 0, (byte) MAX_FLUJOS,
+                0, 0x3, (byte) (maxFlujos >>> 24), (byte) (maxFlujos >>> 16),
+                        (byte) (maxFlujos >>> 8), (byte) maxFlujos,
                 0, 0x4, 0, 0x1, 0, 0,
                 0, 0x5, 0, 0x40, 0, 0,
                 0, 0x2, 0, 0, 0, 0,
                 // MAX_HEADER_LIST_SIZE: se anuncia además de hacerse cumplir, para que un cliente
                 // educado no llegue siquiera a mandar algo que se le va a rechazar.
-                0, 0x6, 0, 0, (byte) (MAX_LISTA_CABECERAS >>> 8), (byte) MAX_LISTA_CABECERAS,
+                0, 0x6, (byte) (maxListaCabeceras >>> 24), (byte) (maxListaCabeceras >>> 16),
+                        (byte) (maxListaCabeceras >>> 8), (byte) maxListaCabeceras,
         };
     }
 
@@ -826,6 +962,9 @@ final class Http2 {
             // El socket ya estaba roto: no hay a quién despedirse.
         }
         vivo = false;
+        // Sin esto el GOAWAY que se acaba de escribir se pierde en el RST del cierre, y el
+        // cliente ve una conexión reiniciada en vez de un motivo.
+        cerrarConSuavidad();
     }
 
     /**
@@ -838,8 +977,51 @@ final class Http2 {
      * siempre hay peticiones de por medio.
      */
     private void controlDeMas() {
-        if (++controlSeguidas > MAX_CONTROL_SEGUIDAS) {
+        if (++controlSeguidas > maxControlSeguidas) {
             throw new ErrorConexion(ERROR_CALMA, "demasiadas tramas de control sin pedir nada");
+        }
+    }
+
+    /** ¿Este bloque de prioridad dice que el flujo depende de sí mismo? §5.3.1 lo prohíbe. */
+    private static boolean dependeDeSiMismo(int flujo, byte[] carga, int desde) {
+        if (carga.length < desde + 5) {
+            return false;
+        }
+        int padre = ((carga[desde] & 0x7F) << 24) | ((carga[desde + 1] & 0xFF) << 16)
+                | ((carga[desde + 2] & 0xFF) << 8) | (carga[desde + 3] & 0xFF);
+        return padre == flujo;
+    }
+
+    /**
+     * Cierra la conexión sin perder lo último que se escribió.
+     *
+     * <p>Cerrar un socket que todavía tiene datos sin leer en su buffer de recepción hace que TCP
+     * mande un RST, y un RST descarta lo que hubiera en camino <b>en las dos direcciones</b>. El
+     * otro lado no recibe el GOAWAY que se le acaba de mandar: ve la conexión reiniciada y no
+     * sabe si fue un error suyo, uno nuestro o un cable.
+     *
+     * <p>Así que: se vacía lo escrito, se cierra la mitad de escritura —que manda un FIN y le
+     * dice al otro que no habrá más— y se lee lo que quede hasta el final. Es la diferencia
+     * entre despedirse y colgar a media frase.
+     */
+    private void cerrarConSuavidad() {
+        try {
+            out.flush();
+            socketCrudo.shutdownOutput();
+        } catch (IOException yaEstaba) {
+            return;
+        }
+        try {
+            // Un segundo es de sobra para que llegue el FIN del otro lado, y suficientemente
+            // poco para que un cliente que no cierre nunca no retenga el hilo.
+            socketCrudo.setSoTimeout(1_000);
+            byte[] resto = new byte[4096];
+            long tope = 0;
+            while (in.read(resto) > 0 && (tope += resto.length) < 1 << 20) {
+                // Se lee y se tira: solo interesa llegar al final sin provocar un RST.
+            }
+        } catch (IOException seFue) {
+            // Se acabó el tiempo o se cerró: en los dos casos ya no hay nada que esperar.
         }
     }
 
@@ -868,6 +1050,13 @@ final class Http2 {
         final Tuberia entrada = new Tuberia();
         final java.util.concurrent.atomic.AtomicInteger ventana;
         volatile boolean finEntrada;
+
+        /** Lo que la petición declaró en `content-length`, o -1 si no declaró nada. */
+        volatile long declarado = -1;
+
+        /** Lo que ha llegado de verdad en tramas DATA. */
+        final java.util.concurrent.atomic.AtomicLong recibido =
+                new java.util.concurrent.atomic.AtomicLong();
 
         /**
          * La ventana arranca en la que el cliente pidió por SETTINGS, no en la del RFC.
