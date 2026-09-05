@@ -250,6 +250,18 @@ Richar Andre Vilca-Solorzano <andrevilcasolorzano@gmail.com>
 Ese identificador es **público** y no es ninguna contraseña: es lo que se manda a los servidores
 de claves para que Central pueda comprobar las firmas. Se puede enseñar en cualquier sitio.
 
+### Comprobar si una clave tiene contraseña
+
+`--pinentry-mode error` le prohíbe preguntar. Si aun así firma con el agente recién matado, es
+que la clave está desprotegida:
+
+```bash
+gpgconf --kill gpg-agent
+echo x | gpg --batch --pinentry-mode error --clearsign >/dev/null && echo "SIN contraseña"
+```
+
+Es la única comprobación que no se puede falsear con la caché.
+
 ### Cambiar la contraseña de la clave
 
 Una contraseña de GPG **no se recupera**. No hay «la he olvidado»: si nadie la tiene, la clave se
@@ -259,14 +271,19 @@ se puede poner una nueva **sin saber la vieja**.
 La memoria dura diez minutos desde el último uso, y se pierde entera al reiniciar el ordenador.
 Así que esto se hace en la misma sesión en la que se acaba de firmar algo, o ya no se puede.
 
-**Paso 1 — poner la nueva.** El `loopback` es para que pregunte en la terminal y no salte la
-ventana gris del sistema:
+**Paso 1 — poner la nueva:**
 
 ```bash
-gpg --pinentry-mode loopback --passwd 5A1974A4F17D56AC
+gpg --passwd 5A1974A4F17D56AC
 ```
 
-Pide la nueva dos veces. **Al escribir no se ve nada** —ni puntos ni asteriscos—; no está colgado.
+Pide la nueva dos veces, en la ventana del sistema.
+
+> **Sin `--pinentry-mode loopback`.** Ese modo no significa «pregunta en la terminal en vez de
+> abrir una ventana»: significa **no preguntes a nadie, la contraseña te llega por la entrada
+> estándar**. Si no se le pasa ninguna, lee vacío y contesta `Bad passphrase` — que parece que la
+> contraseña está mal cuando lo que pasa es que nunca se le dio ocasión de pedirla. Se perdió un
+> rato dando por perdida una clave que no lo estaba.
 
 **Paso 2 — comprobarla de verdad:**
 
