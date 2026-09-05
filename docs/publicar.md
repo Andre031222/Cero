@@ -151,6 +151,18 @@ esté todo, y pulsa **Publish**.
 Ese botón es el punto de no retorno: **una versión publicada en Central no se puede borrar ni
 rehacer**. Si sale mal, la única salida es publicar una 0.6.1. Por eso conviene mirar antes.
 
+Si Maven falla **después** de decir `Uploaded bundle successfully`, el paquete ya está arriba y
+repetir el comando crearía un duplicado. Se comprueba sin repetir nada:
+
+```bash
+curl -s -X POST "https://central.sonatype.com/api/v1/publisher/status?id=EL-ID-QUE-SALIO" \
+  -H "Authorization: Bearer $(printf '%s:%s' USUARIO CONTRASENA | base64)"
+```
+
+`"deploymentState": "VALIDATED"` significa que está esperando el botón. Los `purls` de la
+respuesta son la lista exacta de lo que se va a publicar: sirve para comprobar que no se coló
+ningún módulo que no toca.
+
 Tarda entre diez minutos y un par de horas en aparecer en las búsquedas.
 
 ---
@@ -179,8 +191,23 @@ Y la prueba de verdad, en una carpeta vacía y sin nada en `~/.m2`:
 Se publican los **seis módulos que son bibliotecas**: `cero-http`, `cero-core`, `cero-view`,
 `cero-data`, `cero-adapter-servlet` y `cero-launcher`.
 
-**`ejemplo` y `cero-web` no.** Están marcados con `maven.deploy.skip` porque son aplicaciones —la
-demostración y este sitio— y nadie las va a declarar como dependencia.
+**`ejemplo` y `cero-web` no.** Son aplicaciones —la demostración y este sitio— y nadie las va a
+declarar como dependencia. Se excluyen con `<excludeArtifacts>` en el pom raíz, que es la única
+forma que entiende el plugin de Central:
+
+```xml
+<excludeArtifacts>
+    <excludeArtifact>ejemplo</excludeArtifact>
+    <excludeArtifact>cero-web</excludeArtifact>
+</excludeArtifacts>
+```
+
+> **Ni `maven.deploy.skip` ni `skipPublishing` sirven aquí, y `skipPublishing` además rompe.** El
+> plugin de Central no sube módulo a módulo: junta todo y hace **una sola subida al final**, en el
+> último módulo del reactor. Como `cero-web` es el último, ponerle `skipPublishing` se saltaba esa
+> subida entera —los seis módulos incluidos— y el registro solo decía
+> `Skipping Central Release Publishing at user's request`, sin dar a entender que se estaba
+> saltando todo. Se perdieron dos corridas en eso.
 
 ## Si algo falla
 
@@ -191,6 +218,8 @@ demostración y este sitio— y nadie las va a declarar como dependencia.
 | `gpg: signing failed` | Falta la clave o la contraseña. `gpg --list-secret-keys` para ver si está |
 | `Missing signature` en el portal | La clave no está publicada en el servidor de claves; repite el `--send-keys` |
 | `Invalid POM: missing description` | No debería pasar: los seis módulos la tienen y se comprobó |
+| `Skipping Central Release Publishing at user's request` | Hay un `skipPublishing` en algún módulo. Quítalo y excluye con `excludeArtifacts` |
+| `Unrecognized field "warnings"` | Fallo del plugin 0.7.0 con la API nueva. **El paquete ya subió**; comprueba el estado antes de repetir |
 
 ## Para la próxima versión
 

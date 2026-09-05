@@ -142,7 +142,7 @@
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.7.0</version>
+                        <version>0.11.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
@@ -150,6 +150,17 @@
                                  mirar lo que se subió antes de que sea irreversible — una versión
                                  publicada en Central no se puede borrar ni rehacer. -->
                             <autoPublish>false</autoPublish>
+                            <!-- `ejemplo` y `cero-web` son aplicaciones —la demostración y el
+                                 sitio— y no deben acabar en Central. Se excluyen aquí y no con
+                                 `maven.deploy.skip`: esa propiedad la mira el plugin de deploy
+                                 de Maven, no este, y además tenerla puesta en el último módulo
+                                 del reactor hacía que este se saltara la subida ENTERA con un
+                                 «Skipping Central Release Publishing at user's request» que
+                                 parecía intencionado y no lo era. -->
+                            <excludeArtifacts>
+                                <excludeArtifact>ejemplo</excludeArtifact>
+                                <excludeArtifact>cero-web</excludeArtifact>
+                            </excludeArtifacts>
                         </configuration>
                     </plugin>
                 </plugins>

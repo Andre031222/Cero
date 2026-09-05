@@ -12,13 +12,6 @@
     <packaging>jar</packaging>
     <name>ejemplo</name>
 
-    <properties>
-        <!-- Módulo interno: no va a Maven Central. `ejemplo` es la aplicación de
-             demostración y `cero-web` el sitio viejo; publicar cualquiera de los dos
-             sería ofrecer como biblioteca algo que no lo es. -->
-        <maven.deploy.skip>true</maven.deploy.skip>
-        <skipPublishing>true</skipPublishing>
-    </properties>
 
     <dependencies>
         <dependency>
