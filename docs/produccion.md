@@ -5,7 +5,7 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 718 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
+- **1 761 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
   de CI. Esa cifra es la de la corrida con PostgreSQL y MySQL levantados, que es la de CI.
   Sin ellos, `MotorTests` se omite —y lo dice— y salen 1 624: si mides en local y no
   cuadra, es por eso.
@@ -36,24 +36,27 @@ Y el sitio de referencia ya no depende de Tomcat: es `cero-web`.
 
 **Criterio:** una aplicación pequeña en producción de verdad, con tráfico real, durante semanas.
 
-### 2. No hay HTTP/2, y el despliegue lo da por supuesto
+### 2. HTTP/2 está a medias · **empezado**
 
-El servidor habla HTTP/1.1 y nada más. El vhost de `cero.ginit.dev` pone nginx delante y lo dice
-por escrito: absorbe TLS, slowloris y HTTP/2, «los tres puntos donde el servidor propio de Cero es
-más joven».
+Ya no es un «no está». **h2c funciona**: capa de tramas, HPACK completo, flujos concurrentes,
+control de flujo por conexión y por flujo, SETTINGS, PING, RST_STREAM y GOAWAY. `curl
+--http2-prior-knowledge` habla con el servidor, y un eco de 533 KB vuelve byte a byte.
 
-Mientras eso sea así, **«sin contenedor» lleva nota al pie**: no hace falta Tomcat, pero sí un
-proxy. Para un despliegue real eso está bien —casi nadie expone un proceso de aplicación
-directamente a internet— pero no es lo que promete la portada, y conviene no confundir las dos
-cosas.
+HPACK se verifica contra **los 32 vectores del apéndice C del RFC 7541** — los ejemplos que el
+propio RFC publica con su volcado hexadecimal, incluidas las secuencias donde crece la tabla
+dinámica y donde empieza a expulsar. Las dos tablas fijas no están escritas a mano: se generan del
+RFC y se validan con la suma de Kraft, que en un código prefijo completo vale exactamente 1.
 
-**Por qué no está hecho:** un HTTP/2 correcto es capa de tramas, HPACK con Huffman y tabla
-dinámica, multiplexación de flujos y control de ventana. Son unas dos mil líneas dentro del
-módulo más sensible del proyecto, y hacerlo a medias ahí es peor que no tenerlo: los fallos de un
-parser de tramas mal cerrado no se ven, se explotan.
+**Lo que falta, y por qué todavía importa:** no hay ALPN, así que ningún navegador va a usar
+HTTP/2 con Cero — los navegadores no hablan h2c. Y falta la entrada por `Upgrade`, que es la que
+usa cualquier cliente que no sepa de antemano que el servidor lo habla.
 
-**Criterio:** o se implementa entero con su propio banco de conformidad, o la documentación dice
-en primera línea que el despliegue recomendado lleva un proxy delante. Hoy vale la segunda.
+Mientras eso siga así, **«sin contenedor» conserva su nota al pie**: no hace falta Tomcat, pero el
+despliegue recomendado lleva un proxy delante que absorbe TLS y h2. La lista completa de lo que
+queda está en [spec/http2.md](../spec/http2.md).
+
+**Criterio:** ALPN y `Upgrade` funcionando, más un bloque de vectores hostiles como el que ya
+tiene HTTP/1.1.
 
 ### 3. El parser HTTP tiene dos días
 
