@@ -143,12 +143,18 @@ jobs:
           # compartido con HTTP/1.1 es una petición con un método que no existe, y la respuesta
           # correcta es 501 y no un GOAWAY binario. Asume un puerto dedicado a h2c.
           ./h2spec -h 127.0.0.1 -p 8777 --timeout 5 | tee h2spec.log || true
-          FALLOS=$(grep -cE "^\s+×" h2spec.log || true)
-          echo "fallos: $FALLOS"
-          if [ "$FALLOS" -gt 1 ]; then
+
+          # Se lee la línea de totales de h2spec en vez de contar las «×»: cada fallo sale
+          # dos veces en la salida —en su sección y en el resumen del final— y contarlas
+          # daba el doble.
+          RESUMEN=$(grep -E "^[0-9]+ tests," h2spec.log | tail -1)
+          echo "$RESUMEN"
+          FALLOS=$(echo "$RESUMEN" | sed -E "s/.*, ([0-9]+) failed.*/\1/")
+          if [ "${FALLOS:-99}" -gt 1 ]; then
             echo "::error::h2spec encontró $FALLOS fallos; solo se admite el 3.5.2 explicado."
             exit 1
           fi
+          echo "Conforme salvo el 3.5.2, que asume un puerto dedicado a h2c."
 
   # Las dependencias que sí se distribuyen son cero, pero las de prueba se compilan y se
   # ejecutan aquí: una vulnerable es una vulnerable en la máquina de quien compile el proyecto.
