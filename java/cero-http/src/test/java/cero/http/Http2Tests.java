@@ -419,6 +419,8 @@ final class Http2Tests {
                         new byte[] { 0x00, 0x00, (byte) 0x84,
                                      (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF }), 0x9);
 
+        inundaciones();
+
         cortaElFlujoNoLaConexion("un método que no existe",
                 c -> c.cabeceras(":method", "INVENTADO", ":scheme", "http", ":path", "/"));
         cortaElFlujoNoLaConexion("una cabecera en mayúsculas, que en h2 es malformada",
@@ -445,6 +447,56 @@ final class Http2Tests {
         cortaElFlujoNoLaConexion("un TE que no sea trailers",
                 c -> c.cabeceras(":method", "GET", ":scheme", "http", ":path", "/",
                         "te", "gzip"));
+    }
+
+    /**
+     * Las cuatro inundaciones conocidas de HTTP/2.
+     *
+     * <p>Todas son la misma idea: el protocolo deja que un cliente pida trabajo al servidor sin
+     * coste propio. No son entradas malformadas —cada trama es válida por separado— así que no
+     * las caza ningún control de sintaxis: hacen falta topes explícitos.
+     *
+     * <p>Se espera ENHANCE_YOUR_CALM (0xb) y no PROTOCOL_ERROR, que es lo que distingue «te estás
+     * pasando» de «esto está mal escrito».
+     */
+    private static void inundaciones() {
+        // CVE-2024-27316: HEADERS y luego CONTINUATION sin fin. Cada trama es válida; el bloque
+        // crece en memoria hasta agotarla.
+        // Tramas diminutas: lo que agota no es la memoria de golpe sino la cuenta, y así el
+        // cliente termina de escribir antes de que el servidor cierre — si no, el fallo sería un
+        // «broken pipe» al escribir y no se llegaría a leer el GOAWAY que sí manda.
+        rompeLaConexion("inundación de CONTINUATION · CVE-2024-27316", c -> {
+            c.trama(Http2Cliente.HEADERS, 0, 1,
+                    c.cabeceras(":method", "GET", ":scheme", "http", ":path", "/"));
+            for (int i = 0; i < 80; i++) {
+                c.trama(Http2Cliente.CONTINUATION, 0, 1, new byte[4]);
+            }
+        }, 0xb);
+
+        // CVE-2023-44487, «Rapid Reset»: abrir y anular deja el flujo fuera del tope de
+        // concurrencia al instante, así que se puede pedir trabajo sin límite.
+        rompeLaConexion("Rapid Reset · CVE-2023-44487", c -> {
+            for (int i = 0; i < 200; i++) {
+                int flujo = c.pedirSinCerrar("GET", "/lento");
+                c.trama(Http2Cliente.RST_STREAM, 0, flujo, Http2Cliente.entero(0x8));
+            }
+        }, 0xb);
+
+        // Amplificación por tramas de control. Se usa WINDOW_UPDATE y no PING a propósito: el
+        // PING obliga al servidor a contestar, y con 1 500 sin leer las respuestas se llenan los
+        // dos buffers y lo que falla es el socket, no el tope que se quiere probar.
+        rompeLaConexion("inundación de tramas de control", c -> {
+            for (int i = 0; i < 1100; i++) {
+                c.trama(Http2Cliente.WINDOW_UPDATE, 0, 0, Http2Cliente.entero(1));
+            }
+        }, 0xb);
+
+        // Bomba de HPACK: 3 KB en el cable, 300 KB al descomprimirse. Limitar el bloque
+        // comprimido no la ve — hay que mirar lo que sale.
+        rompeLaConexion("bomba de expansión en HPACK", c ->
+                c.trama(Http2Cliente.HEADERS,
+                        Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 1,
+                        c.bombaHpack(3000, 100)), 0xb);
     }
 
     /** Un preámbulo que no es el preámbulo tiene que cerrar, no quedarse esperando. */

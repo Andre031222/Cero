@@ -75,6 +75,26 @@ caída de todo lo que ese cliente tuviera en vuelo.
 | `H2-025` | Una cabecera específica de conexión DEBE tratarse como malformada. | 9113 §8.2.2 |
 | `H2-026` | Un `TE` con un valor distinto de `trailers` DEBE tratarse como malformado. | 9113 §8.2.2 |
 
+### Inundaciones
+
+No son entradas malformadas: cada trama es válida por separado, así que ningún control de
+sintaxis las caza. Lo que las define es que el protocolo deja al cliente pedir trabajo sin coste
+propio, y sin topes explícitos eso es una negación de servicio con una sola conexión. Se responde
+con `ENHANCE_YOUR_CALM`, que distingue «te estás pasando» de «esto está mal escrito».
+
+| # | Requisito | RFC / CVE |
+|---|---|---|
+| `H2-036` | Un bloque de cabeceras sin fin, repartido en CONTINUATION, NO DEBE admitirse. | CVE-2024-27316 |
+| `H2-037` | Abrir y anular flujos en bucle NO DEBE poder pedir trabajo sin límite. | CVE-2023-44487 |
+| `H2-038` | Las tramas de control sin abrir ningún flujo NO DEBEN admitirse sin tope. | 9113 §10.5 |
+| `H2-039` | Una lista de cabeceras que se expande al descomprimirse NO DEBE admitirse. | 7541 §7.1 |
+
+`H2-039` es el que menos se ve venir: limitar el bloque comprimido no basta, porque tres
+kilobytes en el cable pueden ser trescientos al salir — basta con meter una entrada grande en la
+tabla dinámica y referenciarla cien veces, a un octeto por referencia. Hay que mirar lo que sale,
+y el tope se anuncia además en `SETTINGS_MAX_HEADER_LIST_SIZE` para que un cliente educado no
+llegue a mandarlo.
+
 ### Comportamiento
 
 | # | Requisito | RFC |
@@ -104,7 +124,9 @@ caída de todo lo que ese cliente tuviera en vuelo.
 
 - **Prioridad de escritura entre flujos.** Con muchos flujos escribiendo a la vez, el orden lo
   decide el candado de salida. Funciona, pero no hay una política.
-- **`SETTINGS_MAX_HEADER_LIST_SIZE`.** No se anuncia ni se hace cumplir, así que un bloque de
-  cabeceras enorme se procesa entero antes de rechazarse por otra vía.
-- **Vectores de expansión en HPACK.** Una tabla dinámica manipulada para que unos pocos octetos
-  se conviertan en muchos megabytes de cabeceras.
+- **Los topes no son configurables.** Son constantes razonables, no opciones de
+  `ServerOptions` como sí lo son los de HTTP/1.1. Quien tenga un caso legítimo que los roce no
+  puede subirlos sin recompilar.
+- **Una suite de conformidad de terceros.** `h2spec` existe y es la referencia del ecosistema.
+  Los 39 requisitos de aquí son propios, y eso significa que comprueban lo que se nos ocurrió
+  comprobar.

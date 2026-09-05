@@ -76,6 +76,31 @@ final class Http2 {
     private static final int VENTANA_INICIAL = 65_535;
     private static final int MAX_FLUJOS = 128;
 
+    // ─── topes contra las inundaciones conocidas de HTTP/2 ───────────────────────────────────
+    //
+    // Los cuatro salen de ataques publicados, no de suponer. El protocolo permite que un cliente
+    // pida trabajo al servidor sin coste propio, y sin topes eso es una negación de servicio con
+    // una sola conexión.
+
+    /** Un bloque de cabeceras entero, sumando HEADERS y sus CONTINUATION. CVE-2024-27316. */
+    private static final int MAX_BLOQUE_CABECERAS = 64 * 1024;
+
+    /** Cuántas CONTINUATION se admiten seguidas antes de cortar. */
+    private static final int MAX_CONTINUACIONES = 64;
+
+    /**
+     * Flujos anulados sin llegar a responder antes de cortar la conexión. CVE-2023-44487,
+     * «Rapid Reset»: abrir y anular no deja el flujo contando para el tope de concurrencia, así
+     * que un cliente puede pedir trabajo sin límite mientras parece respetar las reglas.
+     */
+    private static final int MAX_ANULADOS = 100;
+
+    /** Tramas de control seguidas sin abrir un solo flujo. Cada una obliga a contestar. */
+    private static final int MAX_CONTROL_SEGUIDAS = 1_000;
+
+    /** Lo que se anuncia como tamaño máximo de la lista de cabeceras, y se hace cumplir. */
+    private static final int MAX_LISTA_CABECERAS = 32 * 1024;
+
     private final Socket socketCrudo;
     private final InputStream in;
     private final OutputStream out;
@@ -96,6 +121,12 @@ final class Http2 {
     private int ventanaInicialFlujo = VENTANA_INICIAL;
     private int ultimoFlujoVisto;
     private volatile boolean vivo = true;
+
+    /** Flujos que el cliente anuló antes de que se respondieran. Ver {@link #MAX_ANULADOS}. */
+    private int anulados;
+
+    /** Tramas de control seguidas sin que el cliente abra un flujo. */
+    private int controlSeguidas;
 
     private Http2(Socket socket, InputStream in, OutputStream out, ServerContext context,
                   String remoto, ExecutorService hilos) {
@@ -291,7 +322,7 @@ final class Http2 {
         switch (tipo) {
             case DATA -> datos(flujo, banderas, carga);
             case HEADERS -> cabeceras(flujo, banderas, carga);
-            case PRIORITY -> { /* RFC 9113 §5.3.2: se puede ignorar, y se ignora. */ }
+            case PRIORITY -> controlDeMas();
             case RST_STREAM -> {
                 if (flujo == 0) {
                     throw new ErrorConexion(ERROR_PROTOCOLO, "RST_STREAM sobre el flujo 0");
@@ -299,6 +330,14 @@ final class Http2 {
                 Flujo f = flujos.remove(flujo);
                 if (f != null) {
                     f.cerrarEntrada();
+                    // Anular un flujo lo saca del tope de concurrencia al instante, así que
+                    // abrir-y-anular en bucle deja pedir trabajo sin límite mientras se aparenta
+                    // respetar las reglas. Es el CVE-2023-44487. Anular es legítimo; hacerlo cien
+                    // veces sin dejar responder ninguna, no.
+                    if (++anulados > MAX_ANULADOS) {
+                        throw new ErrorConexion(ERROR_CALMA,
+                                "demasiados flujos anulados sin responder");
+                    }
                 }
             }
             case SETTINGS -> ajustes(flujo, banderas, carga);
@@ -309,6 +348,7 @@ final class Http2 {
                     throw new ErrorConexion(ERROR_PROTOCOLO, "PING mal formado");
                 }
                 if ((banderas & RECONOCE) == 0) {
+                    controlDeMas();
                     escribirTrama(PING, RECONOCE, 0, carga);
                 }
             }
@@ -357,9 +397,11 @@ final class Http2 {
             return;
         }
         ultimoFlujoVisto = idFlujo;
+        controlSeguidas = 0;   // abrir un flujo es progreso: la cuenta de control se reinicia
 
         List<Hpack.Campo> campos = hpackIn.decodificar(
                 leerBloqueDeCabeceras(idFlujo, banderas, carga));
+        comprobarTamano(campos);
         Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo);
         flujos.put(idFlujo, flujo);
         if ((banderas & FIN_FLUJO) != 0) {
@@ -399,9 +441,20 @@ final class Http2 {
         }
         ByteArrayOutputStream bloque = new ByteArrayOutputStream();
         bloque.write(carga, pos, carga.length - pos - recorte);
+        if (bloque.size() > MAX_BLOQUE_CABECERAS) {
+            throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
+        }
 
         boolean completo = (banderas & FIN_CABECERAS) != 0;
+        int continuaciones = 0;
         while (!completo) {
+            // Sin estos dos topes, un cliente manda HEADERS y luego CONTINUATION sin fin: el
+            // bloque crece en memoria hasta agotarla, y nada en el protocolo lo impide. Es el
+            // CVE-2024-27316, que en 2024 afectó a media docena de servidores a la vez.
+            if (++continuaciones > MAX_CONTINUACIONES
+                    || bloque.size() > MAX_BLOQUE_CABECERAS) {
+                throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
+            }
             byte[] cab = new byte[9];
             leerDelTodo(cab);
             int largo = ((cab[0] & 0xFF) << 16) | ((cab[1] & 0xFF) << 8) | (cab[2] & 0xFF);
@@ -415,9 +468,31 @@ final class Http2 {
                 throw new ErrorConexion(ERROR_PROTOCOLO, "se esperaba CONTINUATION");
             }
             bloque.write(trozo);
+            if (bloque.size() > MAX_BLOQUE_CABECERAS) {
+                throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
+            }
             completo = (flags & FIN_CABECERAS) != 0;
         }
         return bloque.toByteArray();
+    }
+
+    /**
+     * El tamaño de la lista de cabeceras ya descomprimida.
+     *
+     * <p>HPACK comprime, y eso significa que unos pocos octetos en el cable pueden convertirse en
+     * muchos megabytes de cabeceras: basta con referenciar mil veces una entrada grande de la
+     * tabla. Limitar el bloque comprimido no basta — hay que mirar lo que sale.
+     *
+     * <p>Se cuenta como manda el RFC 7541 §4.1: nombre + valor + 32 por campo.
+     */
+    private static void comprobarTamano(List<Hpack.Campo> campos) {
+        long total = 0;
+        for (Hpack.Campo c : campos) {
+            total += c.coste();
+            if (total > MAX_LISTA_CABECERAS) {
+                throw new ErrorConexion(ERROR_CALMA, "lista de cabeceras desmedida");
+            }
+        }
     }
 
     /** Los pseudo-campos de h2 se convierten en la petición que el resto del framework entiende. */
@@ -562,6 +637,7 @@ final class Http2 {
         if ((banderas & RECONOCE) != 0) {
             return;
         }
+        controlDeMas();
         if (carga.length % 6 != 0) {
             throw new ErrorConexion(ERROR_TAMANO_TRAMA, "SETTINGS de tamaño imposible");
         }
@@ -612,6 +688,7 @@ final class Http2 {
             escribirTrama(RST_STREAM, 0, flujo, deEntero(ERROR_PROTOCOLO));
             return;
         }
+        controlDeMas();
         if (flujo == 0) {
             if (ventanaSalida.addAndGet(incremento) > 0x7FFFFFFFL) {
                 throw new ErrorConexion(ERROR_CONTROL_FLUJO, "ventana desbordada");
@@ -637,6 +714,9 @@ final class Http2 {
                 0, 0x4, 0, 0x1, 0, 0,
                 0, 0x5, 0, 0x40, 0, 0,
                 0, 0x2, 0, 0, 0, 0,
+                // MAX_HEADER_LIST_SIZE: se anuncia además de hacerse cumplir, para que un cliente
+                // educado no llegue siquiera a mandar algo que se le va a rechazar.
+                0, 0x6, 0, 0, (byte) (MAX_LISTA_CABECERAS >>> 8), (byte) MAX_LISTA_CABECERAS,
         };
     }
 
@@ -746,6 +826,21 @@ final class Http2 {
             // El socket ya estaba roto: no hay a quién despedirse.
         }
         vivo = false;
+    }
+
+    /**
+     * Una trama de control más sin haber abierto ningún flujo.
+     *
+     * <p>PING, SETTINGS, WINDOW_UPDATE y PRIORITY obligan al servidor a hacer algo —contestar,
+     * recalcular ventanas— y no cuestan casi nada al cliente. Mandadas en bucle son una
+     * amplificación: el que ataca escribe ocho octetos y el que recibe escribe otros tantos y
+     * gasta un despertar de hilo. Contarlas solo entre flujos deja pasar el uso normal, donde
+     * siempre hay peticiones de por medio.
+     */
+    private void controlDeMas() {
+        if (++controlSeguidas > MAX_CONTROL_SEGUIDAS) {
+            throw new ErrorConexion(ERROR_CALMA, "demasiadas tramas de control sin pedir nada");
+        }
     }
 
     private static byte[] deEntero(int valor) {
