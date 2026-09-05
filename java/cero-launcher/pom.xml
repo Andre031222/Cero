@@ -5,7 +5,7 @@
     <parent>
         <groupId>dev.ginit.cero</groupId>
         <artifactId>cero-parent</artifactId>
-        <version>0.5.0</version>
+        <version>0.6.0</version>
     </parent>
 
     <artifactId>cero-launcher</artifactId>
@@ -17,7 +17,7 @@
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-core</artifactId>
-            <version>0.5.0</version>
+            <version>0.6.0</version>
         </dependency>
     </dependencies>
 

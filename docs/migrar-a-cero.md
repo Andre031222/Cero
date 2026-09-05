@@ -1,9 +1,10 @@
-# Migrar una aplicación de LuxCore o Corvo a Cero 0.5.0
+# Migrar una aplicación de LuxCore o Corvo a Cero 0.6.0
 
 LuxCore pasa a llamarse **Cero**. Cambian los paquetes, las coordenadas de Maven, las claves de
 configuración y algunos nombres que se ven desde fuera.
 
-Esta guía es para llevar una aplicación de 0.2.x, 0.3.x o 0.4.0 a **0.5.0**. El guion
+Esta guía es para llevar una aplicación de 0.2.x, 0.3.x o 0.4.0 a **0.6.0**, que es la
+primera que se publica. El guion
 acepta los dos nombres viejos, así que una que se quedó en LuxCore llega a Cero en un solo paso.
 
 ---
@@ -27,7 +28,7 @@ sola aplicación.
 
 ### 0 · Comprueba que tienes Java 25
 
-**Cero 0.5.0 pide JDK 25.** Las versiones anteriores se conformaban con 21, así que este es el
+**Cero 0.6.0 pide JDK 25.** Las versiones anteriores se conformaban con 21, así que este es el
 único cambio de la versión capaz de impedir que arranque una aplicación que hoy funciona — y no
 avisa antes de tiempo: la aplicación compila en tu máquina y falla en el servidor que se quedó
 en 21.
@@ -39,7 +40,7 @@ java -version      # tiene que decir 25 o más
 Va antes que nada porque afecta a dos sitios que no son el mismo: la máquina donde compilas y la
 que ejecuta. Si el servidor arranca con un JRE viejo, súbelo **antes** de desplegar el jar nuevo.
 
-### 1 · Instala Cero 0.5.0
+### 1 · Instala Cero 0.6.0
 
 ```bash
 cd <el-repositorio-de-cero>
@@ -99,7 +100,7 @@ cd <el-repositorio-de-cero>
 | Servlet | `LuxServlet` | `CeroServlet` |
 | groupId | `lux` | `dev.ginit.cero` |
 | Artefactos | `lux-core`, `lux-data`… | `cero-core`, `cero-data`… |
-| Versión | `0.2.x` / `0.3.x` / `0.4.0` | `0.5.0` |
+| Versión | `0.2.x` / `0.3.x` / `0.4.0` | `0.6.0` |
 | Propiedad del pom | `${lux.version}` | `${cero.version}` |
 | Claves de config | `lux.oauth.google.id` | `cero.oauth.google.id` |
 | Variables de entorno | `LUX_SERVER_PORT` | `CERO_SERVER_PORT` |
@@ -197,7 +198,7 @@ ALTER TABLE cero_sesiones RENAME TO lux_sesiones;
 
 ## Repaso rápido
 
-- [ ] `./cero install` — Cero 0.5.0 en `~/.m2`
+- [ ] `./cero install` — Cero 0.6.0 en `~/.m2`
 - [ ] El árbol de git de la aplicación, limpio
 - [ ] `ALTER TABLE lux_migraciones RENAME TO cero_migraciones;`
 - [ ] `ALTER TABLE lux_sesiones RENAME TO cero_sesiones;` (si aplica)

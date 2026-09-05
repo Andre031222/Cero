@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Lleva una aplicación a Cero 0.5.0, venga de LuxCore 0.2.x/0.3.x o de Corvo 0.4.0.
+"""Lleva una aplicación a Cero 0.6.0, venga de LuxCore 0.2.x/0.3.x o de Corvo 0.4.0.
 
 Toca cuatro cosas, que son las cuatro que cambiaron de nombre:
 
   1. Los imports y las referencias con nombre completo: lux.core / corvo.core → cero.core
   2. La clase de arranque: Lux.run(...) / Corvo.run(...) → Cero.run(...)
   3. Las coordenadas de Maven: lux:lux-core:0.3.0 o dev.ginit.corvo:corvo-core:0.4.0
-     → dev.ginit.cero:cero-core:0.5.0
+     → dev.ginit.cero:cero-core:0.6.0
   4. Las claves de configuración: lux.* / corvo.* → cero.* y LUX_* / CORVO_* → CERO_*
 
 Acepta los dos nombres viejos a la vez, así que una app que se quedó en LuxCore sin pasar
@@ -81,9 +81,9 @@ def migrar_texto(ruta: pathlib.Path, texto: str) -> tuple[str, list[str]]:
             texto = texto.replace(f"<{viejo}.version>", "<cero.version>")
             texto = texto.replace(f"</{viejo}.version>", "</cero.version>")
             texto = texto.replace(f"${{{viejo}.version}}", "${cero.version}")
-        # Las versiones viejas del framework pasan a 0.5.0; las de terceros no se tocan.
+        # Las versiones viejas del framework pasan a 0.6.0; las de terceros no se tocan.
         texto = re.sub(
-            r"(<cero\.version>)0\.[0-4]\.\d+(</cero\.version>)", r"\g<1>0.5.0\g<2>", texto)
+            r"(<cero\.version>)0\.[0-5]\.\d+(</cero\.version>)", r"\g<1>0.6.0\g<2>", texto)
         texto, n = PAQUETE.subn(r"cero.\1", texto)
         if n:
             notas.append(f"{n} clase(s) en el pom")

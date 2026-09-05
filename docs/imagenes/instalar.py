@@ -37,7 +37,7 @@ GUION = [
     ("comentario", "# 1 — instalar"),
     ("orden",      "curl -fsSL https://cero.ginit.dev/instalar | sh"),
     ("ok",         "entorno    Java 25 · Maven 3.9 · Darwin arm64"),
-    ("ok",         "descargado cero-0.5.0.tar.gz · 736 KB"),
+    ("ok",         "descargado cero-0.6.0.tar.gz · 736 KB"),
     ("ok",         "huella     sha256 d4311facf0aed62a…"),
     ("ok",         "compilado  ocho módulos en ~/.m2 · 45 s"),
     ("ok",         "orden cero  ~/.local/bin/cero"),

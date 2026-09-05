@@ -10,19 +10,18 @@ señaló la auditoría del portal FINESI, y de ahí sale esta regla.
 
 ---
 
-## 0.5.0 · sin publicar
+## 0.6.0 · 5 de septiembre de 2026
 
-**El framework se llama Cero.** *LuxCore* chocaba con un framework PHP del mismo entorno.
-*Corvo* resolvió esa confusión pero no decía nada del framework: era un nombre correcto y mudo.
-**Cero** sí dice algo, y es lo mismo que dice la primera línea del LEEME —cero dependencias en
-ejecución, cero configuración para arrancar, cero contenedor de servlets—. No es una metáfora
-que haya que explicar: es la lista de lo que este framework no te obliga a tener.
+**La primera que se publica.** Las tres anteriores existieron y están documentadas, pero ninguna
+llegó a un repositorio: quien quisiera usar el framework tenía que clonarlo y compilarlo. Con
+esta, `dev.ginit.cero:cero-core` se declara como cualquier otra dependencia.
 
-Se escribe **Cero**, con mayúscula, también a mitad de frase: es una palabra común del
-castellano y en minúscula desaparece dentro del texto. En artefactos y órdenes va en minúscula,
-como siempre: `cero-core`, `cero new`.
+Trae además lo que faltaba para poder decir que el servidor está completo: habla HTTP/2, y lo
+demuestra contra una suite escrita por otros.
 
 ### Java 25
+
+**Rompiente: sube el mínimo de JDK 21 a 25.**
 
 **Sube el mínimo de JDK 21 a JDK 25**, y es lo único de esta versión capaz de impedir que
 arranque una aplicación que hoy funciona. Va aquí arriba y no entre los arreglos por eso: el
@@ -35,6 +34,140 @@ referencia ya corre sobre Temurin 25.
 
 Comprueba las dos máquinas, que no son la misma: la que compila y la que ejecuta. Ver
 [migrar-a-cero.md](migrar-a-cero.md).
+
+### Licencia: de MIT a Apache 2.0
+
+MIT es la más permisiva que existe: cualquiera puede coger esto, cerrarlo y venderlo sin devolver
+nada y sin nombrar a nadie. Apache 2.0 permite exactamente lo mismo y añade tres cosas que MIT no
+tiene: **concesión expresa de patentes** —con retirada automática para quien demande por patentes
+a este proyecto—, **obligación de declarar los cambios** al redistribuir una versión modificada, y
+una **cláusula de marca** que impide que un fork se presente como si fuera este proyecto.
+
+Es además la de Spring, Quarkus, Micronaut y Javalin, así que no introduce fricción de adopción
+frente a lo que compite con esto. El aviso MIT de JxMVC 3.4.0 se conserva dentro del NOTICE: Apache
+2.0 exige mantener los avisos de la obra de la que se parte.
+
+### HTTP/2
+
+**Las tres puertas:** conocimiento previo, `Upgrade: h2c` y **ALPN sobre TLS**. Esta última es la
+que importa de cara a internet — ningún navegador habla h2 en claro, así que sin ALPN el módulo no
+llegaba a un navegador nunca.
+
+Capa de tramas, HPACK completo, multiplexación de verdad —24 peticiones de 120 ms en 129 ms sobre
+una conexión—, control de flujo por conexión y por flujo, respuestas por `stream()` saliendo en
+tramas según se escriben, CONTINUATION, trailers, SETTINGS negociados, PING, RST_STREAM y GOAWAY
+con el código exacto que pide el RFC en cada caso.
+
+Para la aplicación no cambia nada: recibe el mismo `Request` y el mismo `Response`.
+
+**Las tablas de HPACK no están escritas a mano.** Se generan de los apéndices A y B del RFC 7541 y
+se validan al parsearlas: la estática tiene que dar 61 entradas y la suma de Kraft del código de
+Huffman tiene que valer 1 exacto, que es lo que demuestra que es un código prefijo completo. Una
+tabla de 257 filas copiada a mano no revienta cuando se equivoca — decodifica mal, en silencio.
+
+**Lo que no va a estar, y por qué:** PUSH_PROMISE está en desuso y los navegadores lo retiraron;
+PRIORITY lo deprecó el RFC 9113; WebSocket sobre h2 es otro RFC y `switchProtocols()` falla con un
+501 explícito en vez de devolver un 101 que en h2 no significa nada.
+
+### Conformidad y seguridad de HTTP/2
+
+**`h2spec`, la suite del ecosistema, dio 124 de 146 la primera vez.** Veintidós fallos que ninguna
+prueba propia veía — que es exactamente para lo que sirve correr una escrita por otros: las de
+casa comprueban lo que se nos ocurrió comprobar.
+
+La causa grande era que no había máquina de estados de flujo. Hoy pasa **145 de 146**, y el que
+falta —`3.5.2`— no aplica: manda `INVALID CONNECTION PREFACE` y espera un GOAWAY, pero en un
+puerto compartido con HTTP/1.1 eso es una petición con un método que no existe y la respuesta
+correcta es 501. Asume un puerto dedicado a h2c. Corre en integración continua en cada cambio.
+
+**Las cuatro inundaciones conocidas del protocolo, con tope y prueba.** Ninguna es una entrada
+malformada —cada trama es válida por separado— así que no las caza ningún control de sintaxis:
+
+- **CVE-2024-27316**, CONTINUATION sin fin: el bloque de cabeceras crecía hasta agotar la memoria.
+- **CVE-2023-44487**, Rapid Reset: anular un flujo lo sacaba del tope de concurrencia al instante,
+  así que abrir-y-anular en bucle pedía trabajo sin límite.
+- **Amplificación por tramas de control:** PING y compañía obligan a contestar y no cuestan nada.
+- **Bomba de expansión en HPACK**, la que menos se ve venir: limitar el bloque comprimido no basta
+  porque tres kilobytes en el cable pueden ser trescientos al salir.
+
+Los cinco topes son configurables en `ServerOptions`, con javadoc que dice contra qué protege cada
+uno.
+
+### Trazado distribuido
+
+**`Trace` — W3C Trace Context.** La cabecera `traceparent` entra, se hereda y sale:
+
+```java
+Cero.app().use(Trace.middleware()).start();
+```
+
+Desde ahí el identificador **aparece solo** en cada línea de `Log`, en el log de acceso y en las
+llamadas salientes de `Http`. Ese es el punto: un trazado que hay que pasar a mano de método en
+método se pierde en el primer método que no lo pasa, y entonces no sirve para nada.
+
+La respuesta lleva `Trace-Id`, que convierte «me dio error» en «me dio error, aquí tienes el
+número». `Trace.middlewareCallado()` lo omite si el servicio da a internet.
+
+Una cabecera inválida no tumba la petición: se descarta y se empieza traza propia — un proxy mal
+configurado no debe convertirse en una caída. Se validan versión, longitudes, hex en minúscula y
+los identificadores todo a ceros, con 10 vectores.
+
+**No trae exportador de tramos ni mide duraciones por operación.** Para eso está un agente de
+OpenTelemetry, que no es asunto de un framework sin dependencias. Cero pone lo que solo Cero
+puede poner: que el identificador entre, viaje y salga.
+
+### Arreglado por el camino
+
+- **Un `index.html` inmutable dejaba el sitio congelado.** `StaticFiles` aplicaba el mismo
+  `Cache-Control` a todo, y para una SPA eso nunca es correcto: el documento no tiene huella en el
+  nombre, así que servirlo inmutable significa que quien ya visitó el sitio no vuelve a pedirlo
+  nunca — y como los nombres de los assets viven dentro, tampoco se entera de que existen. Los
+  despliegues eran invisibles. Ahora los documentos se revalidan y los assets siguen inmutables.
+- **Apagar esperaba diez segundos sin esperar a nadie.** `stop()` gastaba la ventana de gracia
+  entera si quedaba una conexión con keep-alive ociosa, aunque no hubiera nada en vuelo. De 10 011
+  ms a 2. La batería de pruebas pasó de doce minutos a cuarenta y cinco segundos.
+- **`Messages` perdía el idioma base** si no se encadenaba `base(...)`: la negociación lo elegía y
+  la búsqueda no lo encontraba, así que la página salía con los nombres de las claves.
+- **`Textos` decía ser un `Map` y no cumplía el contrato:** `containsKey` era cierto para
+  cualquier clave y `entrySet()` volvía vacío, así que un `if` sobre una clave inexistente era
+  cierto y un `for` no recorría nada. Sin dar error.
+- La subida a Java 25 estaba a medias: CI corría una matriz con JDK 21 que no podía compilar, los
+  dos lanzadores dejaban pasar un 21 que luego fallaba, y el banco de pruebas no podía construirse.
+
+### Ruido dirigido
+
+1 200 entradas malformadas por corrida contra los dos parsers: peticiones HTTP/1.1 rotas por un
+sitio al azar, tramas de h2 con tipos y longitudes inventados, y bytes puros detrás de un preámbulo
+válido. El criterio no es qué contesta a cada una —cerrar es una respuesta válida— sino que después
+de todas siga atendiendo.
+
+La semilla es fija a propósito: un fuzzer con semilla del reloj falla un día de cada cincuenta en
+integración continua y nadie puede reproducirlo.
+
+### El contrato empieza a existir
+
+`spec/` deja de ser un directorio que el LEEME cita y no existe. Va como borrador y lo dice en su
+primera línea —hoy sigue mandando `java/`— con dos bloques numerados: los 23 vectores de RFC 9112
+para HTTP/1.1 y 39 requisitos para HTTP/2, separando los que rompen la conexión de los que solo
+cortan un flujo. La regla es que no se especifica lo que no está probado.
+
+### Estado
+
+**1 835 aserciones en verde**, ocho módulos, sin fallos. Eran 1 584 en 0.5.0.
+
+---
+
+## 0.5.0 · sin publicar
+
+**El framework se llama Cero.** *LuxCore* chocaba con un framework PHP del mismo entorno.
+*Corvo* resolvió esa confusión pero no decía nada del framework: era un nombre correcto y mudo.
+**Cero** sí dice algo, y es lo mismo que dice la primera línea del LEEME —cero dependencias en
+ejecución, cero configuración para arrancar, cero contenedor de servlets—. No es una metáfora
+que haya que explicar: es la lista de lo que este framework no te obliga a tener.
+
+Se escribe **Cero**, con mayúscula, también a mitad de frase: es una palabra común del
+castellano y en minúscula desaparece dentro del texto. En artefactos y órdenes va en minúscula,
+como siempre: `cero-core`, `cero new`.
 
 ### Qué cambia de nombre
 
@@ -109,29 +242,6 @@ en 0.4.0, que era lo menos rodado.
 - **UTF-8 mal formado en un marco de texto** se sustituía en silencio en vez de cerrar con 1007,
   y las longitudes de marco no exigían la forma más corta. Los dos según RFC 6455.
 
-### Trazado distribuido
-
-**`Trace` — W3C Trace Context.** La cabecera `traceparent` entra, se hereda y sale:
-
-```java
-Cero.app().use(Trace.middleware()).start();
-```
-
-Desde ahí el identificador **aparece solo** en cada línea de `Log`, en el log de acceso y en las
-llamadas salientes de `Http`. Ese es el punto: un trazado que hay que pasar a mano de método en
-método se pierde en el primer método que no lo pasa, y entonces no sirve para nada.
-
-La respuesta lleva `Trace-Id`, que convierte «me dio error» en «me dio error, aquí tienes el
-número». `Trace.middlewareCallado()` lo omite si el servicio da a internet.
-
-Una cabecera inválida no tumba la petición: se descarta y se empieza traza propia — un proxy mal
-configurado no debe convertirse en una caída. Se validan versión, longitudes, hex en minúscula y
-los identificadores todo a ceros, con 10 vectores.
-
-**No trae exportador de tramos ni mide duraciones por operación.** Para eso está un agente de
-OpenTelemetry, que no es asunto de un framework sin dependencias. Cero pone lo que solo Cero
-puede poner: que el identificador entre, viaje y salga.
-
 ### Arreglado por el camino
 
 - La versión que se escribía en el pom de cada proyecto nuevo estaba clavada en una constante y
@@ -143,7 +253,12 @@ puede poner: que el identificador entre, viaje y salga.
 
 ### Estado
 
-**1 835 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
+**1 584 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
+
+> **Esta versión tampoco se publicó.** El renombrado se hizo y se probó, pero antes de
+> etiquetarla llegaron HTTP/2, el trazado y el salto a Java 25 — y meter una implementación de
+> protocolo entera bajo un título que dice «el framework se llama Cero» habría dejado un registro
+> que no se puede leer. Ver [0.6.0](#060--5-de-septiembre-de-2026).
 
 ---
 

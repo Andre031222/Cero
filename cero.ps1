@@ -160,7 +160,7 @@ switch -Regex ($Orden) {
     }
 
     '^(migrar|migrate)$' {
-        # Lleva una aplicación de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.5.0.
+        # Lleva una aplicación de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.6.0.
         #
         # Exige que el árbol de git de la aplicación esté limpio: así el propio git es la copia
         # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
@@ -261,7 +261,7 @@ public class Sitio {
         Write-Host ('  {0,-24} {1}' -f 'cero docs [puerto]',   'sirve la documentación estática')
         Write-Host ('  {0,-24} {1}' -f 'cero build',           'regenera las páginas del sitio')
         Write-Host ('  {0,-24} {1}' -f 'cero status',          'resumen del proyecto')
-        Write-Host ('  {0,-24} {1}' -f 'cero migrar <ruta>',   'lleva una app de LuxCore o Corvo a Cero 0.5.0')
+        Write-Host ('  {0,-24} {1}' -f 'cero migrar <ruta>',   'lleva una app de LuxCore o Corvo a Cero 0.6.0')
         Write-Host ''
         Gris '  `cero dist` arma los paquetes de la descarga y solo está en macOS y Linux:'
         Gris '  lo corre quien publica una versión, y comprueba el paquete desempaquetándolo.'
