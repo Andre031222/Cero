@@ -6,7 +6,7 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 [![Licencia: Apache 2.0](https://img.shields.io/badge/Licencia-Apache_2.0-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-25%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-1718-15803d?style=flat-square)](#estado)
+[![Pruebas](https://img.shields.io/badge/Pruebas-1761-15803d?style=flat-square)](#estado)
 [![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.5.0-6d28d9?style=flat-square)](docs/versiones.md)
 [![En vivo](https://img.shields.io/badge/En_vivo-cero.ginit.dev-0f2444?style=flat-square)](https://cero.ginit.dev)
 
@@ -105,7 +105,7 @@ Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
 git clone https://github.com/Andre031222/Cero.git && cd Cero
-cd java && mvn install     # 1 718 pruebas, runner propio (sin JUnit)
+cd java && mvn install     # 1 761 pruebas, runner propio (sin JUnit)
 ./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
@@ -172,7 +172,7 @@ prueba propia. Ver [versiones.md](docs/versiones.md).
 
 Lo verificado, y cómo:
 
-- **1 718 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
+- **1 761 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.

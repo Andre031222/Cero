@@ -6,7 +6,7 @@
 # Baja el paquete, comprueba su huella, lo compila, deja los artefactos en ~/.m2 y la orden
 # `cero` en el PATH. No pide contraseña y no escribe fuera de $HOME.
 #
-#   --con-pruebas   corre las 1 718 pruebas durante la instalación (~90 s más)
+#   --con-pruebas   corre las 1 761 pruebas durante la instalación (~90 s más)
 #   --sin-color     salida plana, para registros y CI
 set -eu
 
