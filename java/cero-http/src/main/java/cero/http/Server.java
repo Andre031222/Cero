@@ -116,6 +116,15 @@ public final class Server implements AutoCloseable {
                     : new ServerSocket();
             if (opened instanceof SSLServerSocket secure) {
                 secure.setUseClientMode(false);
+                // ALPN: se anuncia h2 y http/1.1, en ese orden de preferencia. Es la única forma
+                // de que un navegador use HTTP/2 — ninguno habla h2c en claro, así que sin esto
+                // el trabajo del módulo no llega a un navegador nunca.
+                //
+                // http/1.1 va detrás y no se quita: un cliente que no sepa de h2 no manda ALPN,
+                // y otro puede pedir explícitamente http/1.1. Dejar solo h2 rompería a los dos.
+                javax.net.ssl.SSLParameters parametros = secure.getSSLParameters();
+                parametros.setApplicationProtocols(new String[] { "h2", "http/1.1" });
+                secure.setSSLParameters(parametros);
             }
             opened.setReuseAddress(true);
             opened.bind(new InetSocketAddress(options.host(), options.port()), options.backlog());

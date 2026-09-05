@@ -32,6 +32,9 @@ final class Connection implements Runnable, Watchdog.Vigilada {
     /** Buffer de cabeceras compartido por todas las peticiones de esta conexión. */
     private AsciiBuffer head;
 
+    /** El flujo crudo, que hace falta si la conexión cambia a HTTP/2 a mitad. */
+    private java.io.PushbackInputStream entrada;
+
     Connection(Socket socket, ServerContext context, Consumer<Connection> release) {
         this.socket = socket;
         this.context = context;
@@ -52,8 +55,18 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
             OutputStream out = new BufferedOutputStream(open.getOutputStream(), 16_384);
 
-            // El preámbulo de HTTP/2 se mira antes de nada y se devuelve al flujo. Es la única
-            // forma de distinguir h2c de HTTP/1.1 en claro: los dos empiezan por texto ASCII, y
+            // Sobre TLS no hay que adivinar nada: el protocolo se acordó en el apretón de manos
+            // por ALPN, y preguntarlo es más fiable que mirar los primeros bytes. Es también el
+            // único camino por el que un navegador llega a HTTP/2.
+            if (open instanceof javax.net.ssl.SSLSocket cifrado
+                    && "h2".equals(cifrado.getApplicationProtocol())) {
+                ociosa = false;
+                Http2.servir(open, open.getInputStream(), out, context, remoteAddress(open));
+                return;
+            }
+
+            // En claro sí hay que mirar: el preámbulo se ojea y se devuelve al flujo. Es la única
+            // forma de distinguir h2c de HTTP/1.1, porque los dos empiezan por texto ASCII y
             // «PRI * HTTP/2.0» es una petición sintácticamente válida en HTTP/1.1.
             java.io.PushbackInputStream entrada =
                     new java.io.PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
@@ -63,6 +76,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
                 return;
             }
 
+            this.entrada = entrada;
             ByteReader reader = new ByteReader(entrada, options.readBufferBytes());
             RequestReader requests = new RequestReader(reader, context);
             head = new AsciiBuffer(512);
@@ -100,6 +114,14 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             }
             // Desde aquí hay algo que terminar: el apagado ya no puede cortar esta conexión.
             ociosa = false;
+
+            // `Upgrade: h2c` es la otra puerta a HTTP/2, y la que usa un cliente que no sabe de
+            // antemano si el servidor lo habla. Solo vale en la primera petición de la conexión:
+            // después ya se ha hablado HTTP/1.1 y cambiar a mitad no está definido.
+            if (served == 0 && Http2.pidenUpgrade(request)) {
+                Http2.aceptarUpgrade(socket, entrada, out, context, remote, request);
+                return;
+            }
 
             boolean last = served + 1 == options.maxKeepAliveRequests();
             boolean keepAlive = wantsKeepAlive(request) && !last && context.accepting().getAsBoolean();
