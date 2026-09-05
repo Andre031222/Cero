@@ -28,13 +28,24 @@ tuyo. Es lo que impide que alguien publique paquetes haciéndose pasar por otro.
    > publiques bajo ese dominio en el futuro.
 
 3. Te da un **código de verificación**, algo como `abc123xyz`. Hay que ponerlo como registro TXT
-   en el DNS de `ginit.dev`:
+   en el DNS de `ginit.dev`.
+
+   > **El DNS de `ginit.dev` está en Namecheap, no en Contabo.** Es fácil confundirlo porque
+   > Contabo es donde corre el servidor —la IP 173.249.52.127— pero quien responde a las
+   > preguntas del dominio es `dns1/dns2.registrar-servers.com`, que son los de Namecheap. El
+   > registro va en su panel: **Domain List → ginit.dev → Advanced DNS → Add New Record**.
+   >
+   > Comprobable en cualquier momento con `dig +short NS ginit.dev`.
 
    ```text
-   Tipo:   TXT
-   Nombre: @          (o ginit.dev, según el panel)
-   Valor:  abc123xyz  (el que te dé Central, tal cual)
+   Tipo:   TXT Record
+   Host:   @          (eso significa ginit.dev a secas)
+   Value:  abc123xyz  (el que te dé Central, tal cual)
+   TTL:    Automatic
    ```
+
+   Ya hay un TXT ahí —el `v=spf1 …` del reenvío de correo— y **no hay que tocarlo**: un dominio
+   puede tener varios TXT a la vez y se añade uno más.
 
 4. Vuelve a Central y pulsa **Verify Namespace**. Si dice que no lo ve, espera: el DNS tarda entre
    diez minutos y unas horas. Se puede comprobar sin salir de la terminal:
