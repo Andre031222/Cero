@@ -1,63 +1,110 @@
-# HTTP/2 — qué hay y qué falta
+# HTTP/2 — el contrato
 
-Segundo bloque del contrato, y el único que se escribe con la implementación a medio hacer. Va
-así a propósito: en `produccion.md` HTTP/2 llevaba tres versiones como hueco declarado, y pasar de
-«no está» a «está a medias, y aquí está la lista exacta» es la diferencia entre una promesa y un
-trabajo con estado.
+Segundo bloque, después de [conformidad.md](conformidad.md), que cubre HTTP/1.1.
 
-**Solo h2c**, HTTP/2 en claro. Sobre TLS todavía no.
+**Las tres puertas están abiertas:** conocimiento previo, `Upgrade: h2c` y ALPN sobre TLS. Esta
+última es la que importa de cara a internet — ningún navegador habla h2 en claro, así que sin ALPN
+el módulo entero no llegaba a un navegador nunca.
 
-## Lo que está, y probado
+## Lo que está, y cómo se comprueba
 
-| Pieza | Estado | Cómo se comprueba |
-|---|---|---|
-| HPACK — tabla estática, dinámica y Huffman | completo | los 32 vectores del apéndice C del RFC 7541 |
-| Capa de tramas | completo para los tipos que usa un servidor | `Http2Tests` |
-| Flujos concurrentes | uno por hilo virtual | pendiente de prueba concurrente |
-| Control de flujo, conexión y flujo | completo | 200 KB de bajada y 533 KB de eco con `curl` |
-| SETTINGS negociados | completo | ventana inicial y tamaño de trama |
-| PING, RST_STREAM, GOAWAY | completo | `Http2Tests` |
-| CONTINUATION | completo | bloques de cabeceras que no caben en una trama |
-| Entrada por conocimiento previo | completo | `curl --http2-prior-knowledge` |
+| Pieza | Cómo se verifica |
+|---|---|
+| HPACK — estática, dinámica y Huffman | los 32 vectores del apéndice C del RFC 7541 |
+| Capa de tramas y máquina de flujos | 24 vectores propios en `Http2Tests` |
+| Multiplexación | 24 peticiones de 120 ms en 129 ms sobre una conexión |
+| Control de flujo, conexión y flujo | 300 KB de bajada y 100 KB de subida, y `curl` con 533 KB |
+| Respuestas por `stream()` | 384 KB en tramas, sin acumular y sin `content-length` |
+| CONTINUATION | 400 cabeceras que no caben en una trama |
+| Trailers | se descartan, pero se decodifican para no descolocar HPACK |
+| SETTINGS, PING, RST_STREAM, GOAWAY | `Http2Tests` |
+| Entrada por conocimiento previo | `curl --http2-prior-knowledge` |
+| Entrada por `Upgrade: h2c` | `curl --http2` y un vector propio |
+| Entrada por ALPN sobre TLS | `curl --http2` sobre https y un vector propio |
 
 Las tablas de HPACK **no están escritas a mano**: se generan del RFC y se validan con la suma de
 Kraft, que en un código prefijo completo vale exactamente 1. Una tabla de 257 filas copiada a mano
-no revienta cuando se equivoca — decodifica mal.
+no revienta cuando se equivoca — decodifica mal, en silencio.
 
-## Lo que falta, por orden de lo que más pesa
+## Requisitos
 
-1. **`Upgrade: h2c`.** Es la puerta que usa `curl --http2` a secas y cualquier cliente que no sepa
-   de antemano que el servidor habla h2. Sin ella, solo entra quien ya lo sabe. `Http2` ya acepta
-   una petición inicial como flujo 1; falta el 101 y decodificar `HTTP2-Settings`.
+`DEBE` y `NO DEBE` en el sentido del RFC 2119. La columna «RFC» cita el apartado del 9113 que lo
+obliga, o el 7541 para lo de HPACK. Continúan la numeración de `conformidad.md`.
 
-2. **h2 sobre TLS con ALPN.** Sin esto, ningún navegador usará HTTP/2 con Cero: los navegadores no
-   hablan h2c. Es la pieza que convierte esto en algo que sirve de cara a internet, y hasta que
-   esté, el despliegue recomendado sigue llevando un proxy delante.
+### Errores de conexión
 
-3. **Multiplexación bajo carga.** Un flujo por hilo virtual está escrito y funciona con peticiones
-   sueltas, pero no hay prueba de decenas de flujos a la vez sobre una conexión — que es la razón
-   de ser del protocolo.
+Rompen la conexión entera con GOAWAY, porque después de ellos no se puede seguir interpretando
+nada. Cada uno lleva su código exacto: cerrar sin decir por qué deja al cliente sin saber si
+reintentar.
 
-4. **Entradas hostiles.** Tramas cortadas, longitudes que mienten, flujos con identificador hacia
-   atrás, CONTINUATION suelto, bombas de expansión en HPACK. HTTP/1.1 tiene 23 vectores de
-   conformidad; h2 todavía no tiene ninguno.
+| # | Requisito | Código | RFC |
+|---|---|---|---|
+| `H2-001` | Un preámbulo que no sea el preámbulo NO DEBE atenderse. | — | 9113 §3.4 |
+| `H2-002` | SETTINGS sobre un flujo distinto de 0 NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.5 |
+| `H2-003` | SETTINGS cuyo tamaño no sea múltiplo de seis NO DEBE admitirse. | FRAME_SIZE_ERROR | 9113 §6.5 |
+| `H2-004` | DATA sobre el flujo 0 NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.1 |
+| `H2-005` | HEADERS sobre el flujo 0 NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.2 |
+| `H2-006` | HEADERS sobre un flujo par NO DEBE admitirse: los pares son del servidor. | PROTOCOL_ERROR | 9113 §5.1.1 |
+| `H2-007` | Un identificador de flujo menor o igual que uno ya usado NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §5.1.1 |
+| `H2-008` | CONTINUATION sin un HEADERS delante NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.10 |
+| `H2-009` | PUSH_PROMISE de un cliente NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.6 |
+| `H2-010` | PING que no mida ocho octetos NO DEBE admitirse. | FRAME_SIZE_ERROR o PROTOCOL_ERROR | 9113 §6.7 |
+| `H2-011` | PING sobre un flujo NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.7 |
+| `H2-012` | WINDOW_UPDATE que no mida cuatro octetos NO DEBE admitirse. | FRAME_SIZE_ERROR | 9113 §6.9 |
+| `H2-013` | WINDOW_UPDATE con incremento cero sobre la conexión NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.9 |
+| `H2-014` | Una trama mayor que `SETTINGS_MAX_FRAME_SIZE` NO DEBE admitirse. | FRAME_SIZE_ERROR | 9113 §4.2 |
+| `H2-015` | Un índice de HPACK fuera de la tabla NO DEBE admitirse. | COMPRESSION_ERROR | 7541 §2.3.3 |
+| `H2-016` | El símbolo EOS dentro de una cadena Huffman NO DEBE admitirse. | COMPRESSION_ERROR | 7541 §5.2 |
+| `H2-017` | Un segundo bloque de cabeceras sin fin de flujo NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §8.1 |
 
-5. **Respuestas por `stream()`.** Se acumulan en memoria en vez de ir saliendo, porque el control
-   de flujo obliga a esperar ventana antes de cada trama. Para respuestas grandes, HTTP/1.1 sigue
-   siendo el camino.
+### Errores de flujo
 
-6. **Trailers.** Se leen y se descartan.
+Cortan un flujo con RST_STREAM y **dejan la conexión en pie**: las demás peticiones de ese cliente
+no tienen la culpa. Confundir estos con los de arriba convierte una petición mal formada en una
+caída de todo lo que ese cliente tuviera en vuelo.
+
+| # | Requisito | RFC |
+|---|---|---|
+| `H2-018` | Un método que el servidor no implementa DEBE cortar el flujo, no la conexión. | 9113 §8.1 |
+| `H2-019` | Un nombre de campo con mayúsculas DEBE tratarse como malformado. | 9113 §8.2.1 |
+| `H2-020` | Faltar `:method`, `:scheme` o `:path` DEBE tratarse como malformado. | 9113 §8.3.1 |
+| `H2-021` | Un `:path` vacío DEBE tratarse como malformado. | 9113 §8.3.1 |
+| `H2-022` | Un pseudo-campo repetido DEBE tratarse como malformado. | 9113 §8.3 |
+| `H2-023` | Un pseudo-campo después de un campo normal DEBE tratarse como malformado. | 9113 §8.3 |
+| `H2-024` | Un pseudo-campo desconocido DEBE tratarse como malformado. | 9113 §8.3 |
+| `H2-025` | Una cabecera específica de conexión DEBE tratarse como malformada. | 9113 §8.2.2 |
+| `H2-026` | Un `TE` con un valor distinto de `trailers` DEBE tratarse como malformado. | 9113 §8.2.2 |
+
+### Comportamiento
+
+| # | Requisito | RFC |
+|---|---|---|
+| `H2-027` | El servidor DEBE mandar sus SETTINGS como primera trama. | 9113 §3.4 |
+| `H2-028` | Un PING sin ACK DEBE contestarse con la misma carga y el ACK puesto. | 9113 §6.7 |
+| `H2-029` | Los flujos DEBEN atenderse en paralelo, no en fila. | 9113 §5 |
+| `H2-030` | Un flujo anulado NO DEBE afectar a los demás de esa conexión. | 9113 §5.1 |
+| `H2-031` | La ventana de un flujo nuevo DEBE ser la negociada, no la del RFC. | 9113 §6.9.2 |
+| `H2-032` | Un bloque de cabeceras mayor que una trama DEBE continuar en CONTINUATION. | 9113 §6.10 |
+| `H2-033` | Los nombres de campo de la respuesta DEBEN ir en minúscula. | 9113 §8.2.1 |
+| `H2-034` | Las cabeceras de conexión NO DEBEN emitirse en la respuesta. | 9113 §8.2.2 |
+| `H2-035` | Los trailers DEBEN decodificarse aunque se descarten, o HPACK se descoloca. | 7541 §4 |
 
 ## Lo que no va a estar, y por qué
 
-- **PUSH_PROMISE.** Está en desuso y los navegadores lo retiraron. Se anuncia deshabilitado en
-  SETTINGS, que es lo que manda el RFC.
+- **PUSH_PROMISE.** En desuso; los navegadores lo retiraron. Se anuncia deshabilitado en SETTINGS,
+  que es lo que manda el RFC.
 - **PRIORITY.** El RFC 9113 deprecó el esquema de prioridades del 7540. Se lee y se descarta.
-- **WebSocket sobre h2** (RFC 8441, el CONNECT extendido). `switchProtocols()` falla con un 501
-  explícito en vez de devolver un 101 que en h2 no significa nada.
+- **WebSocket sobre h2** (RFC 8441). `switchProtocols()` falla con un 501 explícito en vez de
+  devolver un 101, que en h2 no significa nada.
+- **Trailers hacia la aplicación.** Se decodifican y se descartan, igual que hace el módulo con
+  HTTP/1.1. Exponerlos solo en h2 dejaría una API que existe según el protocolo por debajo, que
+  es justo lo que este framework evita.
 
-## Requisitos numerados
+## Lo que falta
 
-Empiezan en `H2-001` y continúan la numeración de [conformidad.md](conformidad.md), que cubre
-HTTP/1.1. Se escribirán a medida que existan las pruebas que los verifican: la regla del contrato
-—no se especifica lo que no está probado— vale igual para este bloque.
+- **Prioridad de escritura entre flujos.** Con muchos flujos escribiendo a la vez, el orden lo
+  decide el candado de salida. Funciona, pero no hay una política.
+- **`SETTINGS_MAX_HEADER_LIST_SIZE`.** No se anuncia ni se hace cumplir, así que un bloque de
+  cabeceras enorme se procesa entero antes de rechazarse por otra vía.
+- **Vectores de expansión en HPACK.** Una tabla dinámica manipulada para que unos pocos octetos
+  se conviertan en muchos megabytes de cabeceras.

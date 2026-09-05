@@ -76,7 +76,7 @@ TEXTOS = {
         "pie_licencia": "Cero 0.3.0 · Licencia MIT",
         "pie_medido": "Medido el 2 de agosto de 2026",
         "movil": ("Inicio", "Bajar", "Guía", "Módulos"),
-        "og_alt": "Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 372 KB.",
+        "og_alt": "Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 407 KB.",
     },
     "en": {
         "locale": "en_US",
@@ -89,7 +89,7 @@ TEXTOS = {
         "pie_licencia": "Cero 0.3.0 · MIT licence",
         "pie_medido": "Measured on 2 August 2026",
         "movil": ("Home", "Get", "Guide", "Modules"),
-        "og_alt": "Cero — web framework for Java. 106 ms boot, 0 dependencies, 372 KB.",
+        "og_alt": "Cero — web framework for Java. 106 ms boot, 0 dependencies, 407 KB.",
     },
 }
 
