@@ -6,6 +6,27 @@ Segundo bloque, después de [conformidad.md](conformidad.md), que cubre HTTP/1.1
 última es la que importa de cara a internet — ningún navegador habla h2 en claro, así que sin ALPN
 el módulo entero no llegaba a un navegador nunca.
 
+## h2spec
+
+La suite de conformidad del ecosistema, escrita por otros. Es lo que separa «comprueba lo que se
+nos ocurrió comprobar» de «comprueba lo que dice el RFC».
+
+```
+146 tests, 145 passed, 0 skipped, 1 failed
+```
+
+**La primera corrida dio 124 de 146.** Los 22 fallos tenían pocas causas: no había máquina de
+estados de flujo, y faltaban las validaciones de forma de PRIORITY, RST_STREAM y SETTINGS. Ninguno
+lo veían las pruebas propias, que es exactamente el motivo de correr una de fuera.
+
+**El que queda —`3.5.2`, «Sends invalid connection preface»— no aplica y no se va a arreglar.**
+Manda `INVALID CONNECTION PREFACE\r\n\r\n` y espera un GOAWAY. En un puerto compartido con
+HTTP/1.1 eso es una petición con un método que no existe, y la respuesta correcta es **501**, que
+es la que se da. Contestar un GOAWAY binario a un cliente HTTP/1.1 sería peor que fallar el test.
+El caso asume un puerto dedicado a h2c.
+
+Corre en integración continua en cada cambio, y falla si aparece cualquier fallo que no sea ese.
+
 ## Lo que está, y cómo se comprueba
 
 | Pieza | Cómo se verifica |
@@ -124,9 +145,9 @@ llegue a mandarlo.
 
 - **Prioridad de escritura entre flujos.** Con muchos flujos escribiendo a la vez, el orden lo
   decide el candado de salida. Funciona, pero no hay una política.
-- **Los topes no son configurables.** Son constantes razonables, no opciones de
-  `ServerOptions` como sí lo son los de HTTP/1.1. Quien tenga un caso legítimo que los roce no
-  puede subirlos sin recompilar.
-- **Una suite de conformidad de terceros.** `h2spec` existe y es la referencia del ecosistema.
-  Los 39 requisitos de aquí son propios, y eso significa que comprueban lo que se nos ocurrió
-  comprobar.
+- **Prioridad de escritura entre flujos.** El orden lo decide el candado de salida. Funciona,
+  pero no hay una política: un flujo que escribe mucho puede hacer esperar a otro que escribe
+  poco.
+- **h2 sobre TLS con certificado recargable.** ALPN se fija al abrir el socket de escucha; si el
+  certificado se recarga, la lista de protocolos no se vuelve a mirar. Hoy no cambia nunca, así
+  que no se nota — pero es una suposición sin comprobar.
