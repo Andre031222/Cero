@@ -17,7 +17,7 @@
 #   ./cero portal        arranca cero-web: el sitio con acceso, demos y generador
 #   ./cero build         regenera las páginas del sitio
 #   ./cero status        resumen del proyecto
-#   ./cero migrar <ruta> lleva una app de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.5.0
+#   ./cero migrar <ruta> lleva una app de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.6.0
 set -euo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -273,7 +273,7 @@ JAVA
     ;;
 
   migrar|migrate)
-    # Lleva una aplicación de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.5.0.
+    # Lleva una aplicación de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.6.0.
     #
     # Exige que el árbol de git de la aplicación esté limpio: así el propio git es la copia
     # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
@@ -311,6 +311,6 @@ JAVA
     printf '  %-24s %s\n' "./cero portal [puerto]"  "arranca cero-web: acceso, demos y generador"
     printf '  %-24s %s\n' "./cero build"            "regenera las páginas del sitio"
     printf '  %-24s %s\n' "./cero status"           "resumen del proyecto"
-    printf '  %-24s %s\n' "./cero migrar <ruta>"    "lleva una app de LuxCore o Corvo a Cero 0.5.0"
+    printf '  %-24s %s\n' "./cero migrar <ruta>"    "lleva una app de LuxCore o Corvo a Cero 0.6.0"
     ;;
 esac

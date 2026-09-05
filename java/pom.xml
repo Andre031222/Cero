@@ -4,7 +4,7 @@
 
     <groupId>dev.ginit.cero</groupId>
     <artifactId>cero-parent</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0</version>
     <packaging>pom</packaging>
     <name>Cero</name>
     <description>Web framework for Java 25. Its own HTTP server, one virtual thread per connection, and zero runtime dependencies.</description>

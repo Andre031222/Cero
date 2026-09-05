@@ -7,7 +7,7 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 [![Java](https://img.shields.io/badge/Java-25%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
 [![Pruebas](https://img.shields.io/badge/Pruebas-1835-15803d?style=flat-square)](#estado)
-[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.5.0-6d28d9?style=flat-square)](docs/versiones.md)
+[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.6.0-6d28d9?style=flat-square)](docs/versiones.md)
 [![En vivo](https://img.shields.io/badge/En_vivo-cero.ginit.dev-0f2444?style=flat-square)](https://cero.ginit.dev)
 
 > **English** — Cero is a web framework for Java 25 with its own HTTP server, one virtual
