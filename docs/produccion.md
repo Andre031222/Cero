@@ -5,11 +5,11 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 761 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
+- **1 826 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
   de CI. Esa cifra es la de la corrida con PostgreSQL y MySQL levantados, que es la de CI.
   Sin ellos, `MotorTests` se omite —y lo dice— y salen 1 624: si mides en local y no
   cuadra, es por eso.
-- Arranca en ~100 ms dentro de un contenedor y pesa 372 KB. El resto de contendientes, medidos
+- Arranca en ~100 ms dentro de un contenedor y pesa 407 KB. El resto de contendientes, medidos
   a la vez y en las mismas condiciones, tardan entre 4 y 13 veces más.
 - El endurecimiento HTTP es explícito y está probado: rechaza cabeceras plegadas,
   `Content-Length` duplicado, `Content-Length` junto a `Transfer-Encoding`, `Host` ausente o
@@ -36,27 +36,27 @@ Y el sitio de referencia ya no depende de Tomcat: es `cero-web`.
 
 **Criterio:** una aplicación pequeña en producción de verdad, con tráfico real, durante semanas.
 
-### 2. HTTP/2 está a medias · **empezado**
+### 2. HTTP/2 · **hecho**
 
-Ya no es un «no está». **h2c funciona**: capa de tramas, HPACK completo, flujos concurrentes,
-control de flujo por conexión y por flujo, SETTINGS, PING, RST_STREAM y GOAWAY. `curl
---http2-prior-knowledge` habla con el servidor, y un eco de 533 KB vuelve byte a byte.
+Las tres puertas están abiertas: conocimiento previo, `Upgrade: h2c` y **ALPN sobre TLS**. Esa
+última es la que importa — ningún navegador habla h2 en claro, así que sin ALPN el módulo entero
+no llegaba a un navegador nunca. `curl` negocia h2 sobre https contra el servidor y responde.
 
-HPACK se verifica contra **los 32 vectores del apéndice C del RFC 7541** — los ejemplos que el
-propio RFC publica con su volcado hexadecimal, incluidas las secuencias donde crece la tabla
-dinámica y donde empieza a expulsar. Las dos tablas fijas no están escritas a mano: se generan del
-RFC y se validan con la suma de Kraft, que en un código prefijo completo vale exactamente 1.
+Están la capa de tramas, HPACK completo, multiplexación de verdad —24 peticiones de 120 ms en
+129 ms sobre una conexión—, control de flujo por conexión y por flujo, respuestas por `stream()`
+saliendo en tramas según se escriben, CONTINUATION, trailers, SETTINGS negociados, PING,
+RST_STREAM y GOAWAY con el código exacto que pide el RFC en cada caso.
 
-**Lo que falta, y por qué todavía importa:** no hay ALPN, así que ningún navegador va a usar
-HTTP/2 con Cero — los navegadores no hablan h2c. Y falta la entrada por `Upgrade`, que es la que
-usa cualquier cliente que no sepa de antemano que el servidor lo habla.
+Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **35 requisitos
+numerados** en [spec/http2.md](../spec/http2.md), separando los que rompen la conexión de los que
+solo cortan un flujo — confundirlos convierte una petición mal formada en una caída de todo lo que
+ese cliente tuviera en vuelo.
 
-Mientras eso siga así, **«sin contenedor» conserva su nota al pie**: no hace falta Tomcat, pero el
-despliegue recomendado lleva un proxy delante que absorbe TLS y h2. La lista completa de lo que
-queda está en [spec/http2.md](../spec/http2.md).
+**Lo que sigue faltando** está escrito allí: prioridad de escritura entre flujos,
+`SETTINGS_MAX_HEADER_LIST_SIZE` y vectores de expansión en HPACK. Nada de eso impide usarlo.
 
-**Criterio:** ALPN y `Upgrade` funcionando, más un bloque de vectores hostiles como el que ya
-tiene HTTP/1.1.
+Con esto, **«sin contenedor» deja de llevar nota al pie**: el proxy delante ya es una elección de
+despliegue, no un requisito para que un navegador hable con Cero.
 
 ### 3. El parser HTTP tiene dos días
 

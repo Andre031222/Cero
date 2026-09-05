@@ -973,7 +973,7 @@ td.huella { color: var(--tenue); font-size: .75rem; }
         <div class="chip"><b>390</b><span>KB</span><em>Desplegado</em></div>
         <div class="chip"><b>106</b><span>ms</span><em>Arranque</em></div>
         <div class="chip"><b>0</b><span>deps</span><em>En ejecución</em></div>
-        <div class="chip"><b>1761</b><span></span><em>Pruebas</em></div>
+        <div class="chip"><b>1826</b><span></span><em>Pruebas</em></div>
       </div>
 
       <div class="orden" data-copiar="curl -fsSL https://cero.ginit.dev/instalar | sh">
@@ -1102,7 +1102,7 @@ Cero.app()
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">Cero</th><th class="cifra">Diferencia</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td><td class="cifra">6,6×</td></tr>
-              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">372 KB</td><td class="cifra">51×</td></tr>
+              <tr><td>Desplegado</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">407 KB</td><td class="cifra">51×</td></tr>
               <tr><td>Imagen de contenedor</td><td class="cifra">274 MB</td><td class="cifra">110 MB</td><td class="cifra">2,5×</td></tr>
               <tr><td>Dependencias en ejecución</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td><td class="cifra">—</td></tr>
               <tr><td>Pruebas</td><td class="cifra">347</td><td class="cifra">1 342</td><td class="cifra">2,7×</td></tr>
@@ -1332,28 +1332,28 @@ Cero.app()
         <div class="ficha">
           <div class="campo">
             <div class="etiqueta">Solo HTTP</div>
-            <div><span class="mono">cero-http</span> · <b>95 KB</b><br>
+            <div><span class="mono">cero-http</span> · <b>129 KB</b><br>
               Un servidor con handlers a mano, sin rutas ni inyección. Para un webhook, un
               healthcheck o un proxy pequeño.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Una API JSON</div>
-            <div><span class="mono">cero-core</span> · <b>284 KB</b><br>
+            <div><span class="mono">cero-core</span> · <b>319 KB</b><br>
               Rutas, inyección, validación, seguridad y métricas. Lo habitual para un servicio.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Una web con HTML</div>
-            <div><span class="mono">+ cero-view</span> · <b>322 KB</b><br>
+            <div><span class="mono">+ cero-view</span> · <b>357 KB</b><br>
               Añade plantillas con herencia y escapado por defecto.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Con base de datos</div>
-            <div><span class="mono">+ cero-data</span> · <b>370 KB</b><br>
+            <div><span class="mono">+ cero-data</span> · <b>405 KB</b><br>
               JDBC, pool, transacciones, repositorios y sesiones en tabla. Más el driver de tu motor.</div>
           </div>
           <div class="campo">
             <div class="etiqueta">Migrando desde Tomcat</div>
-            <div><span class="mono">+ cero-adapter-servlet</span> · <b>382 KB</b><br>
+            <div><span class="mono">+ cero-adapter-servlet</span> · <b>418 KB</b><br>
               Despliega la misma aplicación dentro de Tomcat mientras haces el cambio, y vuelve
               atrás si hace falta.</div>
           </div>
@@ -1370,7 +1370,7 @@ Cero.app()
 
 ./cero install     <span class="cm"># compila, prueba e instala en ~/.m2</span>
 ./cero package     <span class="cm"># solo los JAR, con sus tamaños</span>
-./cero test        <span class="cm"># las 1 761 pruebas</span>
+./cero test        <span class="cm"># las 1 826 pruebas</span>
 ./cero run         <span class="cm"># la aplicación de ejemplo en :8080</span>
 ./cero new mi-app  <span class="cm"># un proyecto nuevo, listo para arrancar</span>
 ./cero docs        <span class="cm"># esta documentación, servida por Cero</span>
@@ -1504,7 +1504,7 @@ Cero.app()
           Los dos guiones se sirven como texto plano a propósito: ábrelos en el navegador y léelos
           antes de ejecutarlos — <a href="/instalar">instalar</a> ·
           <a href="/instalar.ps1">instalar.ps1</a>. Con <code>--con-pruebas</code> corre además las
-          1 761 pruebas durante la instalación.
+          1 826 pruebas durante la instalación.
         </p>
 
         <p>Y si prefieres hacerlo a mano, es lo mismo paso a paso:</p>
@@ -2745,8 +2745,8 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
           <table>
             <thead><tr><th>Sistema</th><th>Estado</th><th>Nota</th></tr></thead>
             <tbody>
-              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 761 pruebas.</td></tr>
-              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 761 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 25, en cada cambio.</td></tr>
+              <tr><td class="mono">macOS</td><td><span class="pastilla ok">Probado</span></td><td>Intel y Apple Silicon. Donde se desarrolló y donde corren las 1 826 pruebas.</td></tr>
+              <tr><td class="mono">Linux</td><td><span class="pastilla ok">Probado</span></td><td>Las 1 826 pruebas en verde sobre Linux 6.12, con PostgreSQL y MySQL reales. En integración continua, sobre JDK 25, en cada cambio.</td></tr>
               <tr><td class="mono">Windows</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Nada toca rutas ni permisos específicos del sistema.</td></tr>
               <tr><td class="mono">Contenedores</td><td><span class="pastilla parcial">Sin verificar</span></td><td>Cualquier imagen con JRE 21. Sin contenedor de servlets, la imagen es el JRE más 223 KB.</td></tr>
             </tbody>
@@ -2780,7 +2780,7 @@ Datos datos = config.bind(Datos.class, <span class="st">"db"</span>);</pre>
             <thead><tr><th>Métrica</th><th class="cifra">JxMVC sobre Tomcat</th><th class="cifra">Cero</th></tr></thead>
             <tbody>
               <tr><td>Arranque</td><td class="cifra">698 ms</td><td class="cifra">106 ms</td></tr>
-              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">372 KB</td></tr>
+              <tr><td>Artefacto</td><td class="cifra">253 KB + ~15 MB</td><td class="cifra">407 KB</td></tr>
               <tr><td>Necesita contenedor</td><td class="cifra">Tomcat 10.1+</td><td class="cifra">no</td></tr>
               <tr><td>Dependencias en runtime</td><td class="cifra">Jakarta EE 10</td><td class="cifra">ninguna</td></tr>
               <tr><td>Líneas de producción</td><td class="cifra">10 379</td><td class="cifra">12 784</td></tr>
@@ -3088,9 +3088,9 @@ document.addEventListener('DOMContentLoaded', function () {
       { t: 'giro', v: 'cero-web',  dur: 500,  fin: '[INFO] cero-web ............... SUCCESS [    2.6 s]    74 ✓' },
       { t: 'blank' },
       { t: 'out', v: '[INFO] BUILD SUCCESS', cls: 'ok' },
-      { t: 'contar', hasta: 1761, dur: 900,
-        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 372 KB'
-                      : '        {n} tests · 0 failures · 0 dependencies · 372 KB', cls: 'ok' },
+      { t: 'contar', hasta: 1826, dur: 900,
+        plantilla: es ? '        {n} pruebas · 0 fallos · 0 dependencias · 407 KB'
+                      : '        {n} tests · 0 failures · 0 dependencies · 407 KB', cls: 'ok' },
       { t: 'blank' },
 
       { t: 'cm', v: es ? '# 3 — levantar la aplicación de ejemplo' : '# 3 — start the example app', paso: 2 },
