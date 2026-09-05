@@ -8,6 +8,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 final class ProtocolTests {
 
@@ -99,9 +100,18 @@ final class ProtocolTests {
             }
         });
 
-        dentro.await();
+        // Con tiempo límite, no `await()` a secas. Si la petición no llega —por lo que sea— un
+        // await sin plazo convierte un fallo intermitente en un build colgado, y el que lo vea
+        // mañana no sabrá si está probando o parado. Que falle rápido y diga por qué.
+        if (!dentro.await(10, TimeUnit.SECONDS)) {
+            server.stop();
+            Check.that("el apagado sí espera a la petición en vuelo (no llegó a entrar: "
+                    + respuesta.getNow("sin respuesta") + ")", false);
+            return;
+        }
         server.stop();
-        Check.equal("el apagado sí espera a la petición en vuelo", respuesta.get(), "terminada");
+        Check.equal("el apagado sí espera a la petición en vuelo",
+                respuesta.get(15, TimeUnit.SECONDS), "terminada");
     }
 
     private static void route(Request request, Response response) throws Exception {
