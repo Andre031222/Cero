@@ -133,7 +133,7 @@ final class Fixture {
         return path;
     }
 
-    private static SSLContext trustEverything() throws Exception {
+    static SSLContext trustEverything() throws Exception {
         TrustManager[] permissive = {new X509TrustManager() {
             @Override
             public void checkClientTrusted(X509Certificate[] chain, String authType) {

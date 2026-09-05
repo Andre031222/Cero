@@ -213,26 +213,65 @@ final class Http2Respuesta implements Response {
     }
 
     /**
-     * La salida por {@code stream()}: se acumula y sale al cerrar.
+     * La salida por {@code stream()}: sale en tramas según se escribe, no al final.
      *
-     * <p>En HTTP/1.1 esto va en trozos chunked según se escribe. Aquí se junta porque el control
-     * de flujo de h2 obliga a esperar ventana antes de cada trama, y un manejador que escribe de
-     * mil en mil bytes acabaría durmiendo dentro de su propio {@code write}. Para respuestas que
-     * no caben en memoria, HTTP/1.1 sigue siendo el camino.
+     * <p>Antes se acumulaba entera en memoria, lo que convertía una respuesta de streaming en una
+     * respuesta normal con un rodeo — y hacía imposible mandar algo más grande que el montón, que
+     * es justo para lo que existe {@code stream()}.
+     *
+     * <p>Va con un buffer intermedio de 8 KB por una razón concreta: cada trama DATA cuesta nueve
+     * octetos de cabecera y una espera de ventana, así que un manejador que escriba de byte en
+     * byte generaría una trama por byte. El buffer las junta; {@code flush()} las suelta cuando
+     * el manejador quiere que salgan de verdad —eventos del servidor, progreso— y ahí sí sale
+     * inmediatamente.
+     *
+     * <p>Las cabeceras se mandan en la primera escritura, no al cerrar: un cliente que está
+     * esperando el primer byte necesita el {@code :status} antes que el cuerpo.
      */
     private final class Flujo extends OutputStream {
 
-        private final ByteArrayOutputStream acumulado = new ByteArrayOutputStream();
+        private static final int BUFFER = 8 * 1024;
+
+        private final ByteArrayOutputStream pendiente = new ByteArrayOutputStream(BUFFER);
         private boolean cerrado;
 
         @Override
-        public void write(int b) {
-            acumulado.write(b);
+        public void write(int b) throws IOException {
+            pendiente.write(b);
+            siLlenoSuelta();
         }
 
         @Override
-        public void write(byte[] datos, int desde, int largo) {
-            acumulado.write(datos, desde, largo);
+        public void write(byte[] datos, int desde, int largo) throws IOException {
+            pendiente.write(datos, desde, largo);
+            siLlenoSuelta();
+        }
+
+        private void siLlenoSuelta() throws IOException {
+            if (pendiente.size() >= BUFFER) {
+                soltar(false);
+            }
+        }
+
+        @Override
+        public void flush() throws IOException {
+            soltar(false);
+        }
+
+        /** Manda lo acumulado. Con `fin`, cierra el flujo en la misma trama. */
+        private void soltar(boolean fin) throws IOException {
+            if (!comprometida) {
+                comprometida = true;
+                // Sin `content-length`: en streaming no se sabe cuánto va a salir, y declararlo
+                // mal es peor que no declararlo. El fin del flujo lo marca la bandera.
+                cabeceras.remove("content-length");
+                conexion.mandarCabeceras(flujo.id, campos(), false);
+            }
+            byte[] trozo = pendiente.toByteArray();
+            pendiente.reset();
+            if (trozo.length > 0 || fin) {
+                conexion.mandarDatos(flujo, trozo, fin);
+            }
         }
 
         @Override
@@ -245,9 +284,12 @@ final class Http2Respuesta implements Response {
                 return;
             }
             cerrado = true;
-            byte[] cuerpo = acumulado.toByteArray();
             Http2Respuesta.this.salidaEnCurso = null;
-            emitir(cuerpo);
+            try {
+                soltar(true);
+            } catch (IOException roto) {
+                throw new OutgoingResponse.UncheckedHttpException(roto);
+            }
         }
     }
 }

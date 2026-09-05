@@ -122,6 +122,82 @@ final class Http2 {
     }
 
     /**
+     * ¿Esta petición pide cambiar a HTTP/2?
+     *
+     * <p>RFC 9113 §3.2: hacen falta las tres a la vez —{@code Upgrade: h2c},
+     * {@code HTTP2-Settings} y las dos nombradas en {@code Connection}—. Con menos no es una
+     * petición de cambio, es una cabecera suelta que hay que ignorar.
+     */
+    static boolean pidenUpgrade(IncomingRequest peticion) {
+        String upgrade = peticion.header("Upgrade");
+        return upgrade != null && upgrade.trim().equalsIgnoreCase("h2c")
+                && peticion.header("HTTP2-Settings") != null
+                && peticion.headers().contains("Connection", "Upgrade")
+                && peticion.headers().contains("Connection", "HTTP2-Settings");
+    }
+
+    /**
+     * Contesta 101 y sigue hablando HTTP/2 sobre el mismo socket.
+     *
+     * <p>La petición que pidió el cambio no se pierde: se atiende como flujo 1, que es lo que
+     * manda el RFC, y ese identificador queda gastado — el cliente empieza a numerar por el 3.
+     */
+    static void aceptarUpgrade(Socket socket, InputStream in, OutputStream out,
+                               ServerContext context, String remoto, IncomingRequest peticion)
+            throws IOException {
+        out.write(("HTTP/1.1 101 Switching Protocols\r\n"
+                + "Connection: Upgrade\r\n"
+                + "Upgrade: h2c\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+        out.flush();
+
+        try (ExecutorService hilos = Executors.newVirtualThreadPerTaskExecutor()) {
+            Http2 conexion = new Http2(socket, in, out, context, remoto, hilos);
+            // Los SETTINGS del cliente viajan en base64url dentro de la cabecera, no como trama.
+            // Se aplican antes del preámbulo porque de ellos depende la ventana con la que nace
+            // el flujo 1, que se atiende inmediatamente.
+            conexion.ajustesDeCabecera(peticion.header("HTTP2-Settings"));
+            conexion.correr(comoHttp2(peticion, context));
+        }
+    }
+
+    /**
+     * La misma petición, pero declarándose HTTP/2.
+     *
+     * <p>Entró como HTTP/1.1 y por eso lo decía, pero se atiende como flujo 1 y se responde con
+     * tramas. Dejar que un controlador lea «HTTP/1.1» ahí le haría tomar decisiones sobre un
+     * protocolo que ya no es el que hay debajo — empezando por creer que puede pedir un
+     * {@code switchProtocols()}.
+     *
+     * <p>Se quitan además las tres cabeceras del propio cambio: en HTTP/2 no existen, y dejarlas
+     * visibles sería enseñar a la aplicación algo que el protocolo prohíbe.
+     */
+    private static IncomingRequest comoHttp2(IncomingRequest original, ServerContext context) {
+        Headers limpias = new Headers(original.headers().size());
+        for (int i = 0; i < original.headers().size(); i++) {
+            String nombre = original.headers().name(i);
+            if (nombre.equalsIgnoreCase("Connection") || nombre.equalsIgnoreCase("Upgrade")
+                    || nombre.equalsIgnoreCase("HTTP2-Settings")) {
+                continue;
+            }
+            limpias.add(nombre, original.headers().value(i));
+        }
+        return new IncomingRequest(original.method(), original.path(), original.rawQuery(),
+                "HTTP/2.0", limpias, original.body(), original.remoteAddress(), context);
+    }
+
+    /** Aplica los SETTINGS que vinieron en la cabecera del Upgrade. */
+    private void ajustesDeCabecera(String base64url) {
+        try {
+            byte[] crudos = java.util.Base64.getUrlDecoder().decode(base64url.trim());
+            ajustes(0, 0, crudos, false);
+        } catch (IllegalArgumentException | IOException malFormados) {
+            // §3.2: una cabecera que no se puede leer se trata como si no estuviera. El cambio
+            // ya está aceptado y deshacerlo no es una opción, así que se sigue con los valores
+            // por defecto, que es lo que habría pasado sin la cabecera.
+        }
+    }
+
+    /**
      * ¿Empieza esto con el preámbulo de h2c? Se mira sin consumir.
      *
      * <p>Byte a byte, y se abandona en cuanto uno no coincide. No es una optimización: leer los
@@ -253,6 +329,26 @@ final class Http2 {
         if (idFlujo == 0 || (idFlujo & 1) == 0) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "HEADERS sobre un flujo que no vale");
         }
+
+        // Un HEADERS sobre un flujo que ya está abierto son los trailers: las cabeceras que van
+        // detrás del cuerpo. Se descartan —igual que en HTTP/1.1, que también los salta— pero
+        // hay que DECODIFICARLOS igual. La tabla dinámica de HPACK es un estado compartido que
+        // avanza con cada bloque: saltarse uno la descoloca, y a partir de ahí todos los índices
+        // de esa conexión significan otra cosa. Tirar los bytes sin leerlos rompe la conexión
+        // entera unas cuantas peticiones más tarde, lejos de la causa.
+        Flujo abierto = flujos.get(idFlujo);
+        if (abierto != null && !abierto.finEntrada) {
+            hpackIn.decodificar(leerBloqueDeCabeceras(idFlujo, banderas, carga));
+            if ((banderas & FIN_FLUJO) == 0) {
+                // §8.1: los trailers son el último bloque del flujo. Sin FIN_FLUJO no son
+                // trailers, son un segundo bloque de cabeceras, que no existe.
+                throw new ErrorConexion(ERROR_PROTOCOLO, "trailers sin fin de flujo");
+            }
+            abierto.finEntrada = true;
+            abierto.cerrarEntrada();
+            return;
+        }
+
         if (idFlujo <= ultimoFlujoVisto) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "identificador de flujo hacia atrás");
         }
@@ -262,6 +358,34 @@ final class Http2 {
         }
         ultimoFlujoVisto = idFlujo;
 
+        List<Hpack.Campo> campos = hpackIn.decodificar(
+                leerBloqueDeCabeceras(idFlujo, banderas, carga));
+        Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo);
+        flujos.put(idFlujo, flujo);
+        if ((banderas & FIN_FLUJO) != 0) {
+            flujo.finEntrada = true;
+            flujo.cerrarEntrada();
+        }
+
+        IncomingRequest peticion;
+        try {
+            peticion = aPeticion(campos, flujo);
+        } catch (ErrorFlujo malFormada) {
+            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
+            flujos.remove(idFlujo);
+            return;
+        }
+        lanzar(flujo, peticion);
+    }
+
+    /**
+     * Junta el bloque de cabeceras: quita el relleno y la prioridad, y sigue por CONTINUATION.
+     *
+     * <p>Hasta que llegue FIN_CABECERAS no puede intercalarse ninguna otra trama, ni siquiera de
+     * otro flujo: para HPACK el bloque es indivisible, y algo en medio lo descolocaría.
+     */
+    private byte[] leerBloqueDeCabeceras(int idFlujo, int banderas, byte[] carga)
+            throws IOException {
         int pos = 0;
         int recorte = 0;
         if ((banderas & RELLENO) != 0) {
@@ -276,8 +400,6 @@ final class Http2 {
         ByteArrayOutputStream bloque = new ByteArrayOutputStream();
         bloque.write(carga, pos, carga.length - pos - recorte);
 
-        // CONTINUATION: hasta que llegue FIN_CABECERAS no se puede intercalar ninguna otra
-        // trama, ni siquiera de otro flujo. El bloque es indivisible para HPACK.
         boolean completo = (banderas & FIN_CABECERAS) != 0;
         while (!completo) {
             byte[] cab = new byte[9];
@@ -295,24 +417,7 @@ final class Http2 {
             bloque.write(trozo);
             completo = (flags & FIN_CABECERAS) != 0;
         }
-
-        List<Hpack.Campo> campos = hpackIn.decodificar(bloque.toByteArray());
-        Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo);
-        flujos.put(idFlujo, flujo);
-        if ((banderas & FIN_FLUJO) != 0) {
-            flujo.finEntrada = true;
-            flujo.cerrarEntrada();
-        }
-
-        IncomingRequest peticion;
-        try {
-            peticion = aPeticion(campos, flujo);
-        } catch (ErrorFlujo malFormada) {
-            escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
-            flujos.remove(idFlujo);
-            return;
-        }
-        lanzar(flujo, peticion);
+        return bloque.toByteArray();
     }
 
     /** Los pseudo-campos de h2 se convierten en la petición que el resto del framework entiende. */
@@ -368,9 +473,14 @@ final class Http2 {
         String ruta = interrogante < 0 ? destino : destino.substring(0, interrogante);
         String consulta = interrogante < 0 ? null : destino.substring(interrogante + 1);
 
-        HttpMethod verbo = HttpMethod.of(metodo);
-        if (verbo == null) {
-            throw new ErrorFlujo("método desconocido");
+        HttpMethod verbo;
+        try {
+            verbo = HttpMethod.of(metodo);
+        } catch (HttpException noSoportado) {
+            // En HTTP/1.1 esto sale como 501 porque hay una línea de estado donde ponerlo. En
+            // h2 llega antes de que exista el flujo como tal, así que se corta el flujo y la
+            // conexión sigue: las demás peticiones de ese cliente no tienen la culpa.
+            throw new ErrorFlujo("método desconocido: " + metodo);
         }
         return new IncomingRequest(verbo, Url.decodePath(ruta), consulta, "HTTP/2.0",
                 cabeceras, flujo.entrada, remoto, context);
@@ -436,6 +546,16 @@ final class Http2 {
     }
 
     private void ajustes(int flujo, int banderas, byte[] carga) throws IOException {
+        ajustes(flujo, banderas, carga, true);
+    }
+
+    /**
+     * @param reconocer falso cuando los SETTINGS no vinieron en una trama sino en la cabecera del
+     *                  Upgrade: ahí no hay nada que reconocer, y mandar un ACK antes del
+     *                  preámbulo confundiría al cliente
+     */
+    private void ajustes(int flujo, int banderas, byte[] carga, boolean reconocer)
+            throws IOException {
         if (flujo != 0) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "SETTINGS sobre un flujo");
         }
@@ -474,7 +594,9 @@ final class Http2 {
                 default -> { /* §6.5.2: lo que no se conoce se ignora. */ }
             }
         }
-        escribirTrama(SETTINGS, RECONOCE, 0, new byte[0]);
+        if (reconocer) {
+            escribirTrama(SETTINGS, RECONOCE, 0, new byte[0]);
+        }
     }
 
     private void ventana(int flujo, byte[] carga) throws IOException {
@@ -554,21 +676,29 @@ final class Http2 {
         }
     }
 
-    /** Manda el cuerpo respetando las dos ventanas: la del flujo y la de la conexión. */
+    /**
+     * Manda el cuerpo respetando las dos ventanas: la del flujo y la de la conexión.
+     *
+     * <p>El caso vacío se resuelve antes del bucle y no dentro. Con cero bytes, el hueco que se
+     * pide también es cero, y esperar a que quepan cero bytes es esperar para siempre: el bucle
+     * no salía nunca. No se notaba porque hasta que `stream()` empezó a mandar tramas según se
+     * escribe, aquí no llegaba nunca un cuerpo vacío.
+     */
     void mandarDatos(Flujo flujo, byte[] cuerpo, boolean fin) throws IOException {
+        if (cuerpo.length == 0) {
+            if (fin) {
+                escribirTrama(DATA, FIN_FLUJO, flujo.id, new byte[0]);
+            }
+            return;
+        }
         int pos = 0;
-        do {
+        while (pos < cuerpo.length) {
             int quedan = cuerpo.length - pos;
-            int hueco = esperarHueco(flujo, Math.min(quedan, tramaMaxima));
-            int trozo = Math.min(hueco, Math.min(quedan, tramaMaxima));
+            int trozo = esperarHueco(flujo, Math.min(quedan, tramaMaxima));
             boolean ultimo = fin && pos + trozo >= cuerpo.length;
             escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
                     java.util.Arrays.copyOfRange(cuerpo, pos, pos + trozo));
             pos += trozo;
-        } while (pos < cuerpo.length);
-
-        if (fin && cuerpo.length == 0) {
-            escribirTrama(DATA, FIN_FLUJO, flujo.id, new byte[0]);
         }
     }
 
