@@ -5,7 +5,7 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 830 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
+- **1 835 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
   de CI. Esa cifra es la de la corrida con PostgreSQL y MySQL levantados, que es la de CI.
   Sin ellos, `MotorTests` se omite —y lo dice— y salen 1 624: si mides en local y no
   cuadra, es por eso.
@@ -64,20 +64,25 @@ probados.
 Con esto, **«sin contenedor» deja de llevar nota al pie**: el proxy delante ya es una elección de
 despliegue, no un requisito para que un navegador hable con Cero.
 
-### 3. El parser HTTP tiene dos días
+### 3. El parser HTTP es joven · **mitigado, no resuelto**
 
-Tomcat lleva 25 años recibiendo tráfico hostil y tiene un historial de CVEs ya corregidos que
-nosotros vamos a redescubrir por nuestra cuenta. Que la auditoría encontrara una inyección CRLF a
-las pocas horas de escribir el módulo dice que el riesgo es real, no teórico.
+Tomcat lleva veinticinco años recibiendo tráfico hostil. Eso no se compensa con pruebas, pero sí
+se puede acotar, y desde la última revisión hay tres cosas que antes no estaban:
 
-**Hecho en parte:** hay fuzzing dirigido y **23 vectores de conformidad con RFC 9112** — forma
-del destino, reglas de cabecera, longitud del cuerpo, orden de las codificaciones. Escribirlos
-destapó cuatro incumplimientos reales: no se aceptaba *absolute-form* ni *asterisk-form*, se
-tragaba `chunked` fuera de la última posición y se admitían bytes nulos en valores de cabecera.
-Los cuatro corregidos.
+- **`h2spec` en integración continua.** La suite de conformidad de HTTP/2 del ecosistema, escrita
+  por otros. La primera corrida dio **124 de 146**: veintidós fallos que las pruebas propias no
+  veían. Hoy pasa 145, y el que falta está explicado en [spec/http2.md](../spec/http2.md).
+- **Ruido dirigido contra los dos parsers.** 1 200 entradas malformadas por corrida —peticiones
+  HTTP/1.1 rotas por un sitio al azar, tramas de h2 con tipos y longitudes inventados, y bytes
+  puros detrás de un preámbulo válido—. El criterio no es qué contesta: es que después de todas
+  siga atendiendo.
+- **Las cuatro inundaciones conocidas de HTTP/2**, con tope y prueba.
 
-**Lo que falta:** una suite reconocida de terceros. No existe libre para HTTP/1.1, así que la
-alternativa realista es ampliar los vectores propios.
+Lo escrito arriba sigue valiendo: **esto lo encontró alguien que buscó, no saltó solo.** La
+diferencia entre un parser joven y uno maduro es el tráfico real, y eso no se acelera.
+
+**Lo que falta:** una auditoría externa. Los once hallazgos de la 0.3.0 salieron de un lector que
+no lo había escrito, y eso no se sustituye leyéndolo uno mismo.
 
 ### 4. `cero-data` contra motores reales · **hecho**
 
@@ -114,7 +119,14 @@ Lo medido es en Docker Desktop: los números relativos son justos, los absolutos
 programaba una tarea por petición que al cancelarse no salía de la cola; con eso corregido bajó a
 136,4 MB. Sigue por encima de la meta absoluta de 120 MB, pero ya es el más bajo de los seis.
 
-### 6. Las pruebas adversariales son ráfagas, no maratones · **parcialmente hecho**
+### 6. Sin escaneo de dependencias · **hecho**
+
+El núcleo no distribuye ninguna, pero las de prueba —los tres drivers JDBC— se compilan y se
+ejecutan en la máquina de quien construya el proyecto. Ahora CI inventaría lo que se declara en
+cada corrida y, en los cambios propuestos, la revisión de dependencias falla ante una
+vulnerabilidad de severidad alta.
+
+### 7. Las pruebas adversariales son ráfagas, no maratones · **parcialmente hecho**
 
 `HostileTests` ya cubre lo que faltaba en ráfaga: conexiones lentas que caducan, 20 sockets mudos
 a la vez, `Content-Length` que miente, un chunk de 4 GB declarado, 15 clientes cortando a media
@@ -131,7 +143,7 @@ descriptores e hilos. Una corrida de 30 minutos con 64 conexiones: RSS de 382,6 
 
 **Lo que falta:** días, no minutos, y con conexiones hostiles mezcladas.
 
-### 7. Huecos operativos conocidos
+### 8. Huecos operativos conocidos
 
 | Hueco | Impacto |
 |---|---|
