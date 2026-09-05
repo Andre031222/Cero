@@ -52,11 +52,14 @@ leer. Ninguno de los dos es código del framework.
 
 ## Por qué se copió en vez de trabajar sobre el original
 
-**`19.Soft_JXMVC` está congelado.** Alimenta un artículo en revisión para *Software: Practice and
-Experience*, cuya carpeta es `AUP_Papers/13.-JxMVC_SPE/`. Los benchmarks del artículo se midieron
-en Arch bare-metal bajo condiciones controladas; cualquier cambio en el framework invalida esos
-números. El origen tiene además tres pendientes abiertos (benchmark `/db` en Arch, DOI de Zenodo,
-autoría/ORCID) que siguen su curso sin relación con este repositorio.
+**`19.Soft_JXMVC` está congelado.** Alimenta un artículo cuya carpeta es
+`AUP_Papers/13.-JxMVC_SPE/`. Fue rechazado en la selección editorial de *Software: Practice and
+Experience* en agosto de 2026, sin llegar a revisión por pares, por un motivo ajeno al contenido
+del manuscrito; se está redirigiendo a otra revista. Los benchmarks se midieron en Arch
+bare-metal bajo condiciones controladas y **cualquier cambio en el framework invalida esos
+números**, que es lo que mantiene el congelado. El origen tiene además tres pendientes abiertos
+(benchmark `/db` en Arch, DOI de Zenodo, autoría/ORCID) que siguen su curso sin relación con este
+repositorio.
 
 Tampoco se copió el `.git` del origen: su `origin` apunta al repositorio del artículo, y bastaría
 un `git push` distraído desde aquí para reescribirlo. Este repositorio arranca con historial propio.
