@@ -51,7 +51,19 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             open.setSoTimeout(options.idleTimeoutMillis());
 
             OutputStream out = new BufferedOutputStream(open.getOutputStream(), 16_384);
-            ByteReader reader = new ByteReader(open.getInputStream(), options.readBufferBytes());
+
+            // El preámbulo de HTTP/2 se mira antes de nada y se devuelve al flujo. Es la única
+            // forma de distinguir h2c de HTTP/1.1 en claro: los dos empiezan por texto ASCII, y
+            // «PRI * HTTP/2.0» es una petición sintácticamente válida en HTTP/1.1.
+            java.io.PushbackInputStream entrada =
+                    new java.io.PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
+            if (Http2.pareceHttp2(entrada)) {
+                ociosa = false;
+                Http2.servir(open, entrada, out, context, remoteAddress(open));
+                return;
+            }
+
+            ByteReader reader = new ByteReader(entrada, options.readBufferBytes());
             RequestReader requests = new RequestReader(reader, context);
             head = new AsciiBuffer(512);
 

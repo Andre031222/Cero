@@ -32,7 +32,7 @@ Tres reglas, para que el documento no se convierta en literatura:
 
 ## Cómo va a crecer
 
-El contrato se extrae del banco que ya corre: **1 593 aserciones en 87 grupos**. Cada grupo es un
+El contrato se extrae del banco que ya corre: **1 761 aserciones en 88 grupos**. Cada grupo es un
 candidato a sección del contrato, y cada aserción a requisito numerado. El trabajo pendiente no
 es inventar el contrato — es transcribirlo y decidir, grupo a grupo, qué parte es contrato y qué
 parte es detalle de la implementación en Java.
@@ -40,6 +40,7 @@ parte es detalle de la implementación en Java.
 | Área | Grupos de prueba | Estado del contrato |
 |---|---|---|
 | Protocolo HTTP/1.1 | 6 | [conformidad.md](conformidad.md) · **empezado** |
+| Protocolo HTTP/2 | 1 | [http2.md](http2.md) · **inventario, sin numerar** |
 | Ruteo y despacho | 5 | por escribir |
 | Petición y respuesta | 9 | por escribir |
 | Sesiones y cookies | 4 | por escribir |
