@@ -169,8 +169,7 @@ public final class Cero {
     }
 
     public Handler handler() {
-        Handler dispatcher = new Dispatcher(router, registry, middleware, authenticator, views, messages);
-        return fallback == null ? dispatcher : withFallback(dispatcher);
+        return new Dispatcher(router, registry, middleware, authenticator, views, messages, fallback);
     }
 
     public Server start() {
@@ -185,16 +184,6 @@ public final class Cero {
                     router.size(), millis);
         }
         return server;
-    }
-
-    private Handler withFallback(Handler dispatcher) {
-        return (request, response) -> {
-            if (router.resolve(request.method(), request.path()) == null) {
-                fallback.handle(request, response);
-                return;
-            }
-            dispatcher.handle(request, response);
-        };
     }
 
     private static ServerOptions applyConfig(ServerOptions current, Config config) {

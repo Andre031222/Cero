@@ -66,6 +66,17 @@ final class JsonTests {
         Check.equal("instante", Json.write(Instant.parse("2026-08-01T10:00:00Z")),
                 "\"2026-08-01T10:00:00Z\"");
         Check.equal("fecha", Json.write(LocalDate.of(2026, 8, 1)), "\"2026-08-01\"");
+
+        // Los tres de java.sql heredan de java.util.Date. Tratados como instantes, una hora
+        // de clase salía «1970-01-02T00:00:00Z» y una fecha se adelantaba un día al pasarla
+        // a UTC — que en otra zona horaria es el día anterior.
+        Check.equal("hora sql es etiqueta de reloj, no instante",
+                Json.write(java.sql.Time.valueOf("19:00:00")), "\"19:00\"");
+        Check.equal("fecha sql no se desplaza a UTC",
+                Json.write(java.sql.Date.valueOf("2026-10-01")), "\"2026-10-01\"");
+        Check.equal("marca de tiempo sql sí es un instante",
+                Json.write(java.sql.Timestamp.from(Instant.parse("2026-08-01T10:00:00Z"))),
+                "\"2026-08-01T10:00:00Z\"");
         Check.equal("escapes", Json.write("a\"b\\c\nd\te"), "\"a\\\"b\\\\c\\nd\\te\"");
         Check.equal("control", Json.write("\u0001"), "\"\\u0001\"");
         Check.equal("acentos sin escapar", Json.write("añó"), "\"añó\"");

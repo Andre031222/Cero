@@ -68,6 +68,13 @@ public final class Json {
                 case Optional<?> maybe -> value(maybe.orElse(null));
                 case UUID id -> string(id.toString());
                 case Temporal moment -> string(moment.toString());
+                // Los tres tipos de java.sql heredan de java.util.Date, así que van ANTES
+                // que él o caen en su rama. Y no son instantes: `time` y `date` son etiquetas
+                // de calendario y de reloj. Tratarlos como instantes convertía las 19:00 en
+                // «1970-01-02T00:00:00Z» y adelantaba un día las fechas al pasarlas a UTC.
+                case java.sql.Timestamp instante -> string(instante.toInstant().toString());
+                case java.sql.Time reloj -> string(reloj.toLocalTime().toString());
+                case java.sql.Date dia -> string(dia.toLocalDate().toString());
                 case Date moment -> string(Instant.ofEpochMilli(moment.getTime()).toString());
                 case Map<?, ?> map -> object(map);
                 case Collection<?> items -> array(items);
