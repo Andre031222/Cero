@@ -217,6 +217,8 @@ final class DispatcherTests {
         } finally {
             server.stop();
         }
+
+        fallback();
     }
 
     private static void enrutado(String base) throws Exception {
@@ -361,5 +363,51 @@ final class DispatcherTests {
         Cliente.get(base + "/nada");
         Check.equal("el middleware también corre en un 404",
                 String.join(",", traza), "entra,dentro");
+    }
+
+    /**
+     * El fallback pasa por los middlewares, como cualquier otra respuesta.
+     *
+     * <p>Antes no: se resolvía delante del despachador y se saltaba la cadena entera. El
+     * documento HTML de un SPA —lo único que un atacante puede meter en un iframe— salía sin
+     * X-Frame-Options mientras la API sí la llevaba, y los estáticos no tenían freno de tasa.
+     */
+    private static void fallback() throws Exception {
+        List<String> traza = new ArrayList<>();
+        Server server = Cero.app()
+                .port(0)
+                .quiet()
+                .reporter(ErrorReporter.silent())
+                .routes(router -> router.get("/api/ping", ctx -> "pong"))
+                .use((context, chain) -> {
+                    traza.add(context.path());
+                    context.response().header("X-Frame-Options", "DENY");
+                    return chain.proceed(context);
+                })
+                .fallback((request, response) -> response.html("<!doctype html><title>spa</title>"))
+                .start();
+
+        String base = "http://127.0.0.1:" + server.port();
+        try {
+            HttpResponse<String> spa = Cliente.get(base + "/una/ruta/del/cliente");
+            Check.equal("el fallback atiende la ruta no enrutada", spa.statusCode(), 200);
+            Check.that("y devuelve su contenido", spa.body().contains("spa"));
+            Check.equal("y la respuesta lleva las cabeceras del middleware",
+                    spa.headers().firstValue("X-Frame-Options").orElse(""), "DENY");
+            Check.that("el middleware vio la petición del fallback",
+                    traza.contains("/una/ruta/del/cliente"));
+
+            HttpResponse<String> api = Cliente.get(base + "/api/ping");
+            Check.equal("la ruta enrutada sigue funcionando", api.body(), "pong");
+            Check.equal("y también lleva las cabeceras",
+                    api.headers().firstValue("X-Frame-Options").orElse(""), "DENY");
+
+            // Un verbo equivocado sobre una ruta que existe es un 405, no la página del SPA:
+            // devolver HTML ahí escondería el error de quien llama a la API.
+            Check.equal("un verbo no permitido sigue dando 405",
+                    Cliente.method(base + "/api/ping", "DELETE").statusCode(), 405);
+        } finally {
+            server.stop();
+        }
     }
 }

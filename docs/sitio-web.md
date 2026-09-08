@@ -1,7 +1,7 @@
 # El sitio de demostración
 
 > **Esto no es el sitio público.** `cero.ginit.dev` lo sirve un repositorio aparte —
-> `~/Research/Software/51.Soft_Cero-Web`, React más un backend Java en un solo jar. Lo que se
+> `~/Research/Software/82.Soft_Cero-Web`, React más un backend Java en un solo jar. Lo que se
 > documenta aquí es `docs/web` y las plantillas de `cero-web`: la **aplicación de demostración**
 > que vive dentro del framework y que sus pruebas usan para comprobar que todo encaja de punta a
 > punta. Las trampas de CSS y de captura del final siguen valiendo para los dos.

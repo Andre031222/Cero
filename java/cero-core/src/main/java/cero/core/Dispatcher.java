@@ -29,9 +29,23 @@ final class Dispatcher implements Handler {
 
     private final Messages messages;
 
+    /**
+     * Lo que atiende una ruta que no existe: normalmente los estáticos de un SPA.
+     *
+     * <p>Va dentro del despachador, y no delante, para que la respuesta pase por la misma
+     * cadena de middlewares que las demás. Puesto delante, la petición del documento HTML se
+     * saltaba {@code SecurityHeaders} y {@code RateLimit} enteros: la página quedaba sin
+     * {@code X-Frame-Options} —justo la que la protege de ir dentro de un iframe ajeno— y sin
+     * freno de tasa, mientras la API sí las tenía. La cabecera acababa puesta donde no hacía
+     * falta y ausente donde sí.
+     */
+    private final Handler fallback;
+
     Dispatcher(Router router, Registry registry, List<Middleware> middleware,
-               Authenticator authenticator, ViewRenderer views, Messages messages) {
+               Authenticator authenticator, ViewRenderer views, Messages messages,
+               Handler fallback) {
         this.messages = messages;
+        this.fallback = fallback;
         this.router = router;
         this.registry = registry;
         this.middleware = List.copyOf(middleware);
@@ -73,7 +87,12 @@ final class Dispatcher implements Handler {
                 throw new HttpException(405, "método no permitido en " + ctx.path());
             }
             if (ctx.route() == null) {
-                throw new HttpException(404, "no existe " + ctx.path());
+                if (fallback == null) {
+                    throw new HttpException(404, "no existe " + ctx.path());
+                }
+                // El fallback pinta y confirma la respuesta; render() lo detecta y sale solo.
+                fallback.handle(ctx.request(), ctx.response());
+                return null;
             }
             Object outcome = invoke(ctx.route(), ctx);
             // Pintar dentro de la cadena, no después: si no, un middleware que mide o registra
