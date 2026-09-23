@@ -29,12 +29,12 @@ echo "compilando…"
 cp=$(ls -d "$REPO"/java/cero-*/target/cero-*.jar | tr '\n' ':')
 tmp=$(mktemp -d)
 cat > "$tmp/Sostenido.java" <<'JAVA'
-import cero.core.Lux;
+import cero.core.Cero;
 import cero.core.Result;
 
 public class Sostenido {
     public static void main(String[] args) throws Exception {
-        Lux.app().port(Integer.parseInt(args[0])).quiet()
+        Cero.app().port(Integer.parseInt(args[0])).quiet()
            .routes(r -> r
                .get("/plaintext", ctx -> Result.text("OK"))
                .get("/json", ctx -> Result.raw("{\"mensaje\":\"hola\"}")))

@@ -36,19 +36,13 @@ function Requisitos {
     if ($v -lt 25) { Malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v" }
 }
 
-# Python solo lo piden `migrar` y `build`; el resto de órdenes no lo necesitan, así que no
-# entra en Requisitos.
+# Python solo lo pide `migrar`; el resto de órdenes no lo necesita, así que no entra en
+# Requisitos.
 function Python {
     foreach ($nombre in 'python3', 'python', 'py') {
         if (Get-Command $nombre -ErrorAction SilentlyContinue) { return $nombre }
     }
-    Malo 'falta Python 3: lo necesitan `cero migrar` y `cero build`'
-}
-
-# Solo los jar del framework, sin las clases de ningún módulo.
-function JarsDeCero {
-    $jars = Get-ChildItem (Join-Path $JavaDir 'cero-*\target\cero-*.jar') -ErrorAction SilentlyContinue
-    return (($jars | ForEach-Object { $_.FullName }) -join ';')
+    Malo 'falta Python 3: lo necesita `cero migrar`'
 }
 
 # El classpath de un módulo ya compilado: sus clases más las de los cero-*.
@@ -109,7 +103,7 @@ switch -Regex ($Orden) {
         if ($Resto.Count -eq 0) { Malo 'dime el nombre:  cero nuevo mi-app [grupo] [motor]' }
         Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'install')
         Azul "creando $($Resto[0])…"
-        & java -cp (Classpath 'cero-web') 'cero.web.Nuevo' @Resto
+        & java -cp (Join-Path $JavaDir 'cero-launcher\target\classes') 'cero.launcher.Nuevo' @Resto
     }
 
     '^fatjar$' {
@@ -118,7 +112,6 @@ switch -Regex ($Orden) {
         $main = if ($Resto.Count -gt 1) { $Resto[1] } else {
             switch ($modulo) {
                 'ejemplo' { 'ejemplo.App' }
-                'cero-web' { 'cero.web.App' }
                 default   { Malo 'dime la clase principal:  cero fatjar <modulo> <clase>' }
             }
         }
@@ -130,15 +123,6 @@ switch -Regex ($Orden) {
         & java -cp (Join-Path $JavaDir 'cero-launcher\target\classes') 'cero.launcher.Packager' `
               '--main' $main '--out' $destino (Join-Path $JavaDir "$modulo\target\classes") @partes
         Azul "arráncalo con:  java -jar $modulo.jar"
-    }
-
-    '^portal$' {
-        Requisitos
-        $puerto = if ($Resto.Count -gt 0) { $Resto[0] } else { '8080' }
-        Azul 'compilando el sitio…'
-        Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'install')
-        Azul "arrancando el sitio en http://localhost:$puerto"
-        & java -cp (Classpath 'cero-web') 'cero.web.App' $puerto
     }
 
     '^(clean|limpiar)$' {
@@ -159,8 +143,32 @@ switch -Regex ($Orden) {
         Write-Host ('  {0,-16} {1}' -f 'sistema', "Windows $([Environment]::OSVersion.Version.Major)")
     }
 
+    '^migraciones$' {
+        # Aplica el lote entero sobre una base vacía y desechable y dice qué pasó: nada toca
+        # la base de verdad, así que vale en integración continua.
+        Requisitos
+        if ($Resto.Count -eq 0 -or $Resto[0] -ne '--verificar') {
+            Malo 'uso:  cero migraciones --verificar [directorio] [url-jdbc]'
+        }
+        $dir = if ($Resto.Count -gt 1) { $Resto[1] } else { 'db\migraciones' }
+        if (-not (Test-Path -PathType Container $dir)) { Malo "no existe el directorio de migraciones $dir" }
+        Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', '-pl', 'cero-launcher', '-am', 'install')
+        # El driver lo pone quien llama; si no dice nada, se usa el H2 de ~\.m2.
+        $driver = if ($env:CERO_JDBC_JAR) { $env:CERO_JDBC_JAR } else {
+            (Get-ChildItem (Join-Path $HOME '.m2\repository\com\h2database\h2\*\h2-*.jar') -ErrorAction SilentlyContinue |
+             Select-Object -First 1).FullName
+        }
+        if (-not $driver) { Malo 'hace falta un driver JDBC: $env:CERO_JDBC_JAR = C:\ruta\driver.jar' }
+        # Las clases recién compiladas, no los jar de target\: ahí conviven versiones viejas.
+        $cp = @('cero-launcher', 'cero-data', 'cero-core' |
+                ForEach-Object { Join-Path $JavaDir "$_\target\classes" }) + $driver -join ';'
+        $argumentos = @($dir); if ($Resto.Count -gt 2) { $argumentos += $Resto[2] }
+        & java -cp $cp 'cero.launcher.Migraciones' @argumentos
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
     '^(migrar|migrate)$' {
-        # Lleva una aplicación de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.6.0.
+        # Migra una aplicación de una versión anterior del framework a Cero 0.6.0.
         #
         # Exige que el árbol de git de la aplicación esté limpio: así el propio git es la copia
         # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
@@ -192,41 +200,6 @@ switch -Regex ($Orden) {
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
-    '^(build|sitio)$' {
-        Azul 'regenerando las páginas…'
-        $py = Python
-        & $py (Join-Path $Aqui 'docs\web\construir.py')
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        & $py (Join-Path $Aqui 'docs\web\a-plantillas.py')
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    }
-
-    '^(docs|web)$' {
-        Requisitos
-        $puerto = if ($Resto.Count -gt 0) { $Resto[0] } else { '8095' }
-        Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'install')
-        $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('cero-docs-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
-        New-Item -ItemType Directory -Path $tmp | Out-Null
-        @'
-import cero.core.Cero;
-import cero.http.StaticFiles;
-import java.nio.file.Path;
-
-public class Sitio {
-    public static void main(String[] args) throws Exception {
-        Cero.app().port(Integer.parseInt(args[1]))
-           .fallback(StaticFiles.from(Path.of(args[0])))
-           .start().await();
-    }
-}
-'@ | Set-Content -Path (Join-Path $tmp 'Sitio.java') -Encoding UTF8
-        $cp = JarsDeCero
-        & javac -cp $cp -d $tmp (Join-Path $tmp 'Sitio.java')
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        Azul "sirviendo la documentación estática en http://localhost:$puerto"
-        & java -cp "$cp;$tmp" 'Sitio' (Join-Path $Aqui 'docs\web') $puerto
-    }
-
     '^cache$' {
         $m2 = Join-Path $HOME '.m2\repository\dev\ginit\cero'
         if ($Resto -contains '--purge') {
@@ -255,13 +228,11 @@ public class Sitio {
         Write-Host ('  {0,-24} {1}' -f 'cero package',         'genera los JAR y muestra sus tamaños')
         Write-Host ('  {0,-24} {1}' -f 'cero fatjar [módulo]', 'un solo jar ejecutable con java -jar')
         Write-Host ('  {0,-24} {1}' -f 'cero install',         'compila, prueba e instala en ~\.m2')
-        Write-Host ('  {0,-24} {1}' -f 'cero portal [puerto]', 'arranca cero-web: acceso, demos y generador')
         Write-Host ('  {0,-24} {1}' -f 'cero clean',           'borra lo generado')
         Write-Host ('  {0,-24} {1}' -f 'cero cache',           'qué ocupa la caché; con --purge la vacía')
-        Write-Host ('  {0,-24} {1}' -f 'cero docs [puerto]',   'sirve la documentación estática')
-        Write-Host ('  {0,-24} {1}' -f 'cero build',           'regenera las páginas del sitio')
         Write-Host ('  {0,-24} {1}' -f 'cero status',          'resumen del proyecto')
-        Write-Host ('  {0,-24} {1}' -f 'cero migrar <ruta>',   'lleva una app de LuxCore o Corvo a Cero 0.6.0')
+        Write-Host ('  {0,-24} {1}' -f 'cero migraciones',     'con --verificar, prueba las migraciones en una base desechable')
+        Write-Host ('  {0,-24} {1}' -f 'cero migrar <ruta>',   'migra una aplicación anterior a Cero 0.6.0')
         Write-Host ''
         Gris '  `cero dist` arma los paquetes de la descarga y solo está en macOS y Linux:'
         Gris '  lo corre quien publica una versión, y comprueba el paquete desempaquetándolo.'

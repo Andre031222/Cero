@@ -70,10 +70,10 @@ final class AsincronoTests {
         try {
             String base = "http://127.0.0.1:" + servidor.port();
 
-            Http.Respuesta eco = Http.to(base + "/eco").query("q", "lux").query("n", 42).get();
+            Http.Respuesta eco = Http.to(base + "/eco").query("q", "cero").query("n", 42).get();
             Check.that("GET con parámetros de consulta", eco.ok());
             Check.that("los parámetros llegan codificados",
-                    eco.cuerpo().contains("\"q\":\"lux\"") && eco.cuerpo().contains("\"n\":\"42\""));
+                    eco.cuerpo().contains("\"q\":\"cero\"") && eco.cuerpo().contains("\"n\":\"42\""));
             Check.equal("el estado se expone", eco.estado(), 200);
             Check.that("y las cabeceras de respuesta",
                     eco.cabecera("Content-Type").startsWith("application/json"));

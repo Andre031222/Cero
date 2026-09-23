@@ -34,7 +34,6 @@ Salida:
 | Framework | Versión | Runtime |
 |---|---|---|
 | **Cero** | 0.3.0 | servidor propio, un hilo virtual por conexión |
-| JxMVC | 3.4.0 | Tomcat 10.1 (WAR, core compilado desde el repo) |
 | Spring Boot | 3.3.4 | Tomcat embebido |
 | Quarkus | 3.11.3 (JVM) | fast-jar |
 | Micronaut | 4.5.3 | Netty |

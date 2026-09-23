@@ -175,6 +175,7 @@ public final class Cero {
     public Server start() {
         long began = System.nanoTime();
         Handler handler = handler();
+        config.revisarEntorno();
 
         Server server = Server.start(options, handler, reporter);
         if (banner) {

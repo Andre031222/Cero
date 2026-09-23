@@ -3,22 +3,28 @@
 #
 #   curl -fsSL https://cero.ginit.dev/instalar | sh
 #
-# Baja el paquete, comprueba su huella, lo compila, deja los artefactos en ~/.m2 y la orden
-# `cero` en el PATH. No pide contraseña y no escribe fuera de $HOME.
+# Detecta el sistema, la arquitectura y el gestor de paquetes; baja el paquete, comprueba su
+# huella, lo compila, deja los artefactos en ~/.m2 y la orden `cero` en el PATH. No pide
+# contraseña y no escribe fuera de $HOME.
 #
-#   --con-pruebas   corre las 1 835 pruebas durante la instalación (~90 s más)
+#   --con-pruebas   corre las pruebas durante la instalación (~90 s más)
 #   --sin-color     salida plana, para registros y CI
+#   --detectar      enseña qué sistema, arquitectura y Java ve, y termina
 set -eu
 
 BASE="${CERO_BASE:-https://cero.ginit.dev}"
 RAIZ="${CERO_HOME:-$HOME/.cero}"
 BIN="${CERO_BIN:-$HOME/.local/bin}"
+JAVA_MINIMO=25
+TOTAL=8
 PRUEBAS=no
+SOLO_DETECTAR=no
 
 for arg in "$@"; do
   case "$arg" in
     --con-pruebas) PRUEBAS=si ;;
     --sin-color)   NO_COLOR=1 ;;
+    --detectar)    SOLO_DETECTAR=si ;;
     -h|--ayuda|--help)
       sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -26,51 +32,93 @@ for arg in "$@"; do
 done
 
 # ─── pintura ────────────────────────────────────────────────────────────────────────────
-# Cuando esto va por una tubería la salida sigue siendo la terminal, así que la animación
-# vale igual. Si no lo es —CI, un fichero de registro— se apaga sola.
-if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
-  ACENTO='\033[38;5;205m'; TENUE='\033[38;5;245m'; VERDE='\033[38;5;71m'
-  ROJO='\033[38;5;167m';  FUERTE='\033[1m';       FIN='\033[0m'
-  OCULTA='\033[?25l';     MUESTRA='\033[?25h';    BORRA='\r\033[K'
+# Sin terminal, con TERM=dumb, con NO_COLOR o dentro de integración continua no se escribe
+# ni un escape: un registro de CI lleno de restos de spinner no sirve para leer nada.
+EN_CI=no
+for v in CI GITHUB_ACTIONS GITLAB_CI JENKINS_URL BUILDKITE TEAMCITY_VERSION TF_BUILD; do
+  eval "val=\${$v:-}"
+  [ -n "$val" ] && EN_CI=si && break
+done
+
+if [ -t 1 ] && [ "$EN_CI" = no ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
   VIVO=si
+  ACENTO='\033[38;5;205m'; TENUE='\033[38;5;245m'; VERDE='\033[38;5;71m'
+  ROJO='\033[38;5;167m';   FUERTE='\033[1m';       FIN='\033[0m'
+  OCULTA='\033[?25l';      MUESTRA='\033[?25h';    BORRA='\r\033[K'
 else
+  VIVO=no
   ACENTO=''; TENUE=''; VERDE=''; ROJO=''; FUERTE=''; FIN=''
   OCULTA=''; MUESTRA=''; BORRA=''
-  VIVO=no
 fi
+
+# Los glifos solo si la configuración regional es UTF-8; si no, una tty de Linux con LANG=C
+# los pinta como basura.
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+  *UTF-8*|*utf-8*|*UTF8*|*utf8*)
+    GIROS='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'; NGIROS=10; LLENO='━'; VACIO='─'; OK='✓'; NO='✗' ;;
+  *)
+    GIROS='|/-\'; NGIROS=4; LLENO='#'; VACIO='-'; OK='+'; NO='x' ;;
+esac
 
 p() { printf "$@"; }
 
-marca() {
-  [ "$VIVO" = si ] || { p "Cero · instalador\n\n"; return; }
-  p "\n"
-  p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n"
-  p "   ${ACENTO}\\${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}/${FIN}\n"
-  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}Cero${FIN}\n"
-  p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
-  p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n\n"
+PASO=0
+ETIQUETA=
+
+barra() {
+  ancho=16; i=0; hechos=$(( PASO * ancho / TOTAL )); b=''
+  while [ "$i" -lt "$ancho" ]; do
+    if [ "$i" -lt "$hechos" ]; then b="$b$LLENO"; else b="$b$VACIO"; fi
+    i=$((i + 1))
+  done
+  printf '%s' "$b"
 }
 
-PASO=0
+# En vivo la línea se reescribe sobre sí misma; en plano se imprime una vez y ya está.
 paso() {
   PASO=$((PASO + 1))
-  # Sin terminal no se puede volver atrás sobre la línea, así que no se escribe y ya la
-  # pinta entera el ✓ de después.
-  [ "$VIVO" = si ] && p "  ${ACENTO}%02d${FIN}  %s" "$PASO" "$1"
-  return 0
+  ETIQUETA="$1"
+  if [ "$VIVO" = si ]; then
+    p "${BORRA}  ${ACENTO}%s${FIN} ${TENUE}%d/%d${FIN}  %s" "$(barra)" "$PASO" "$TOTAL" "$1"
+  else
+    p "[%d/%d] %s\n" "$PASO" "$TOTAL" "$1"
+  fi
 }
-bien()  { p "${BORRA}  ${VERDE}✓${FIN}   %s${TENUE}%s${FIN}\n" "$1" "${2:+  $2}"; }
-mal()   { p "${BORRA}  ${ROJO}✗   %s${FIN}\n" "$1" >&2; }
 
-# Muere el proceso hijo si nos cortan a mitad, para no dejar un mvn suelto.
+# %-28s cuenta bytes, así que con acentos la columna se descuadra: se rellena a mano.
+rellena() {
+  n=$(printf '%s' "$1" | wc -m | tr -d ' ')
+  printf '%s' "$1"
+  while [ "$n" -lt "$2" ]; do printf ' '; n=$((n + 1)); done
+}
+
+bien() {
+  if [ "$VIVO" = si ]; then
+    p "${BORRA}  ${VERDE}%s${FIN}  %s${TENUE}%s${FIN}\n" "$OK" "$(rellena "$1" 26)" "${2:-}"
+  else
+    p "        %s %s\n" "$1" "${2:-}"
+  fi
+}
+
+aviso() { p "${BORRA}  ${ACENTO}!${FIN}  %s${TENUE}%s${FIN}\n" "$(rellena "$1" 26)" "${2:-}"; }
+mal()   { p "${BORRA}  ${ROJO}%s  %s${FIN}\n" "$NO" "$1" >&2; }
+
+# El cursor vuelve siempre, también si cortan con Ctrl-C a mitad del giro.
 HIJO=
-limpiar() { p "${MUESTRA}"; [ -n "$HIJO" ] && kill "$HIJO" 2>/dev/null || true; }
-trap limpiar EXIT INT TERM
+TMP=
+limpiar() {
+  p "${MUESTRA}"
+  [ -n "$HIJO" ] && kill "$HIJO" 2>/dev/null || true
+  [ -n "$TMP" ] && rm -rf "$TMP" || true
+}
+trap limpiar EXIT
+trap 'limpiar; exit 130' INT
+trap 'limpiar; exit 143' TERM HUP
 
-# Corre una orden larga enseñando un giro y el tiempo que lleva. La salida va a un fichero:
-# si acaba bien no se enseña, y si falla se enseña entera.
+# Corre una orden larga. La salida va a un fichero: si acaba bien no se enseña, y si falla
+# se enseña entera.
 girando() {
-  etiqueta="$1"; registro="$2"; shift 2
+  registro="$1"; shift
   inicio=$(date +%s)
   if [ "$VIVO" = no ]; then
     "$@" >"$registro" 2>&1 || return 1
@@ -79,13 +127,13 @@ girando() {
   fi
   "$@" >"$registro" 2>&1 &
   HIJO=$!
-  giros='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
   i=0
   p "${OCULTA}"
   while kill -0 "$HIJO" 2>/dev/null; do
     i=$((i + 1))
-    giro=$(printf '%s' "$giros" | cut -c $(( (i % 10) + 1 )))
-    p "${BORRA}  ${ACENTO}%s${FIN}   %s ${TENUE}%ss${FIN}" "$giro" "$etiqueta" "$(( $(date +%s) - inicio ))"
+    giro=$(printf '%s' "$GIROS" | cut -c $(( (i % NGIROS) + 1 )))
+    p "${BORRA}  ${ACENTO}%s${FIN} ${TENUE}%d/%d${FIN}  %s ${ACENTO}%s${FIN} ${TENUE}%ss${FIN}" \
+      "$(barra)" "$PASO" "$TOTAL" "$ETIQUETA" "$giro" "$(( $(date +%s) - inicio ))"
     sleep 0.08
   done
   wait "$HIJO"; estado=$?
@@ -101,9 +149,103 @@ muere() {
   exit 1
 }
 
+marca() {
+  if [ "$VIVO" = no ]; then
+    p "Cero - instalador\n\n"
+    return
+  fi
+  p "\n"
+  p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n"
+  p "   ${ACENTO}\\\\${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}/${FIN}\n"
+  p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}Cero${FIN}\n"
+  p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
+  p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n\n"
+}
+
+# ─── detección ──────────────────────────────────────────────────────────────────────────
+NUCLEO=$(uname -s)
+case "$(uname -m)" in
+  arm64|aarch64) ARQ=arm64 ;;
+  x86_64|amd64)  ARQ=x86_64 ;;
+  *)             ARQ=$(uname -m) ;;
+esac
+
+case "$NUCLEO" in
+  Darwin)
+    SISTEMA=macOS
+    VERSION_SO=$(sw_vers -productVersion 2>/dev/null || echo '')
+    case "$ARQ" in
+      arm64) MARCA_CPU='Apple Silicon' ;;
+      *)     MARCA_CPU='Intel' ;;
+    esac
+    DETALLE_SO="macOS ${VERSION_SO:-?} · $MARCA_CPU ($ARQ)" ;;
+  Linux)
+    SISTEMA=Linux
+    DISTRO=$( . /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-Linux}" || printf 'Linux' )
+    DETALLE_SO="$DISTRO · $ARQ"
+    grep -qi microsoft /proc/version 2>/dev/null && DETALLE_SO="$DETALLE_SO · WSL" ;;
+  MINGW*|MSYS*|CYGWIN*)
+    SISTEMA=Windows
+    DETALLE_SO="Windows bajo $NUCLEO · $ARQ" ;;
+  *)
+    SISTEMA="$NUCLEO"
+    DETALLE_SO="$NUCLEO · $ARQ" ;;
+esac
+
+INTERPRETE=$(basename "${SHELL:-sh}")
+
+GESTOR=
+for g in brew apt-get dnf pacman zypper apk winget scoop; do
+  if command -v "$g" >/dev/null 2>&1; then GESTOR="$g"; break; fi
+done
+
+# La orden concreta para ESTE sistema, no una lista de posibilidades.
+orden_java() {
+  case "$GESTOR" in
+    brew)    printf 'brew install openjdk@%s maven && sudo ln -sfn "$(brew --prefix)/opt/openjdk@%s/libexec/openjdk.jdk" /Library/Java/JavaVirtualMachines/openjdk-%s.jdk' "$JAVA_MINIMO" "$JAVA_MINIMO" "$JAVA_MINIMO" ;;
+    apt-get) printf 'sudo apt-get install -y openjdk-%s-jdk maven' "$JAVA_MINIMO" ;;
+    dnf)     printf 'sudo dnf install -y java-%s-openjdk-devel maven' "$JAVA_MINIMO" ;;
+    pacman)  printf 'sudo pacman -S --needed jdk-openjdk maven' ;;
+    zypper)  printf 'sudo zypper install -y java-%s-openjdk-devel maven' "$JAVA_MINIMO" ;;
+    apk)     printf 'sudo apk add openjdk%s maven' "$JAVA_MINIMO" ;;
+    winget)  printf 'winget install EclipseAdoptium.Temurin.%s.JDK Apache.Maven' "$JAVA_MINIMO" ;;
+    scoop)   printf 'scoop install temurin%s-jdk maven' "$JAVA_MINIMO" ;;
+    *)
+      case "$SISTEMA" in
+        macOS) printf 'instala Homebrew (https://brew.sh) y luego: brew install openjdk@%s maven' "$JAVA_MINIMO" ;;
+        *)     printf 'baja un JDK %s de https://adoptium.net/temurin/releases/?os=%s&arch=%s y Maven de https://maven.apache.org/download.cgi' \
+                 "$JAVA_MINIMO" "$(printf '%s' "$SISTEMA" | tr 'A-Z' 'a-z')" "$ARQ" ;;
+      esac ;;
+  esac
+}
+
+version_java() {
+  command -v java >/dev/null 2>&1 || { printf '0'; return; }
+  java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/'
+}
+
+if [ "$SOLO_DETECTAR" = si ]; then
+  marca
+  jv=$(version_java)
+  p "  %-14s %s\n" sistema  "$DETALLE_SO"
+  p "  %-14s %s\n" terminal "$INTERPRETE"
+  p "  %-14s %s\n" gestor   "${GESTOR:-ninguno conocido}"
+  p "  %-14s %s\n" java     "$( [ "${jv:-0}" -gt 0 ] 2>/dev/null && echo "$jv" || echo 'no encontrado' )"
+  p "  %-14s %s\n" maven    "$(command -v mvn >/dev/null 2>&1 && mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3 || echo 'no encontrado')"
+  p "  %-14s %s\n" salida   "$( [ "$VIVO" = si ] && echo 'terminal con color' || echo 'plana (sin escapes)' )"
+  if [ "${jv:-0}" -lt "$JAVA_MINIMO" ] 2>/dev/null; then
+    p "\n  Para tener Java %s en tu sistema:\n\n      %s\n\n" "$JAVA_MINIMO" "$(orden_java)"
+  fi
+  exit 0
+fi
+
 # ─── 1 · lo que hace falta ──────────────────────────────────────────────────────────────
 marca
 paso "comprobando el entorno"
+
+if [ "$SISTEMA" = Windows ]; then
+  aviso "estás en Windows" "en PowerShell:  irm $BASE/instalar.ps1 | iex"
+fi
 
 falta=
 for orden in curl tar java mvn; do
@@ -111,19 +253,21 @@ for orden in curl tar java mvn; do
 done
 if [ -n "$falta" ]; then
   mal "falta:$falta"
-  p "\n  Cero necesita un ${FUERTE}JDK 25${FIN} o superior y ${FUERTE}Maven${FIN}.\n"
-  case "$(uname -s)" in
-    Darwin) p "  ${TENUE}brew install openjdk@25 maven${FIN}\n" ;;
-    Linux)  p "  ${TENUE}sudo apt install openjdk-25-jdk maven${FIN}   ${TENUE}(o el gestor de tu distribución)${FIN}\n" ;;
-  esac
+  p "\n  Cero necesita un ${FUERTE}JDK %s${FIN} o superior y ${FUERTE}Maven${FIN}.\n" "$JAVA_MINIMO"
+  p "  ${TENUE}Detectado: %s · gestor %s${FIN}\n\n" "$DETALLE_SO" "${GESTOR:-ninguno}"
+  p "      ${FUERTE}%s${FIN}\n\n" "$(orden_java)"
   exit 1
 fi
 
-JAVA_V=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
-if [ "${JAVA_V:-0}" -lt 25 ] 2>/dev/null; then
-  muere "Cero necesita Java 25 o superior — hilos virtuales. Tienes $JAVA_V."
+JAVA_V=$(version_java)
+if [ "${JAVA_V:-0}" -lt "$JAVA_MINIMO" ] 2>/dev/null; then
+  mal "Cero necesita Java $JAVA_MINIMO o superior — hilos virtuales. Tienes ${JAVA_V:-ninguno}."
+  p "\n  ${TENUE}Detectado: %s · gestor %s${FIN}\n\n" "$DETALLE_SO" "${GESTOR:-ninguno}"
+  p "      ${FUERTE}%s${FIN}\n\n" "$(orden_java)"
+  exit 1
 fi
-bien "entorno" "Java $JAVA_V · $(mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3) · $(uname -s) $(uname -m)"
+MAVEN_V=$(mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3)
+bien "entorno" "$DETALLE_SO · Java $JAVA_V · $MAVEN_V"
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
 paso "consultando la versión"
@@ -137,10 +281,9 @@ bien "versión" "Cero $VERSION"
 # ─── 3 · bajarlo ────────────────────────────────────────────────────────────────────────
 PAQUETE="cero-$VERSION.tar.gz"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/cero.XXXXXX")
-trap 'limpiar; rm -rf "$TMP"' EXIT INT TERM
 
 paso "bajando el paquete"
-girando "bajando $PAQUETE" "$TMP/curl.log" \
+girando "$TMP/curl.log" \
   curl -fsSL --max-time 300 -o "$TMP/$PAQUETE" "$BASE/estaticos/$PAQUETE" \
   || muere "no se pudo bajar $BASE/estaticos/$PAQUETE" "$TMP/curl.log"
 KB=$(( $(wc -c < "$TMP/$PAQUETE") / 1024 ))
@@ -158,7 +301,7 @@ else
   REAL=''
 fi
 if [ -z "$REAL" ]; then
-  p "${BORRA}  ${ACENTO}!${FIN}   huella ${TENUE}sin comprobar: no hay shasum ni sha256sum${FIN}\n"
+  aviso "huella" "sin comprobar: no hay shasum ni sha256sum"
 elif [ "$REAL" != "$ESPERADA" ]; then
   muere "la huella no coincide — el paquete llegó cambiado, no lo instalo.
       esperada  $ESPERADA
@@ -177,15 +320,14 @@ tar -xzf "$TMP/$PAQUETE" -C "$RAIZ" || muere "el paquete no se pudo extraer"
 bien "extraído" "$DESTINO"
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
-paso "compilando"
 if [ "$PRUEBAS" = si ]; then
-  girando "compilando los ocho módulos y corriendo las pruebas" "$TMP/mvn.log" \
-    mvn -B -q -f "$DESTINO/java/pom.xml" install \
+  paso "compilando los ocho módulos y corriendo las pruebas"
+  girando "$TMP/mvn.log" mvn -B -q -f "$DESTINO/java/pom.xml" install \
     || muere "la compilación falló" "$TMP/mvn.log"
   bien "compilado" "con las pruebas en verde · ${SEGUNDOS:-?} s"
 else
-  girando "compilando los ocho módulos" "$TMP/mvn.log" \
-    mvn -B -q -f "$DESTINO/java/pom.xml" -DskipTests install \
+  paso "compilando los ocho módulos"
+  girando "$TMP/mvn.log" mvn -B -q -f "$DESTINO/java/pom.xml" -DskipTests install \
     || muere "la compilación falló" "$TMP/mvn.log"
   bien "compilado" "ocho módulos en ~/.m2 · ${SEGUNDOS:-?} s"
 fi
@@ -207,18 +349,28 @@ paso "comprobando la instalación"
 "$BIN/cero" estado >/dev/null 2>&1 || muere "quedó instalado pero 'cero status' no responde"
 bien "comprobado" "cero status responde"
 
-# ─── final ──────────────────────────────────────────────────────────────────────────────
-p "\n  ${VERDE}${FUERTE}Cero $VERSION instalado${FIN}\n\n"
+# ─── resumen ────────────────────────────────────────────────────────────────────────────
+p "\n  ${VERDE}${FUERTE}Cero %s instalado${FIN}\n\n" "$VERSION"
+p "  %-12s %s\n" sistema "$DETALLE_SO"
+p "  %-12s %s\n" java    "$JAVA_V · $MAVEN_V"
+p "  %-12s %s\n" carpeta "$DESTINO"
+p "  %-12s %s\n" orden   "$BIN/cero"
+p "\n"
 
 case ":$PATH:" in
   *":$BIN:"*) ;;
   *)
-    p "  ${ACENTO}Falta un paso${FIN} — $BIN no está en tu PATH. Añade esta línea a tu\n"
-    p "  ${TENUE}~/.zshrc${FIN} o ${TENUE}~/.bashrc${FIN} y abre una terminal nueva:\n\n"
+    p "  ${ACENTO}Falta un paso${FIN} — %s no está en tu PATH. Añade esta línea a tu\n" "$BIN"
+    case "$INTERPRETE" in
+      zsh)  PERFIL='~/.zshrc' ;;
+      fish) PERFIL='~/.config/fish/config.fish' ;;
+      *)    PERFIL='~/.bashrc' ;;
+    esac
+    p "  ${TENUE}%s${FIN} y abre una terminal nueva:\n\n" "$PERFIL"
     p "      ${FUERTE}export PATH=\"%s:\$PATH\"${FIN}\n\n" "$(printf '%s' "$BIN" | sed "s|^$HOME|\$HOME|")" ;;
 esac
 
 p "  ${TENUE}Crear un proyecto y arrancarlo:${FIN}\n\n"
 p "      ${FUERTE}cero new mi-app${FIN}\n"
 p "      ${FUERTE}cd mi-app && mvn -q package && java -jar target/mi-app.jar${FIN}\n\n"
-p "  ${TENUE}Guía completa:${FIN}  $BASE/empezar\n\n"
+p "  ${TENUE}Guía completa:${FIN}  %s/empezar\n\n" "$BASE"

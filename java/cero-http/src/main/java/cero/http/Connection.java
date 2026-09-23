@@ -58,7 +58,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             // Sobre TLS no hay que adivinar nada: el protocolo se acordó en el apretón de manos
             // por ALPN, y preguntarlo es más fiable que mirar los primeros bytes. Es también el
             // único camino por el que un navegador llega a HTTP/2.
-            if (open instanceof javax.net.ssl.SSLSocket cifrado
+            if (options.http2() && open instanceof javax.net.ssl.SSLSocket cifrado
                     && "h2".equals(cifrado.getApplicationProtocol())) {
                 ociosa = false;
                 Http2.servir(open, open.getInputStream(), out, context, remoteAddress(open));
@@ -70,7 +70,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             // «PRI * HTTP/2.0» es una petición sintácticamente válida en HTTP/1.1.
             java.io.PushbackInputStream entrada =
                     new java.io.PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
-            if (Http2.pareceHttp2(entrada)) {
+            if (options.http2() && Http2.pareceHttp2(entrada)) {
                 ociosa = false;
                 Http2.servir(open, entrada, out, context, remoteAddress(open));
                 return;
@@ -118,7 +118,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             // `Upgrade: h2c` es la otra puerta a HTTP/2, y la que usa un cliente que no sabe de
             // antemano si el servidor lo habla. Solo vale en la primera petición de la conexión:
             // después ya se ha hablado HTTP/1.1 y cambiar a mitad no está definido.
-            if (served == 0 && Http2.pidenUpgrade(request)) {
+            if (served == 0 && options.http2() && Http2.pidenUpgrade(request)) {
                 Http2.aceptarUpgrade(socket, entrada, out, context, remote, request);
                 return;
             }

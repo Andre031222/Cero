@@ -5,7 +5,7 @@
     <parent>
         <groupId>dev.ginit.cero</groupId>
         <artifactId>cero-parent</artifactId>
-        <version>0.6.1</version>
+        <version>0.7.0</version>
     </parent>
 
     <artifactId>cero-launcher</artifactId>
@@ -17,11 +17,27 @@
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-core</artifactId>
-            <version>0.6.1</version>
+            <version>0.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.ginit.cero</groupId>
+            <artifactId>cero-data</artifactId>
+            <version>0.7.0</version>
         </dependency>
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Solo esto se filtra: la versión que escribe `cero new` en cada pom generado
+                 sale del pom y no hay un número más que acordarse de subir a mano. -->
+            <resource>
+                <directory>src/main/filtrado</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

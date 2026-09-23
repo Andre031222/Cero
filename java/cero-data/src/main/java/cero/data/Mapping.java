@@ -51,7 +51,7 @@ final class Mapping {
             if (!includeId && property.identity()) {
                 continue;
             }
-            row.put(property.column(), property.read(entity));
+            row.set(property.column(), property.read(entity));
         }
         return row;
     }

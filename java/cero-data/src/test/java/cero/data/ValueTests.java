@@ -1,5 +1,7 @@
 package cero.data;
 
+import cero.core.Json;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -64,6 +66,15 @@ final class ValueTests {
         Check.equal("from construye desde un mapa", Row.from(Map.of("a", 1)).get("a"), 1);
         Check.raises("of con número impar de argumentos falla", IllegalArgumentException.class,
                 () -> Row.of("a"));
+
+        Check.equal("es un Map, así que anidada en JSON se escribe como objeto",
+                Json.write(Map.of("fila", Row.of("a", 1))), "{\"fila\":{\"a\":1}}");
+        Check.equal("y equivale al mapa que representa", Row.of("a", 1), Map.of("a", 1));
+        Check.equal("toMap sigue devolviendo una copia suelta", Row.of("a", 1).toMap(), Map.of("a", 1));
+        Check.raises("no se puede escribir por el contrato Map", UnsupportedOperationException.class,
+                () -> ((Map<String, Object>) Row.of("a", 1)).put("b", 2));
+        Check.raises("ni borrar", UnsupportedOperationException.class,
+                () -> Row.of("a", 1).remove("a"));
 
         Rows rows = Rows.of(List.of(
                 Row.of("id", 1L, "titulo", "uno", "paginas", 10),

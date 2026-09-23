@@ -15,12 +15,6 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 > English at **[cero.ginit.dev/en](https://cero.ginit.dev/en)**; this repository, its commit
 > history and the javadoc are written in Spanish, which is deliberate.
 
-> **Antes se llamó LuxCore y luego Corvo.** *LuxCore* chocaba con un framework PHP del mismo
-> entorno; *Corvo* resolvió la confusión pero no decía nada del framework. **Cero** sí: cero
-> dependencias, cero configuración, cero contenedor. Si vienes de cualquiera de los dos, la
-> conversión es una orden y el guion acepta los dos:
-> [`docs/migrar-a-cero.md`](docs/migrar-a-cero.md).
-
 **En producción:** [cero.ginit.dev](https://cero.ginit.dev) — el sitio de este proyecto,
 servido por el propio framework, sin Tomcat detrás. Su código está abierto en
 [`cero-sitio`](https://github.com/Andre031222/cero-sitio): React con Vite delante, Cero detrás,
@@ -33,10 +27,11 @@ comprobar que la afirmación de arriba es cierta en vez de creerla.
 
 ## Qué es
 
-Cero nace de [JxMVC 3.4.0](docs/origen.md), un framework MVC en Java con cero dependencias que
-funciona y está en producción — pero que necesita Tomcat para arrancar y solo existe para Java.
+Cero sale de una molestia concreta: desplegar una aplicación Java suponía montar un contenedor de
+servlets, empaquetar un WAR, copiarlo a Tomcat y confiar en que la configuración del servidor
+fuera la que uno creía. Nada de eso es el programa que uno escribió.
 
-Cero cambia esas dos cosas:
+De ahí las dos decisiones que definen el proyecto:
 
 1. **Arranca solo.** Servidor HTTP/1.1 propio con un hilo virtual por conexión. `java -jar app.jar`
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
@@ -56,23 +51,21 @@ Cero cambia esas dos cosas:
 
 ## Rendimiento
 
-![Arranque en frío y memoria: Cero frente a Javalin, JxMVC, Quarkus, Micronaut y Spring Boot](docs/imagenes/banco.png)
-
-*Los seis en contenedores idénticos, misma corrida, 90 mediciones sin un solo error.
-[Tabla completa y salvedades](benchmarks/results/RESULTS-docker.md).*
+*Contenedores idénticos, misma corrida, 90 mediciones sin un solo error.
+[Cómo se rehace la medición](benchmarks/results/LEEME.md).*
 
 | Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
 |---|---|---|---|---|---|---|
 | **Cero** | **106 ms** | 110,3 MB | **136,4 MB** | **26 425** | **25 431** | **25 931** |
 | Javalin | 451 ms | 115,2 MB | 285,7 MB | 21 994 | 25 125 | 24 459 |
-| JxMVC | 698 ms | **110,1 MB** | 191,5 MB | 24 240 | 23 307 | 18 771 |
 | Quarkus | 707 ms | 123,2 MB | 259,8 MB | 25 515 | 22 744 | 21 258 |
 | Micronaut | 838 ms | 120,7 MB | 201,2 MB | 18 381 | 19 088 | 17 213 |
 | Spring Boot | 1467 ms | 127,3 MB | 352,5 MB | 19 809 | 20 432 | 20 088 |
 
-Cero gana en todo menos en tamaño de imagen, y ahí pierde por 0,2 MB. Arranca 4,3× más rápido
-que el siguiente, gasta la menor memoria de los seis y lidera los tres endpoints. En `/db` —el que
-mide el framework haciendo trabajo de aplicación— saca un 38 % al JxMVC del que viene.
+Cero gana en todo menos en tamaño de imagen, donde queda segundo. Arranca 4,3× más rápido que el
+siguiente, gasta la menor memoria de la tabla y lidera los tres endpoints. La ventaja mayor está
+en el arranque; en `/db` —el que mide el framework haciendo trabajo de aplicación— la diferencia
+con el segundo es del 6 %.
 
 **Salvedad que importa:** se midió en Docker Desktop. Los valores **relativos** son justos porque
 las condiciones fueron idénticas para los seis; los **absolutos** requieren repetir la corrida en
@@ -153,7 +146,7 @@ class ApiController {
     }
 }
 
-Lux.run(8080, ApiController.class);
+Cero.run(8080, ApiController.class);
 ```
 
 Eso levanta ruteo, inyección de dependencias, serialización JSON y manejo de errores. De dónde sale
@@ -169,8 +162,7 @@ la reflexión.
 | [`cero-view`](java/cero-view) | 93 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
 | [`cero-data`](java/cero-data) | 318 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
 | [`cero-adapter-servlet`](java/cero-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
-| [`cero-launcher`](java/cero-launcher) | 10 | Empaqueta aplicación y framework en un jar ejecutable, con `java.util.jar` y sin plugins de terceros |
-| [`cero-web`](java/cero-web) | 92 | El sitio de este proyecto: documentación, demostraciones, acceso con contraseña o Google, panel de métricas en vivo y un generador de proyectos |
+| [`cero-launcher`](java/cero-launcher) | 10 | La línea de órdenes: el generador de `cero new`, el empaquetado en un jar ejecutable con `java.util.jar` y sin plugins de terceros, y las migraciones |
 | [`ejemplo`](java/ejemplo) | 43 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
 
 Los cuatro del núcleo —`cero-http`, `cero-core`, `cero-view` y `cero-data`— suman **407 KB** y no
@@ -179,8 +171,8 @@ declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo
 
 ## Estado
 
-**Las fases 1 y 2 están cerradas** — versión **0.3.0**, 4 de agosto de 2026. Del núcleo heredado
-no queda código por migrar, y el sitio de referencia corre sobre el propio framework.
+**Las fases 1 y 2 están cerradas** — versión **0.3.0**, 4 de agosto de 2026. El framework está
+completo en Java y el sitio de referencia corre sobre él.
 
 Lo que cerró la fase 2 no fue una lista de casillas: fue que el framework tuvo su **primer
 consumidor externo** y con él la primera auditoría de alguien que no lo escribió — once hallazgos
@@ -208,10 +200,10 @@ Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaci
 ```text
 java/         Los ocho módulos
 benchmarks/   Harness comparativo y prueba de carga sostenida
-docs/         Documentación y el sitio estático
+docs/         Documentación
 spec/         Contrato del kernel, neutral respecto al lenguaje   (fase 3)
 rust/  cpp/   Implementaciones adicionales                        (fase 3)
-cero         Órdenes del proyecto: ./cero test, portal, fatjar…
+cero         Órdenes del proyecto: ./cero test, new, fatjar…
 ```
 
 ## Documentación
@@ -219,22 +211,15 @@ cero         Órdenes del proyecto: ./cero test, portal, fatjar…
 | Documento | Qué responde |
 |---|---|
 | [produccion.md](docs/produccion.md) | ¿Está listo para producción? (respuesta corta: todavía no, y ahí está la lista) |
-| [sitio-web.md](docs/sitio-web.md) | Cómo se construye, se traduce y se despliega cero.ginit.dev |
 | [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
-| [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Comparación con JxMVC, capa por capa |
+| [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Auditoría interna del núcleo, capa por capa |
 | [versiones.md](docs/versiones.md) | Qué cambió en cada versión, y por qué una publicada no se toca |
 | [papers.md](docs/papers.md) | Plan de publicación: los tres artículos y qué bloquea cada uno |
-| [origen.md](docs/origen.md) | De dónde viene el código y por qué el original no se toca |
 | [autores.md](docs/autores.md) | Autoría y atribución |
-
-El sitio del proyecto vive en [`docs/web/`](docs/web/) —ocho páginas, sin npm ni paso de
-compilación de terceros— y se regenera con `./cero build`. El mismo generador produce
-`completo.html`: el sitio entero en un archivo, sin recursos externos.
 
 ## Licencia
 
-Apache 2.0 — ver [LICENSE](LICENSE) y [NOTICE](NOTICE). El código heredado de JxMVC 3.4.0
-conserva su aviso MIT original dentro de [NOTICE](NOTICE), como exige Apache 2.0.
+Apache 2.0 — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
 Autores: **Richar Andre Vilca-Solorzano** y **Ramiro Pedro Laura-Murillo**.
 Universidad Nacional del Altiplano, Puno, Perú.

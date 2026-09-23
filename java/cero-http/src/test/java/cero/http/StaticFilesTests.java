@@ -17,7 +17,7 @@ final class StaticFilesTests {
 
         cacheDelDocumentoYDelAsset();
 
-        Path root = Files.createTempDirectory("lux-static");
+        Path root = Files.createTempDirectory("cero-static");
         Files.writeString(root.resolve("index.html"), "<h1>inicio</h1>");
         Files.writeString(root.resolve("estilo.css"), "body{margin:0}");
         Files.createDirectory(root.resolve("sub"));
@@ -119,7 +119,7 @@ final class StaticFilesTests {
      * dando 404, o un error evidente se convierte en uno de una hora.
      */
     private static void spa() throws Exception {
-        Path raiz = Files.createTempDirectory("lux-spa");
+        Path raiz = Files.createTempDirectory("cero-spa");
         Files.writeString(raiz.resolve("index.html"), "<div id=app></div>");
         Files.createDirectory(raiz.resolve("assets"));
         Files.writeString(raiz.resolve("assets").resolve("app.js"), "console.log(1)");
@@ -163,7 +163,7 @@ final class StaticFilesTests {
     }
 
     private static void rangos() throws Exception {
-        Path root = Files.createTempDirectory("lux-rangos");
+        Path root = Files.createTempDirectory("cero-rangos");
         Files.writeString(root.resolve("alfabeto.txt"), "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
         try (Server server = Server.start(ServerOptions.builder().port(0).build(),

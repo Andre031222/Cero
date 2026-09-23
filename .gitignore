@@ -41,7 +41,6 @@ target/
 *.class
 .mvn/wrapper/maven-wrapper.jar
 # jar que arma el guion de despliegue en la raíz
-/cero-web.jar
 /ejemplo.jar
 
 # === Rust (fase 3) ===
@@ -98,10 +97,8 @@ Thumbs.db
 desktop.ini
 *.swp
 
-# === Paquetes que arma ./cero paquete (se rehacen; no se versionan) ===
-java/cero-web/src/main/resources/estaticos/cero-*.tar.gz
-java/cero-web/src/main/resources/estaticos/cero-*.zip
-java/cero-web/src/main/resources/estaticos/cero-*.sha256
+# === Paquetes que arma ./cero dist (se rehacen; no se versionan) ===
+/dist/
 
 # El borrador del paper de JxMVC. No es de este repositorio y no se publica.
 main.pdf

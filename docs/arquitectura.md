@@ -2,27 +2,17 @@
 
 Este documento describe hacia dónde va el código. **Las fases 1 y 2 están cerradas**: siete
 módulos, el sitio de referencia sobre el propio framework y 1 227 pruebas. Lo que sigue es la
-fase 3. Ver [origen.md](origen.md) para de dónde viene todo.
+fase 3.
 
 ## El hallazgo que define el plan
 
-Antes de diseñar nada se midió el acoplamiento real del núcleo heredado al contenedor de servlets.
-El resultado es mejor de lo que sugiere el README de JxMVC:
+Una aplicación web en Java parece atada al contenedor de servlets, y al medirlo no lo está: la
+superficie que de verdad se usa son **cinco tipos** —`HttpServletRequest`, `HttpServletResponse`,
+`HttpSession`, `Cookie` y `Part`—, más JSP para las vistas y `ServerContainer` para WebSocket.
 
-- De **54 clases** en el núcleo de JxMVC 3.4.0, **40 no importan nada de `jakarta.*`**.
-  `JxDB`, `JxJson`, `JxRepository`, `JxValidation`, `JxOAuth`, `JxCache`, `JxScheduler`, `JxPool`,
-  `JxMetrics`, `JxOpenApi`, `JxServiceRegistry`, `JxTransaction`… todo eso es Java puro.
-- Las **14 clases restantes** tocan Jakarta con 1–4 referencias cada una, salvo dos:
-  `MainLxServlet` (1046 líneas, 6 refs) y `JxWsRegistrar` (8 refs).
-- La superficie real son **cinco tipos**: `HttpServletRequest`, `HttpServletResponse`,
-  `HttpSession`, `Cookie` y `Part`. Más JSP (`TagSupport`, en `JxTagFor`/`JxTagIf`) y
-  `ServerContainer` de WebSocket.
-
-Es decir: el framework nunca estuvo realmente casado con Tomcat. Está casado con cinco interfaces.
-Y `JxRequest`/`JxResponse` ya son exactamente la costura por donde separarlas — envuelven el
-request y el response crudos y exponen a los controladores la API propia del framework.
-
-Cambiar lo que envuelven es un trabajo acotado a 14 archivos, no una reescritura de 55.
+Todo lo demás —acceso a datos, JSON, validación, OAuth, caché, tareas, pool, métricas— es Java
+puro y no sabe que hay un contenedor detrás. El plan sale de ahí: escribir esos cinco tipos en
+casa, sobre un servidor propio, y dejar intacto el resto.
 
 ## Estructura destino
 
@@ -35,9 +25,8 @@ java/
   cero-http/               Servidor HTTP/1.1 propio (hilos virtuales). Cero deps.
   cero-core/               Router, pipeline, DI, configuración, resultados. Cero deps.
   cero-view/               Motor de plantillas propio (sustituye a JSP)
-  cero-data/               JxDB, JxRepository, JxPool, JxTransaction — se mudan casi tal cual
-  cero-adapter-servlet/    Compatibilidad Jakarta/Tomcat para las apps AUR ya desplegadas
-  cero-web/                Sitio oficial: acceso, demos y generador de proyectos
+  cero-data/               Db, Repository, Pool, Tx — JDBC directo, sin ORM
+  cero-adapter-servlet/    Compatibilidad Jakarta/Tomcat para desplegar en un contenedor
   ejemplo/                Aplicación pequeña de punta a punta
   cero-launcher/           Fat-jar: java -jar app.jar   (pendiente)
 rust/                     Segunda implementación
@@ -50,8 +39,8 @@ benchmarks/               Harness comparativo
 - **Sin comentarios.** Ni javadoc decorativo, ni cabeceras de autoría, ni bloques que repiten lo
   que dice el código. Si un fragmento necesita explicación, el problema es el fragmento.
 - **Nombres completos.** `readChunkSize`, no `rcs`. `maxKeepAliveRequests`, no `mkar`.
-- **Métodos cortos.** Uno hace una cosa. `MainLxServlet` con 1046 líneas es el contraejemplo que
-  motiva esta regla.
+- **Métodos cortos.** Uno hace una cosa. Un servlet de despacho de mil líneas es el contraejemplo
+  que motiva esta regla: se lee entero o no se entiende ninguna de sus partes.
 - **Todo en minúscula** en rutas, módulos y directorios generados.
 - Identificadores en inglés, mensajes de error y documentación en español.
 
@@ -133,19 +122,19 @@ medio.
 
 ### 1.4 Adiós JSP
 
-`JxTagFor` y `JxTagIf` dependen de `jakarta.servlet.jsp` y se eliminan. Los sustituye `cero-view`:
-plantillas compiladas a Java en el arranque, cero dependencias, sin motor de JSP detrás.
+Las vistas no dependen de `jakarta.servlet.jsp`. Las resuelve `cero-view`: plantillas compiladas a
+Java en el arranque, cero dependencias, sin motor de JSP detrás.
 
 ### 1.5 El lanzador · **hecho**
 
 ```java
-Lux.run(8080, ApiController.class);
+Cero.run(8080, ApiController.class);
 ```
 
 o con todo declarado:
 
 ```java
-Lux.app()
+Cero.app()
    .loadConfig()
    .controllers(ApiController.class, AdminController.class)
    .routes(r -> r.get("/salud", ctx -> "ok"))
@@ -161,15 +150,15 @@ Imprime host, puerto, número de rutas y tiempo de arranque. `cero-launcher` com
 ### 1.6 No romper lo que ya está en producción
 
 `cero-adapter-servlet` implementa `cero.http.Request`/`Response` sobre `HttpServletRequest`/`Response`.
-Las apps AUR que hoy dependen de JxMVC (Academia, Intranet, NFC Intranet) siguen desplegando en
-Tomcat sin cambiar una línea, mientras el modo standalone es el camino nuevo.
+Una aplicación que tenga que seguir viviendo en Tomcat lo hace sin cambiar una línea, mientras el
+modo autónomo es el camino nuevo.
 
-Esto es lo que convierte la refundación en una migración y no en una ruptura.
+Esto es lo que hace reversible la decisión: se puede volver al contenedor sin reescribir nada.
 
 ### Metas de la fase
 
 Mismo harness, mismas condiciones para los seis contendientes. Medido el 2 de agosto de 2026
-([tabla](../benchmarks/results/RESULTS-docker.md)); comparaciones dentro de esa misma corrida,
+([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones dentro de esa misma corrida,
 porque los absolutos dependen de la máquina.
 
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
@@ -187,20 +176,16 @@ fallo: el vigilante programaba una tarea por petición y cancelarla no la sacaba
 Falta repetir la corrida en el mismo Arch bare-metal que usó el paper: lo de arriba es Docker
 Desktop. Ver [docs/mediciones-locales.md](mediciones-locales.md).
 
-## Fase 2 — Paridad
+## Fase 2 — Cubrir todo lo que ponía el contenedor
 
-Migrar las 41 clases puras a los módulos nuevos — hecho, las 14 transversales incluidas.
-WebSockets propios sobre `cero-http` sustituyendo `jakarta.websocket` — hecho. `cero-view`
-cubriendo todo lo que hacía JSP en el sitio de referencia — hecho.
-
-De las 347 pruebas heredadas no se hizo un port literal: se compararon una a una contra las
-nuestras buscando comportamiento sin cubrir, que es lo que aportaban. Aparecieron dos fallos
-reales —una redirección abierta y una carrera que hacía al pool pasarse de su tope— y los dos
-están corregidos con prueba propia.
+Los transversales —métricas, log, tareas, OAuth, contraseñas, caché, eventos, perfiles, OpenAPI—
+en los módulos nuevos, hecho. WebSockets propios sobre `cero-http` en lugar de
+`jakarta.websocket`, hecho. `cero-view` cubriendo todo lo que hacía JSP en el sitio de referencia,
+hecho.
 
 **Criterio de cierre — cumplido el 2 de agosto de 2026.** El sitio de referencia corre entero en
-modo standalone: es `java/cero-web`, con 82 pruebas de punta a punta que lo comprueban. Sustituye
-al `jxmvc2x` heredado, que se ha retirado del repositorio.
+modo autónomo, comprobado por 82 pruebas de punta a punta. Ese sitio vive hoy en su propio
+repositorio.
 
 **Cerrada del todo el 4 de agosto de 2026, con la versión 0.3.0.** El 3 de agosto el framework
 tuvo su primer consumidor externo —el portal FINESI— y con él la primera auditoría de alguien que
@@ -212,16 +197,11 @@ Eso es lo que convierte «paridad» en algo comprobado: no la lista de casillas,
 de fuera intentara construir encima y anotara lo que le faltaba. Ver
 [versiones.md](versiones.md).
 
-Lo que **no** se hizo, y a propósito: portar literalmente las 347 pruebas heredadas. Se comparó
-cobertura una a una, que es lo que aportaban, y aparecieron dos fallos reales.
-
 ## Fase 3 — El framework de frameworks
 
 **Java se termina primero.** Ni el spec ni Rust ni C++ se empiezan hasta que la fase 2 esté
 cerrada. Un spec escrito antes de tener una implementación completa describe lo que uno imagina,
 no lo que el framework necesita.
-
-Aquí Cero deja de ser «JxMVC v4».
 
 `SPEC/cero-kernel.md` define el contrato en lenguaje neutro: modelo de rutas, forma del
 request/response, ciclo del pipeline, contrato de middleware, inyección de dependencias,
@@ -242,6 +222,6 @@ framework de Java.
 
 ## Fuera de alcance
 
-`19.Soft_JXMVC` y `AUP_Papers/13.-JxMVC_SPE/` no se tocan. Los pendientes del artículo (benchmark
-`/db` en Arch, DOI de Zenodo, autoría y ORCID) siguen su curso aparte; Cero no los bloquea ni
-depende de ellos.
+La corrida de benchmark en Arch bare-metal, el DOI de Zenodo y la autoría con ORCID son trabajo de
+publicación y siguen su curso aparte: ver [papers.md](papers.md). No bloquean al framework ni el
+framework depende de ellos.

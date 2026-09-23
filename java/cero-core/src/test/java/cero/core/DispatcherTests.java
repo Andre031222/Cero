@@ -27,6 +27,9 @@ final class DispatcherTests {
     record Articulo(String titulo, int paginas) {
     }
 
+    record Filtro(String nivel, String sede) {
+    }
+
     record Busqueda(String q, int pagina) {
     }
 
@@ -83,6 +86,12 @@ final class DispatcherTests {
         @Get("/buscar")
         public Object buscar(@Query("q") String termino, @Query(value = "pagina", orElse = "1") int pagina) {
             return new Busqueda(termino, pagina);
+        }
+
+        @Get("/filtrar")
+        public Object filtrar(@Query(value = "nivel", orElse = "") String nivel,
+                              @Query("sede") String sede) {
+            return new Filtro(nivel, sede);
         }
 
         @Post("/articulos")
@@ -246,6 +255,11 @@ final class DispatcherTests {
                 Cliente.get(base + "/api/buscar?q=cero&pagina=4").body(), "{\"q\":\"cero\",\"pagina\":4}");
         Check.equal("parámetro con valor por defecto",
                 Cliente.get(base + "/api/buscar?q=cero").body(), "{\"q\":\"cero\",\"pagina\":1}");
+
+        // orElse = "" declara la cadena vacía como defecto; antes era indistinguible de no
+        // declarar defecto y el parámetro llegaba null.
+        Check.equal("orElse vacío es un defecto declarado",
+                Cliente.get(base + "/api/filtrar").body(), "{\"nivel\":\"\",\"sede\":null}");
 
         HttpResponse<String> creado = Cliente.post(base + "/api/articulos",
                 "{\"titulo\":\"nuevo\",\"paginas\":7}");

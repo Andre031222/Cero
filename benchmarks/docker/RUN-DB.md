@@ -7,8 +7,8 @@ in-memory** sembrada con 1000 filas, y serializa el resultado a JSON.
 
 ## Por qué es justo y reproducible
 
-La clase `Db.java` es **byte-idéntica en los cinco frameworks**
-(JxMVC, Spring Boot, Quarkus, Micronaut, Javalin): mismo motor (H2), mismo
+La clase `Db.java` es **idéntica en los cinco frameworks** salvo la declaración de paquete
+(Cero, Spring Boot, Quarkus, Micronaut, Javalin): mismo motor (H2), mismo
 pool (`org.h2.jdbcx.JdbcConnectionPool`), misma query, mismo seed de 1000
 filas, acceso por JDBC plano. Así, la diferencia medida sigue siendo el
 **overhead de request-handling de cada framework**, ahora con un round-trip

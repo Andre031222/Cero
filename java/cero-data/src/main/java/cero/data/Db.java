@@ -235,7 +235,7 @@ public final class Db {
         while (results.next()) {
             Row row = new Row();
             for (int i = 0; i < columns; i++) {
-                row.put(names[i], results.getObject(i + 1));
+                row.set(names[i], results.getObject(i + 1));
             }
             rows.add(row);
         }

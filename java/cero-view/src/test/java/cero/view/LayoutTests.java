@@ -11,7 +11,7 @@ final class LayoutTests {
     }
 
     static void run() throws Exception {
-        Path raiz = Files.createTempDirectory("lux-view");
+        Path raiz = Files.createTempDirectory("cero-view");
 
         escribir(raiz, "base.html",
                 "<html><head><title>{% block titulo %}sin título{% end %}</title></head>"

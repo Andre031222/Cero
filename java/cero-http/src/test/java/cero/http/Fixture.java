@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 final class Fixture {
 
+    private static Path keystorePath;
+
     private Fixture() {
     }
 
@@ -113,14 +115,16 @@ final class Fixture {
     }
 
     static Path keystore() throws Exception {
-        Path path = Path.of("target", "test-keystore.p12");
-        if (Files.exists(path)) {
-            return path;
+        if (keystorePath != null) {
+            return keystorePath;
         }
-        Files.createDirectories(path.getParent());
+        Path directorio = Files.createTempDirectory("cero-tls");
+        directorio.toFile().deleteOnExit();
+        Path path = directorio.resolve("keystore.p12");
+        path.toFile().deleteOnExit();
         Process keytool = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "keytool").toString(),
-                "-genkeypair", "-alias", "lux", "-keyalg", "RSA", "-keysize", "2048",
+                "-genkeypair", "-alias", "cero", "-keyalg", "RSA", "-keysize", "2048",
                 "-validity", "365", "-storetype", "PKCS12",
                 "-keystore", path.toString(), "-storepass", "cerotest", "-keypass", "cerotest",
                 "-dname", "CN=localhost", "-ext", "SAN=dns:localhost,ip:127.0.0.1")
@@ -130,7 +134,8 @@ final class Fixture {
             throw new IllegalStateException("keytool falló: "
                     + new String(keytool.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
         }
-        return path;
+        keystorePath = path;
+        return keystorePath;
     }
 
     static SSLContext trustEverything() throws Exception {

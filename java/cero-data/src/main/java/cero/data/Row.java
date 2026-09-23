@@ -6,12 +6,21 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.AbstractMap;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-public final class Row {
+/**
+ * Una fila: un mapa de columna a valor, de solo lectura y con búsqueda insensible a mayúsculas.
+ *
+ * <p>Es un {@link Map} para que al anidarse en una respuesta JSON se serialice como objeto en vez
+ * de introspeccionarse por getters. Las operaciones de escritura del contrato lanzan
+ * {@link UnsupportedOperationException}: una fila se construye con {@link #of} o {@link #from}.
+ */
+public final class Row extends AbstractMap<String, Object> {
 
     private final Map<String, Object> values = new LinkedHashMap<>();
     private final Map<String, String> byLowercase = new HashMap<>();
@@ -25,45 +34,49 @@ public final class Row {
         }
         Row row = new Row();
         for (int i = 0; i < keysAndValues.length; i += 2) {
-            row.put(String.valueOf(keysAndValues[i]), keysAndValues[i + 1]);
+            row.set(String.valueOf(keysAndValues[i]), keysAndValues[i + 1]);
         }
         return row;
     }
 
     public static Row from(Map<String, ?> source) {
         Row row = new Row();
-        source.forEach(row::put);
+        source.forEach(row::set);
         return row;
     }
 
-    public Row put(String column, Object value) {
+    Row set(String column, Object value) {
         values.put(column, value);
         byLowercase.put(column.toLowerCase(), column);
         return this;
     }
 
-    public Object get(String column) {
-        if (values.containsKey(column)) {
-            return values.get(column);
+    @Override
+    public Object get(Object column) {
+        String name = String.valueOf(column);
+        if (values.containsKey(name)) {
+            return values.get(name);
         }
-        String actual = byLowercase.get(column.toLowerCase());
+        String actual = byLowercase.get(name.toLowerCase());
         return actual == null ? null : values.get(actual);
+    }
+
+    @Override
+    public boolean containsKey(Object column) {
+        return has(String.valueOf(column));
+    }
+
+    @Override
+    public Set<Entry<String, Object>> entrySet() {
+        return Collections.unmodifiableMap(values).entrySet();
     }
 
     public boolean has(String column) {
         return values.containsKey(column) || byLowercase.containsKey(column.toLowerCase());
     }
 
-    public boolean isEmpty() {
-        return values.isEmpty();
-    }
-
-    public int size() {
-        return values.size();
-    }
-
     public Set<String> columns() {
-        return values.keySet();
+        return keySet();
     }
 
     public Map<String, Object> toMap() {
@@ -143,21 +156,6 @@ public final class Row {
 
     public String toJson() {
         return Json.write(values);
-    }
-
-    @Override
-    public String toString() {
-        return values.toString();
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof Row row && values.equals(row.values);
-    }
-
-    @Override
-    public int hashCode() {
-        return values.hashCode();
     }
 
     private Number number(String column) {

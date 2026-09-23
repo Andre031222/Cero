@@ -32,7 +32,7 @@ base de datos y API REST, cubierta por 43 pruebas de punta a punta— y destapó
 lista de casillas no veía. Eso convierte «paridad» en algo verificado, no declarado.
 
 Lo que sigue sin ocurrir es tráfico real: nadie ha desplegado esto y lo ha dejado correr semanas.
-Y el sitio de referencia ya no depende de Tomcat: es `cero-web`.
+Y el sitio de referencia ya no depende de Tomcat.
 
 **Criterio:** una aplicación pequeña en producción de verdad, con tráfico real, durante semanas.
 
@@ -102,15 +102,15 @@ debían coincidir y no coincidían. Corregido haciendo que ambos usen el mismo r
 Los 94 610 rps de la medición casera no valían: cliente y servidor en la misma máquina, con `ab`,
 sin aislamiento. Ya están sustituidos por una corrida del harness con Cero como sexto
 contendiente, `/plaintext`, `/json` y `/db`, 5 repeticiones de 30 s y cero errores
-([tabla](../benchmarks/results/RESULTS-docker.md)).
+([cómo se mide](../benchmarks/results/LEEME.md)).
 
 Lo que sale de ahí, sin adornos:
 
 - **Arranque: 106 ms.** El siguiente es Javalin con 451: una ventaja de categoría, no de matiz.
 - **Memoria: 136,4 MB de RSS, la más baja de las seis.** Micronaut, el segundo, gasta 201.
 - **Throughput: primero en los tres endpoints.** `/plaintext` 26 425, `/json` 25 431 y `/db`
-  25 931. En `/db` —el que mide el framework haciendo trabajo de verdad— saca un 38 % a JxMVC.
-- **Imagen: 110,3 MB**, segunda por 0,2 MB detrás de JxMVC. La base JRE domina el tamaño.
+  25 931. `/db` es el que mide el framework haciendo trabajo de verdad.
+- **Imagen: 110,3 MB**, segunda por 0,2 MB. La base JRE domina el tamaño.
 
 **Criterio que sigue abierto:** repetir la corrida en el mismo Arch bare-metal que usó el paper.
 Lo medido es en Docker Desktop: los números relativos son justos, los absolutos no son citables.
@@ -162,7 +162,7 @@ En orden, porque cada paso informa al siguiente. Tachado lo que ya está:
 2. ~~Correr `cero-data` contra PostgreSQL y MySQL reales~~ — hecho, y encontró un fallo.
 3. ~~Fuzzing dirigido del parser~~ — hecho; falta el banco de **conformidad** HTTP/1.1.
 4. ~~Correr la suite en Linux~~ — hecho, en cada push, sobre JDK 21 y 25.
-5. ~~Levantar el sitio de referencia en standalone~~ — hecho: es `cero-web`.
+5. ~~Levantar el sitio de referencia en standalone~~ — hecho.
 6. Benchmark en Arch bare-metal, con los números buenos.
 7. Prueba de carga sostenida con conexiones hostiles.
 8. Elegir **una** app pequeña y de bajo riesgo, ponerla en producción detrás de un proxy inverso,

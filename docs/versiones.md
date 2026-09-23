@@ -3,10 +3,116 @@
 Cada versión publicada es **inmutable**: mismo número, mismo `sha256`, siempre. Si el contenido
 cambia, cambia el número.
 
-Eso no fue así al principio, y conviene decirlo: durante el 3 de agosto de 2026 el paquete
-`luxcore-0.2.0.tar.gz` se rehizo unas ocho veces sin cambiar de número. Quien instalara por la
-mañana y quien instalara por la noche tenían frameworks distintos y ninguna forma de saberlo. Lo
-señaló la auditoría del portal FINESI, y de ahí sale esta regla.
+Eso no fue así al principio, y conviene decirlo: durante el 3 de agosto de 2026 el paquete de la
+0.2.0 se rehizo unas ocho veces sin cambiar de número. Quien instalara por la mañana y quien
+instalara por la noche tenían frameworks distintos y ninguna forma de saberlo. Lo señaló la
+auditoría del portal FINESI, y de ahí sale esta regla.
+
+---
+
+## 0.7.0 · en desarrollo
+
+Sin etiquetar todavía. Lo de abajo está en `main` y **no** en la 0.6.0 publicada.
+
+### La cookie de sesión no salía por HTTP/2
+
+Una sesión nueva se crea durante la petición y su cookie queda pendiente de emitir. El camino de
+HTTP/1.1 la recogía al componer las cabeceras; el de HTTP/2 no, así que **sobre h2 la sesión se
+creaba entera en cada petición**: el identificador cambiaba, el token CSRF con él y el formulario
+siguiente fallaba la validación. En claro no se veía, porque ningún navegador habla h2 sin TLS.
+
+Ahora `Http2Respuesta` emite la cookie pendiente al construir el bloque de cabeceras, que es el
+único punto por el que pasan las dos salidas de una respuesta h2.
+
+### `@Query(orElse = "")` no podía pedir la cadena vacía
+
+El valor por omisión de `orElse` era la cadena vacía, y el vinculador la usaba como «no se declaró
+defecto». Así que declarar `orElse = ""` —querer exactamente eso, que es lo normal en un filtro de
+búsqueda— no daba `""` sino `null`, y con un parámetro `String` la acción recibía `null` donde su
+autor había escrito lo contrario.
+
+El centinela es ahora `Query.SIN_DEFECTO`, una cadena imposible de escribir por accidente. Mismo
+arreglo en `@Form`. La corrección es compatible: quien nunca declaró `orElse` sigue recibiendo
+`null`.
+
+### Fechas y horas de SQL en `Json`
+
+`java.sql.Date`, `java.sql.Time` y `java.sql.Timestamp` heredan de `java.util.Date`, y al
+serializarse caían en la rama genérica: una fecha salía como instante UTC —con hora y zona que
+nadie pidió— y una hora salía como una fecha de 1970. El síntoma de fuera era que las consultas se
+llenaban de `to_char(...)` para no tocar el serializador.
+
+Los tres se reconocen antes que `java.util.Date` y salen en su forma ISO: `2026-09-22`,
+`14:30:00` y el instante completo, respectivamente.
+
+### `Row` es un `Map`
+
+`Row` implementa ahora `Map<String, Object>` de solo lectura: anidada dentro de una respuesta
+JSON se serializa como objeto en vez de introspeccionarse por getters, y encaja en cualquier API
+que pida un mapa. Las operaciones de escritura del contrato lanzan `UnsupportedOperationException`
+—una fila se construye con `Row.of(...)` o `Row.from(...)`— y `get` sigue siendo insensible a
+mayúsculas. Los accesores con tipo (`text`, `integer`, `date`, `as`…) no cambian.
+
+### Aviso por variables `CERO_*` que no se aplican
+
+Una variable de entorno mal escrita, o con el nombre de una clave en camelCase —que el traductor
+pasa a minúsculas, así que nunca casa—, se leía y no tenía efecto, en silencio. Al arrancar, Cero
+avisa ahora de toda variable `CERO_*` que no haya acabado en ninguna clave consultada, y si la
+diferencia es solo de mayúsculas lo dice con el nombre correcto delante.
+
+Es un aviso, no un fallo: el arranque sigue.
+
+### `ServerOptions.http2(boolean)`
+
+Apagarlo deja el servidor solo en HTTP/1.1: ni ALPN anuncia `h2`, ni se acepta `h2c` por
+conocimiento previo ni por `Upgrade`. Viene encendido. Sirve para descartar el protocolo como
+causa de un fallo sin cambiar nada más, y para un despliegue detrás de un proxy que ya termina h2.
+
+### Migraciones: el troceador de SQL, `repair()` y `verify()`
+
+`Migrations` parte cada archivo por punto y coma porque muchos drivers no aceptan varias
+sentencias en un `execute`. El corte era literal, así que un `;` dentro de una cadena, de un
+comentario de bloque o de un cuerpo `$$ … $$` partía la sentencia por la mitad y el motor
+respondía con un error de sintaxis que no se parecía en nada al archivo escrito. Ahora el
+troceador reconoce literales, identificadores entre comillas, comentarios de línea y de bloque
+—anidados, como en PostgreSQL— y cadenas con etiqueta de dólar.
+
+Dos métodos nuevos:
+
+- **`repair()`** reescribe la huella de las migraciones ya aplicadas que hayan cambiado, sin
+  reejecutar nada, y devuelve los nombres que tocó. Es la salida para una migración corregida que
+  no altera lo que dejó en el esquema: sin esto, el arranque se para en todos los entornos y solo
+  queda editar la tabla a mano.
+- **`verify(fuenteDesechable)`** aplica el lote entero contra otro origen —una base vacía, pensada
+  para integración continua— y devuelve una `Verificacion` en vez de lanzar: si algo falla, dice
+  cuál es la migración y con qué mensaje.
+
+### `cero-test`, un módulo nuevo
+
+Pruebas de una aplicación Cero sin cablear nada, y sin dependencias fuera del JDK. Va en `scope`
+de prueba.
+
+- **`TestServer`** levanta la aplicación en un puerto libre —`start(Cero)` o
+  `start(Class<?>...)`— y se cierra sola con try-with-resources.
+- **`TestClient`** pide con las cookies conservadas entre llamadas, y elige protocolo con
+  `http1()` o `http2()`.
+- **`TestResponse`** afirma encadenando: `ok()`, `status(…)`, `header(…)`, `contains(…)` y
+  `json(ruta, valor)`.
+- **`TestDatabase`** registra un origen de datos para la prueba y aplica las migraciones.
+
+### El fallback se saltaba la cadena de middlewares
+
+**Rompiente en el comportamiento.** `withFallback` resolvía la ruta antes del despachador y, si no
+había ninguna, llamaba al fallback y volvía — pero la cadena de middlewares vive dentro del
+despachador. Resultado: en una aplicación de una sola página, el documento HTML y todos sus
+estáticos no pasaban por ningún middleware.
+
+El efecto era del revés de lo que uno espera: la API salía con `X-Frame-Options: DENY` y la
+página, lo único que de verdad se puede meter en un iframe, sin ninguna cabecera. `RateLimit`
+tampoco veía los estáticos.
+
+Ahora el fallback es la terminal de la cadena cuando no hay ruta, así que los middlewares lo
+envuelven por construcción y no por disciplina de quien configura la aplicación.
 
 ---
 
@@ -24,9 +130,8 @@ demuestra contra una suite escrita por otros.
 **Rompiente: sube el mínimo de JDK 21 a 25.**
 
 **Sube el mínimo de JDK 21 a JDK 25**, y es lo único de esta versión capaz de impedir que
-arranque una aplicación que hoy funciona. Va aquí arriba y no entre los arreglos por eso: el
-renombrado se resuelve con una orden, pero un servidor que corre un JRE 21 no ejecuta este jar
-—ni con el nombre viejo ni con el nuevo—.
+arranque una aplicación que hoy funciona. Va aquí arriba y no entre los arreglos por eso: el resto
+se resuelve recompilando, pero un servidor que corre un JRE 21 no ejecuta este jar.
 
 El motivo es de plataforma, no de código: nada del framework usa una función posterior a la 21.
 Se sube para no sostener dos objetivos de compilación a la vez, y porque el despliegue de
@@ -44,8 +149,8 @@ a este proyecto—, **obligación de declarar los cambios** al redistribuir una 
 una **cláusula de marca** que impide que un fork se presente como si fuera este proyecto.
 
 Es además la de Spring, Quarkus, Micronaut y Javalin, así que no introduce fricción de adopción
-frente a lo que compite con esto. El aviso MIT de JxMVC 3.4.0 se conserva dentro del NOTICE: Apache
-2.0 exige mantener los avisos de la obra de la que se parte.
+frente a lo que compite con esto. Los avisos de terceros se conservan en el NOTICE, como exige
+Apache 2.0.
 
 ### HTTP/2
 
@@ -159,41 +264,11 @@ cortan un flujo. La regla es que no se especifica lo que no está probado.
 
 ## 0.5.0 · sin publicar
 
-**El framework se llama Cero.** *LuxCore* chocaba con un framework PHP del mismo entorno.
-*Corvo* resolvió esa confusión pero no decía nada del framework: era un nombre correcto y mudo.
-**Cero** sí dice algo, y es lo mismo que dice la primera línea del LEEME —cero dependencias en
-ejecución, cero configuración para arrancar, cero contenedor de servlets—. No es una metáfora
-que haya que explicar: es la lista de lo que este framework no te obliga a tener.
-
-Se escribe **Cero**, con mayúscula, también a mitad de frase: es una palabra común del
-castellano y en minúscula desaparece dentro del texto. En artefactos y órdenes va en minúscula,
-como siempre: `cero-core`, `cero new`.
-
-### Qué cambia de nombre
-
-- Paquetes `corvo.*` → `cero.*`. Clases `Corvo` → `Cero` y `CorvoServlet` → `CeroServlet`.
-- Coordenadas `dev.ginit.corvo:corvo-*` → `dev.ginit.cero:cero-*`.
-- La orden `./corvo` pasa a `./cero`.
-- Configuración: `corvo.*` → `cero.*`, `CORVO_*` → `CERO_*`.
-- Cookie de sesión `CORVOSESSION` → `CEROSESSION`.
-- Métricas `corvo_*` → `cero_*`, y los endpoints `/corvo/*` → `/cero/*`.
-- Tablas por defecto `corvo_migraciones` y `corvo_sesiones` → `cero_*`.
-
-`./cero migrar <ruta>` convierte una aplicación entera, y **acepta los dos nombres viejos**: una
-aplicación que se quedó en LuxCore sin pasar por Corvo llega a Cero en un solo paso. Ver
-[migrar-a-cero.md](migrar-a-cero.md), que además explica las tres cosas que ninguna herramienta
-puede hacer sola: renombrar las tablas antes de arrancar, que la cookie cierra todas las sesiones
-al desplegar, y que los paneles de Grafana se quedan vacíos —sin dar error— hasta que se
-actualicen las métricas.
-
-**No hay capa de compatibilidad, a propósito.** Las aplicaciones que usan el framework son todas
-nuestras: aceptar los nombres viejos en tiempo de ejecución significaría arrastrar código muerto
-para siempre. El guion los acepta; el framework, no.
+**La versión de la auditoría de seguridad.** Se revisó el código entero, y de ahí salen los diez
+hallazgos de abajo. Cuatro de los cinco primeros estaban en lo añadido en 0.4.0, que era lo menos
+rodado.
 
 ### Seguridad
-
-Salen de una auditoría del código completo. Cuatro de los cinco hallazgos estaban en lo añadido
-en 0.4.0, que era lo menos rodado.
 
 - **`Sanitize.html` no saneaba.** Era una lista negra a base de expresiones regulares, y una
   lista negra de HTML siempre tiene un agujero más: `<svg/onload=alert(1)>` salía intacto porque
@@ -231,7 +306,7 @@ en 0.4.0, que era lo menos rodado.
 - **`Json` sin tope de anidamiento.** Un cuerpo de 50 KB de `[[[[…` agotaba la pila del hilo.
   Tope de 64 niveles.
 
-- **`/corvo/listo` publicaba el mensaje del fallo**, que en un fallo de conexión lleva el host y
+- **`/cero/listo` publicaba el mensaje del fallo**, que en un fallo de conexión lleva el host y
   el puerto de la base de datos. Nuevo `Health.checks().publico()`: el código y el estado, nada
   más.
 
@@ -255,37 +330,22 @@ en 0.4.0, que era lo menos rodado.
 
 **1 584 aserciones en verde**, ocho módulos, sin fallos. Eran 1 317 en 0.4.0.
 
-> **Esta versión tampoco se publicó.** El renombrado se hizo y se probó, pero antes de
-> etiquetarla llegaron HTTP/2, el trazado y el salto a Java 25 — y meter una implementación de
-> protocolo entera bajo un título que dice «el framework se llama Cero» habría dejado un registro
-> que no se puede leer. Ver [0.6.0](#060--5-de-septiembre-de-2026).
+> **Esta versión no se publicó.** Los arreglos se hicieron y se probaron, pero antes de
+> etiquetarla llegaron HTTP/2, el trazado y el salto a Java 25, y salieron todos juntos en la
+> [0.6.0](#060--5-de-septiembre-de-2026).
 
 ---
 
 ## 0.4.0 · sin publicar
 
-**LuxCore pasa a llamarse Corvo.** El nombre chocaba con un framework PHP del mismo entorno y se
-confundían constantemente. *Corvo* significa cuervo —la marca que el proyecto ya llevaba— y
-conserva el «cor» de LuxCore, que en latín es corazón, la misma raíz de *core*.
+**El `groupId` pasa a ser `dev.ginit.cero`**, un dominio propio, que es lo que exige Maven Central
+y antes no se cumplía. Es un cambio rompiente en las coordenadas, y por eso va en una versión
+propia. Las anteriores no se tocan: `0.2.0` y `0.3.0` siguen siendo exactamente lo que eran, y las
+aplicaciones que las usan no se enteran.
 
-Es un cambio rompiente, y por eso va en una versión propia. Las anteriores no se tocan: `0.2.0` y
-`0.3.0` siguen siendo exactamente lo que eran, y las aplicaciones que las usan no se enteran.
-
-> **Esta versión nunca se publicó.** El renombrado a Corvo se hizo y se probó, pero antes de
-> etiquetarla el nombre volvió a cambiar —ver [0.5.0](#050--sin-publicar)—. Se conserva la
-> entrada porque el trabajo existió y porque el guion de migración sigue aceptando este nombre:
-> hay aplicaciones que se quedaron aquí.
-
-### Qué cambió
-
-- Paquetes `lux.*` → `corvo.*`. Clases `Lux` → `Corvo` y `LuxServlet` → `CorvoServlet`.
-- Coordenadas `lux:lux-*` → `dev.ginit.corvo:corvo-*`. El `groupId` pasa a ser un dominio propio,
-  que es lo que exige Maven Central y antes no cumplíamos.
-- La orden `./lux` pasa a `./corvo`.
-- Configuración: `lux.*` → `corvo.*`, `LUX_*` → `CORVO_*`.
-- Cookie de sesión `LUXSESSION` → `CORVOSESSION`.
-- Métricas `lux_*` → `corvo_*`, y los endpoints `/lux/metrics` → `/corvo/metrics`.
-- Tablas por defecto `lux_migraciones` y `lux_sesiones` → `corvo_*`.
+> **Esta versión nunca se publicó.** El trabajo existió y se conserva la entrada, pero antes de
+> etiquetarla llegó la auditoría de seguridad —ver [0.5.0](#050--sin-publicar)— y todo salió junto
+> más tarde.
 
 ### Añadido
 
@@ -305,10 +365,10 @@ Es un cambio rompiente, y por eso va en una versión propia. Las anteriores no s
 
 - `Registry.get` resolvía dentro de `computeIfAbsent` y `build()` vuelve a entrar en `get()`, así
   que las cadenas de servicios hondas lanzaban `IllegalStateException: Recursive update`.
-- `Config` recortaba el prefijo de las variables de entorno con la longitud escrita a mano. Al
-  pasar de `LUX_` (4) a `CORVO_` (6), `CORVO_SERVER_PORT` se leía como `o.server.port` y la
-  aplicación arrancaba con los valores por defecto en silencio. Ese camino no lo cubría ninguna
-  prueba; ahora sí.
+- `Config` recortaba el prefijo de las variables de entorno con una longitud escrita a mano en
+  vez de la del prefijo, así que la clave salía truncada —`CERO_SERVER_PORT` acababa en
+  `o.server.port`— y la aplicación arrancaba con los valores por defecto en silencio. Ese camino
+  no lo cubría ninguna prueba; ahora sí.
 
 ---
 
@@ -370,7 +430,7 @@ lleva:
 - **`Sse`** — eventos del servidor al navegador. El panel del sitio ya no pregunta cada dos
   segundos: el servidor empuja.
 - **`StaticFiles.spa()`** — respaldo para React, Svelte y Vue con rutas de cliente.
-- **`lux new … --front`** — genera el proyecto separado en `backend/` y `frontend/`, con CORS de
+- **`cero new … --front`** — genera el proyecto separado en `backend/` y `frontend/`, con CORS de
   desarrollo y el respaldo de SPA ya puestos.
 
 ### Cifras
@@ -385,7 +445,7 @@ lleva:
 
 ## 0.2.0 · 2 de agosto de 2026
 
-Primera versión desplegada. Cierra la migración del núcleo heredado: servidor HTTP/1.1 propio con
+Primera versión desplegada. El framework ya se sostiene entero: servidor HTTP/1.1 propio con
 un hilo virtual por conexión, router, pipeline, inyección, JSON, plantillas, capa de datos,
 WebSocket, TLS recargable, instalador de una orden para los tres sistemas.
 

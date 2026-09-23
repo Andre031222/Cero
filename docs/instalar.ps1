@@ -3,26 +3,73 @@
 
         irm https://cero.ginit.dev/instalar.ps1 | iex
 
-    Baja el paquete, comprueba su huella, lo compila, deja los artefactos en ~\.m2 y la orden
-    `cero` en el PATH del usuario. No necesita administrador y no escribe fuera de tu perfil.
+    Detecta el sistema, la arquitectura y el gestor de paquetes; baja el paquete, comprueba su
+    huella, lo compila, deja los artefactos en ~\.m2 y la orden `cero` en el PATH del usuario.
+    No necesita administrador y no escribe fuera de tu perfil.
 
     Con pruebas:  & ([scriptblock]::Create((irm https://cero.ginit.dev/instalar.ps1))) -ConPruebas
+    Solo detectar: ... -Detectar
 #>
 [CmdletBinding()]
 param(
     [switch] $ConPruebas,
     [switch] $SinColor,
+    [switch] $Detectar,
     [string] $Base = $(if ($env:CERO_BASE) { $env:CERO_BASE } else { 'https://cero.ginit.dev' })
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'   # la barra nativa de Invoke-WebRequest la frena mucho
 
-$Raiz = if ($env:CERO_HOME) { $env:CERO_HOME } else { Join-Path $env:LOCALAPPDATA 'Cero' }
+$JavaMinimo = 25
+$Total      = 8
+$Raiz = if ($env:CERO_HOME) { $env:CERO_HOME }
+        elseif ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Cero' }
+        else { Join-Path $HOME '.cero' }
 $Bin  = Join-Path $Raiz 'bin'
 
+# ─── detección ──────────────────────────────────────────────────────────────────────────
+$Arq = switch -Regex ("$([Runtime.InteropServices.RuntimeInformation]::OSArchitecture)") {
+    'Arm64' { 'arm64' }; 'X64' { 'x86_64' }; 'X86' { 'x86' }; default { "$_" }
+}
+$EnWindows = [Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Windows)
+$DetalleSo = if ($EnWindows) {
+    "Windows $([Environment]::OSVersion.Version.Major) - $Arq"
+} else {
+    "$([Runtime.InteropServices.RuntimeInformation]::OSDescription) - $Arq"
+}
+$Interprete = if ($PSVersionTable.PSEdition -eq 'Core') { "PowerShell $($PSVersionTable.PSVersion)" }
+              else { "Windows PowerShell $($PSVersionTable.PSVersion)" }
+
+function Donde([string] $orden) { (Get-Command $orden -ErrorAction SilentlyContinue).Source }
+
+$Gestor = @('winget', 'scoop', 'choco', 'brew', 'apt-get') | Where-Object { Donde $_ } | Select-Object -First 1
+
+function OrdenJava {
+    switch ($Gestor) {
+        'winget'  { "winget install EclipseAdoptium.Temurin.$JavaMinimo.JDK Apache.Maven" }
+        'scoop'   { "scoop install temurin$JavaMinimo-jdk maven" }
+        'choco'   { "choco install -y temurin$JavaMinimo maven" }
+        'brew'    { "brew install openjdk@$JavaMinimo maven" }
+        'apt-get' { "sudo apt-get install -y openjdk-$JavaMinimo-jdk maven" }
+        default   { "baja un JDK $JavaMinimo de https://adoptium.net/temurin/releases/?os=windows&arch=$Arq y Maven de https://maven.apache.org/download.cgi" }
+    }
+}
+
+function VersionJava {
+    if (-not (Donde 'java')) { return 0 }
+    $linea = (& java -version 2>&1 | Select-Object -First 1)
+    if ("$linea" -match '"(\d+)') { return [int]$Matches[1] }
+    return 0
+}
+
 # ─── pintura ────────────────────────────────────────────────────────────────────────────
-$Vivo = -not $SinColor -and $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
+# Sin terminal, con NO_COLOR, con TERM=dumb o dentro de integración continua: líneas planas,
+# ni un escape ni un retorno de carro.
+$EnCi = @('CI','GITHUB_ACTIONS','GITLAB_CI','JENKINS_URL','BUILDKITE','TEAMCITY_VERSION','TF_BUILD') |
+        Where-Object { [Environment]::GetEnvironmentVariable($_) }
+$Vivo = -not $SinColor -and -not $EnCi -and -not $env:NO_COLOR -and $env:TERM -ne 'dumb' `
+        -and $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
 $e = [char]27
 if ($Vivo) {
     $Acento='{0}[38;5;205m' -f $e; $Tenue='{0}[38;5;245m' -f $e; $Verde='{0}[38;5;71m'  -f $e
@@ -31,21 +78,46 @@ if ($Vivo) {
     $Acento=''; $Tenue=''; $Verde=''; $Rojo=''; $Fuerte=''; $Fin=''
 }
 
+# Glifos UTF-8 solo si la consola los sabe pintar; si no, ASCII.
+$Utf = [Console]::OutputEncoding.WebName -match 'utf'
+if ($Utf) { $Giros = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'.ToCharArray(); $Lleno='━'; $Vacio='─'; $Ok='✓'; $No='✗' }
+else      { $Giros = '|/-\'.ToCharArray();           $Lleno='#'; $Vacio='-'; $Ok='+'; $No='x' }
+
 function Escribe([string] $t) { Write-Host $t }
 function Borra { if ($Vivo) { Write-Host ("`r{0}[K" -f $e) -NoNewline } }
 
 $script:Paso = 0
+$script:Etiqueta = ''
+function Barra {
+    $ancho = 16
+    $hechos = [int]($script:Paso * $ancho / $Total)
+    ($Lleno * $hechos) + ($Vacio * ($ancho - $hechos))
+}
 function Paso([string] $t) {
     $script:Paso++
-    Write-Host ("  {0}{1:D2}{2}  {3}" -f $Acento, $script:Paso, $Fin, $t) -NoNewline
+    $script:Etiqueta = $t
+    if ($Vivo) {
+        Borra
+        Write-Host ("  {0}{1}{2} {3}{4}/{5}{2}  {6}" -f $Acento, (Barra), $Fin, $Tenue, $script:Paso, $Total, $t) -NoNewline
+    } else {
+        Write-Host ("[{0}/{1}] {2}" -f $script:Paso, $Total, $t)
+    }
 }
 function Bien([string] $t, [string] $nota) {
+    if ($Vivo) {
+        Borra
+        Write-Host ("  {0}{1}{2}  {3}{4}" -f $Verde, $Ok, $Fin, $t.PadRight(26), $(if ($nota) { "$Tenue$nota$Fin" }))
+    } else {
+        Write-Host ("        {0} {1}" -f $t, $nota)
+    }
+}
+function Aviso([string] $t, [string] $nota) {
     Borra
-    Write-Host ("  {0}OK{1}  {2}{3}" -f $Verde, $Fin, $t, $(if ($nota) { "  $Tenue$nota$Fin" }))
+    Write-Host ("  {0}!{1}  {2}{3}" -f $Acento, $Fin, $t.PadRight(26), $(if ($nota) { "$Tenue$nota$Fin" }))
 }
 function Muere([string] $t, [string] $registro) {
     Borra
-    Write-Host ("  {0}X   {1}{2}" -f $Rojo, $t, $Fin) -ForegroundColor Red
+    Write-Host ("  {0}{1}  {2}{3}" -f $Rojo, $No, $t, $Fin)
     if ($registro -and (Test-Path $registro)) {
         Write-Host ''
         Get-Content $registro -Tail 25 | ForEach-Object { Write-Host "$Tenue$_$Fin" }
@@ -64,54 +136,89 @@ function Marca {
     Escribe ''
 }
 
-# Corre algo largo enseñando un giro. La salida va a un fichero: solo se enseña si falla.
-function Girando([string] $etiqueta, [string] $registro, [string] $orden, [string[]] $argumentos) {
+# Corre algo largo enseñando el paso y un giro. La salida va a un fichero: solo se enseña si
+# falla. El finally devuelve el cursor aunque corten con Ctrl-C.
+function Girando([string] $registro, [string] $orden, [string[]] $argumentos) {
     $inicio = Get-Date
     $proc = Start-Process -FilePath $orden -ArgumentList $argumentos -NoNewWindow -PassThru `
                           -RedirectStandardOutput $registro -RedirectStandardError "$registro.err"
-    if (-not $Vivo) {
-        Escribe "  ... $etiqueta"
-        $proc.WaitForExit()
-    } else {
-        $giros = '|/-\'.ToCharArray()
-        $i = 0
-        while (-not $proc.HasExited) {
-            $s = [int]((Get-Date) - $inicio).TotalSeconds
-            Write-Host ("`r{0}[K  {1}{2}{3}   {4} {5}{6}s{3}" -f `
-                        $e, $Acento, $giros[$i % 4], $Fin, $etiqueta, $Tenue, $s) -NoNewline
-            $i++
-            Start-Sleep -Milliseconds 90
+    try {
+        if (-not $Vivo) {
+            $proc.WaitForExit()
+        } else {
+            Write-Host ("{0}[?25l" -f $e) -NoNewline
+            $i = 0
+            while (-not $proc.HasExited) {
+                $s = [int]((Get-Date) - $inicio).TotalSeconds
+                Write-Host ("`r{0}[K  {1}{2}{3} {4}{5}/{6}{3}  {7} {1}{8}{3} {4}{9}s{3}" -f `
+                            $e, $Acento, (Barra), $Fin, $Tenue, $script:Paso, $Total, `
+                            $script:Etiqueta, $Giros[$i % $Giros.Length], $s) -NoNewline
+                $i++
+                Start-Sleep -Milliseconds 90
+            }
         }
+    } finally {
+        if ($Vivo) { Write-Host ("{0}[?25h" -f $e) -NoNewline }
+        if (-not $proc.HasExited) { $proc.Kill() }
     }
     $script:Segundos = [int]((Get-Date) - $inicio).TotalSeconds
     if (Test-Path "$registro.err") { Get-Content "$registro.err" | Add-Content $registro }
     return $proc.ExitCode
 }
 
-function Donde([string] $orden) { (Get-Command $orden -ErrorAction SilentlyContinue).Source }
+# ─── solo detectar ──────────────────────────────────────────────────────────────────────
+if ($Detectar) {
+    Marca
+    $jv = VersionJava
+    Escribe ("  {0} {1}" -f 'sistema '.PadRight(14), $DetalleSo)
+    Escribe ("  {0} {1}" -f 'terminal'.PadRight(14), $Interprete)
+    Escribe ("  {0} {1}" -f 'gestor  '.PadRight(14), $(if ($Gestor) { $Gestor } else { 'ninguno conocido' }))
+    Escribe ("  {0} {1}" -f 'java    '.PadRight(14), $(if ($jv) { $jv } else { 'no encontrado' }))
+    Escribe ("  {0} {1}" -f 'maven   '.PadRight(14), $(if (Donde 'mvn') { 'presente' } else { 'no encontrado' }))
+    Escribe ("  {0} {1}" -f 'salida  '.PadRight(14), $(if ($Vivo) { 'terminal con color' } else { 'plana (sin escapes)' }))
+    if ($jv -lt $JavaMinimo) {
+        Escribe ''
+        Escribe "  Para tener Java $JavaMinimo en tu sistema:"
+        Escribe ''
+        Escribe ("      {0}" -f (OrdenJava))
+        Escribe ''
+    }
+    exit 0
+}
 
 # ─── 1 · lo que hace falta ──────────────────────────────────────────────────────────────
 Marca
 Paso 'comprobando el entorno'
 
+if (-not $EnWindows) {
+    Aviso 'no estás en Windows' "usa el instalador de shell:  curl -fsSL $Base/instalar | sh"
+}
+
 $falta = @('java', 'mvn') | Where-Object { -not (Donde $_) }
 if ($falta) {
     Borra
-    Write-Host ("  {0}X   falta: {1}{2}" -f $Rojo, ($falta -join ' '), $Fin)
+    Write-Host ("  {0}{1}  falta: {2}{3}" -f $Rojo, $No, ($falta -join ' '), $Fin)
     Escribe ''
-    Escribe "  Cero necesita un ${Fuerte}JDK 25${Fin} o superior y ${Fuerte}Maven${Fin}."
-    Escribe "  ${Tenue}winget install EclipseAdoptium.Temurin.25.JDK${Fin}"
-    Escribe "  ${Tenue}winget install Apache.Maven${Fin}"
+    Escribe "  Cero necesita un ${Fuerte}JDK $JavaMinimo${Fin} o superior y ${Fuerte}Maven${Fin}."
+    Escribe "  ${Tenue}Detectado: $DetalleSo - gestor $(if ($Gestor) { $Gestor } else { 'ninguno' })${Fin}"
+    Escribe ''
+    Escribe ("      {0}{1}{2}" -f $Fuerte, (OrdenJava), $Fin)
     Escribe ''
     Escribe "  ${Tenue}Cierra y abre PowerShell despues de instalarlos, para que entren en el PATH.${Fin}"
     exit 1
 }
 
-$javaV = 0
-$linea = (& java -version 2>&1 | Select-Object -First 1)
-if ("$linea" -match '"(\d+)') { $javaV = [int]$Matches[1] }
-if ($javaV -lt 25) { Muere "Cero necesita Java 25 o superior - hilos virtuales. Tienes $javaV." }
-Bien 'entorno' "Java $javaV - Windows $([Environment]::OSVersion.Version.Major) - $env:PROCESSOR_ARCHITECTURE"
+$javaV = VersionJava
+if ($javaV -lt $JavaMinimo) {
+    Borra
+    Write-Host ("  {0}{1}  Cero necesita Java $JavaMinimo o superior - hilos virtuales. Tienes $javaV.{2}" -f $Rojo, $No, $Fin)
+    Escribe ''
+    Escribe ("      {0}{1}{2}" -f $Fuerte, (OrdenJava), $Fin)
+    Escribe ''
+    exit 1
+}
+$mavenV = ((& cmd.exe /c 'mvn -v' 2>$null) | Select-Object -First 1)
+Bien 'entorno' "$DetalleSo - Java $javaV"
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
 Paso 'consultando la version'
@@ -151,13 +258,13 @@ if (-not (Test-Path $destino)) { Muere "el paquete no traia cero-$version dentro
 Bien 'extraido' $destino
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
-Paso 'compilando'
+Paso $(if ($ConPruebas) { 'compilando los ocho modulos y corriendo las pruebas' } else { 'compilando los ocho modulos' })
 $pom = Join-Path $destino 'java\pom.xml'
 $mvnArgs = @('-B', '-q', '-f', $pom, 'install')
 if (-not $ConPruebas) { $mvnArgs += '-DskipTests' }
 $registro = Join-Path $tmp 'mvn.log'
 # mvn en Windows es un .cmd, asi que va por cmd.exe
-$codigo = Girando 'compilando los ocho modulos' $registro 'cmd.exe' (@('/c', 'mvn') + $mvnArgs)
+$codigo = Girando $registro 'cmd.exe' (@('/c', 'mvn') + $mvnArgs)
 if ($codigo -ne 0) { Muere 'la compilacion fallo' $registro }
 Bien 'compilado' "ocho modulos en ~\.m2 - $script:Segundos s"
 
@@ -187,12 +294,17 @@ Paso 'comprobando la instalacion'
 if ($LASTEXITCODE -ne 0) { Muere "quedo instalado pero 'cero status' no responde" }
 Bien 'comprobado' 'cero status responde'
 
-# ─── final ──────────────────────────────────────────────────────────────────────────────
+# ─── resumen ────────────────────────────────────────────────────────────────────────────
 Escribe ''
 Escribe "  ${Verde}${Fuerte}Cero $version instalado${Fin}"
 Escribe ''
+Escribe ("  {0} {1}" -f 'sistema '.PadRight(12), $DetalleSo)
+Escribe ("  {0} {1}" -f 'java    '.PadRight(12), "$javaV - $mavenV")
+Escribe ("  {0} {1}" -f 'carpeta '.PadRight(12), $destino)
+Escribe ("  {0} {1}" -f 'orden   '.PadRight(12), (Join-Path $Bin 'cero.cmd'))
+Escribe ''
 if ($script:PathTocado) {
-    Escribe "  ${Acento}Abre una terminal nueva${Fin} para que el PATH se entere de la orden ${Fuerte}lux${Fin}."
+    Escribe "  ${Acento}Abre una terminal nueva${Fin} para que el PATH se entere de la orden ${Fuerte}cero${Fin}."
     Escribe ''
 }
 Escribe "  ${Tenue}Crear un proyecto y arrancarlo:${Fin}"
