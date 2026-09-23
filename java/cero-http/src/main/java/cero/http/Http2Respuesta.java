@@ -178,6 +178,12 @@ final class Http2Respuesta implements Response {
     private List<Hpack.Campo> campos() {
         List<Hpack.Campo> campos = new ArrayList<>();
         campos.add(new Hpack.Campo(":status", String.valueOf(estado)));
+        // No es una lectura pura: marca la cookie como emitida. `campos()` corre una sola vez por
+        // respuesta —los dos caminos de salida lo protegen con `comprometida`—, así que va aquí.
+        Cookie pendiente = peticion.pendingSessionCookie();
+        if (pendiente != null) {
+            campos.add(new Hpack.Campo("set-cookie", pendiente.encode()));
+        }
         for (int i = 0; i < cabeceras.size(); i++) {
             String minuscula = cabeceras.name(i).toLowerCase(Locale.ROOT);
             if (minuscula.equals("connection") || minuscula.equals("keep-alive")

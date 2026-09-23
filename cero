@@ -13,11 +13,8 @@
 #   ./cero dist          arma el .tar.gz y el .zip que baja el instalador
 #   ./cero clean         borra lo generado
 #   ./cero cache         muestra qué ocupa la caché, y con --purge la vacía
-#   ./cero docs          sirve la documentación estática con el propio Cero
-#   ./cero portal        arranca cero-web: el sitio con acceso, demos y generador
-#   ./cero build         regenera las páginas del sitio
 #   ./cero status        resumen del proyecto
-#   ./cero migrar <ruta> lleva una app de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.6.0
+#   ./cero migrar <ruta> migra una aplicación anterior a Cero 0.6.0
 set -euo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,7 +39,6 @@ requisitos() {
 }
 
 modulos() { echo "cero-http cero-core cero-view cero-data cero-adapter-servlet"; }
-aplicaciones() { echo "ejemplo cero-web"; }
 
 classpath_ejemplo() {
   local destino="$JAVA_DIR/ejemplo/target/classpath.txt"
@@ -61,15 +57,14 @@ case "${1:-ayuda}" in
     requisitos
     [ -n "${2:-}" ] || { malo "dime el nombre:  cero new mi-app [grupo] [motor]"; exit 1; }
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
-    cp="$JAVA_DIR/cero-web/target/classes:$(ls -d "$JAVA_DIR"/cero-*/target/cero-*.jar | tr '\n' ':')"
     azul "creando $2…"
-    java -cp "$cp" cero.web.Nuevo "${@:2}"
+    java -cp "$JAVA_DIR/cero-launcher/target/classes" cero.launcher.Nuevo "${@:2}"
     ;;
 
   dist|paquete)
     # Arma lo que se baja el instalador: el código fuente, sin target/ y sin la web.
-    # Va dentro de los recursos de cero-web, así que se despliega con el propio sitio y no
-    # hay un segundo sitio del que acordarse.
+    # Sale a dist/, que es lo que se sube a la página de la versión y lo que recoge el
+    # repositorio del sitio; no viaja dentro de ningún jar del framework.
     #
     # Primero se compila DESDE CERO. Sin esto se publicó un paquete que no compilaba en una
     # instalación limpia: la compilación incremental reutilizaba clases viejas que todavía
@@ -80,13 +75,10 @@ case "${1:-ayuda}" in
       malo "no compila desde cero: no se empaqueta"; exit 1; }
 
     v=$(version)
-    # Los guiones del instalador ya los copia Maven desde docs/ al compilar; aquí solo van los
-    # paquetes.
-    destino="$JAVA_DIR/cero-web/src/main/resources/estaticos"
+    destino="$AQUI/dist"
     mkdir -p "$destino"
 
-    # Antes de copiar nada: si quedaran los paquetes de la vez anterior, el nuevo se los
-    # llevaría dentro y engordaría en cada pasada.
+    # Los paquetes de la vez anterior estorban: se rehacen enteros en cada pasada.
     rm -f "$destino"/cero-*.tar.gz "$destino"/cero-*.zip "$destino"/cero-*.sha256
 
     tmp=$(mktemp -d)
@@ -94,7 +86,6 @@ case "${1:-ayuda}" in
     # COPYFILE_DISABLE evita que el tar de macOS meta un ._archivo por cada archivo.
     COPYFILE_DISABLE=1 tar -cf - \
         --exclude target --exclude '*.class' --exclude .DS_Store --exclude classpath.txt \
-        --exclude 'cero-*.tar.gz' --exclude 'cero-*.zip' --exclude 'cero-*.sha256' \
         -C "$AQUI" java cero cero.cmd cero.ps1 LICENSE NOTICE README.md \
                   docs/instalar.sh docs/instalar.ps1 \
       | tar -xf - -C "$tmp/cero-$v"
@@ -127,7 +118,7 @@ case "${1:-ayuda}" in
       rm -rf "$prueba"
     fi
 
-    gris "  huellas en .sha256 · los sirve cero-web en /estaticos/"
+    gris "  huellas en .sha256 · en $destino"
     ;;
 
   run|correr)
@@ -197,30 +188,6 @@ case "${1:-ayuda}" in
     fi
     ;;
 
-  docs|web)
-    requisitos
-    puerto="${2:-8095}"
-    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
-    cp=$(ls -d "$JAVA_DIR"/cero-*/target/cero-*.jar | tr '\n' ':')
-    tmp=$(mktemp -d)
-    cat > "$tmp/Sitio.java" <<'JAVA'
-import cero.core.Cero;
-import cero.http.StaticFiles;
-import java.nio.file.Path;
-
-public class Sitio {
-    public static void main(String[] args) throws Exception {
-        Cero.app().port(Integer.parseInt(args[1]))
-           .fallback(StaticFiles.from(Path.of(args[0])))
-           .start().await();
-    }
-}
-JAVA
-    javac -cp "$cp" -d "$tmp" "$tmp/Sitio.java"
-    azul "sirviendo la documentación estática en http://localhost:$puerto"
-    java -cp "$cp:$tmp" Sitio "$AQUI/docs/web" "$puerto"
-    ;;
-
   fatjar)
     requisitos
     modulo="${2:-ejemplo}"
@@ -228,7 +195,6 @@ JAVA
     if [ -z "$main" ]; then
       case "$modulo" in
         ejemplo) main="ejemplo.App" ;;
-        cero-web) main="cero.web.App" ;;
         *) malo "dime la clase principal: ./cero fatjar <modulo> <clase>"; exit 1 ;;
       esac
     fi
@@ -241,22 +207,6 @@ JAVA
          "$JAVA_DIR/$modulo/target/classes" \
          $(tr ':' '\n' < "$JAVA_DIR/$modulo/target/classpath.txt")
     azul "arráncalo con:  java -jar $(basename "$destino")"
-    ;;
-
-  portal)
-    requisitos
-    puerto="${2:-8080}"
-    azul "compilando el sitio…"
-    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
-    cp="$JAVA_DIR/cero-web/target/classes:$(ls -d "$JAVA_DIR"/cero-*/target/cero-*.jar | tr '\n' ':')"
-    azul "arrancando el sitio en http://localhost:$puerto"
-    java -cp "$cp" cero.web.App "$puerto"
-    ;;
-
-  build|sitio)
-    azul "regenerando las páginas…"
-    python3 "$AQUI/docs/web/construir.py"
-    python3 "$AQUI/docs/web/a-plantillas.py"
     ;;
 
   status|estado)
@@ -272,8 +222,27 @@ JAVA
     printf '  %-16s %s\n' repositorio "$(git -C "$AQUI" rev-parse --short HEAD 2>/dev/null || echo '—')"
     ;;
 
+  migraciones)
+    # Aplica el lote entero sobre una base vacía y desechable y dice qué pasó: nada toca la
+    # base de verdad, así que vale en integración continua.
+    requisitos
+    [ "${2:-}" = "--verificar" ] || {
+      malo "uso: ./cero migraciones --verificar [directorio] [url-jdbc]"; exit 1; }
+    dir="${3:-db/migraciones}"
+    [ -d "$dir" ] || { malo "no existe el directorio de migraciones $dir"; exit 1; }
+    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests -pl cero-launcher -am install)
+    # Las clases recién compiladas, no los jar de target/: ahí conviven versiones viejas y
+    # la primera del listado gana.
+    cp="$JAVA_DIR/cero-launcher/target/classes:$JAVA_DIR/cero-data/target/classes:$JAVA_DIR/cero-core/target/classes"
+    # El driver lo pone quien llama; si no dice nada, se usa el H2 de ~/.m2, que es el motor
+    # de la base desechable por omisión.
+    driver="${CERO_JDBC_JAR:-$(ls "$HOME"/.m2/repository/com/h2database/h2/*/h2-*.jar 2>/dev/null | head -1)}"
+    [ -n "$driver" ] || { malo "hace falta un driver JDBC: exporta CERO_JDBC_JAR=/ruta/driver.jar"; exit 1; }
+    java -cp "$cp:$driver" cero.launcher.Migraciones "$dir" ${4:+"$4"}
+    ;;
+
   migrar|migrate)
-    # Lleva una aplicación de LuxCore 0.2/0.3 o Corvo 0.4 a Cero 0.6.0.
+    # Migra una aplicación de una versión anterior del framework a Cero 0.6.0.
     #
     # Exige que el árbol de git de la aplicación esté limpio: así el propio git es la copia
     # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
@@ -307,10 +276,8 @@ JAVA
     printf '  %-24s %s\n' "./cero dist"             "arma el .tar.gz y el .zip del instalador"
     printf '  %-24s %s\n' "./cero clean"            "borra lo generado"
     printf '  %-24s %s\n' "./cero cache [--purge]"  "qué ocupa la caché, o vaciarla"
-    printf '  %-24s %s\n' "./cero docs [puerto]"    "sirve la documentación estática"
-    printf '  %-24s %s\n' "./cero portal [puerto]"  "arranca cero-web: acceso, demos y generador"
-    printf '  %-24s %s\n' "./cero build"            "regenera las páginas del sitio"
     printf '  %-24s %s\n' "./cero status"           "resumen del proyecto"
-    printf '  %-24s %s\n' "./cero migrar <ruta>"    "lleva una app de LuxCore o Corvo a Cero 0.6.0"
+    printf '  %-24s %s\n' "./cero migraciones"      "con --verificar, prueba las migraciones en una base desechable"
+    printf '  %-24s %s\n' "./cero migrar <ruta>"    "migra una aplicación anterior a Cero 0.6.0"
     ;;
 esac

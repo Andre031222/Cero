@@ -120,8 +120,7 @@ final class ResponseOverServlet implements Response {
 
     @Override
     public cero.http.Duplex switchProtocols() {
-        // El socket lo tiene el contenedor. Quien despliegue en Tomcat y necesite WebSocket usa
-        // el de Tomcat; sobre lux-http la misma aplicación lo tiene sin nada extra.
+        // El socket lo tiene el contenedor: sobre el servidor propio de Cero esto funciona sin nada extra.
         throw new UnsupportedOperationException(
                 "cambiar de protocolo no se puede desde el adaptador de servlet");
     }

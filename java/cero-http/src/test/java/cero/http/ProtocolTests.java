@@ -116,7 +116,7 @@ final class ProtocolTests {
 
     private static void route(Request request, Response response) throws Exception {
         switch (request.path()) {
-            case "/" -> response.text("lux");
+            case "/" -> response.text("cero");
             case "/eco" -> response.text(request.bodyText());
             case "/consulta" -> response.text(request.query("a") + "|" + request.query("b"));
             case "/flujo" -> {
@@ -146,9 +146,9 @@ final class ProtocolTests {
     private static void basics(String base) throws Exception {
         HttpResponse<String> response = Fixture.get(base + "/");
         Check.equal("GET devuelve 200", response.statusCode(), 200);
-        Check.equal("GET devuelve el cuerpo", response.body(), "lux");
+        Check.equal("GET devuelve el cuerpo", response.body(), "cero");
         Check.equal("Content-Length correcto",
-                response.headers().firstValue("content-length").orElse(null), "3");
+                response.headers().firstValue("content-length").orElse(null), "4");
         Check.that("Date presente", response.headers().firstValue("date").isPresent());
     }
 
@@ -195,7 +195,7 @@ final class ProtocolTests {
                         .build());
         Check.that("HEAD sin cuerpo", response.body().isEmpty());
         Check.equal("HEAD conserva Content-Length",
-                response.headers().firstValue("content-length").orElse(null), "3");
+                response.headers().firstValue("content-length").orElse(null), "4");
     }
 
     private static void streamedResponse(String base) throws Exception {
@@ -281,14 +281,14 @@ final class ProtocolTests {
             String second = Fixture.readHead(in);
             Check.that("keep-alive: segunda respuesta reusa la conexión", second.contains("200 OK"));
             Check.equal("keep-alive: cuerpo correcto",
-                    Fixture.readExactly(in, Fixture.contentLength(second)), "lux");
+                    Fixture.readExactly(in, Fixture.contentLength(second)), "cero");
         }
     }
 
     private static void connectionClose(int port) throws Exception {
         String response = Fixture.raw(port, "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
         Check.that("Connection: close se anuncia", response.toLowerCase().contains("connection: close"));
-        Check.that("Connection: close cierra el socket", response.endsWith("lux"));
+        Check.that("Connection: close cierra el socket", response.endsWith("cero"));
     }
 
     private static void pipelinedBodyIsDrained(int port) throws Exception {
@@ -308,7 +308,7 @@ final class ProtocolTests {
             Check.that("cuerpo no leído se drena antes de la siguiente petición",
                     second.startsWith("HTTP/1.1 200"));
             Check.equal("la conexión sigue sincronizada",
-                    Fixture.readExactly(in, Fixture.contentLength(second)), "lux");
+                    Fixture.readExactly(in, Fixture.contentLength(second)), "cero");
         }
     }
 

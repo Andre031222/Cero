@@ -71,7 +71,7 @@ final class JsonTests {
         // de clase salía «1970-01-02T00:00:00Z» y una fecha se adelantaba un día al pasarla
         // a UTC — que en otra zona horaria es el día anterior.
         Check.equal("hora sql es etiqueta de reloj, no instante",
-                Json.write(java.sql.Time.valueOf("19:00:00")), "\"19:00\"");
+                Json.write(java.sql.Time.valueOf("19:00:00")), "\"19:00:00\"");
         Check.equal("fecha sql no se desplaza a UTC",
                 Json.write(java.sql.Date.valueOf("2026-10-01")), "\"2026-10-01\"");
         Check.equal("marca de tiempo sql sí es un instante",

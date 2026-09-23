@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Lleva una aplicación a Cero 0.6.0, venga de LuxCore 0.2.x/0.3.x o de Corvo 0.4.0.
+"""Lleva una aplicación a Cero 0.7.0, venga de LuxCore 0.2.x/0.3.x o de Corvo 0.4.0.
+
+Herramienta de transición: acompaña al cambio de nombre y se retira en la 1.0.
 
 Toca cuatro cosas, que son las cuatro que cambiaron de nombre:
 
   1. Los imports y las referencias con nombre completo: lux.core / corvo.core → cero.core
   2. La clase de arranque: Lux.run(...) / Corvo.run(...) → Cero.run(...)
   3. Las coordenadas de Maven: lux:lux-core:0.3.0 o dev.ginit.corvo:corvo-core:0.4.0
-     → dev.ginit.cero:cero-core:0.6.0
+     → dev.ginit.cero:cero-core:0.6.0, y el nivel del compilador que Cero exige
   4. Las claves de configuración: lux.* / corvo.* → cero.* y LUX_* / CORVO_* → CERO_*
 
 Acepta los dos nombres viejos a la vez, así que una app que se quedó en LuxCore sin pasar
@@ -50,9 +52,26 @@ CLAVE_PROP = re.compile(
     r"\b(?:" + VIEJO + r")\.(?!(?:" + SUBPAQUETES + r")\b)([a-zA-Z0-9_.]+)")
 CLAVE_ENV = re.compile(r"\b(?:LUX|CORVO)_([A-Z0-9_]+)")
 
+VERSION = "0.7.0"
+RELEASE = "25"
+
+# Las dependencias del framework con la versión escrita a mano dentro del <dependency>, sin
+# pasar por ${cero.version}. Sin esto el pom queda apuntando a un artefacto que no existe.
+DEPENDENCIA = re.compile(
+    r"(<dependency>(?:(?!</dependency>).)*?<artifactId>cero-[a-z-]+</artifactId>"
+    r"(?:(?!</dependency>).)*?<version>)0\.[0-5]\.\d+(</version>)", re.S)
+
 CODIGO = {".java"}
-CONFIG = {".properties", ".yml", ".yaml", ".env", ".conf"}
+CONFIG = {".properties", ".yml", ".yaml", ".env", ".conf", ".service"}
+# Sin extensión o con un sufijo que no lo es: ahí viven las variables que arrancan la
+# aplicación, y quedarse fuera significa dejar CERO_* a medias sin avisar.
+NOMBRES = {"Makefile", "Caddyfile", "Dockerfile", "Procfile"}
 SALTAR = {"target", "build", ".git", "node_modules", ".idea", ".m2"}
+
+
+def es_config(f: pathlib.Path) -> bool:
+    return (f.suffix in CONFIG or f.name in NOMBRES
+            or f.name.startswith(".env") or f.name == "pom.xml")
 
 
 def migrar_texto(ruta: pathlib.Path, texto: str) -> tuple[str, list[str]]:
@@ -81,14 +100,24 @@ def migrar_texto(ruta: pathlib.Path, texto: str) -> tuple[str, list[str]]:
             texto = texto.replace(f"<{viejo}.version>", "<cero.version>")
             texto = texto.replace(f"</{viejo}.version>", "</cero.version>")
             texto = texto.replace(f"${{{viejo}.version}}", "${cero.version}")
-        # Las versiones viejas del framework pasan a 0.6.0; las de terceros no se tocan.
-        texto = re.sub(
-            r"(<cero\.version>)0\.[0-5]\.\d+(</cero\.version>)", r"\g<1>0.6.0\g<2>", texto)
+        # Las versiones viejas del framework pasan a VERSION; las de terceros no se tocan.
+        # Vale tanto con la propiedad como con la versión escrita dentro de cada dependencia.
+        texto, n = re.subn(
+            r"(<cero\.version>)0\.[0-5]\.\d+(</cero\.version>)", rf"\g<1>{VERSION}\g<2>", texto)
+        texto, k = DEPENDENCIA.subn(rf"\g<1>{VERSION}\g<2>", texto)
+        if n + k:
+            notas.append(f"versión del framework a {VERSION}")
+        for prop in ("release", "source", "target"):
+            texto, n = re.subn(
+                rf"(<maven\.compiler\.{prop}>)\d+(</maven\.compiler\.{prop}>)",
+                rf"\g<1>{RELEASE}\g<2>", texto)
+            if n:
+                notas.append(f"maven.compiler.{prop} a {RELEASE}")
         texto, n = PAQUETE.subn(r"cero.\1", texto)
         if n:
             notas.append(f"{n} clase(s) en el pom")
 
-    if ruta.suffix in CONFIG or ruta.name == "pom.xml":
+    if es_config(ruta):
         texto, n = CLAVE_PROP.subn(r"cero.\1", texto)
         if n:
             notas.append(f"{n} clave(s) de configuración")
@@ -112,7 +141,7 @@ def main() -> int:
             continue
         if any(parte in SALTAR for parte in f.parts):
             continue
-        if f.suffix in CODIGO or f.suffix in CONFIG or f.name == "pom.xml":
+        if f.suffix in CODIGO or es_config(f):
             candidatos.append(f)
 
     if not candidatos:

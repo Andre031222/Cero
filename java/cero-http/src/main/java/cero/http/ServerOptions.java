@@ -16,6 +16,7 @@ public record ServerOptions(
         long maxBodyBytes,
         int readBufferBytes,
         int maxKeepAliveRequests,
+        boolean http2,
         int http2MaxFlujos,
         int http2MaxBloqueCabeceras,
         int http2MaxListaCabeceras,
@@ -68,7 +69,8 @@ public record ServerOptions(
                 .maxHeaderBytes(maxHeaderBytes).maxHeaderCount(maxHeaderCount)
                 .maxBodyBytes(maxBodyBytes).readBufferBytes(readBufferBytes)
                 .maxKeepAliveRequests(maxKeepAliveRequests)
-                .http2MaxFlujos(http2MaxFlujos).http2MaxBloqueCabeceras(http2MaxBloqueCabeceras)
+                .http2(http2).http2MaxFlujos(http2MaxFlujos)
+                .http2MaxBloqueCabeceras(http2MaxBloqueCabeceras)
                 .http2MaxListaCabeceras(http2MaxListaCabeceras)
                 .http2MaxAnulados(http2MaxAnulados)
                 .http2MaxControlSeguidas(http2MaxControlSeguidas)
@@ -97,6 +99,7 @@ public record ServerOptions(
         // ─── HTTP/2 ─────────────────────────────────────────────────────────────────────────
         // Los cuatro últimos son topes contra inundaciones conocidas. Se pueden subir, pero
         // conviene saber contra qué protege cada uno antes de tocarlos: ver el javadoc.
+        private boolean http2 = true;
         private int http2MaxFlujos = 128;
         private int http2MaxBloqueCabeceras = 64 * 1024;
         private int http2MaxListaCabeceras = 32 * 1024;
@@ -168,6 +171,12 @@ public record ServerOptions(
 
         public Builder readBufferBytes(int value) {
             readBufferBytes = value;
+            return this;
+        }
+
+        /** Apagarlo deja el servidor solo en HTTP/1.1: ni ALPN anuncia h2, ni se acepta h2c. */
+        public Builder http2(boolean value) {
+            http2 = value;
             return this;
         }
 
@@ -304,7 +313,7 @@ public record ServerOptions(
             return new ServerOptions(host, port, backlog, maxConnections, idleTimeoutMillis,
                     handlerTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
                     maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests,
-                    http2MaxFlujos, http2MaxBloqueCabeceras, http2MaxListaCabeceras,
+                    http2, http2MaxFlujos, http2MaxBloqueCabeceras, http2MaxListaCabeceras,
                     http2MaxAnulados, http2MaxControlSeguidas,
                     sessionTimeoutMillis, sessionMaxLifetimeMillis, sessionStore,
                     gzipMinBytes, requireHost, behindProxy, trustedProxies, tls);

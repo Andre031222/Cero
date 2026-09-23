@@ -12,7 +12,7 @@ final class MultipartTests {
     private MultipartTests() {
     }
 
-    private static final String BOUNDARY = "----luxboundary";
+    private static final String BOUNDARY = "----ceroboundary";
 
     static void run() throws Exception {
         Check.group("multipart/form-data");

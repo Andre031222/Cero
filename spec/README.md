@@ -43,7 +43,7 @@ parte es detalle de la implementación en Java.
 | Protocolo HTTP/2 | 3 | [http2.md](http2.md) · **39 requisitos + h2spec** |
 | Ruteo y despacho | 5 | por escribir |
 | Petición y respuesta | 9 | por escribir |
-| Sesiones y cookies | 4 | por escribir |
+| Sesiones y cookies | 4 | [sesiones.md](sesiones.md) · **13 requisitos** |
 | Seguridad transversal | 8 | por escribir |
 | Plantillas | 7 | fuera del núcleo: contrato aparte |
 | Datos | 9 | fuera del núcleo: contrato aparte |
@@ -54,8 +54,8 @@ parte es detalle de la implementación en Java.
 Conviene que conste, porque un contrato incompleto que no admite estarlo hace más daño que uno
 que sí:
 
-- **Nada de HTTP/2.** La implementación en Java no lo tiene, así que no hay nada que especificar.
-  Cuando lo tenga, será un contrato aparte: h2 no es HTTP/1.1 con otra sintaxis.
+- **Nada de ruteo, despacho ni observabilidad.** Son los bloques que siguen, y hasta que estén
+  escritos la referencia de esas áreas es `java/`.
 - **Nada de la API en el lenguaje.** Que en Java se llame `Cero.app()` y en Rust se llame otra
   cosa es correcto. El contrato es el comportamiento, no los nombres.
 - **Nada de rendimiento.** Los números viven en `benchmarks/` y se miden; no se prometen.

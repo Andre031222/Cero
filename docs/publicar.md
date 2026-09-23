@@ -191,21 +191,20 @@ Y la prueba de verdad, en una carpeta vacía y sin nada en `~/.m2`:
 Se publican los **seis módulos que son bibliotecas**: `cero-http`, `cero-core`, `cero-view`,
 `cero-data`, `cero-adapter-servlet` y `cero-launcher`.
 
-**`ejemplo` y `cero-web` no.** Son aplicaciones —la demostración y este sitio— y nadie las va a
-declarar como dependencia. Se excluyen con `<excludeArtifacts>` en el pom raíz, que es la única
-forma que entiende el plugin de Central:
+**`ejemplo` no.** Es la aplicación de demostración y nadie la va a declarar como dependencia. Se
+excluye con `<excludeArtifacts>` en el pom raíz, que es la única forma que entiende el plugin de
+Central:
 
 ```xml
 <excludeArtifacts>
     <excludeArtifact>ejemplo</excludeArtifact>
-    <excludeArtifact>cero-web</excludeArtifact>
 </excludeArtifacts>
 ```
 
 > **Ni `maven.deploy.skip` ni `skipPublishing` sirven aquí, y `skipPublishing` además rompe.** El
 > plugin de Central no sube módulo a módulo: junta todo y hace **una sola subida al final**, en el
-> último módulo del reactor. Como `cero-web` es el último, ponerle `skipPublishing` se saltaba esa
-> subida entera —los seis módulos incluidos— y el registro solo decía
+> último módulo del reactor. Ponerle `skipPublishing` a ese último se saltaba esa subida entera
+> —los seis módulos incluidos— y el registro solo decía
 > `Skipping Central Release Publishing at user's request`, sin dar a entender que se estaba
 > saltando todo. Se perdieron dos corridas en eso.
 

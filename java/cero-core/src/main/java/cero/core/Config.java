@@ -6,8 +6,10 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public final class Config {
 
@@ -16,7 +18,18 @@ public final class Config {
     private static final String PREFIJO_ENTORNO = "CERO_";
     private static final String PREFIJO_PROPIEDAD = "cero.";
 
+    private static final Log LOG = Log.of(Config.class);
+
     private final Map<String, String> values = new LinkedHashMap<>();
+
+    /** Clave traducida -> variable de origen, para poder nombrar la variable en el aviso. */
+    private final Map<String, String> desdeEntorno = new LinkedHashMap<>();
+
+    /** Toda clave por la que alguien ha preguntado; es el registro de claves conocidas que no
+     *  hay que mantener a mano. Incluye las ausentes: preguntar por una clave la declara. */
+    private final Set<String> consultadas = new LinkedHashSet<>();
+
+    private boolean entornoLeido;
 
     private Config() {
     }
@@ -44,14 +57,17 @@ public final class Config {
     }
 
     public boolean has(String key) {
+        consultadas.add(key);
         return values.containsKey(key);
     }
 
     public String get(String key) {
+        consultadas.add(key);
         return values.get(key);
     }
 
     public String get(String key, String fallback) {
+        consultadas.add(key);
         String found = values.get(key);
         return found == null || found.isBlank() ? fallback : found;
     }
@@ -76,6 +92,7 @@ public final class Config {
         Map<String, String> selected = new LinkedHashMap<>();
         values.forEach((key, value) -> {
             if (key.startsWith(head)) {
+                consultadas.add(key);
                 selected.put(key.substring(head.length()), value);
             }
         });
@@ -112,10 +129,18 @@ public final class Config {
     }
 
     private void readEnvironment() {
-        System.getenv().forEach((name, value) -> {
+        absorbEnvironment(System.getenv());
+    }
+
+    /** Aparte de {@link #readEnvironment()} por lo mismo que {@link #claveDeEntorno}: el entorno
+     *  real no se puede tocar dentro del proceso, y sin esta puerta el aviso no tiene prueba. */
+    void absorbEnvironment(Map<String, String> entorno) {
+        entornoLeido = true;
+        entorno.forEach((name, value) -> {
             String clave = claveDeEntorno(name);
             if (clave != null) {
                 values.put(clave, value);
+                desdeEntorno.put(clave, name);
             }
         });
     }
@@ -134,6 +159,44 @@ public final class Config {
             return null;
         }
         return nombre.substring(PREFIJO_ENTORNO.length()).toLowerCase().replace('_', '.');
+    }
+
+    /**
+     * Avisa de las variables {@code CERO_*} que no han acabado en ninguna clave que alguien lea.
+     * Se llama al final del arranque, cuando ya han preguntado todos: una variable mal escrita, o
+     * con el nombre de una clave en camelCase (que {@link #claveDeEntorno} pasa a minúsculas y por
+     * tanto nunca casa), se aplicaba sin efecto y en silencio.
+     */
+    void revisarEntorno() {
+        revisarEntorno(System.getenv());
+    }
+
+    void revisarEntorno(Map<String, String> entorno) {
+        if (!entornoLeido) {
+            String ignoradas = entorno.keySet().stream()
+                    .filter(nombre -> nombre.startsWith(PREFIJO_ENTORNO))
+                    .sorted()
+                    .collect(java.util.stream.Collectors.joining(", "));
+            if (!ignoradas.isEmpty()) {
+                LOG.warn("{} no se leen: la aplicación no llama a loadConfig()", ignoradas);
+            }
+            return;
+        }
+        desdeEntorno.forEach((clave, variable) -> {
+            if (consultadas.contains(clave)) {
+                return;
+            }
+            String parecida = consultadas.stream()
+                    .filter(candidata -> candidata.equalsIgnoreCase(clave))
+                    .findFirst()
+                    .orElse(null);
+            if (parecida != null) {
+                LOG.warn("{} no se aplica: la clave es {}, en camelCase, y el entorno no distingue mayúsculas",
+                        variable, parecida);
+            } else {
+                LOG.warn("{} no corresponde a ninguna clave conocida ({})", variable, clave);
+            }
+        });
     }
 
     private void readSystemProperties() {

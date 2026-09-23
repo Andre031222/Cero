@@ -52,6 +52,34 @@ final class Http2Tests {
         Check.group("HTTP/2 · las tres puertas");
         porUpgrade();
         porAlpn();
+        apagado();
+    }
+
+    /** Con `http2(false)` las dos puertas quedan cerradas: ni preámbulo en claro, ni h2 por ALPN. */
+    private static void apagado() throws Exception {
+        ServerOptions enClaro = ServerOptions.builder().port(0).http2(false).build();
+        try (Server s = Server.start(enClaro, Http2Tests::rutas, ErrorReporter.silent())) {
+            String respuesta = Fixture.raw(s.port(),
+                    new String(Http2.PREAMBULO, StandardCharsets.US_ASCII));
+            Check.that("con HTTP/2 apagado el preámbulo h2c se rechaza en vez de negociar",
+                    respuesta.startsWith("HTTP/1.1 501"));
+        }
+
+        ServerOptions conTls = ServerOptions.builder().port(0).http2(false)
+                .tls(Tls.fromKeystore(Fixture.keystore(), "cerotest".toCharArray())).build();
+        try (Server s = Server.start(conTls, Http2Tests::rutas, ErrorReporter.silent())) {
+            javax.net.ssl.SSLSocketFactory fabrica = Fixture.trustEverything().getSocketFactory();
+            try (javax.net.ssl.SSLSocket socket =
+                         (javax.net.ssl.SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
+                javax.net.ssl.SSLParameters p = socket.getSSLParameters();
+                p.setApplicationProtocols(new String[] { "h2", "http/1.1" });
+                socket.setSSLParameters(p);
+                socket.startHandshake();
+
+                Check.equal("y ALPN ya no ofrece h2, aunque el cliente lo pida primero",
+                        socket.getApplicationProtocol(), "http/1.1");
+            }
+        }
     }
 
     /**

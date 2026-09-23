@@ -40,9 +40,9 @@ final class IntegrationTests {
     }
 
     static void run() throws Exception {
-        Check.group("integración con lux-core");
+        Check.group("integración con cero-core");
 
-        java.nio.file.Path raiz = Files.createTempDirectory("lux-view-web");
+        java.nio.file.Path raiz = Files.createTempDirectory("cero-view-web");
         Files.writeString(raiz.resolve("base.html"),
                 "<h1>{% block titulo %}—{% end %}</h1>{% block cuerpo %}{% end %}");
         Files.writeString(raiz.resolve("hija.html"),

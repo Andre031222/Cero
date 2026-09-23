@@ -14,6 +14,7 @@ final class SessionTests {
         Check.group("sesiones");
 
         overHttp();
+        sobreHttp2();
         expiry();
         rotacion();
         vidaMaxima();
@@ -98,8 +99,8 @@ final class SessionTests {
         Check.equal("y la borrada se fue", alFinal.get("csrf"), null);
     }
 
-    private static void overHttp() throws Exception {
-        Handler handler = (req, res) -> {
+    private static Handler sessionHandler() {
+        return (req, res) -> {
             switch (req.path()) {
                 case "/entrar" -> {
                     Session session = req.session();
@@ -120,9 +121,11 @@ final class SessionTests {
                 default -> res.status(404).text("404");
             }
         };
+    }
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(), handler,
-                ErrorReporter.silent())) {
+    private static void overHttp() throws Exception {
+        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+                sessionHandler(), ErrorReporter.silent())) {
             int port = server.port();
 
             String creada = Fixture.raw(port,
@@ -153,6 +156,31 @@ final class SessionTests {
                     Fixture.raw(port, "GET /quien HTTP/1.1\r\nHost: x\r\nCookie: "
                             + Sessions.COOKIE + "=" + id + "\r\nConnection: close\r\n\r\n")
                             .endsWith("anonimo"));
+        }
+    }
+
+    /**
+     * El mismo camino por h2c. La respuesta HTTP/2 se construye aparte de la de HTTP/1.1, así que
+     * su cookie de sesión se perdía sin que ninguna prueba lo viera: sin cookie no hay sesión, y
+     * sin sesión no hay token CSRF.
+     */
+    private static void sobreHttp2() throws Exception {
+        try (Server servidor = Server.start(ServerOptions.builder().port(0).build(),
+                sessionHandler(), ErrorReporter.silent());
+                Http2Cliente c = new Http2Cliente(servidor.port())) {
+            c.saludar();
+
+            Http2Cliente.Respuesta entrar = c.respuestaDe(c.pedir("GET", "/entrar"));
+            String cookie = entrar.cabeceras().get("set-cookie");
+            Check.that("la respuesta HTTP/2 emite la cookie de sesión",
+                    cookie != null && cookie.startsWith(Sessions.COOKIE + "="));
+
+            String id = cookie.substring(cookie.indexOf('=') + 1, cookie.indexOf(';'));
+            Http2Cliente.Respuesta quien = c.respuestaDe(
+                    c.pedir("GET", "/quien", "cookie", Sessions.COOKIE + "=" + id));
+            Check.equal("y reenviándola, la segunda petición sigue identificada",
+                    quien.texto(), "andre");
+            Check.equal("sin reemitirla", quien.cabeceras().get("set-cookie"), null);
         }
     }
 

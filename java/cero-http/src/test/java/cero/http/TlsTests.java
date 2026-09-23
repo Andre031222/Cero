@@ -63,8 +63,8 @@ final class TlsTests {
      * nuevas presentan ya el nuevo.
      */
     private static void recargaDeCertificado() throws Exception {
-        java.nio.file.Path keystore = java.nio.file.Path.of("target", "test-recarga.p12");
-        java.nio.file.Files.deleteIfExists(keystore);
+        java.nio.file.Path directorio = java.nio.file.Files.createTempDirectory("cero-recarga");
+        java.nio.file.Path keystore = directorio.resolve("recarga.p12");
         generar(keystore, "CN=primero.local");
 
         Tls.Certificado certificado = Tls.reloadable(keystore, "cerotest".toCharArray());
@@ -84,9 +84,10 @@ final class TlsTests {
             Check.equal("después de recargar presenta el nuevo, sin reiniciar",
                     sujetoPresentado(server.port()), "CN=segundo.local");
             Check.equal("y el servidor sigue atendiendo", cuerpo(server.port()), "ok");
+        } finally {
+            java.nio.file.Files.deleteIfExists(keystore);
+            java.nio.file.Files.deleteIfExists(directorio);
         }
-
-        java.nio.file.Files.deleteIfExists(keystore);
     }
 
     private static String sujetoPresentado(int puerto) throws Exception {
@@ -110,7 +111,7 @@ final class TlsTests {
     private static void generar(java.nio.file.Path destino, String dn) throws Exception {
         Process keytool = new ProcessBuilder(
                 java.nio.file.Path.of(System.getProperty("java.home"), "bin", "keytool").toString(),
-                "-genkeypair", "-alias", "lux", "-keyalg", "RSA", "-keysize", "2048",
+                "-genkeypair", "-alias", "cero", "-keyalg", "RSA", "-keysize", "2048",
                 "-validity", "365", "-storetype", "PKCS12",
                 "-keystore", destino.toString(), "-storepass", "cerotest", "-keypass", "cerotest",
                 "-dname", dn, "-ext", "SAN=dns:localhost,ip:127.0.0.1")

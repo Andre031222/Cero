@@ -74,7 +74,7 @@ final class Binder {
         Query query = parameter.getAnnotation(Query.class);
         if (query != null) {
             String nombre = query.value();
-            String porDefecto = query.orElse().isEmpty() ? null : query.orElse();
+            String porDefecto = Query.SIN_DEFECTO.equals(query.orElse()) ? null : query.orElse();
             return contexto -> {
                 String raw = contexto.query(nombre);
                 return convert(raw == null ? porDefecto : raw, type, nombre, false);
@@ -84,7 +84,7 @@ final class Binder {
         Form form = parameter.getAnnotation(Form.class);
         if (form != null) {
             String nombre = form.value();
-            String porDefecto = form.orElse().isEmpty() ? null : form.orElse();
+            String porDefecto = Form.SIN_DEFECTO.equals(form.orElse()) ? null : form.orElse();
             return contexto -> {
                 String raw = contexto.form(nombre);
                 return convert(raw == null ? porDefecto : raw, type, nombre, false);

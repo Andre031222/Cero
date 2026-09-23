@@ -1,5 +1,10 @@
 package cero.core;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 final class ConfigTests {
 
     private ConfigTests() {
@@ -47,7 +52,7 @@ final class ConfigTests {
             System.clearProperty("cero.prueba.valor");
         }
 
-        // Regresión: el prefijo pasó de LUX_ (4) a CERO_ (6) y el recorte estaba escrito a
+        // Regresión: el prefijo pasó de cuatro letras a seis y el recorte estaba escrito a
         // mano, así que CERO_SERVER_PORT se leía como "o.server.port". No lo cazó nadie porque
         // System.getenv() no se puede tocar en el proceso y este camino no tenía prueba.
         Check.equal("CERO_ se recorta por la longitud del prefijo, no a mano",
@@ -55,9 +60,55 @@ final class ConfigTests {
         Check.equal("y un solo tramo también",
                 Config.claveDeEntorno("CERO_PUERTO"), "puerto");
         Check.that("lo que no lleva el prefijo se ignora",
-                Config.claveDeEntorno("PATH") == null && Config.claveDeEntorno("LUX_PUERTO") == null);
+                Config.claveDeEntorno("PATH") == null && Config.claveDeEntorno("OTRO_PUERTO") == null);
 
         Check.equal("cargar un recurso inexistente no falla",
                 Config.load("no-existe.properties").get("nada"), null);
+
+        avisosDeEntorno();
+    }
+
+    /** Una variable con el nombre viejo o mal escrito se aplicaba sin efecto y sin decir nada. */
+    private static void avisosDeEntorno() {
+        Map<String, String> entorno = new LinkedHashMap<>();
+        entorno.put("CERO_SERVER_PORT", "9000");
+        entorno.put("CERO_SERVER_MAXCONNECTIONS", "512");
+        entorno.put("CERO_SESION_SEGURA", "true");
+        entorno.put("PATH", "/usr/bin");
+
+        Config config = Config.empty();
+        config.absorbEnvironment(entorno);
+        config.getInt("server.port", 0);
+        config.has("server.maxConnections");
+
+        List<String> avisos = capturar(config::revisarEntorno);
+
+        Config sinCargar = Config.empty();
+        List<String> silencioso = capturar(() -> sinCargar.revisarEntorno(entorno));
+        Check.equal("sin loadConfig() avisa de que el entorno entero se ignora", silencioso.size(), 1);
+        Check.that("y nombra las variables ignoradas",
+                silencioso.get(0).contains("CERO_SERVER_PORT") && silencioso.get(0).contains("loadConfig()"));
+
+        Check.equal("solo avisa de las variables que nadie lee", avisos.size(), 2);
+        Check.that("señala la clave camelCase que el entorno no puede alcanzar",
+                avisos.get(0).contains("CERO_SERVER_MAXCONNECTIONS")
+                        && avisos.get(0).contains("server.maxConnections"));
+        Check.that("y la variable que no corresponde a ninguna clave",
+                avisos.get(1).contains("CERO_SESION_SEGURA"));
+        Check.that("los avisos son WARN", avisos.stream().allMatch(linea -> linea.contains("WARN")));
+    }
+
+    private static List<String> capturar(Runnable accion) {
+        List<String> lineas = new ArrayList<>();
+        Log.Nivel previo = Log.nivel();
+        Log.nivel(Log.Nivel.WARN);
+        Log.destino(lineas::add);
+        try {
+            accion.run();
+        } finally {
+            Log.destino(linea -> System.out.println(linea));
+            Log.nivel(previo);
+        }
+        return lineas;
     }
 }

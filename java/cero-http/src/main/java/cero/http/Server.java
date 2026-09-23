@@ -123,7 +123,9 @@ public final class Server implements AutoCloseable {
                 // http/1.1 va detrás y no se quita: un cliente que no sepa de h2 no manda ALPN,
                 // y otro puede pedir explícitamente http/1.1. Dejar solo h2 rompería a los dos.
                 javax.net.ssl.SSLParameters parametros = secure.getSSLParameters();
-                parametros.setApplicationProtocols(new String[] { "h2", "http/1.1" });
+                parametros.setApplicationProtocols(options.http2()
+                        ? new String[] { "h2", "http/1.1" }
+                        : new String[] { "http/1.1" });
                 secure.setSSLParameters(parametros);
             }
             opened.setReuseAddress(true);

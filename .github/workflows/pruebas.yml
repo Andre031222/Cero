@@ -80,7 +80,7 @@ jobs:
         working-directory: java
         run: |
           mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=dev.ginit.cero \
-              -DoutputFile=target/deps.txt -pl cero-http,cero-core,cero-view,cero-data -am
+              -DoutputFile=target/deps.txt -pl cero-http,cero-core,cero-view,cero-data,cero-test -am
           fuera=$(grep -h ':jar:' cero-*/target/deps.txt || true)
           if [ -n "$fuera" ]; then
             echo "::error::El núcleo arrastra dependencias externas:"; echo "$fuera"; exit 1
@@ -186,25 +186,3 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           fail-on-severity: high
-
-  # El sitio se genera. Que nadie edite el HTML publicado a mano y se desincronice.
-  sitio:
-    name: docs/web al día
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Regenerar y comprobar que no cambia nada
-        run: |
-          python3 docs/web/construir.py
-          python3 docs/web/a-plantillas.py
-          # Las plantillas y los recursos de cero-web son copias de docs/web. Tres veces se
-          # quedaron atrás sin que nadie lo viera —terminal.js con el contador viejo, social.png
-          # y el favicon con la paleta anterior—, así que ahora lo comprueba la máquina.
-          if ! git diff --quiet -- docs/web java/cero-web/src/main/resources; then
-            echo "::error::El sitio o las copias de cero-web están desincronizados. Corre ./cero build y commitea."
-            git diff --stat -- docs/web java/cero-web/src/main/resources
-            exit 1
-          fi
-          echo "El sitio publicado y las copias de cero-web coinciden con sus fuentes."

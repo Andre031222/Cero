@@ -1,17 +1,17 @@
-# JxMVC — Harness de benchmarks reproducible
+# Cero — Harness de benchmarks reproducible
 
-Protocolo y herramientas para medir **JxMVC** frente a **Spring Boot, Quarkus, Micronaut y
-Javalin** de forma reproducible. Diseñado para respaldar las cifras de un paper (tamaño,
-arranque, memoria, throughput y latencia) con una metodología descrita y sin herramientas
-externas de carga (el generador está en JDK puro).
+Protocolo y herramientas para medir **Cero** frente a **Spring Boot, Quarkus, Micronaut y
+Javalin** de forma reproducible. Diseñado para respaldar cifras publicables (tamaño, arranque,
+memoria, throughput y latencia) con una metodología descrita y sin herramientas externas de
+carga: el generador está en JDK puro.
 
 > Estado: harness completo y ejecutable. Las filas de resultados se completan ejecutando el
-> protocolo en una **máquina limpia y aislada** (ver §6). No publiques números de una laptop
-> de desarrollo con IDE/navegador abiertos.
+> protocolo en una **máquina limpia y aislada** (ver §6). No publiques números de un portátil
+> de desarrollo con IDE o navegador abiertos.
 
 ---
 
-## 1. Qué se mide (métricas)
+## 1. Qué se mide
 
 | Métrica | Definición | Cómo |
 |---|---|---|
@@ -22,19 +22,19 @@ externas de carga (el generador está en JDK puro).
 | **Throughput** | req/s sostenidos, ventana de medición tras warmup | `load/LoadClient` |
 | **Latencia** | media y p50/p90/p95/p99 (ms) bajo la misma carga | `load/LoadClient` |
 
-Dos endpoints canónicos, iguales en todos los frameworks:
+Endpoints canónicos, idénticos en todos los frameworks:
+
 - `GET /plaintext` → `text/plain` con el cuerpo `OK`.
 - `GET /json` → `application/json` con `{"message":"hello","n":42}`.
+- `GET /db` → una consulta contra el mismo motor (H2) en todos.
 
-## 2. Regla de honestidad sobre el tamaño
+## 2. Por qué el tamaño se compara de una sola forma
 
-JxMVC empaqueta **solo el framework** (~253 KB); el servlet container (Tomcat/Jakarta EE) es
-`provided` y NO va en el artefacto. Spring Boot/Quarkus/Micronaut producen *uber-JARs* que
-**incluyen** su servidor embebido. Por eso el tamaño se reporta de dos formas:
-
-1. **Framework solo** (JAR del framework sin servidor) — favorece a JxMVC, se marca como tal.
-2. **Desplegable + servidor** (JxMVC core + `tomcat-embed`/Tomcat mínimo vs el uber-JAR del rival) —
-   la comparación **justa** y la que va en las conclusiones del paper.
+Cero trae su propio servidor HTTP: el artefacto que se despliega ya incluye todo lo necesario
+para atender peticiones. Los uber-JAR de Spring Boot, Quarkus, Micronaut y Javalin también.
+La comparación es por tanto directa —**desplegable contra desplegable**— y no necesita la doble
+contabilidad que hace falta cuando un framework deja el servidor fuera del artefacto como
+dependencia `provided`.
 
 ## 3. Entorno (rellenar al ejecutar)
 
@@ -54,20 +54,20 @@ Warmup:         5 s (carga) / descartar 1ª corrida (arranque)
 ```bash
 cd load && javac LoadClient.java
 java LoadClient <url> <conexiones> <segundos> [warmupSegs]
-# ej:
 java LoadClient http://localhost:8080/plaintext 64 30 5
 ```
+
 Imprime una línea CSV: `url,conns,durSecs,requests,errors,non2xx,rps,meanMs,p50,p90,p95,p99`.
 
 ## 5. Apps de referencia
 
 Las apps mínimas equivalentes, con sus versiones fijadas y sus Dockerfile, están en
-[`docker/apps/`](docker/apps/) y listadas en [`docker/README.md`](docker/README.md). Las seis
-exponen `/plaintext`, `/json` y `/db` para que la comparación sea uno-a-uno.
+[`docker/apps/`](docker/apps/) y listadas en [`docker/README.md`](docker/README.md). Las cinco
+exponen `/plaintext`, `/json` y `/db` para que la comparación sea uno a uno.
 
 ## 6. Protocolo de ejecución
 
-Un solo comando: construye las seis imágenes, las mide una por una y escribe la tabla.
+Un solo comando: construye las cinco imágenes, las mide una por una y escribe la tabla.
 
 ```bash
 cd benchmarks/docker
@@ -90,15 +90,12 @@ throughput/latencia), 30 s por punto, 5 s de warmup.
 
 ## 7. Resultados
 
-Se consolidan en [`results/RESULTS.md`](results/RESULTS.md) (tabla + CSV crudo por corrida).
-Las filas vienen pre-cargadas con los datos ya conocidos y verificables de **tamaño y
-dependencias** de JxMVC; el resto se completa al correr el protocolo.
+Se consolidan en [`results/`](results/LEEME.md), con el CSV crudo por corrida al lado. Una tabla sin su CSV no es un resultado: es un recuerdo.
 
-## 8. Amenazas a la validez (para el paper)
+## 8. Amenazas a la validez
 
 - **Steady-state del JIT**: sin warmup, HotSpot penaliza a la JVM; por eso se descarta el warmup.
-- **Comparación de tamaño**: ver §2 — reportar ambas formas evita la crítica "es tramposo".
 - **Carga en loopback**: satura el mismo host; para números finales, cliente en máquina aparte.
-- **AOT vs JIT**: Quarkus/Micronaut pueden compilarse a nativo (GraalVM), lo que cambia
-  radicalmente arranque/memoria; indicar el modo (JVM vs nativo) de cada corrida.
-- **Paridad de endpoints**: los dos endpoints deben ser idénticos en semántica y salida.
+- **AOT vs JIT**: Quarkus y Micronaut pueden compilarse a nativo (GraalVM), lo que cambia
+  radicalmente arranque y memoria; indicar el modo (JVM o nativo) de cada corrida.
+- **Paridad de endpoints**: los tres endpoints deben ser idénticos en semántica y salida.
