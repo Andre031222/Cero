@@ -3,13 +3,14 @@
 Framework web para Java que arranca solo, sin contenedor de servlets y sin una sola dependencia
 externa. Pensado desde el principio para vivir en más de un lenguaje.
 
-[![Licencia: Apache 2.0](https://img.shields.io/badge/Licencia-Apache_2.0-15803d?style=flat-square)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-25%2B-007396?style=flat-square)](https://openjdk.org/)
-[![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-1762-15803d?style=flat-square)](#estado)
-[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.7.0-6d28d9?style=flat-square)](docs/versiones.md)
-[![En vivo](https://img.shields.io/badge/En_vivo-cero.ginit.dev-0f2444?style=flat-square)](https://cero.ginit.dev)
+[![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=0b1220&color=38bdf8)](https://central.sonatype.com/namespace/dev.ginit.cero)
+[![Java 25+](https://img.shields.io/badge/java-25%2B-38bdf8?style=flat-square&labelColor=0b1220&logo=openjdk&logoColor=38bdf8)](https://openjdk.org/)
+[![Dependencias: 0](https://img.shields.io/badge/dependencias-0-38bdf8?style=flat-square&labelColor=0b1220)](#principios)
+[![Pruebas: 1762](https://img.shields.io/badge/pruebas-1%E2%80%AF762-38bdf8?style=flat-square&labelColor=0b1220)](#estado)
+[![Licencia: Apache 2.0](https://img.shields.io/badge/licencia-Apache_2.0-38bdf8?style=flat-square&labelColor=0b1220)](LICENSE)
+[![En vivo: cero.ginit.dev](https://img.shields.io/badge/en_vivo-cero.ginit.dev-38bdf8?style=flat-square&labelColor=0b1220&logo=googlechrome&logoColor=38bdf8)](https://cero.ginit.dev)
 
+> [!NOTE]
 > **English** — Cero is a web framework for Java 25 with its own HTTP server, one virtual
 > thread per connection and zero runtime dependencies. The full documentation is available in
 > English at **[cero.ginit.dev/en](https://cero.ginit.dev/en)**; this repository, its commit
@@ -21,7 +22,7 @@ servido por el propio framework, sin Tomcat detrás. Su código está abierto en
 los dos dentro del mismo jar. Es la aplicación de ejemplo más completa que hay, y se puede
 comprobar que la afirmación de arriba es cierta en vez de creerla.
 
-![Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 416 KB](docs/imagenes/portada.png)
+![La portada de cero.ginit.dev, servida por el propio framework](docs/imagenes/portada.png)
 
 * * *
 
@@ -68,9 +69,10 @@ siguiente, gasta la menor memoria de la tabla y lidera los tres endpoints. La ve
 en el arranque; en `/db` —el que mide el framework haciendo trabajo de aplicación— la diferencia
 con el segundo es del 6 %.
 
-**Salvedad que importa:** se midió en Docker Desktop. Los valores **relativos** son justos porque
-las condiciones fueron idénticas para los cinco; los **absolutos** requieren repetir la corrida en
-Linux sin virtualizar antes de citarse.
+> [!WARNING]
+> **Se midió en Docker Desktop.** Los valores **relativos** son justos, porque las condiciones
+> fueron idénticas para los cinco; los **absolutos** hay que repetirlos en Linux sin virtualizar
+> antes de citarlos en ningún sitio.
 
 ## Instalar
 
@@ -93,7 +95,10 @@ se usan. Ninguno arrastra nada de fuera.
 
 Sirve para tener la orden `cero`, que es la que crea proyectos ya montados.
 
-![Una orden instala Cero, crea un proyecto y lo arranca en 10 ms](docs/imagenes/instalar.gif)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/imagenes/instalar.gif">
+  <img alt="Una orden instala Cero, crea un proyecto y lo arranca en 10 ms" src="docs/imagenes/instalar-claro.gif">
+</picture>
 
 ```bash
 curl -fsSL https://cero.ginit.dev/instalar | sh          # macOS y Linux
@@ -120,8 +125,13 @@ cd java && mvn install     # 1 762 pruebas, runner propio (sin JUnit)
 ./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
-Las pruebas de `cero-data` contra motores reales necesitan PostgreSQL y MySQL escuchando; sin ellos
-se omiten esos grupos y el resto sigue corriendo:
+<details>
+<summary>Las pruebas contra PostgreSQL y MySQL reales, si las quieres correr</summary>
+
+<br>
+
+`cero-data` corre su batería contra motores de verdad. Sin ellos escuchando se omiten esos grupos
+y el resto sigue:
 
 ```bash
 docker run -d --name cero-pg -e POSTGRES_PASSWORD=cero -e POSTGRES_DB=ceropruebas \
@@ -129,6 +139,8 @@ docker run -d --name cero-pg -e POSTGRES_PASSWORD=cero -e POSTGRES_DB=ceroprueba
 docker run -d --name cero-my -e MYSQL_ROOT_PASSWORD=cero -e MYSQL_DATABASE=ceropruebas \
        -p 53306:3306 mysql:8
 ```
+
+</details>
 
 En [integración continua](.github/workflows/pruebas.yml) se levantan siempre, y la corrida **falla
 si algún motor quedó sin probar** — para que la suite no pueda mentir por omisión.
@@ -199,9 +211,13 @@ Lo verificado, y cómo:
 - **Media hora de carga continua** sin fuga: el RSS acabó más bajo que al empezar y los
   descriptores no se movieron.
 
-Lo que falta está en [docs/produccion.md](docs/produccion.md), sin adornos. Cómo se publica
-una versión, en [docs/publicar.md](docs/publicar.md). En una línea: **nadie
-lo ha usado en producción con tráfico real durante meses**, y eso no se arregla programando.
+Lo que falta está en [docs/produccion.md](docs/produccion.md), sin adornos. Cómo se publica una
+versión, en [docs/publicar.md](docs/publicar.md).
+
+> [!IMPORTANT]
+> **Nadie lo ha usado en producción con tráfico real durante meses**, y eso no se arregla
+> programando. El parser HTTP es la superficie que da a internet y la que más castigo recibe:
+> hasta que no acumule kilómetros, no es honesto llamarlo maduro.
 
 Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaciones en Rust y C++.
 
