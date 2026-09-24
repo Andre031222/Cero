@@ -157,24 +157,35 @@ Esto es lo que hace reversible la decisión: se puede volver al contenedor sin r
 
 ### Metas de la fase
 
-Mismo harness, mismas condiciones para los seis contendientes. Medido el 2 de agosto de 2026
-([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones dentro de esa misma corrida,
+Mismo harness, mismas condiciones para los nueve contendientes. Medido el 24 de septiembre de
+2026 ([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones dentro de esa misma corrida,
 porque los absolutos dependen de la máquina.
 
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
-| Arranque | < 150 ms | **106 ms** | javalin 451 ms | **sí**, y por 4,3× |
-| JAR runtime | ≤ 400 KB | **407 KB** | — | **sí** |
+| Arranque | < 150 ms | **87 ms** | jooby 383 ms | **sí**, y por 4,4× |
+| JAR runtime | ≤ 400 KB | 416 KB | — | **no**, por 16 KB |
 | Dependencias | 0 | **0** | spring: decenas | **sí** |
-| rps `/json` | batir al mejor rival | **25 431** | javalin 25 125 | **sí** |
-| RSS | < 120 MB | 136,4 MB | micronaut 201,2 MB | **no**, aunque es el más bajo |
+| rps `/json` | batir al mejor rival | 25 470 | quarkus 24 981 | **no se puede afirmar** |
+| RSS | < 120 MB | 332 MB | vertx 104 MB | **no**, y es el peor de los nueve |
 
-Cuatro de cinco, y la que falla lo hace por poco: 136,4 MB contra una meta de 120. Esa métrica
-era el punto flojo del proyecto —298 MB esta mañana— hasta que se vio que no era peso sino un
-fallo: el vigilante programaba una tarea por petición y cancelarla no la sacaba de la cola.
+Dos de cinco, y conviene leer las tres que fallan antes que las dos que pasan.
 
-Falta repetir la corrida en el mismo Arch bare-metal que usó el paper: lo de arriba es Docker
-Desktop. Ver [docs/mediciones-locales.md](mediciones-locales.md).
+**El RSS es el problema de verdad.** En agosto salió 136,4 MB, el más bajo de la tabla; en
+septiembre, 332 MB, el más alto. No cambió el framework tanto como el método: aquella corrida no
+acotaba el montón, así que medía lo que el recolector decidía tomar y no lo que el framework
+necesita. Con el mismo `-Xmx` para todos, Cero llena su montón y los demás no, porque asigna más
+por petición. No es una fuga —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico un 4 %
+más rápido en 176 MB—, es trabajo pendiente.
+
+**El `/json` ya no se puede reclamar.** Los seis de arriba están dentro del 2 % unos de otros y
+el abanico de cada uno entre sus propias cinco repeticiones llega al 12,5 %. La medición no
+distingue, así que decir que Cero gana sería ruido.
+
+**El arranque sí.** 87 ms contra 383 del segundo: esa distancia no la explica ningún margen.
+
+Falta repetir la corrida en Linux sin virtualizar: lo de arriba es Docker Desktop. Ver
+[docs/mediciones-locales.md](mediciones-locales.md).
 
 ## Fase 2 — Cubrir todo lo que ponía el contenedor
 

@@ -52,26 +52,44 @@ De ahí las dos decisiones que definen el proyecto:
 
 ## Rendimiento
 
-*Contenedores idénticos, misma corrida, 90 mediciones sin un solo error. **Medición de agosto de
-2026, sobre Cero 0.6.0**: se sustituirá en cuanto haya corrida nueva.
-[Cómo se rehace](benchmarks/results/LEEME.md).*
+*Nueve frameworks, contenedores idénticos, 135 mediciones sin un solo error ni una sola respuesta
+no-2xx. **Corrida del 24 de septiembre de 2026 sobre Cero 0.7.0.**
+[Cómo se rehace](benchmarks/results/LEEME.md) · [tabla completa](benchmarks/results/RESULTS-docker.md).*
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/imagenes/banco.png">
+  <img alt="Cero frente a ocho frameworks JVM: arranque, memoria y peticiones por segundo" src="docs/imagenes/banco-claro.png">
+</picture>
 
 | Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
 |---|---|---|---|---|---|---|
-| **Cero** | **106 ms** | 110,3 MB | **136,4 MB** | **26 425** | **25 431** | **25 931** |
-| Javalin | 451 ms | 115,2 MB | 285,7 MB | 21 994 | 25 125 | 24 459 |
-| Quarkus | 707 ms | 123,2 MB | 259,8 MB | 25 515 | 22 744 | 21 258 |
-| Micronaut | 838 ms | 120,7 MB | 201,2 MB | 18 381 | 19 088 | 17 213 |
-| Spring Boot | 1467 ms | 127,3 MB | 352,5 MB | 19 809 | 20 432 | 20 088 |
+| **Cero** | **87 ms** | 112,2 MB | 332,1 MB | 23 840 | 25 470 | 24 330 |
+| Jooby | 383 ms | 114,6 MB | 137,0 MB | 24 306 | 24 512 | 23 555 |
+| Javalin | 457 ms | 115,2 MB | 198,2 MB | 24 026 | 22 749 | 24 048 |
+| Vert.x | 505 ms | 119,6 MB | **104,2 MB** | 24 728 | 24 949 | 24 473 |
+| Helidon | 653 ms | 112,4 MB | 115,4 MB | 24 599 | 24 966 | 23 545 |
+| Quarkus | 695 ms | 123,2 MB | 152,7 MB | 25 327 | 24 981 | 24 297 |
+| Micronaut | 907 ms | 120,7 MB | 134,6 MB | 23 275 | 23 630 | 20 646 |
+| JxMVC | 979 ms | **110,2 MB** | 237,1 MB | 22 020 | 23 550 | 21 310 |
+| Spring Boot | 1 551 ms | 127,3 MB | 229,2 MB | 22 353 | 23 238 | 21 534 |
 
-Cero gana en todo menos en tamaño de imagen, donde queda segundo. Arranca 4,3× más rápido que el
-siguiente, gasta la menor memoria de la tabla y lidera los tres endpoints. La ventaja mayor está
-en el arranque; en `/db` —el que mide el framework haciendo trabajo de aplicación— la diferencia
-con el segundo es del 6 %.
+**Donde Cero gana, gana de calle.** Arranca en 87 ms, **4,4× más rápido que el segundo** y 17,8×
+más rápido que Spring Boot. Esa distancia no la explica ningún margen de error.
+
+**Donde no gana, lo decimos.** En memoria Cero es **el peor de los nueve**: 332 MB frente a los
+104 de Vert.x. No es una fuga —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico un 4 %
+más rápido en 176 MB—, es que asigna más por petición que los demás y llena el montón que se le
+da. Es lo siguiente que hay que arreglar, y está medido, no estimado.
+
+**Y donde no hay diferencia, tampoco la inventamos.** En peticiones por segundo los seis de
+arriba están empatados: las distancias entre ellos rondan el 2 %, mientras el abanico de cada uno
+entre sus propias cinco repeticiones va del 2,2 % al 12,5 %. Con esta medición, **decir que uno
+sirve más rápido que otro sería ruido**. Lo único que se separa es la cola: Micronaut, JxMVC y
+Spring Boot en `/db`.
 
 > [!WARNING]
 > **Se midió en Docker Desktop.** Los valores **relativos** son justos, porque las condiciones
-> fueron idénticas para los cinco; los **absolutos** hay que repetirlos en Linux sin virtualizar
+> fueron idénticas para los nueve; los **absolutos** hay que repetirlos en Linux sin virtualizar
 > antes de citarlos en ningún sitio.
 
 ## Instalar
