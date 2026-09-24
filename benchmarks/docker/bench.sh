@@ -32,7 +32,7 @@ OUT="$HERE/../results/RESULTS-docker.md"
 CSV="$HERE/../results/raw-docker.csv"
 
 # El contexto de build de cero es el REPO; el de los rivales, su propia carpeta.
-APPS=(cero spring quarkus micronaut javalin)
+APPS=(cero spring quarkus micronaut javalin helidon vertx jooby jxmvc)
 # BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 
@@ -149,7 +149,7 @@ med() {
   echo "| Carga | conns=$CONNS, dur=${DUR}s, reps=$REPS, warmup=5s |"
   echo "| Cliente | \`LoadClient\` desde el host${CLIENT_CPUS:+, fijado a los núcleos $CLIENT_CPUS}${CLIENT_CPUS:+ (aislado)} |"
   echo "| Host | $(uname -s) $(uname -r) $(uname -m) |"
-  echo "| Base JRE | idéntica para los seis |"
+  echo "| Base JRE | idéntica para todos |"
   echo "| \`/db\` | \`SELECT\` sobre H2 in-memory (1000 filas) + JSON; \`Db.java\` byte-idéntico en todos |"
   echo
   echo "Arranque, RSS y rps son la **mediana** de las $REPS repeticiones. \`⚠\` = el framework tuvo"
@@ -158,12 +158,13 @@ med() {
     echo
     echo "> **Aviso.** Esto se midió en Docker Desktop, o sea dentro de una VM y con el cliente de"
     echo "> carga compartiendo la misma máquina. Los números **relativos** son justos —condiciones"
-    echo "> idénticas para los seis—, los **absolutos** no son comparables con una corrida en Linux"
+    echo "> idénticas para todos—, los **absolutos** no son comparables con una corrida en Linux"
     echo "> bare-metal y no deben citarse como tales."
   fi
   echo
   echo "| Framework | Imagen (MB) | Arranque (ms) | RSS (MB) | rps /plaintext (mediana) | rps /json (mediana) | rps /db (mediana) |"
   echo "|---|---|---|---|---|---|---|"
+  # Filas ordenadas por arranque: la clave numérica va delante y se recorta tras ordenar.
   for fw in "${APPS[@]}"; do
     im=$(awk -F, -v f="$fw" '$1==f{print $2; exit}' "$CSV")   # imagen: valor constante por framework
     su=$(med "$fw" 3)                                          # arranque: mediana
@@ -175,8 +176,12 @@ med() {
     db=$(med "$fw" 11 "http://localhost:$PORT/db")            # "-" si no se corrió con BENCH_DB=1
     err=$(awk -F, -v f="$fw" '$1==f{e+=$9+$10} END{print e+0}' "$CSV")
     flag=""; [ "${err:-0}" -gt 0 ] && flag=" ⚠"
-    [ -n "$im" ] && echo "| ${fw}${flag} | $im | $su | $rs | $pt | $js | $db |" || echo "| $fw | (no arrancó) | | | | | |"
-  done
+    if [ -n "$im" ]; then
+      printf '%s\t| %s | %s | %s | %s | %s | %s | %s |\n' "$su" "${fw}${flag}" "$im" "$su" "$rs" "$pt" "$js" "$db"
+    else
+      printf '%s\t| %s | (no se midió: build o arranque falló) | | | | | |\n' 999999999 "$fw"
+    fi
+  done | sort -n -k1,1 | cut -f2-
 } > "$OUT"
 
 echo "Tabla -> $OUT"

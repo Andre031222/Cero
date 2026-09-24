@@ -1,7 +1,7 @@
 # Benchmark dockerizado — un solo comando
 
 Corre el benchmark de forma **aislada y reproducible**: cada framework se construye como una
-imagen Docker (misma base `eclipse-temurin:17-jre`, mismos límites de CPU/RAM), se mide y se
+imagen Docker (misma base `eclipse-temurin:21-jre`, mismos límites de CPU/RAM), se mide y se
 descarta. El mismo comando produce los mismos resultados en tu laptop o en un Linux nativo.
 
 ## Requisitos
@@ -33,11 +33,33 @@ Salida:
 ## Apps (mismos endpoints: `/plaintext`, `/json` y, con `BENCH_DB=1`, `/db`)
 | Framework | Versión | Runtime |
 |---|---|---|
-| **Cero** | 0.3.0 | servidor propio, un hilo virtual por conexión |
+| **Cero** | 0.7.0 | servidor propio, un hilo virtual por conexión |
 | Spring Boot | 3.3.4 | Tomcat embebido |
 | Quarkus | 3.11.3 (JVM) | fast-jar |
-| Micronaut | 4.5.3 | Netty |
+| Micronaut | 4.10.16 | Netty |
 | Javalin | 6.3.0 | Jetty |
+| Helidon SE | 4.5.5 | Helidon Níma (hilos virtuales) |
+| Vert.x | 5.2.0 (+ `vertx-web`) | Netty, event loop |
+| Jooby | 4.5.4 | Netty |
+| JxMVC | 3.4.0 | WAR sobre Tomcat 10.1 (servlets) |
+
+Entre Spark Java y Jooby se eligió **Jooby**: Spark Java sigue en 2.9.4 (julio de 2022) y no
+tiene versiones nuevas, mientras que Jooby publica releases de forma habitual.
+
+Dos notas de paridad para los nuevos:
+
+- **Vert.x** sirve `/db` con `blockingHandler` (pool de workers). JDBC es bloqueante y ponerlo
+  en el event loop no sería el uso idiomático del framework; `/plaintext` y `/json` sí van en
+  el event loop.
+- **Jooby** devuelve `text/plain;charset=utf-8` en `/plaintext`; el cuerpo es el mismo `OK`.
+- **JxMVC** no se compila desde el código fuente —no está en este repositorio—: el Dockerfile
+  instala con `mvn install:install-file` el artefacto publicado `jxmvc-core-3.4.0` que hay en
+  `apps/jxmvc/lib/`. Su `/plaintext` devuelve `text/plain;charset=UTF-8`.
+
+Las imágenes comparten base `eclipse-temurin:21-jre`, con dos excepciones: Cero corre sobre
+`eclipse-temurin:25-jre` (su build usa JDK 25) y JxMVC sobre `tomcat:10.1-jre21`, porque se
+despliega como WAR en un contenedor de servlets. Son diferencias reales de la corrida y
+conviene tenerlas presentes al leer arranque y RSS.
 
 La app de Cero toma la versión del framework de `java/pom.xml` en tiempo de build, no de un
 número escrito a mano: fijarla fue justo lo que dejó a Cero fuera de la tabla durante días.
