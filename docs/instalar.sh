@@ -42,7 +42,13 @@ done
 
 if [ -t 1 ] && [ "$EN_CI" = no ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
   VIVO=si
-  ACENTO='\033[38;5;205m'; TENUE='\033[38;5;245m'; VERDE='\033[38;5;71m'
+  # El acento es el azul de la marca (#38bdf8). En 256 colores no existe, así que se usa el
+  # más cercano; con truecolor va el exacto.
+  case "${COLORTERM:-}" in
+    truecolor|24bit) ACENTO='\033[38;2;56;189;248m' ;;
+    *)               ACENTO='\033[38;5;75m' ;;
+  esac
+  TENUE='\033[38;5;245m'; VERDE='\033[38;5;71m'
   ROJO='\033[38;5;167m';   FUERTE='\033[1m';       FIN='\033[0m'
   OCULTA='\033[?25l';      MUESTRA='\033[?25h';    BORRA='\r\033[K'
 else
