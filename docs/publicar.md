@@ -31,9 +31,8 @@ tuyo. Es lo que impide que alguien publique paquetes haciéndose pasar por otro.
    en el DNS de `ginit.dev`.
 
    > **El DNS de `ginit.dev` está en Namecheap, no en Contabo.** Es fácil confundirlo porque
-   > Contabo es donde corre el servidor —la IP 173.249.52.127— pero quien responde a las
-   > preguntas del dominio es `dns1/dns2.registrar-servers.com`, que son los de Namecheap. El
-   > registro va en su panel: **Domain List → ginit.dev → Advanced DNS → Add New Record**.
+   > Contabo es donde corre el servidor, pero quien responde a las preguntas del dominio es
+   > `dns1/dns2.registrar-servers.com`, que son los de Namecheap. El registro va en su panel: **Domain List → ginit.dev → Advanced DNS → Add New Record**.
    >
    > Comprobable en cualquier momento con `dig +short NS ginit.dev`.
 
