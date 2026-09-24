@@ -1,1 +1,2 @@
 framework,image_mb,startup_ms,rss_mb,endpoint,conns,dur,requests,errors,non2xx,rps,meanMs,p50,p90,p95,p99
+cero,112.2,223,183.9,http://localhost:8080/plaintext,64,30,768012,0,0,25598.4,2.499,2.340,3.177,3.502,5.070
