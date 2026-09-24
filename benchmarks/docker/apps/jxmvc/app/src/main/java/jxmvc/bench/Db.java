@@ -10,7 +10,8 @@ import org.h2.jdbcx.JdbcConnectionPool;
 
 /**
  * Shared in-memory H2 data source for the /db benchmark endpoint.
- * The class is byte-for-byte identical across all evaluated frameworks so
+ * The class is identical across all evaluated frameworks except for its
+ * `package` line, which each app needs for its own layout, so
  * that /db measures each framework's request-handling overhead plus one
  * real SQL round-trip, holding data access constant (plain JDBC, the same
  * engine, the same query, the same 1000-row seed).

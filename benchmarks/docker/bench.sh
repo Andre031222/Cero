@@ -154,12 +154,16 @@ med() {
   echo "| Parámetro | Valor |"
   echo "|---|---|"
   echo "| Límites del contenedor | \`--cpus=$CPUS --memory=$MEM\`${CPUSET:+ \`--cpuset-cpus=$CPUSET\`} |"
-  echo "| Montón de la JVM | ${JAVA_OPTS:+\`$JAVA_OPTS\`, idéntico para todos}${JAVA_OPTS:-sin acotar (la columna de RSS **no** es comparable)} |"
+  if [ -n "$JAVA_OPTS" ]; then
+    echo "| Montón de la JVM | \`$JAVA_OPTS\`, idéntico para todos |"
+  else
+    echo "| Montón de la JVM | sin acotar — la columna de RSS **no** es comparable |"
+  fi
   echo "| Carga | conns=$CONNS, dur=${DUR}s, reps=$REPS, warmup=5s |"
   echo "| Cliente | \`LoadClient\` desde el host${CLIENT_CPUS:+, fijado a los núcleos $CLIENT_CPUS}${CLIENT_CPUS:+ (aislado)} |"
   echo "| Host | $(uname -s) $(uname -r) $(uname -m) |"
   echo "| Base JRE | idéntica para todos |"
-  echo "| \`/db\` | \`SELECT\` sobre H2 in-memory (1000 filas) + JSON; \`Db.java\` byte-idéntico en todos |"
+  echo "| \`/db\` | \`SELECT\` sobre H2 in-memory (1000 filas) + JSON; \`Db.java\` idéntico en todos salvo la línea \`package\` |"
   echo
   echo "Arranque, RSS y rps son la **mediana** de las $REPS repeticiones. El RSS se mide con el mismo
 tope de montón para todos: sin él compara decisiones del recolector, no frameworks. \`⚠\` = el framework tuvo"
