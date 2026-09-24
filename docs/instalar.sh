@@ -165,9 +165,13 @@ marca() {
 # ─── detección ──────────────────────────────────────────────────────────────────────────
 NUCLEO=$(uname -s)
 case "$(uname -m)" in
-  arm64|aarch64) ARQ=arm64 ;;
-  x86_64|amd64)  ARQ=x86_64 ;;
-  *)             ARQ=$(uname -m) ;;
+  arm64|aarch64)        ARQ=arm64 ;;
+  x86_64|amd64)         ARQ=x86_64 ;;
+  armv7*|armv6*|armhf)  ARQ=arm32 ;;
+  riscv64)              ARQ=riscv64 ;;
+  ppc64le|ppc64)        ARQ=ppc64 ;;
+  s390x)                ARQ=s390x ;;
+  *)                    ARQ=$(uname -m) ;;
 esac
 
 case "$NUCLEO" in
@@ -181,12 +185,27 @@ case "$NUCLEO" in
     DETALLE_SO="macOS ${VERSION_SO:-?} · $MARCA_CPU ($ARQ)" ;;
   Linux)
     SISTEMA=Linux
-    DISTRO=$( . /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-Linux}" || printf 'Linux' )
+    # `.` es un builtin especial: si falla con `set -e` mata el intérprete pese al `||`.
+    DISTRO=Linux
+    [ -r /etc/os-release ] && DISTRO=$(sed -n 's/^PRETTY_NAME="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' /etc/os-release | head -1)
+    [ -n "$DISTRO" ] || DISTRO=Linux
     DETALLE_SO="$DISTRO · $ARQ"
     grep -qi microsoft /proc/version 2>/dev/null && DETALLE_SO="$DETALLE_SO · WSL" ;;
   MINGW*|MSYS*|CYGWIN*)
     SISTEMA=Windows
     DETALLE_SO="Windows bajo $NUCLEO · $ARQ" ;;
+  FreeBSD|OpenBSD|NetBSD|DragonFly)
+    SISTEMA=BSD
+    DETALLE_SO="$NUCLEO $(uname -r 2>/dev/null) · $ARQ" ;;
+  SunOS)
+    SISTEMA=Solaris
+    DETALLE_SO="$(uname -v 2>/dev/null || echo SunOS) · $ARQ" ;;
+  AIX)
+    SISTEMA=AIX
+    DETALLE_SO="AIX $(uname -v 2>/dev/null).$(uname -r 2>/dev/null) · $ARQ" ;;
+  Haiku)
+    SISTEMA=Haiku
+    DETALLE_SO="Haiku · $ARQ" ;;
   *)
     SISTEMA="$NUCLEO"
     DETALLE_SO="$NUCLEO · $ARQ" ;;
@@ -195,7 +214,7 @@ esac
 INTERPRETE=$(basename "${SHELL:-sh}")
 
 GESTOR=
-for g in brew apt-get dnf pacman zypper apk winget scoop; do
+for g in brew port apt-get dnf yum pacman zypper apk emerge xbps-install nix-env pkg pkgin pkgutil winget scoop choco; do
   if command -v "$g" >/dev/null 2>&1; then GESTOR="$g"; break; fi
 done
 
@@ -210,6 +229,15 @@ orden_java() {
     apk)     printf 'sudo apk add openjdk%s maven' "$JAVA_MINIMO" ;;
     winget)  printf 'winget install EclipseAdoptium.Temurin.%s.JDK Apache.Maven' "$JAVA_MINIMO" ;;
     scoop)   printf 'scoop install temurin%s-jdk maven' "$JAVA_MINIMO" ;;
+    choco)   printf 'choco install -y temurin%s maven' "$JAVA_MINIMO" ;;
+    port)    printf 'sudo port install openjdk%s-temurin maven' "$JAVA_MINIMO" ;;
+    yum)     printf 'sudo yum install -y java-%s-openjdk-devel maven' "$JAVA_MINIMO" ;;
+    emerge)  printf 'sudo emerge --ask dev-java/openjdk:%s dev-java/maven-bin' "$JAVA_MINIMO" ;;
+    xbps-install) printf 'sudo xbps-install -S openjdk%s maven' "$JAVA_MINIMO" ;;
+    nix-env) printf 'nix-env -iA nixpkgs.temurin-bin-%s nixpkgs.maven' "$JAVA_MINIMO" ;;
+    pkg)     printf 'sudo pkg install -y openjdk%s maven' "$JAVA_MINIMO" ;;
+    pkgin)   printf 'sudo pkgin -y install openjdk%s apache-maven' "$JAVA_MINIMO" ;;
+    pkgutil) printf 'sudo pkgutil -i openjdk%s maven' "$JAVA_MINIMO" ;;
     *)
       case "$SISTEMA" in
         macOS) printf 'instala Homebrew (https://brew.sh) y luego: brew install openjdk@%s maven' "$JAVA_MINIMO" ;;
