@@ -18,6 +18,13 @@ REPS="${3:-3}"
 CPUS="${BENCH_CPUS:-2}"
 MEM="${BENCH_MEM:-1g}"
 PORT="${BENCH_PORT:-8080}"
+# Sin tope de montón, la columna de RSS no mide el framework sino lo que el recolector decidió
+# tomar: con `--memory=1g` la JVM se fija un máximo del 25 %, y quien asigna más por petición lo
+# llena hasta arriba mientras quien asigna poco se queda abajo. Medido: Cero subía 32 MB por
+# repetición hasta estancarse en 401 MB, y con `-Xmx96m` servía el mismo tráfico un 4 % más
+# rápido en 176 MB. No era una fuga —se estancaba— sino un montón sin acotar. Con el mismo tope
+# para todos la columna vuelve a comparar frameworks.
+JAVA_OPTS="${BENCH_JAVA_OPTS:--Xmx256m}"
 # Reproducibilidad avanzada (opcional):
 #   BENCH_CPUSET="0,1"      -> fija el contenedor a esos núcleos (docker --cpuset-cpus)
 #   BENCH_CLIENT_CPUS="2,3" -> fija el LoadClient a OTROS núcleos (taskset) para no competir
@@ -97,6 +104,7 @@ for fw in "${APPS[@]}"; do
 
   docker rm -f "bench_$fw" >/dev/null 2>&1 || true
   runargs=(--cpus="$CPUS" --memory="$MEM")
+  [ -n "$JAVA_OPTS" ] && runargs+=(-e "JAVA_TOOL_OPTIONS=$JAVA_OPTS")
   [ -n "$CPUSET" ] && runargs+=(--cpuset-cpus="$CPUSET")
   # `set -e` mataba el banco entero si un solo `docker run` fallaba (p. ej. puerto ocupado).
   if ! docker run -d --name "bench_$fw" "${runargs[@]}" -p "$PORT:8080" "$img" >/dev/null 2>"/tmp/bench-run-$fw.log"; then
@@ -146,13 +154,15 @@ med() {
   echo "| Parámetro | Valor |"
   echo "|---|---|"
   echo "| Límites del contenedor | \`--cpus=$CPUS --memory=$MEM\`${CPUSET:+ \`--cpuset-cpus=$CPUSET\`} |"
+  echo "| Montón de la JVM | ${JAVA_OPTS:+\`$JAVA_OPTS\`, idéntico para todos}${JAVA_OPTS:-sin acotar (la columna de RSS **no** es comparable)} |"
   echo "| Carga | conns=$CONNS, dur=${DUR}s, reps=$REPS, warmup=5s |"
   echo "| Cliente | \`LoadClient\` desde el host${CLIENT_CPUS:+, fijado a los núcleos $CLIENT_CPUS}${CLIENT_CPUS:+ (aislado)} |"
   echo "| Host | $(uname -s) $(uname -r) $(uname -m) |"
   echo "| Base JRE | idéntica para todos |"
   echo "| \`/db\` | \`SELECT\` sobre H2 in-memory (1000 filas) + JSON; \`Db.java\` byte-idéntico en todos |"
   echo
-  echo "Arranque, RSS y rps son la **mediana** de las $REPS repeticiones. \`⚠\` = el framework tuvo"
+  echo "Arranque, RSS y rps son la **mediana** de las $REPS repeticiones. El RSS se mide con el mismo
+tope de montón para todos: sin él compara decisiones del recolector, no frameworks. \`⚠\` = el framework tuvo"
   echo "errores o respuestas no-2xx: esa fila NO es válida."
   if [ "$(uname -s)" != "Linux" ]; then
     echo
