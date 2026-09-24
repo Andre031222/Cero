@@ -1,12 +1,12 @@
 package ejemplo;
 
 import cero.data.DataSources;
-import cero.http.Server;
+import cero.test.TestClient;
+import cero.test.TestResponse;
+import cero.test.TestServer;
 
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,25 +18,31 @@ public final class TestSuite {
     private static int passed;
     private static int failed;
 
+    private static TestServer app;
+
     private TestSuite() {
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.out.println();
         System.out.println("── aplicación de ejemplo, de punta a punta");
 
-        Server server = App.start(0, "jdbc:h2:mem:pruebas;DB_CLOSE_DELAY=-1");
-        String base = "http://127.0.0.1:" + server.port();
-        try {
-            paginaInicial(base);
-            cabecerasDeSeguridad(base);
-            altaPorFormulario(base);
-            csrf(base);
-            validacionDeFormulario(base);
-            api(base);
-            estaticos(base);
+        try (TestServer servidor = TestServer.start(App.app("jdbc:h2:mem:pruebas;DB_CLOSE_DELAY=-1"))) {
+            app = servidor;
+            paginaInicial();
+            herenciaDePlantillas();
+            cabecerasDeSeguridad();
+            cabecerasEnElDocumentoHtml();
+            prohibido();
+            altaPorFormulario();
+            tablaDeTareas();
+            csrf();
+            validacionDeFormulario();
+            api();
+            estaticos();
+            sesionSobreHttp2();
+            cors();
         } finally {
-            server.stop();
             DataSources.clear();
         }
 
@@ -48,124 +54,242 @@ public final class TestSuite {
         }
     }
 
-    private static void paginaInicial(String base) throws Exception {
-        HttpResponse<String> portada = get(base + "/");
-        check("la portada responde 200", portada.statusCode() == 200);
-        check("se sirve como HTML",
-                portada.headers().firstValue("content-type").orElse("").startsWith("text/html"));
+    private static void paginaInicial() {
+        TestResponse portada = cliente().get("/");
+        check("la portada responde 200", portada.status() == 200);
+        check("se sirve como HTML", tipo(portada).startsWith("text/html"));
         check("el layout se aplica", portada.body().startsWith("<!doctype html>"));
         check("el bloque de título se rellena", portada.body().contains("<title>Tareas · 0 pendientes"));
         check("sin tareas muestra el aviso", portada.body().contains("No hay ninguna tarea"));
         check("emite el token CSRF en el formulario", token(portada.body()) != null);
-        check("abre sesión", portada.headers().firstValue("set-cookie").isPresent());
-        check("/salud responde", get(base + "/salud").body().equals("ok"));
+        check("abre sesión", portada.raw().headers().firstValue("set-cookie").isPresent());
+        check("/salud responde", cliente().get("/salud").body().equals("ok"));
     }
 
-    private static void cabecerasDeSeguridad(String base) throws Exception {
-        HttpResponse<String> portada = get(base + "/");
+    /** El layout de base.html se aplica y la vista hija hereda de él rellenando sus bloques. */
+    private static void herenciaDePlantillas() {
+        String pagina = cliente().get("/").body();
+        check("el layout envuelve el documento entero",
+                pagina.startsWith("<!doctype html>") && pagina.trim().endsWith("</html>"));
+        check("el layout aporta su cabecera común", pagina.contains("<h1>Tareas</h1>"));
+        check("y el enlace a la hoja de estilo",
+                pagina.contains("href=\"/estaticos/estilo.css\""));
+        check("la vista hija sobrescribe el bloque de título",
+                pagina.contains("<title>Tareas · 0 pendientes</title>"));
+        check("y rellena el bloque de contenido",
+                pagina.contains("action=\"/tareas\""));
+        check("el contenido heredado queda dentro del <main> del layout",
+                entre(pagina, "<main>", "</main>").contains("action=\"/tareas\""));
+        check("y el layout mantiene su pie fuera del bloque",
+                entre(pagina, "<header>", "</header>").contains("servido por Cero"));
+        check("no quedan directivas de plantilla sin resolver",
+                !pagina.contains("{%") && !pagina.contains("{{"));
+    }
+
+    private static void cabecerasDeSeguridad() {
+        TestResponse portada = cliente().get("/");
         check("la portada declara nosniff",
-                portada.headers().firstValue("x-content-type-options").orElse("").equals("nosniff"));
-        check("y prohíbe el enmarcado",
-                portada.headers().firstValue("x-frame-options").orElse("").equals("DENY"));
+                "nosniff".equals(portada.header("x-content-type-options")));
+        check("y prohíbe el enmarcado", "DENY".equals(portada.header("x-frame-options")));
         check("con política de referente",
-                portada.headers().firstValue("referrer-policy").orElse("")
-                        .equals("strict-origin-when-cross-origin"));
+                "strict-origin-when-cross-origin".equals(portada.header("referrer-policy")));
         check("cámara, micrófono y ubicación cerradas",
-                portada.headers().firstValue("permissions-policy").orElse("").contains("camera=()"));
+                cabecera(portada, "permissions-policy").contains("camera=()"));
         check("y una CSP que solo permite el propio origen",
-                portada.headers().firstValue("content-security-policy").orElse("")
-                        .equals("default-src 'self'"));
-        check("sin TLS no se manda HSTS",
-                portada.headers().firstValue("strict-transport-security").isEmpty());
+                "default-src 'self'".equals(portada.header("content-security-policy")));
+        check("sin TLS no se manda HSTS", portada.header("strict-transport-security") == null);
 
-        HttpResponse<String> rechazo = form(base + "/tareas", null, "titulo=intruso");
+        TestResponse rechazo = cliente().form("/tareas", Map.of("titulo", "intruso"));
         check("y también viajan en una respuesta rechazada",
-                rechazo.statusCode() == 403
-                        && rechazo.headers().firstValue("x-content-type-options").isPresent());
+                rechazo.status() == 403 && rechazo.header("x-content-type-options") != null);
     }
 
-    private static void altaPorFormulario(String base) throws Exception {
-        HttpResponse<String> portada = get(base + "/");
-        String cookie = sesion(portada);
-        String token = token(portada.body());
+    /**
+     * Las cabeceras tienen que llegar al documento HTML, que es donde el clickjacking ocurre.
+     *
+     * <p>El fallback de estáticos se saltaba la cadena entera de middlewares, así que sus
+     * respuestas —incluido el 404— salían desnudas.
+     */
+    private static void cabecerasEnElDocumentoHtml() {
+        TestResponse html = cliente().get("/");
+        check("el documento HTML viaja con X-Frame-Options",
+                tipo(html).startsWith("text/html") && "DENY".equals(html.header("x-frame-options")));
+        check("y con su CSP",
+                "default-src 'self'".equals(html.header("content-security-policy")));
 
-        HttpResponse<String> alta = form(base + "/tareas", cookie,
-                "_csrf=" + token + "&titulo=Terminar+la+web&prioridad=alta");
-        check("el alta redirige", alta.statusCode() == 302);
-        check("a la portada", alta.headers().firstValue("location").orElse("").equals("/"));
+        TestResponse ausente = cliente().get("/estaticos/no-esta.css");
+        check("un estático inexistente da 404", ausente.status() == 404);
+        check("y ese 404 pasa por la cadena de middlewares",
+                "DENY".equals(ausente.header("x-frame-options"))
+                        && "nosniff".equals(ausente.header("x-content-type-options"))
+                        && "default-src 'self'".equals(ausente.header("content-security-policy")));
 
-        HttpResponse<String> conTarea = get(base + "/", cookie);
-        check("la tarea aparece en la lista", conTarea.body().contains("Terminar la web"));
-        check("con su prioridad", conTarea.body().contains("prioridad-alta"));
-        check("y el contador sube", conTarea.body().contains("1 pendientes de 1"));
+        TestResponse servido = cliente().get("/estaticos/estilo.css");
+        check("el estático que sí existe también las lleva",
+                servido.status() == 200 && "DENY".equals(servido.header("x-frame-options")));
+
+        TestResponse ruta = cliente().get("/no-existe");
+        check("una ruta inexistente da 404", ruta.status() == 404);
+        check("con sus cabeceras de seguridad",
+                "DENY".equals(ruta.header("x-frame-options"))
+                        && "nosniff".equals(ruta.header("x-content-type-options")));
+
+        check("y la API las lleva igual que el HTML",
+                "DENY".equals(cliente().get("/api/tareas").header("x-frame-options")));
     }
 
-    private static void csrf(String base) throws Exception {
-        HttpResponse<String> sinToken = form(base + "/tareas", null, "titulo=intruso");
-        check("un POST sin token da 403", sinToken.statusCode() == 403);
-
-        HttpResponse<String> portada = get(base + "/");
-        HttpResponse<String> tokenMalo = form(base + "/tareas", sesion(portada),
-                "_csrf=inventado&titulo=intruso");
-        check("un POST con token falso da 403", tokenMalo.statusCode() == 403);
-        check("y la tarea no se creó", !get(base + "/").body().contains("intruso"));
+    /** Un 403 no puede ser una página en blanco: tiene que decir qué se rechazó y por qué. */
+    private static void prohibido() {
+        TestResponse prohibido = cliente().form("/tareas", Map.of("titulo", "intruso"));
+        check("un alta sin sesión da 403", prohibido.status() == 403);
+        check("nombrando el estado", "Forbidden".equals(prohibido.json("error")));
+        check("y explicando el motivo",
+                String.valueOf(prohibido.json("message")).contains("CSRF"));
+        check("y la ruta rechazada", "/tareas".equals(prohibido.json("path")));
     }
 
-    private static void validacionDeFormulario(String base) throws Exception {
-        HttpResponse<String> portada = get(base + "/");
-        HttpResponse<String> corto = form(base + "/tareas", sesion(portada),
-                "_csrf=" + token(portada.body()) + "&titulo=ab");
-        check("un título corto da 422", corto.statusCode() == 422);
+    private static void altaPorFormulario() {
+        TestClient cliente = cliente();
+        String token = token(cliente.get("/").body());
+
+        TestResponse alta = cliente.form("/tareas",
+                Map.of("_csrf", token, "titulo", "Terminar la web", "prioridad", "alta"));
+        check("el alta redirige", alta.status() == 302);
+        check("a la portada", "/".equals(alta.header("location")));
+
+        String conTarea = cliente.get("/").body();
+        check("la tarea aparece en la lista", conTarea.contains("Terminar la web"));
+        check("con su prioridad", conTarea.contains("prioridad-alta"));
+        check("y el contador sube", conTarea.contains("1 pendientes de 1"));
+    }
+
+    /** La lista pinta una fila por tarea, con sus datos, y no una sola fila con todo dentro. */
+    private static void tablaDeTareas() {
+        TestClient cliente = cliente();
+        String token = token(cliente.get("/").body());
+        cliente.form("/tareas",
+                Map.of("_csrf", token, "titulo", "Revisar el informe", "prioridad", "baja"));
+        cliente.form("/tareas",
+                Map.of("_csrf", token, "titulo", "Llamar a la imprenta", "prioridad", "media"));
+
+        String tabla = cliente.get("/").body();
+        check("la lista pinta una fila por tarea", contar(tabla, "<li class=") == 3);
+        check("con el título de cada una",
+                tabla.contains("Terminar la web") && tabla.contains("Revisar el informe")
+                        && tabla.contains("Llamar a la imprenta"));
+        check("y la prioridad de cada una",
+                tabla.contains("prioridad-alta") && tabla.contains("prioridad-baja")
+                        && tabla.contains("prioridad-media"));
+        check("cada fila trae su botón de borrar", contar(tabla, "class=\"borrar\"") == 3);
+        check("el pie cuadra con las filas", tabla.contains("3 pendientes de 3"));
+        check("y ya no se anuncia la lista vacía", !tabla.contains("No hay ninguna tarea"));
+    }
+
+    private static void csrf() {
+        TestResponse sinToken = cliente().form("/tareas", Map.of("titulo", "intruso"));
+        check("un POST sin token da 403", sinToken.status() == 403);
+
+        TestClient cliente = cliente();
+        cliente.get("/");
+        TestResponse tokenMalo = cliente.form("/tareas",
+                Map.of("_csrf", "inventado", "titulo", "intruso"));
+        check("un POST con token falso da 403", tokenMalo.status() == 403);
+        check("y la tarea no se creó", !cliente().get("/").body().contains("intruso"));
+    }
+
+    private static void validacionDeFormulario() {
+        TestClient cliente = cliente();
+        String token = token(cliente.get("/").body());
+        TestResponse corto = cliente.form("/tareas", Map.of("_csrf", token, "titulo", "ab"));
+        check("un título corto da 422", corto.status() == 422);
         check("y explica el motivo", corto.body().contains("debe tener entre 3 y 120 caracteres"));
         check("conservando lo escrito", corto.body().contains("value=\"ab\""));
     }
 
-    private static void api(String base) throws Exception {
-        HttpResponse<String> creada = json(base + "/api/tareas", "POST",
+    private static void api() {
+        TestClient cliente = cliente();
+        TestResponse creada = cliente.post("/api/tareas",
                 "{\"titulo\":\"Desde la API\",\"prioridad\":\"baja\"}");
-        check("POST devuelve 201", creada.statusCode() == 201);
-        check("con Location", creada.headers().firstValue("location").orElse("").startsWith("/api/tareas/"));
+        check("POST devuelve 201", creada.status() == 201);
+        check("con Location", cabecera(creada, "location").startsWith("/api/tareas/"));
         check("y el recurso creado", creada.body().contains("\"titulo\":\"Desde la API\""));
         check("con el id asignado por la base de datos", !creada.body().contains("\"id\":0"));
 
-        HttpResponse<String> invalida = json(base + "/api/tareas", "POST",
+        TestResponse invalida = cliente.post("/api/tareas",
                 "{\"titulo\":\"x\",\"prioridad\":\"inventada\"}");
-        check("un cuerpo inválido da 422", invalida.statusCode() == 422);
+        check("un cuerpo inválido da 422", invalida.status() == 422);
         check("detallando los dos campos", invalida.body().contains("\"titulo\"")
                 && invalida.body().contains("\"prioridad\""));
 
-        String id = creada.headers().firstValue("location").orElse("").replace("/api/tareas/", "");
+        String id = cabecera(creada, "location").replace("/api/tareas/", "");
         check("GET por id devuelve la tarea",
-                get(base + "/api/tareas/" + id).body().contains("Desde la API"));
-        check("un id inexistente da 404", get(base + "/api/tareas/9999").statusCode() == 404);
+                cliente.get("/api/tareas/" + id).body().contains("Desde la API"));
+        check("un id inexistente da 404", cliente.get("/api/tareas/9999").status() == 404);
 
-        HttpResponse<String> lista = get(base + "/api/tareas");
+        TestResponse lista = cliente.get("/api/tareas");
         check("la lista viene paginada", lista.body().contains("\"page\":1")
                 && lista.body().contains("\"total\":"));
 
-        check("DELETE devuelve 204",
-                json(base + "/api/tareas/" + id, "DELETE", null).statusCode() == 204);
-        check("borrar lo inexistente da 404",
-                json(base + "/api/tareas/9999", "DELETE", null).statusCode() == 404);
+        check("DELETE devuelve 204", cliente.delete("/api/tareas/" + id).status() == 204);
+        check("borrar lo inexistente da 404", cliente.delete("/api/tareas/9999").status() == 404);
     }
 
-    private static void estaticos(String base) throws Exception {
-        HttpResponse<String> css = get(base + "/estaticos/estilo.css");
-        check("sirve el CSS desde el classpath", css.statusCode() == 200);
-        check("con su tipo",
-                css.headers().firstValue("content-type").orElse("").startsWith("text/css"));
+    private static void estaticos() {
+        TestResponse css = cliente().get("/estaticos/estilo.css");
+        check("sirve el CSS desde el classpath", css.status() == 200);
+        check("con su tipo", tipo(css).startsWith("text/css"));
         check("y contenido", css.body().contains("--azul"));
-        check("emite ETag", css.headers().firstValue("etag").isPresent());
+        check("emite ETag", css.header("etag") != null);
 
-        HttpResponse<String> cacheado = HttpClient.newHttpClient().send(
-                HttpRequest.newBuilder(URI.create(base + "/estaticos/estilo.css"))
-                        .version(HttpClient.Version.HTTP_1_1)
-                        .header("If-None-Match", css.headers().firstValue("etag").orElseThrow())
-                        .build(),
-                HttpResponse.BodyHandlers.ofString());
-        check("y responde 304 si no cambió", cacheado.statusCode() == 304);
+        TestResponse cacheado = app.client().http1()
+                .header("If-None-Match", css.header("etag"))
+                .get("/estaticos/estilo.css");
+        check("y responde 304 si no cambió", cacheado.status() == 304);
         check("un estático inexistente da 404",
-                get(base + "/estaticos/no-esta.css").statusCode() == 404);
+                cliente().get("/estaticos/no-esta.css").status() == 404);
+    }
+
+    /** La cookie de sesión se perdía sobre HTTP/2: aquí se comprueba desde una app real. */
+    private static void sesionSobreHttp2() {
+        TestClient cliente = app.client().http2();
+        TestResponse portada = cliente.get("/");
+        check("la portada responde sobre HTTP/2",
+                portada.status() == 200 && portada.version() == HttpClient.Version.HTTP_2);
+        check("y abre sesión", cliente.cookie("CEROSESSION") != null);
+
+        TestResponse alta = cliente.form("/tareas",
+                Map.of("_csrf", token(portada.body()), "titulo", "Alta sobre HTTP/2"));
+        check("la sesión sobrevive a la segunda petición sobre HTTP/2", alta.status() == 302);
+        check("que también va por HTTP/2", alta.version() == HttpClient.Version.HTTP_2);
+        check("y la tarea quedó creada", cliente.get("/").body().contains("Alta sobre HTTP/2"));
+
+        check("un cliente nuevo sobre HTTP/2 no hereda la sesión",
+                app.client().http2().form("/tareas", Map.of("titulo", "intruso")).status() == 403);
+    }
+
+    /** Un cliente nuevo por grupo: su propio tarro de cookies, o sea su propia sesión. */
+    private static void cors() {
+        String permitido = "https://tareas.local";
+
+        TestResponse desdePermitido = app.client().http1()
+                .header("Origin", permitido).get("/api/tareas");
+        check("un origen permitido recibe allow-origin",
+                permitido.equals(cabecera(desdePermitido, "access-control-allow-origin")));
+
+        TestResponse desdeAjeno = app.client().http1()
+                .header("Origin", "https://otro.example").get("/api/tareas");
+        check("un origen ajeno no lo recibe",
+                cabecera(desdeAjeno, "access-control-allow-origin").isEmpty());
+        check("y la petición se atiende igual: CORS lo aplica el navegador, no el servidor",
+                desdeAjeno.status() == 200);
+
+        TestResponse sinOrigen = cliente().get("/api/tareas");
+        check("sin cabecera Origin no se anuncia CORS",
+                cabecera(sinOrigen, "access-control-allow-origin").isEmpty());
+    }
+
+    private static TestClient cliente() {
+        return app.client().http1();
     }
 
     private static String token(String html) {
@@ -173,51 +297,27 @@ public final class TestSuite {
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private static String sesion(HttpResponse<String> response) {
-        String cookie = response.headers().firstValue("set-cookie").orElse("");
-        int end = cookie.indexOf(';');
-        return end < 0 ? cookie : cookie.substring(0, end);
+    private static String tipo(TestResponse response) {
+        return cabecera(response, "content-type");
     }
 
-    private static HttpResponse<String> get(String url) throws Exception {
-        return get(url, null);
+    private static String cabecera(TestResponse response, String name) {
+        String value = response.header(name);
+        return value == null ? "" : value;
     }
 
-    private static HttpResponse<String> get(String url, String cookie) throws Exception {
-        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(url))
-                .version(HttpClient.Version.HTTP_1_1);
-        if (cookie != null) {
-            request.header("Cookie", cookie);
+    private static String entre(String texto, String desde, String hasta) {
+        int inicio = texto.indexOf(desde);
+        int fin = inicio < 0 ? -1 : texto.indexOf(hasta, inicio);
+        return inicio < 0 || fin < 0 ? "" : texto.substring(inicio + desde.length(), fin);
+    }
+
+    private static int contar(String texto, String fragmento) {
+        int veces = 0;
+        for (int i = texto.indexOf(fragmento); i >= 0; i = texto.indexOf(fragmento, i + 1)) {
+            veces++;
         }
-        return send(request.GET().build());
-    }
-
-    private static HttpResponse<String> form(String url, String cookie, String body) throws Exception {
-        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(url))
-                .version(HttpClient.Version.HTTP_1_1)
-                .header("Content-Type", "application/x-www-form-urlencoded");
-        if (cookie != null) {
-            request.header("Cookie", cookie);
-        }
-        return send(request.POST(HttpRequest.BodyPublishers.ofString(body)).build());
-    }
-
-    private static HttpResponse<String> json(String url, String verb, String body) throws Exception {
-        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(url))
-                .version(HttpClient.Version.HTTP_1_1)
-                .header("Content-Type", "application/json");
-        request.method(verb, body == null
-                ? HttpRequest.BodyPublishers.noBody()
-                : HttpRequest.BodyPublishers.ofString(body));
-        return send(request.build());
-    }
-
-    private static HttpResponse<String> send(HttpRequest request) throws Exception {
-        return HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build()
-                .send(request, HttpResponse.BodyHandlers.ofString());
+        return veces;
     }
 
     private static void check(String name, boolean condition) {

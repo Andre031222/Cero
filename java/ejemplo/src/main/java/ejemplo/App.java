@@ -22,11 +22,15 @@ public final class App {
     }
 
     public static Server start(int puerto, String jdbc) {
+        return app(jdbc).port(puerto).start();
+    }
+
+    /** La aplicación sin arrancar: así las pruebas la levantan en un puerto libre. */
+    public static Cero app(String jdbc) {
         DataSources.registerDefault(Pool.to(jdbc).maxSize(8).build());
         Tareas.crearEsquema();
 
         return Cero.app()
-                .port(puerto)
                 .views(Templates.fromClasspath("plantillas"))
                 .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))
                 .use(SecurityHeaders.standard().csp("default-src 'self'"))
@@ -34,8 +38,7 @@ public final class App {
                 .use(RateLimit.perMinute(300))
                 .use(Csrf.enabled().exempt("/api/"))
                 .controllers(TareaController.class, ApiController.class)
-                .routes(rutas -> rutas.get("/salud", contexto -> "ok"))
-                .start();
+                .routes(rutas -> rutas.get("/salud", contexto -> "ok"));
     }
 
     private static int puerto(String[] args) {
