@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * HTTP/2 en claro (h2c) sobre el mismo servidor y el mismo {@link Handler}.
+ * HTTP/2 sobre el mismo servidor y el mismo {@link Handler}, en claro y cifrado.
  *
  * <p>Una aplicación no se entera: recibe el mismo {@link Request} y el mismo {@link Response}
  * que en HTTP/1.1. Lo que cambia debajo es todo — el protocolo deja de ser texto y pasa a ser
@@ -27,13 +27,13 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p>Está: capa de tramas, HPACK completo ({@link Hpack}), flujos concurrentes, control de flujo
  * por conexión y por flujo, SETTINGS negociados, PING, RST_STREAM y GOAWAY ordenado. Se entra por
- * las dos puertas de h2c: conocimiento previo —el cliente manda el preámbulo directamente— y
- * {@code Upgrade: h2c} desde una petición HTTP/1.1.
+ * tres puertas: conocimiento previo —el cliente manda el preámbulo directamente—,
+ * {@code Upgrade: h2c} desde una petición HTTP/1.1, y <b>ALPN sobre TLS</b>, que es la única por
+ * la que llega un navegador. Se apaga entera con {@code ServerOptions.http2(false)}.
  *
  * <p>No está, y se dice: <b>PUSH_PROMISE</b>, que está en desuso y los navegadores ya no lo
  * usan; se anuncia deshabilitado en SETTINGS, que es lo que manda el RFC. <b>PRIORITY</b> se lee
  * y se descarta, que es lo que permite el RFC 9113 tras deprecar el esquema de prioridades.
- * Y <b>h2 sobre TLS con ALPN</b>: en claro funciona, cifrado todavía no.
  *
  * <p>Guía: https://cero.ginit.dev/guia#http2
  */
