@@ -12,7 +12,32 @@ import pathlib
 from PIL import Image, ImageDraw, ImageFont
 
 AQUI = pathlib.Path(__file__).resolve().parent
-DESTINO = AQUI / "instalar.gif"
+# Dos temas: GitHub sirve uno u otro según el del lector, y una terminal negra en una página
+# blanca canta tanto como al revés.
+TEMAS = {
+    "oscuro": dict(
+        destino="instalar.gif", isotipo="logo-light.png",
+        fondo=(6, 6, 7),         # --term-fondo #060607
+        barra=(19, 19, 21),      # --term-barra #131315
+        borde=(31, 31, 32),      # --term-borde sobre el fondo
+        tinta=(242, 245, 250),   # --term-orden #f2f5fa
+        tenue=(204, 210, 221),   # --term-texto #ccd2dd
+        gris=(135, 141, 153),    # --term-tenue #878d99
+        marca=(56, 189, 248),    # --acento #38bdf8
+        verde=(63, 196, 140),
+    ),
+    "claro": dict(
+        destino="instalar-claro.gif", isotipo="logo-primary.png",
+        fondo=(247, 249, 252),   # --term-fondo #f7f9fc
+        barra=(234, 238, 246),   # --term-barra #eaeef6
+        borde=(219, 222, 225),
+        tinta=(15, 20, 28),      # --term-orden #0f141c
+        tenue=(43, 54, 83),      # --term-texto #2b3653
+        gris=(97, 108, 135),     # --term-tenue #616c87
+        marca=(29, 78, 216),     # --acento #1d4ed8
+        verde=(21, 128, 61),
+    ),
+}
 
 ANCHO = 1000
 MARGEN = 22
@@ -20,17 +45,10 @@ ALTO_BARRA = 42
 INTERLINEA = 27
 SANGRIA = 26
 
-# Los mismos tokens que `.terminal` en portada.css, tema oscuro: esta imagen y la terminal
-# del sitio tienen que ser la misma pieza.
-FONDO = (6, 6, 7)          # --term-fondo #060607
-PANEL = (6, 6, 7)
-BARRA = (19, 19, 21)       # --term-barra #131315
-BORDE = (31, 31, 32)       # --term-borde rgba(255,255,255,.1) sobre el fondo
-TINTA = (242, 245, 250)    # --term-orden #f2f5fa
-TENUE = (204, 210, 221)    # --term-texto #ccd2dd
-GRIS = (135, 141, 153)     # --term-tenue #878d99
-MARCA = (56, 189, 248)     # --acento #38bdf8
-VERDE = (63, 196, 140)
+# Los tokens los pone el tema en curso; son los mismos que `.terminal` en portada.css, para
+# que esta imagen y la terminal del sitio sean la misma pieza.
+TEMA = TEMAS["oscuro"]
+ISOTIPO = None
 
 MONO = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 17)
 MONO_FINA = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 13)
@@ -61,9 +79,6 @@ GUION = [
 ALTO = MARGEN * 2 + ALTO_BARRA + 20 + len(GUION) * INTERLINEA + 22
 
 
-ISOTIPO = Image.open(AQUI / "marca" / "logo-light.png").convert("RGBA")
-
-
 def logo(imagen: Image.Image, cx: float, cy: float, lado: int) -> None:
     """El isotipo de la marca, el mismo archivo que sirve el sitio."""
     marca = ISOTIPO.resize((lado, lado), Image.LANCZOS)
@@ -71,17 +86,17 @@ def logo(imagen: Image.Image, cx: float, cy: float, lado: int) -> None:
 
 
 def lienzo() -> Image.Image:
-    imagen = Image.new("RGB", (ANCHO, ALTO), FONDO)
+    imagen = Image.new("RGB", (ANCHO, ALTO), TEMA["fondo"])
     d = ImageDraw.Draw(imagen)
 
     d.rounded_rectangle([MARGEN, MARGEN, ANCHO - MARGEN, ALTO - MARGEN],
-                        radius=6, fill=PANEL, outline=BORDE, width=1)
+                        radius=6, fill=TEMA["fondo"], outline=TEMA["borde"], width=1)
     # La barra de título lleva su propio fondo, como en el sitio.
     d.rounded_rectangle([MARGEN + 1, MARGEN + 1, ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA],
-                        radius=6, fill=BARRA)
+                        radius=6, fill=TEMA["barra"])
     d.rectangle([MARGEN + 1, MARGEN + ALTO_BARRA - 6, ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA],
-                fill=BARRA)
-    d.line([(MARGEN + 1, MARGEN + ALTO_BARRA), (ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA)], fill=BORDE)
+                fill=TEMA["barra"])
+    d.line([(MARGEN + 1, MARGEN + ALTO_BARRA), (ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA)], fill=TEMA["borde"])
 
     centro = MARGEN + ALTO_BARRA / 2
     for i, color in enumerate([(255, 95, 87), (254, 188, 46), (40, 200, 64)]):
@@ -89,8 +104,8 @@ def lienzo() -> Image.Image:
         d.ellipse([x, centro - 5.5, x + 11, centro + 5.5], fill=color)
 
     logo(imagen, MARGEN + 96, centro, 26)
-    d.text((MARGEN + 114, centro - 8), "Cero", font=MONO, fill=TINTA)
-    d.text((ANCHO / 2 + 40, centro - 6), "~/proyectos", font=MONO_FINA, fill=GRIS,
+    d.text((MARGEN + 114, centro - 8), "Cero", font=MONO, fill=TEMA["tinta"])
+    d.text((ANCHO / 2 + 40, centro - 6), "~/proyectos", font=MONO_FINA, fill=TEMA["gris"],
            anchor="mm")
     return imagen
 
@@ -105,22 +120,22 @@ def pintar(hasta: int, escritas: int) -> Image.Image:
         nonlocal y
         x = MARGEN + SANGRIA
         if clase == "orden":
-            d.text((x, y), "$", font=MONO, fill=MARCA)
+            d.text((x, y), "$", font=MONO, fill=TEMA["marca"])
             x += MONO.getlength("$ ")
-            d.text((x, y), texto, font=MONO, fill=TINTA)
+            d.text((x, y), texto, font=MONO, fill=TEMA["tinta"])
             ancho = MONO.getlength(texto)
         elif clase == "ok":
-            d.text((x + MONO.getlength("  "), y), "✓", font=MONO, fill=VERDE)
+            d.text((x + MONO.getlength("  "), y), "✓", font=MONO, fill=TEMA["verde"])
             x += MONO.getlength("  ✓   ")
-            d.text((x, y), texto, font=MONO, fill=TENUE)
+            d.text((x, y), texto, font=MONO, fill=TEMA["tenue"])
             ancho = MONO.getlength(texto)
         else:
-            color = {"comentario": GRIS, "total": VERDE, "arranque": MARCA}.get(clase, TENUE)
+            color = {"comentario": TEMA["gris"], "total": TEMA["verde"], "arranque": TEMA["marca"]}.get(clase, TEMA["tenue"])
             sangrado = "  " + texto if clase in ("salida", "total", "arranque") else texto
             d.text((x, y), sangrado, font=MONO, fill=color)
             ancho = MONO.getlength(sangrado)
         if cursor:
-            d.rectangle([x + ancho + 1, y + 2, x + ancho + 10, y + 19], fill=MARCA)
+            d.rectangle([x + ancho + 1, y + 2, x + ancho + 10, y + 19], fill=TEMA["marca"])
         y += INTERLINEA
 
     for i in range(hasta):
@@ -132,7 +147,12 @@ def pintar(hasta: int, escritas: int) -> Image.Image:
     return imagen
 
 
-def main() -> int:
+def dibuja(nombre: str) -> None:
+    global TEMA, ISOTIPO
+    TEMA = TEMAS[nombre]
+    ISOTIPO = Image.open(AQUI / "marca" / TEMA["isotipo"]).convert("RGBA")
+    destino = AQUI / TEMA["destino"]
+
     fotogramas, tiempos = [], []
     for i, (clase, texto) in enumerate(GUION):
         if clase == "orden":
@@ -147,9 +167,14 @@ def main() -> int:
     fotogramas.append(pintar(len(GUION), 0))
     tiempos.append(3200)                                 # se queda quieto para poder leerlo
 
-    fotogramas[0].save(DESTINO, save_all=True, append_images=fotogramas[1:],
+    fotogramas[0].save(destino, save_all=True, append_images=fotogramas[1:],
                        duration=tiempos, loop=0, optimize=True)
-    print(f"{DESTINO}  {len(fotogramas)} fotogramas  {DESTINO.stat().st_size / 1024:.0f} KB")
+    print(f"{destino}  {len(fotogramas)} fotogramas  {destino.stat().st_size / 1024:.0f} KB")
+
+
+def main() -> int:
+    for nombre in TEMAS:
+        dibuja(nombre)
     return 0
 
 
