@@ -16,17 +16,20 @@ DESTINO = AQUI / "instalar.gif"
 
 ANCHO = 1000
 MARGEN = 22
-BARRA = 42
+ALTO_BARRA = 42
 INTERLINEA = 27
 SANGRIA = 26
 
-FONDO = (7, 11, 20)
-PANEL = (13, 20, 36)
-BORDE = (34, 46, 74)
-TINTA = (234, 240, 250)
-TENUE = (147, 160, 188)
-GRIS = (110, 123, 153)
-MARCA = (255, 61, 154)
+# Los mismos tokens que `.terminal` en portada.css, tema oscuro: esta imagen y la terminal
+# del sitio tienen que ser la misma pieza.
+FONDO = (6, 6, 7)          # --term-fondo #060607
+PANEL = (6, 6, 7)
+BARRA = (19, 19, 21)       # --term-barra #131315
+BORDE = (31, 31, 32)       # --term-borde rgba(255,255,255,.1) sobre el fondo
+TINTA = (242, 245, 250)    # --term-orden #f2f5fa
+TENUE = (204, 210, 221)    # --term-texto #ccd2dd
+GRIS = (135, 141, 153)     # --term-tenue #878d99
+MARCA = (56, 189, 248)     # --acento #38bdf8
 VERDE = (63, 196, 140)
 
 MONO = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 17)
@@ -37,8 +40,8 @@ GUION = [
     ("comentario", "# 1 — instalar"),
     ("orden",      "curl -fsSL https://cero.ginit.dev/instalar | sh"),
     ("ok",         "entorno    Java 25 · Maven 3.9 · Darwin arm64"),
-    ("ok",         "descargado cero-0.6.0.tar.gz · 736 KB"),
-    ("ok",         "huella     sha256 d4311facf0aed62a…"),
+    ("ok",         "descargado cero-0.7.0.tar.gz · 344 KB"),
+    ("ok",         "huella     sha256 c16628fd2d28c207…"),
     ("ok",         "compilado  ocho módulos en ~/.m2 · 45 s"),
     ("ok",         "orden cero  ~/.local/bin/cero"),
     ("blanco",     ""),
@@ -55,18 +58,16 @@ GUION = [
     ("salida",     "ok"),
 ]
 
-ALTO = MARGEN * 2 + BARRA + 20 + len(GUION) * INTERLINEA + 22
+ALTO = MARGEN * 2 + ALTO_BARRA + 20 + len(GUION) * INTERLINEA + 22
 
 
-def logo(dibujo: ImageDraw.ImageDraw, cx: float, cy: float, r: float) -> None:
-    """El mismo sol de ocho rayos de la marca, a mano: aquí no hay SVG."""
-    import math
-    for i in range(8):
-        angulo = math.radians(i * 45)
-        dx, dy = math.cos(angulo), math.sin(angulo)
-        dibujo.line([(cx + dx * r * 0.52, cy + dy * r * 0.52),
-                     (cx + dx * r, cy + dy * r)], fill=MARCA, width=2)
-    dibujo.ellipse([cx - r * 0.26, cy - r * 0.26, cx + r * 0.26, cy + r * 0.26], fill=MARCA)
+ISOTIPO = Image.open(AQUI / "marca" / "logo-light.png").convert("RGBA")
+
+
+def logo(imagen: Image.Image, cx: float, cy: float, lado: int) -> None:
+    """El isotipo de la marca, el mismo archivo que sirve el sitio."""
+    marca = ISOTIPO.resize((lado, lado), Image.LANCZOS)
+    imagen.paste(marca, (int(cx - lado / 2), int(cy - lado / 2)), marca)
 
 
 def lienzo() -> Image.Image:
@@ -74,16 +75,21 @@ def lienzo() -> Image.Image:
     d = ImageDraw.Draw(imagen)
 
     d.rounded_rectangle([MARGEN, MARGEN, ANCHO - MARGEN, ALTO - MARGEN],
-                        radius=11, fill=PANEL, outline=BORDE, width=1)
-    d.line([(MARGEN + 1, MARGEN + BARRA), (ANCHO - MARGEN - 1, MARGEN + BARRA)], fill=BORDE)
+                        radius=6, fill=PANEL, outline=BORDE, width=1)
+    # La barra de título lleva su propio fondo, como en el sitio.
+    d.rounded_rectangle([MARGEN + 1, MARGEN + 1, ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA],
+                        radius=6, fill=BARRA)
+    d.rectangle([MARGEN + 1, MARGEN + ALTO_BARRA - 6, ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA],
+                fill=BARRA)
+    d.line([(MARGEN + 1, MARGEN + ALTO_BARRA), (ANCHO - MARGEN - 1, MARGEN + ALTO_BARRA)], fill=BORDE)
 
-    centro = MARGEN + BARRA / 2
+    centro = MARGEN + ALTO_BARRA / 2
     for i, color in enumerate([(255, 95, 87), (254, 188, 46), (40, 200, 64)]):
         x = MARGEN + 20 + i * 19
         d.ellipse([x, centro - 5.5, x + 11, centro + 5.5], fill=color)
 
-    logo(d, MARGEN + 92, centro, 9)
-    d.text((MARGEN + 108, centro - 8), "Cero", font=MONO, fill=TINTA)
+    logo(imagen, MARGEN + 96, centro, 26)
+    d.text((MARGEN + 114, centro - 8), "Cero", font=MONO, fill=TINTA)
     d.text((ANCHO / 2 + 40, centro - 6), "~/proyectos", font=MONO_FINA, fill=GRIS,
            anchor="mm")
     return imagen
@@ -93,7 +99,7 @@ def pintar(hasta: int, escritas: int) -> Image.Image:
     """Fotograma con las líneas 0..hasta-1 completas y `escritas` letras de la siguiente."""
     imagen = lienzo()
     d = ImageDraw.Draw(imagen)
-    y = MARGEN + BARRA + 18
+    y = MARGEN + ALTO_BARRA + 18
 
     def linea(clase: str, texto: str, cursor: bool) -> None:
         nonlocal y

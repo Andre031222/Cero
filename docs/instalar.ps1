@@ -72,7 +72,10 @@ $Vivo = -not $SinColor -and -not $EnCi -and -not $env:NO_COLOR -and $env:TERM -n
         -and $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
 $e = [char]27
 if ($Vivo) {
-    $Acento='{0}[38;5;205m' -f $e; $Tenue='{0}[38;5;245m' -f $e; $Verde='{0}[38;5;71m'  -f $e
+    # El azul de la marca (#38bdf8). Windows Terminal habla truecolor; la consola vieja no.
+    $Acento = if ($env:WT_SESSION -or $env:COLORTERM -in 'truecolor','24bit') {
+        '{0}[38;2;56;189;248m' -f $e } else { '{0}[38;5;75m' -f $e }
+    $Tenue='{0}[38;5;245m' -f $e; $Verde='{0}[38;5;71m'  -f $e
     $Rojo ='{0}[38;5;167m' -f $e; $Fuerte='{0}[1m'       -f $e; $Fin  ='{0}[0m'        -f $e
 } else {
     $Acento=''; $Tenue=''; $Verde=''; $Rojo=''; $Fuerte=''; $Fin=''
