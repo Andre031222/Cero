@@ -112,3 +112,6 @@ settings.xml
 **/settings.xml
 *.gpg
 secring.*
+
+# El jar de un contendiente se instala desde el repositorio local de Maven; no se versiona.
+benchmarks/docker/apps/*/lib/
