@@ -6,8 +6,8 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 [![Licencia: Apache 2.0](https://img.shields.io/badge/Licencia-Apache_2.0-15803d?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-25%2B-007396?style=flat-square)](https://openjdk.org/)
 [![Dependencias](https://img.shields.io/badge/Dependencias-0-2e7d32?style=flat-square)](#principios)
-[![Pruebas](https://img.shields.io/badge/Pruebas-1835-15803d?style=flat-square)](#estado)
-[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.6.0-6d28d9?style=flat-square)](docs/versiones.md)
+[![Pruebas](https://img.shields.io/badge/Pruebas-1762-15803d?style=flat-square)](#estado)
+[![Versión](https://img.shields.io/badge/Versi%C3%B3n-0.7.0-6d28d9?style=flat-square)](docs/versiones.md)
 [![En vivo](https://img.shields.io/badge/En_vivo-cero.ginit.dev-0f2444?style=flat-square)](https://cero.ginit.dev)
 
 > **English** — Cero is a web framework for Java 25 with its own HTTP server, one virtual
@@ -21,7 +21,7 @@ servido por el propio framework, sin Tomcat detrás. Su código está abierto en
 los dos dentro del mismo jar. Es la aplicación de ejemplo más completa que hay, y se puede
 comprobar que la afirmación de arriba es cierta en vez de creerla.
 
-![Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 407 KB](docs/imagenes/portada.png)
+![Cero — framework web para Java. 106 ms de arranque, 0 dependencias, 416 KB](docs/imagenes/portada.png)
 
 * * *
 
@@ -33,7 +33,7 @@ fuera la que uno creía. Nada de eso es el programa que uno escribió.
 
 De ahí las dos decisiones que definen el proyecto:
 
-1. **Arranca solo.** Servidor HTTP/1.1 propio con un hilo virtual por conexión. `java -jar app.jar`
+1. **Arranca solo.** Servidor HTTP/1.1 y HTTP/2 propio, con un hilo virtual por conexión. `java -jar app.jar`
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
 2. **No es solo Java.** El objetivo final es un *contrato* de framework —rutas, pipeline,
    request/response, inyección, configuración— definido de forma neutral e implementado en
@@ -51,8 +51,9 @@ De ahí las dos decisiones que definen el proyecto:
 
 ## Rendimiento
 
-*Contenedores idénticos, misma corrida, 90 mediciones sin un solo error.
-[Cómo se rehace la medición](benchmarks/results/LEEME.md).*
+*Contenedores idénticos, misma corrida, 90 mediciones sin un solo error. **Medición de agosto de
+2026, sobre Cero 0.6.0**: se sustituirá en cuanto haya corrida nueva.
+[Cómo se rehace](benchmarks/results/LEEME.md).*
 
 | Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
 |---|---|---|---|---|---|---|
@@ -68,24 +69,24 @@ en el arranque; en `/db` —el que mide el framework haciendo trabajo de aplicac
 con el segundo es del 6 %.
 
 **Salvedad que importa:** se midió en Docker Desktop. Los valores **relativos** son justos porque
-las condiciones fueron idénticas para los seis; los **absolutos** requieren repetir la corrida en
+las condiciones fueron idénticas para los cinco; los **absolutos** requieren repetir la corrida en
 Linux sin virtualizar antes de citarse.
 
 ## Instalar
 
 Java 25 o superior (hilos virtuales) y Maven. Nada más.
 
-Está en Maven Central desde la 0.6.0. Tres líneas y ya está:
+Está en Maven Central. Tres líneas y ya está:
 
 ```xml
 <dependency>
     <groupId>dev.ginit.cero</groupId>
     <artifactId>cero-core</artifactId>   <!-- arrastra cero-http -->
-    <version>0.6.0</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
-`cero-view`, `cero-data`, `cero-adapter-servlet` y `cero-launcher` van aparte, y se toman solo si
+`cero-view`, `cero-data`, `cero-test`, `cero-adapter-servlet` y `cero-launcher` van aparte, y se toman solo si
 se usan. Ninguno arrastra nada de fuera.
 
 ### El instalador
@@ -115,7 +116,7 @@ Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
 git clone https://github.com/Andre031222/Cero.git && cd Cero
-cd java && mvn install     # 1 835 pruebas, runner propio (sin JUnit)
+cd java && mvn install     # 1 762 pruebas, runner propio (sin JUnit)
 ./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
@@ -157,31 +158,40 @@ la reflexión.
 
 | Módulo | Pruebas | Qué trae |
 |---|---|---|
-| [`cero-http`](java/cero-http) | 427 | Servidor HTTP/1.1 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE), **HTTP/2** —h2c y h2 sobre TLS por ALPN— y confianza en proxy configurable |
-| [`cero-core`](java/cero-core) | 817 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP**, **trazado W3C** y OpenAPI |
+| [`cero-http`](java/cero-http) | 432 | Servidor HTTP/1.1 y HTTP/2 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE), **HTTP/2** —h2c y h2 sobre TLS por ALPN— y confianza en proxy configurable |
+| [`cero-core`](java/cero-core) | 834 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP**, **trazado W3C** y OpenAPI |
 | [`cero-view`](java/cero-view) | 93 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
-| [`cero-data`](java/cero-data) | 318 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
+| [`cero-data`](java/cero-data) | 250 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
+| [`cero-test`](java/cero-test) | 29 | Pruebas de punta a punta para quien usa Cero: levanta la aplicación en un puerto libre, cliente HTTP que mantiene las cookies y deja fijar la versión del protocolo, y aserciones legibles sobre la respuesta |
 | [`cero-adapter-servlet`](java/cero-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
 | [`cero-launcher`](java/cero-launcher) | 10 | La línea de órdenes: el generador de `cero new`, el empaquetado en un jar ejecutable con `java.util.jar` y sin plugins de terceros, y las migraciones |
-| [`ejemplo`](java/ejemplo) | 43 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
+| [`ejemplo`](java/ejemplo) | 79 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
 
-Los cuatro del núcleo —`cero-http`, `cero-core`, `cero-view` y `cero-data`— suman **407 KB** y no
+Los cuatro del núcleo —`cero-http`, `cero-core`, `cero-view` y `cero-data`— suman **416 KB** y no
 declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo el proyecto está en
 `cero-adapter-servlet`, en *scope* `provided`.
 
 ## Estado
 
-**Las fases 1 y 2 están cerradas** — versión **0.3.0**, 4 de agosto de 2026. El framework está
-completo en Java y el sitio de referencia corre sobre él.
+**Versión 0.7.0**, publicada en Maven Central. El framework está completo en Java y el sitio de
+este proyecto corre sobre él.
 
 Lo que cerró la fase 2 no fue una lista de casillas: fue que el framework tuvo su **primer
 consumidor externo** y con él la primera auditoría de alguien que no lo escribió — once hallazgos
 leyendo el código, dos explotables desde fuera sin credenciales. Los once están cerrados con
-prueba propia. Ver [versiones.md](docs/versiones.md).
+prueba propia.
+
+La 0.7.0 salió de una segunda revisión externa, y el hallazgo mayor da la medida de para qué
+sirven: **la cookie de sesión no viajaba en ninguna respuesta HTTP/2**. Dos implementaciones
+hermanas de la misma interfaz y solo una preguntaba por la cookie pendiente, así que sobre h2
+ningún cliente podía iniciar sesión — y sin sesión no hay token CSRF, con lo que toda escritura
+respondía 403 señalando al sitio equivocado. Ninguna de las 432 comprobaciones del módulo lo vio,
+porque todas entraban por HTTP/1.1: no fue un descuido de escritura, fue un camino de salida
+entero sin ejercitar. Ver [versiones.md](docs/versiones.md).
 
 Lo verificado, y cómo:
 
-- **1 835 pruebas** con runner propio, en macOS y en Linux, sobre JDK 21 y 25.
+- **1 762 pruebas** con runner propio, en macOS y en Linux, sobre JDK 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.
