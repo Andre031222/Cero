@@ -154,6 +154,53 @@ Se han ido de esta lista, y con prueba cada uno: log de acceso, métricas, WebSo
 de eventos, **rangos en estáticos**, **recarga de certificado TLS sin reiniciar** y **almacén de
 sesiones compartido** para varias instancias.
 
+## Cuánta memoria darle
+
+**Ponle un tope de montón.** Sin él la JVM toma el 25 % de la memoria de la máquina y no la
+devuelve mientras haya carga, y el proceso aparenta gastar mucho más de lo que necesita.
+
+Medido el 25 de septiembre de 2026, con once cabeceras de navegador y 64 conexiones:
+
+| `-Xmx` | RSS en el pico | Peticiones por segundo |
+|---|---|---|
+| 256 MB | 194 MB | 4 200 |
+| 96 MB | 142 MB | 4 133 |
+| 64 MB | **131 MB** | 4 133 |
+| 48 MB | **118 MB** | 4 200 |
+
+**Con 48 MB el rendimiento no se mueve y el RSS baja un 39 %.** La recomendación para una
+aplicación pequeña es:
+
+```bash
+java -Xmx64m -jar mi-app.jar
+```
+
+### Por qué el RSS parece tan alto sin eso
+
+Conviene entender el número antes de asustarse con él, porque la mayor parte no es tuya:
+
+| | |
+|---|---|
+| Lo que la aplicación **retiene** de verdad | **2,5 MB** |
+| Montón en uso bajo carga | 16 MB |
+| Montón **comprometido** con `-Xmx256m` | 256 MB |
+| La JVM vacía, antes de tu código | 57 MB |
+| RSS tras 25 s en reposo | 86 MB |
+
+G1 hace crecer el montón hasta el tope que le des porque crecer es barato, y lo devuelve cuando
+el proceso queda ocioso. Así que el RSS bajo carga mide sobre todo **cuánto le has permitido
+tomar**, no cuánto necesita.
+
+Si necesitas que devuelva antes, `-XX:G1PeriodicGCInterval=5000` lo hace, aunque en nuestras
+medidas la diferencia fue pequeña: 86 MB contra 80.
+
+### Lo que no funciona, para que no lo intentes
+
+Bajar el ritmo de asignación **no** baja el RSS por sí solo. Lo medimos: una reducción del 40 %
+en octetos asignados dejó el pico igual, 203 MB contra 194. G1 decide crecer por sus propias
+heurísticas, y un 40 % menos no le hizo cambiar de opinión. Reducir asignación es bueno por otros
+motivos —menos pausas, menos presión— pero para el RSS el que manda es el tope.
+
 ## Cómo llegar
 
 En orden, porque cada paso informa al siguiente. Tachado lo que ya está:

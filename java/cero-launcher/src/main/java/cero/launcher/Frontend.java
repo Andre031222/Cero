@@ -117,7 +117,7 @@ final class Frontend {
                 Dos servidores a la vez. El backend en el 8080:
 
                 ```bash
-                cd backend && mvn -q package && java -jar target/%s.jar
+                cd backend && mvn -q package && java -Xmx64m -jar target/%s.jar
                 ```
 
                 Y el frontend en el suyo, como te pida la herramienta que uses. El backend ya
@@ -132,7 +132,7 @@ final class Frontend {
                 ```bash
                 cd frontend && npm run build && cp -r dist/* ../backend/src/main/resources/front/
                 cd ../backend && mvn -q package
-                java -jar target/%s.jar
+                java -Xmx64m -jar target/%s.jar
                 ```
                 """.formatted(p.nombre(), p.artefacto(), p.artefacto());
     }
