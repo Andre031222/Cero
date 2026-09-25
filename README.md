@@ -52,45 +52,45 @@ De ahí las dos decisiones que definen el proyecto:
 
 ## Rendimiento
 
-*Nueve frameworks, contenedores idénticos, 135 mediciones sin un solo error ni una sola respuesta
-no-2xx. **Corrida del 24 de septiembre de 2026 sobre Cero 0.7.0.**
+*Ocho frameworks, contenedores idénticos, 120 mediciones sin un solo error ni una sola respuesta
+no-2xx. **Corrida del 25 de septiembre de 2026 sobre Cero 0.7.0**, en Linux sin virtualizar: 16
+núcleos, el contenedor y el generador de carga en núcleos distintos, gobernador en `performance`,
+cero suspensiones.
 [Cómo se rehace](benchmarks/results/LEEME.md) · [tabla completa](benchmarks/results/RESULTS-docker.md).*
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/imagenes/banco.png">
-  <img alt="Cero frente a ocho frameworks JVM: arranque, memoria y peticiones por segundo" src="docs/imagenes/banco-claro.png">
+  <img alt="Cero frente a siete frameworks JVM: arranque, memoria y peticiones por segundo" src="docs/imagenes/banco-claro.png">
 </picture>
 
 | Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
 |---|---|---|---|---|---|---|
-| **Cero** | **87 ms** | 112,2 MB | 332,1 MB | 23 840 | 25 470 | 24 330 |
-| Jooby | 383 ms | 114,6 MB | 137,0 MB | 24 306 | 24 512 | 23 555 |
-| Javalin | 457 ms | 115,2 MB | 198,2 MB | 24 026 | 22 749 | 24 048 |
-| Vert.x | 505 ms | 119,6 MB | **104,2 MB** | 24 728 | 24 949 | 24 473 |
-| Helidon | 653 ms | 112,4 MB | 115,4 MB | 24 599 | 24 966 | 23 545 |
-| Quarkus | 695 ms | 123,2 MB | 152,7 MB | 25 327 | 24 981 | 24 297 |
-| Micronaut | 907 ms | 120,7 MB | 134,6 MB | 23 275 | 23 630 | 20 646 |
-| JxMVC | 979 ms | **110,2 MB** | 237,1 MB | 22 020 | 23 550 | 21 310 |
-| Spring Boot | 1 551 ms | 127,3 MB | 229,2 MB | 22 353 | 23 238 | 21 534 |
+| **Cero** | **155 ms** | 323,2 MB | 307,9 MB | 93 577 | 94 634 | 86 690 |
+| Jooby | 443 ms | 310,8 MB | **73,4 MB** | 94 112 | 93 281 | 84 429 |
+| Vert.x | 481 ms | 316,3 MB | 79,5 MB | **99 241** | **98 589** | **88 368** |
+| Javalin | 518 ms | 311,4 MB | 117,4 MB | 89 193 | 88 773 | 68 686 |
+| Helidon | 583 ms | **308,4 MB** | 83,3 MB | 90 078 | 92 693 | 79 402 |
+| Quarkus | 711 ms | 321,0 MB | 104,6 MB | 93 409 | 91 823 | 65 069 |
+| Micronaut | 1 102 ms | 317,6 MB | 104,7 MB | 76 941 | 76 465 | 64 751 |
+| Spring Boot | 2 446 ms | 325,0 MB | 176,5 MB | 60 903 | 64 133 | 49 870 |
 
-**Donde Cero gana, gana de calle.** Arranca en 87 ms, **4,4× más rápido que el segundo** y 17,8×
-más rápido que Spring Boot. Esa distancia no la explica ningún margen de error.
+**En arranque no hay discusión.** 155 ms, **2,9× por debajo del segundo** y 15,8× por debajo de
+Spring Boot.
 
-**Donde no gana, lo decimos.** En memoria Cero es **el peor de los nueve**: 332 MB frente a los
-104 de Vert.x. No es una fuga —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico un 4 %
-más rápido en 176 MB—, es que asigna más por petición que los demás y llena el montón que se le
-da. Es lo siguiente que hay que arreglar, y está medido, no estimado.
+**En peticiones por segundo, Cero está arriba pero no gana.** Vert.x lo supera de forma medible:
+98 589 contra 94 634 en `/json`, y los intervalos de las cinco repeticiones no se solapan
+—Cero entre 93 095 y 95 777, Vert.x entre 97 913 y 99 828—. Con Jooby y Helidon sí hay empate:
+las diferencias caben dentro de la variación de cada uno.
 
-**Y donde no hay diferencia, tampoco la inventamos.** En peticiones por segundo los seis de
-arriba están empatados: las distancias entre ellos rondan el 2 %, mientras el abanico de cada uno
-entre sus propias cinco repeticiones va del 2,2 % al 12,5 %. Con esta medición, **decir que uno
-sirve más rápido que otro sería ruido**. Lo único que se separa es la cola: Micronaut, JxMVC y
-Spring Boot en `/db`.
+**En memoria Cero es el peor**, y por mucho: 307,9 MB frente a los 73,4 de Jooby. No es una fuga
+—el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico algo más rápido en 176 MB—, es que
+asigna más por petición y llena el montón que se le da. Es lo siguiente que hay que arreglar.
 
 > [!WARNING]
-> **Se midió en Docker Desktop.** Los valores **relativos** son justos, porque las condiciones
-> fueron idénticas para los nueve; los **absolutos** hay que repetirlos en Linux sin virtualizar
-> antes de citarlos en ningún sitio.
+> **JxMVC no se midió:** su imagen necesita un jar que no se versiona, por ser de otro autor.
+> Y aunque esta corrida es bare-metal, el generador de carga sigue compartiendo máquina con el
+> servidor: ni uno ni otro saturan su CPU, así que los rps son una **cota inferior** limitada por
+> el camino de red del contenedor, idéntico para todos.
 
 ## Instalar
 
