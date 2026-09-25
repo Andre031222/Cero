@@ -59,7 +59,11 @@ cpp/build/
 # medida contra la que se compara la arquitectura nueva.
 
 # === .NET / C# ===
+# `bin/` sin anclar también se traga `rust/cero-http/src/bin/`, que es código fuente y no
+# resultado de compilar: en Rust `src/bin/` es donde viven los ejecutables del crate. Se
+# ignoraba el servidor del banco de conformidad y la aplicación de ejemplo.
 bin/
+!rust/*/src/bin/
 obj/
 .vs/
 *.user
