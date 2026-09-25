@@ -46,14 +46,13 @@ fn main() -> std::io::Result<()> {
             Respuesta::texto(&format!("hola, {}", c.variable("nombre").unwrap_or("mundo")))
         })
         .accion("nota", |c| {
-            // RUT-014 y RUT-015: convertida, y si no convierte es 400 y no 500.
-            match c.variable_como::<u32>("id") {
-                Ok(id) => Respuesta::json(Json::objeto(vec![
-                    ("id", (id as i64).into()),
-                    ("titulo", format!("nota {id}").into()),
-                ])),
-                Err(r) => r,
-            }
+            // RUT-014 y RUT-015: convertida, y si no convierte es 400 y no 500. El `?` lo dice
+            // todo: una acción que puede fallar lo declara devolviendo un `Result`.
+            let id = c.variable_como::<u32>("id")?;
+            Ok(Respuesta::json(Json::objeto(vec![
+                ("id", (id as i64).into()),
+                ("titulo", format!("nota {id}").into()),
+            ])))
         })
         .accion("entrar", |c| {
             // Solo esto crea una sesión: leer nunca la crea (SES-001).

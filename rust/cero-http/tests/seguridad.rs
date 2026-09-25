@@ -209,3 +209,100 @@ fn seg_026_los_nombres_de_archivo() {
     // El intento real: colar una cookie por el nombre de archivo.
     assert!(!sanear_nombre("a\"; Set-Cookie: x=y").contains(';'), "SEG-026");
 }
+
+// ── El token CSRF, de punta a punta ─────────────────────────────────────────
+
+/// `SEG-017`: la respuesta que exige token tiene que poder emitir uno, y ese token tiene que estar
+/// atado a una sesión. Sin lo primero una ruta protegida es inusable —el cliente no tiene de dónde
+/// sacar el token—; sin lo segundo no protege de nada, porque el sitio atacante pediría el suyo.
+///
+/// Emitirlo lo pide la acción y no lo pone el framework en toda respuesta: hacerlo siempre
+/// obligaría a abrir sesión a todo el que pase, incluido el rastreador que nunca va a mandar un
+/// POST. Es `SES-001` otra vez.
+#[test]
+fn seg_017_el_token_se_emite_y_lo_ata_una_sesion() {
+    use cero_http::{Contexto, Peticion, Respuesta, Router, Servidor};
+
+    let router = Router::nuevo()
+        .ruta("GET", "/formulario", "formulario").unwrap()
+        .ruta("POST", "/guardar", "guardar").unwrap();
+    let s = Servidor::nuevo(router)
+        .csrf(&[])
+        .accion("formulario", |c: &Contexto| {
+            Respuesta::texto(&c.token_csrf().unwrap_or_default())
+        })
+        .accion("guardar", |_: &Contexto| Respuesta::texto("guardado"));
+
+    let pedir = |metodo: &str, destino: &str, cabeceras: Vec<(&str, &str)>| {
+        let mut p = Peticion {
+            metodo: metodo.into(),
+            destino: destino.into(),
+            version: "HTTP/1.1".into(),
+            cabeceras: [("host".to_string(), "x".to_string())].into_iter().collect(),
+            cuerpo: Vec::new(),
+        };
+        for (n, v) in cabeceras {
+            p.cabeceras.insert(n.into(), v.into());
+        }
+        s.responder(&p, "x")
+    };
+
+    let formulario = pedir("GET", "/formulario", vec![]);
+    let token = String::from_utf8_lossy(&formulario.cuerpo).into_owned();
+    assert!(token.len() >= 40, "SEG-017: hay token, y no es simbólico");
+
+    let cookie = formulario.extra.iter().find(|(k, _)| k == "Set-Cookie")
+        .map(|(_, v)| v.clone()).expect("SEG-017: y una sesión que lo ate");
+    let id = cookie.split(';').next().unwrap().to_string();
+
+    // SEG-016: el mismo token sin la sesión no vale, que es lo que hace que atarlo sirva.
+    assert_eq!(pedir("POST", "/guardar", vec![("x-csrf-token", &token)]).estado, 403, "SEG-016");
+    assert_eq!(pedir("POST", "/guardar", vec![("cookie", &id)]).estado, 403, "SEG-016");
+    // SEG-018: los dos juntos pasan.
+    let bien = pedir("POST", "/guardar", vec![("cookie", &id), ("x-csrf-token", &token)]);
+    assert_eq!(bien.estado, 200, "SEG-018");
+}
+
+// ── Validación · SEG-027 y SEG-028 ──────────────────────────────────────────
+
+/// `SEG-027`: validar no es normalizar. Si la validación devolviera algo retocado —un texto
+/// recortado, un número redondeado—, lo que llega a la acción ya no sería lo que mandó el cliente,
+/// y eso es una transformación que nadie pidió escondida detrás de una comprobación.
+#[test]
+fn seg_027_un_cuerpo_valido_llega_sin_alterar() {
+    use cero_http::{json, validar, Regla};
+
+    let crudo = r#"{"nombre":"  Ana  ","edad":30,"extra":[1,2]}"#;
+    let cuerpo = json::leer(crudo).unwrap();
+    let pasado = validar(cuerpo, &[
+        ("nombre", Regla::Texto { minimo: 1, maximo: 50 }),
+        ("edad", Regla::Entero { minimo: 0, maximo: 120 }),
+    ]).expect("SEG-027: es válido");
+
+    assert_eq!(pasado.get("nombre").and_then(json::Json::texto), Some("  Ana  "),
+               "SEG-027: ni los espacios se tocan");
+    assert!(pasado.get("extra").is_some(), "SEG-027: y lo que no se validó sigue ahí");
+}
+
+/// `SEG-028`: 422 y no 400 —el cuerpo se entendió, lo que falla es su contenido—, y con el campo y
+/// el motivo. Un 422 que solo dice «inválido» obliga a quien llama a adivinar, y lo que hace en la
+/// práctica es reintentar con lo mismo.
+#[test]
+fn seg_028_un_cuerpo_invalido_es_422_y_dice_cual() {
+    use cero_http::{json, validar, Regla};
+
+    let cuerpo = json::leer(r#"{"nombre":"","edad":300}"#).unwrap();
+    let fallo = validar(cuerpo, &[
+        ("nombre", Regla::Obligatorio),
+        ("edad", Regla::Entero { minimo: 0, maximo: 120 }),
+        ("apodo", Regla::Obligatorio),
+    ]).unwrap_err();
+
+    assert_eq!(fallo.estado, 422, "SEG-028: no 400");
+    let campos = fallo.detalle.as_ref().and_then(|d| d.get("campos")).expect("SEG-028");
+    assert_eq!(campos.get("nombre").and_then(json::Json::texto), Some("es obligatorio"),
+               "SEG-028: presente y vacío es lo mismo que ausente");
+    assert_eq!(campos.get("apodo").and_then(json::Json::texto), Some("es obligatorio"));
+    assert!(campos.get("edad").and_then(json::Json::texto).unwrap().contains("120"),
+            "SEG-028: y por qué, no solo cuál");
+}

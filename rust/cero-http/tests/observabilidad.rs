@@ -168,3 +168,20 @@ fn obs_022_se_registran_tambien_los_errores() {
         assert!(l.contains(&estado.to_string()), "OBS-022: {estado}");
     }
 }
+
+/// `OBS-010`: un error se registra con su **tipo** y su mensaje. El tipo importa tanto como el
+/// mensaje y se olvida más: dos errores distintos pueden decir «no such file» y el que hay que
+/// arreglar es otro según de dónde venga.
+#[test]
+fn obs_010_un_error_se_registra_con_su_tipo() {
+    use cero_http::Fallo;
+
+    let log = Log::nuevo("cero", Nivel::Info);
+    log.con_error("la ruta {} no pudo responder", &["/notas"],
+                  &Fallo::interno("la conexión con la base se cayó"));
+    let linea = log.lineas().first().cloned().expect("OBS-010");
+
+    assert!(linea.contains("/notas"), "OBS-010: y sigue interpolando: {linea}");
+    assert!(linea.contains("Fallo"), "OBS-010: el tipo: {linea}");
+    assert!(linea.contains("la conexión con la base se cayó"), "OBS-010: y el mensaje: {linea}");
+}

@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 /// Java tiene `SecureRandom` en la plataforma. `std` de Rust no trae generador criptográfico, y
 /// traerlo sería una dependencia. Se lee de la fuente del sistema operativo, que es lo que hace
 /// `SecureRandom` por debajo: el requisito habla de la propiedad, no del nombre de la clase.
-fn identificador() -> std::io::Result<String> {
+pub(crate) fn identificador() -> std::io::Result<String> {
     use std::io::Read;
     let mut crudo = [0u8; 32];
     std::fs::File::open("/dev/urandom")?.read_exact(&mut crudo)?;
