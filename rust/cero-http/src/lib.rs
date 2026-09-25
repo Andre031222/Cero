@@ -5,6 +5,7 @@
 
 pub mod contexto;
 pub mod estaticos;
+pub mod http2;
 pub mod json;
 pub mod observabilidad;
 pub mod peticion;
