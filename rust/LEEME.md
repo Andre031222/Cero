@@ -15,8 +15,45 @@ prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad
 | 3 | Seguridad transversal | 28 de 28 requisitos · 18 pruebas |
 | 4 | Observabilidad | 23 de 23 requisitos · 16 pruebas |
 
-**101 de los 163 requisitos del contrato**, con 47 pruebas que citan cada una el suyo. Falta
-HTTP/2, que son los 39 restantes.
+| 5 | El framework montado | pipeline completo · aplicación de ejemplo |
+
+**101 de los 163 requisitos del contrato**, con 47 pruebas que citan cada una el suyo, más los
+23 vectores del banco. Falta HTTP/2, que son los 39 restantes.
+
+## Usarlo
+
+```bash
+cargo run --release --bin ejemplo 8080   # una aplicación de punta a punta
+cargo run --release --bin conforme 8777  # y el servidor del banco de conformidad
+```
+
+El ejemplo levanta el pipeline entero: cabeceras de seguridad en toda respuesta —incluidos los
+404—, CORS, límite de peticiones, CSRF, sesiones con cookie, salud en `/cero/vivo` y
+`/cero/listo`, métricas por patrón de ruta y log de acceso.
+
+## Dos fallos que solo aparecieron al montarlo entero
+
+Los módulos pasaban sus 47 pruebas por separado. Conectarlos destapó dos cosas que ninguna
+prueba de módulo podía ver, que es justo el argumento de `spec/ruteo.md` sobre contar caminos de
+salida en vez de líneas.
+
+**El CSRF tapaba el 405.** Corría antes del ruteo, así que un verbo no admitido recibía 403 en
+vez de 405: la respuesta atribuía el fallo a la causa equivocada, que es lo que `RUT-009` prohíbe
+al exigir distinguir 404 de 405. Ahora el ruteo va primero y el CSRF después, ya sabiendo que la
+petición iba a alguna parte.
+
+**La sesión creada dentro de la acción no emitía su cookie.** `abrir_sesion()` la creaba, pero el
+punto que emite la cookie solo miraba la sesión que había llegado *con* la petición. El cliente
+abría sesión y no recibía nada. Es la familia de `SES-010` otra vez —el estado y el sitio que lo
+escribe, separados— con otra cara.
+
+## Una nota sobre el contrato, no sobre el código
+
+El vector de `OPTIONS *` fija **200**, y al montar el pipeline se devolvió 204, que también es
+una respuesta sin cuerpo razonable. Se cumple el contrato, porque es lo que manda mientras haya
+discrepancia, pero conviene comprobar si el RFC **exige** 200 o solo lo permite. Un contrato que
+fija una elección que la norma deja abierta está especificando de más, y eso ata a las
+implementaciones futuras sin motivo.
 
 ```bash
 cd rust && cargo test          # las pruebas de la implementación
