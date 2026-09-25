@@ -68,9 +68,25 @@ que sí:
 
 ```text
 spec/                 el contrato — manda a partir de la fase 3
+spec/banco/           el juez: bytes sobre un socket, sin lenguaje
 java/                 implementación de referencia hasta entonces
+rust/                 segunda implementación — hito 1
 benchmarks/           mide, no especifica
 ```
+
+## El banco ya no es una idea
+
+[`spec/banco/`](banco/) corre los 23 vectores de HTTP/1.1 contra cualquier servidor que escuche,
+en el lenguaje que sea. El 25 de septiembre de 2026 pasaron **las dos** implementaciones:
+
+| Implementación | Vectores |
+|---|---|
+| `java/` | 23 de 23 |
+| `rust/` | 23 de 23 |
+
+Rust pasó 22 a la primera. El que falló —`Content-Length` y `Transfer-Encoding` juntos, RFC 9112
+§6.3— es una precondición de contrabando de peticiones, y lo encontró el contrato el mismo día en
+que la implementación nació. Eso es exactamente para lo que existe este directorio.
 
 Mientras este directorio siga en borrador, **si el contrato y `java/` no coinciden, gana `java/`**
 y el contrato está mal escrito. Cuando se invierta esa regla, se dirá aquí y en el LEEME el mismo

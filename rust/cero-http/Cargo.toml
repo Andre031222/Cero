@@ -1,0 +1,12 @@
+[package]
+name = "cero-http"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Servidor HTTP de Cero en Rust. Sin dependencias: solo la biblioteca estándar."
+
+# Vacío a propósito y no por falta de tiempo: en Java «cero dependencias» significa solo el JDK,
+# y aquí tiene que significar solo `std`. La primera consecuencia se nota enseguida y está
+# contada en LEEME.md.
+[dependencies]
