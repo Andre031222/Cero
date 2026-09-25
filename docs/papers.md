@@ -9,7 +9,7 @@ De Cero salen **tres artículos**, y salen en orden porque cada uno depende del 
 La tesis no son los números, es el **procedimiento**. Una aplicación web en Java parece atada al
 contenedor de servlets y en realidad lo está solo a cinco interfaces (`HttpServletRequest`,
 `HttpServletResponse`, `HttpSession`, `Cookie`, `Part`); escribirlas en casa deja el arranque en
-106 ms y la cuenta de dependencias en cero.
+**87 ms** —4,4× por debajo del segundo de nueve contendientes— y la cuenta de dependencias en cero.
 
 Lo publicable es cómo se verificó que quitar el contenedor no perdía nada por el camino:
 
@@ -22,13 +22,31 @@ Lo publicable es cómo se verificó que quitar el contenedor no perdía nada por
 - **Desplegar de verdad.** Solo detrás de un proxy aparecieron otros dos: la cookie de sesión sin
   `Secure` porque la aplicación no sabía que el TLS lo terminaba nginx, y un guion de despliegue
   que al reescribir el vhost borraba el bloque HTTPS de certbot.
+- **Buscar la salida sin recorrer, no la línea sin cubrir.** Los dos fallos más graves del
+  proyecto son el mismo patrón: la cookie de sesión no viajaba en **ninguna** respuesta HTTP/2, y
+  la validación de `content-length` desaparecía si la respuesta le ganaba la carrera al cuerpo.
+  Ninguna de las 432 pruebas del módulo los veía porque todas entraban por el mismo camino. La
+  cobertura de líneas no distingue eso; contar caminos de salida sí.
+- **Medir con un método que se pueda invalidar.** La columna de memoria comparaba, sin que nadie
+  lo notara durante dos meses, lo que el recolector decidía tomar y no lo que el framework
+  necesita: sin `-Xmx`, quien asigna más llena su montón y quien asigna poco no. Con el tope
+  igualado, Cero pasa de ser **el mejor** de la tabla a ser **el peor**. Un banco que puede
+  invertir su conclusión al fijar una variable es un banco que hay que publicar con la variable
+  fijada y dicha.
 
 Eso es un procedimiento reproducible para migrar frameworks, no una anécdota.
 
 **Lo único que bloquea:** los números están medidos en Docker Desktop sobre macOS. La comparación
-entre contendientes es justa —condiciones idénticas, misma corrida— pero **las cifras absolutas no
-son citables**. Hay que repetir la corrida en Linux sin virtualizar, con aislamiento de núcleos. Es
-una tarde de trabajo.
+entre contendientes es justa —condiciones idénticas, misma corrida, nueve frameworks, 135
+mediciones sin un error— pero **las cifras absolutas no son citables**. Hay que repetir la corrida
+en Linux sin virtualizar, con aislamiento de núcleos. Es una tarde de trabajo.
+
+Y hay algo que la corrida en bare-metal tiene que resolver además de los absolutos: con este
+montaje —cliente de carga en el mismo equipo que el servidor— **las peticiones por segundo no
+distinguen**. Los seis primeros caen dentro del 2 % unos de otros mientras el abanico de cada uno
+entre sus propias cinco repeticiones llega al 12,5 %. O el cliente deja de ser el cuello de
+botella, o esa columna no sostiene ninguna afirmación y el artículo se apoya solo en arranque,
+memoria y tamaño.
 
 ## 2 · El contrato poliglota
 
