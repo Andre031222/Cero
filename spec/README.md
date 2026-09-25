@@ -44,18 +44,19 @@ parte es detalle de la implementación en Java.
 | Ruteo y despacho | 5 | [ruteo.md](ruteo.md) · **37 requisitos** |
 | Petición y respuesta | 9 | por escribir |
 | Sesiones y cookies | 4 | [sesiones.md](sesiones.md) · **13 requisitos** |
-| Seguridad transversal | 8 | por escribir |
+| Seguridad transversal | 8 | [seguridad.md](seguridad.md) · **28 requisitos** |
 | Plantillas | 7 | fuera del núcleo: contrato aparte |
 | Datos | 9 | fuera del núcleo: contrato aparte |
-| Observabilidad | 4 | por escribir |
+| Observabilidad | 4 | [observabilidad.md](observabilidad.md) · **23 requisitos** |
 
 ## Lo que este borrador **no** dice todavía
 
 Conviene que conste, porque un contrato incompleto que no admite estarlo hace más daño que uno
 que sí:
 
-- **Nada de observabilidad, seguridad transversal ni forma de petición y respuesta.** Son los
-  bloques que siguen, y hasta que estén escritos la referencia de esas áreas es `java/`.
+- **Nada de la forma de la petición y la respuesta, ni de autenticación, ni de trazado
+  distribuido.** Son los bloques que siguen, y hasta que estén escritos la referencia de esas
+  áreas es `java/`.
 - **Nada de cómo se registran las rutas ni cómo se declaran las dependencias.** El bloque de
   ruteo especifica qué resuelve el router, no cómo se le dice qué tiene que resolver: eso es
   donde Java mete reflexión y donde Rust no podrá, así que es decisión de cada implementación.
