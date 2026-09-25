@@ -47,6 +47,55 @@ punto que emite la cookie solo miraba la sesión que había llegado *con* la pet
 abría sesión y no recibía nada. Es la familia de `SES-010` otra vez —el estado y el sitio que lo
 escribe, separados— con otra cara.
 
+## TLS y datos: las dos preguntas difíciles, respondidas
+
+Son los dos sitios donde «cero dependencias» parecía imposible en Rust. Una tenía mejor respuesta
+de la que parecía y la otra no tiene ninguna buena, y conviene decir cuál es cuál.
+
+### Datos: no era un problema, y creerlo era un error de lectura
+
+`cero-data` en Java **no trae driver**. Su `pom.xml` declara PostgreSQL solo en ámbito de prueba,
+y el LEEME del proyecto ya lo dice: «el driver JDBC lo pone la aplicación, y es la única
+excepción». Lo que Java hereda de la plataforma es la **interfaz** —`java.sql`—, no el motor.
+
+`std` de Rust no trae esa interfaz, así que aquí se define. El reparto queda idéntico: el
+framework pone el contrato, la aplicación pone el driver. `cero-data` no declara ninguna
+dependencia de ejecución y **se prueba entero sin base de datos**, con una implementación en
+memoria; Java usa H2 para lo mismo, que sí es una dependencia de prueba.
+
+Definir la interfaz en vez de heredarla deja además dos cosas mejor que en Java:
+
+- **No existe un método que acepte SQL ya interpolado.** En Java es una convención que hay que
+  respetar; aquí habría que escribir la interpolación a mano para saltársela.
+- **Una transacción no puede quedarse a medias por olvido.** En Java es un `try`/`catch` que hay
+  que escribir bien cada vez; aquí la única forma de tener una transacción es pasar por la función
+  que la deshace si el cuerpo falla.
+
+### TLS: aquí no hay buena respuesta, y escribirlo nosotros sería la peor
+
+TLS 1.3 pide aritmética de curva elíptica, AEAD, HKDF, parseo de X.509 y validación de cadenas de
+certificados. Son decenas de miles de líneas de criptografía donde un fallo sutil es una
+vulnerabilidad remota y silenciosa, y donde buena parte de la corrección —resistencia a canales
+laterales— **no se puede comprobar desde fuera**.
+
+Ese último punto es el que decide, y no es el esfuerzo. Este proyecto sostiene sus afirmaciones
+con evidencia: 23 vectores de conformidad, h2spec, un banco reproducible. Para una pila TLS
+escrita a mano **no tendríamos con qué**, y publicarla sería exactamente la clase de afirmación
+sin medir que el resto del proyecto se niega a hacer.
+
+Java tampoco escribió la suya: usa la del JDK, mantenida por un equipo con proceso de CVE.
+
+Queda una salida honesta y es la que ya usa el despliegue real: **terminar TLS fuera del
+proceso**. El sitio en producción corre detrás de nginx hoy, con la implementación en Java que
+sí trae TLS. El requisito del contrato que depende de esto —que la cookie sea `Secure` cuando y
+solo cuando la conexión es segura— se cumple sabiendo si la conexión llegó cifrada, y eso se
+resuelve con confianza en proxy, que Cero ya tiene en Java.
+
+**Y esto es un resultado, no una excusa.** Con la concurrencia se pudo cambiar de modelo y cumplir
+igual; aquí no. Hay partes del contrato que un lenguaje no puede cumplir sin dependencias, y no
+por una decisión de diseño sino porque su biblioteca estándar es más pequeña. Un contrato
+poliglota debería decir qué requisitos son de esa clase.
+
 ## Una nota sobre el contrato, no sobre el código
 
 El vector de `OPTIONS *` fija **200**, y al montar el pipeline se devolvió 204, que también es

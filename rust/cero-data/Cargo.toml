@@ -1,0 +1,12 @@
+[package]
+name = "cero-data"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Acceso a datos de Cero en Rust. Define el contrato; el driver lo pone la aplicación."
+
+# Igual que `cero-data` en Java: el módulo no declara ninguna dependencia de ejecución. Java
+# hereda la interfaz del JDK —`java.sql`— y aquí se define, porque `std` no trae ninguna. El
+# driver lo pone la aplicación, y esa es la misma y única excepción que ya declara el LEEME.
+[dependencies]
