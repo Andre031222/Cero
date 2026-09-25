@@ -10,9 +10,59 @@ auditoría del portal FINESI, y de ahí sale esta regla.
 
 ---
 
-## 0.7.0 · en desarrollo
+## 0.8.0 · 25 de septiembre de 2026
 
-Sin etiquetar todavía. Lo de abajo está en `main` y **no** en la 0.6.0 publicada.
+### Un cuerpo que llegaba tras la respuesta dejaba de validarse
+
+Terminar de responder cierra **nuestra** mitad de un flujo HTTP/2, no el flujo: el RFC 9113 §5.1
+lo deja en *half-closed (local)* y el cliente puede seguir mandando cuerpo hasta que ponga
+`END_STREAM`. El servidor lo olvidaba en cuanto el handler terminaba, así que una trama `DATA`
+posterior no encontraba flujo y **la comprobación de `content-length` dejaba de existir**.
+
+Un desajuste entre lo declarado y lo que llega es la puerta del contrabando de peticiones cuando
+hay un proxy delante: dos intermediarios leen dos peticiones distintas de los mismos octetos.
+
+Se colaba por intermitente. Solo fallaba cuando la respuesta le ganaba la carrera a la petición:
+h2spec caía una de cada cinco veces y las 432 comprobaciones del módulo pasaban siempre, porque
+ninguna esperaba a recibir la respuesta antes de mandar el cuerpo. No fue un descuido al
+escribir: fue un camino de salida entero sin ejercitar, igual que la cookie de sesión de la
+0.7.0.
+
+Ahora el flujo se retiene hasta el `END_STREAM` del cliente, con tres cuidados que la retención
+obliga a tomar: los respondidos no cuentan para el tope de concurrencia, se podan si se acumulan
+—esperar un `END_STREAM` que quizá no llegue es memoria que decide el cliente— y se sueltan si la
+conexión cae.
+
+**Si sirves HTTP/2 detrás de un proxy, actualiza.**
+
+### 40 % menos asignación en el parseo de cabeceras
+
+Perfilado con Flight Recorder: el 80 % de lo que se asignaba bajo carga salía del parseo de la
+petición, y dentro de él, de las cabeceras. Por cada línea se creaban cuatro cadenas —la línea, el
+nombre, el valor y el recorte del valor—; con once cabeceras de un navegador real son cuarenta y
+cuatro por petición.
+
+El nombre se busca ahora en una tabla de las veintinueve habituales: si casa, se devuelve la
+constante y no se asigna nada. El valor pasa de `substring().trim()` a un solo recorte con los
+bordes calculados antes. Medido: 234,8 MB asignados → 141,0 MB.
+
+### `cero new` recomienda un tope de montón
+
+La orden que se enseña al crear un proyecto es la que se copia para siempre, así que ahora lleva
+`-Xmx64m` y explica por qué en la misma salida. Sin tope, la JVM toma el 25 % de la memoria de la
+máquina y no la devuelve mientras haya carga.
+
+Medido: con `-Xmx64m` el RSS baja de 194 a 131 MB y el rendimiento no se mueve. La guía de
+producción gana una sección con las cifras, con el desglose de memoria nativa —las estructuras de
+G1 cuestan 52,9 MB, casi tanto como el montón que administran— y con **lo que no funciona**:
+reducir la asignación un 40 % dejó el pico de RSS igual, porque quien decide crecer es el
+recolector y el tope es lo que lo limita.
+
+---
+
+## 0.7.0 · 24 de septiembre de 2026
+
+Publicada en Maven Central: los siete módulos, firmados.
 
 ### La cookie de sesión no salía por HTTP/2
 

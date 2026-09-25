@@ -5,7 +5,7 @@
     <parent>
         <groupId>dev.ginit.cero</groupId>
         <artifactId>cero-parent</artifactId>
-        <version>0.7.0</version>
+        <version>0.8.0</version>
     </parent>
 
     <artifactId>cero-test</artifactId>
@@ -17,14 +17,14 @@
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-core</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
         </dependency>
 
         <!-- solo lo necesita TestDatabase: una aplicación sin base de datos no arrastra cero-data -->
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-data</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
             <optional>true</optional>
         </dependency>
 

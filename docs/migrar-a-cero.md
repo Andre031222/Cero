@@ -191,7 +191,7 @@ desde el entorno, porque la traducción pasa el nombre a minúsculas y deja de c
 java -Dcero.server.behindProxy=true -jar mi-app.jar
 ```
 
-Desde la 0.7.0 el arranque avisa de las variables `CERO_*` que no han acabado aplicándose a
+Desde la 0.8.0 el arranque avisa de las variables `CERO_*` que no han acabado aplicándose a
 ninguna clave, y dice cuál era la correcta cuando la diferencia es solo de mayúsculas.
 
 ### La cookie de sesión

@@ -5,7 +5,7 @@
     <parent>
         <groupId>dev.ginit.cero</groupId>
         <artifactId>cero-parent</artifactId>
-        <version>0.7.0</version>
+        <version>0.8.0</version>
     </parent>
 
     <artifactId>ejemplo</artifactId>
@@ -17,22 +17,22 @@
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-core</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
         </dependency>
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-view</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
         </dependency>
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-data</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
         </dependency>
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-test</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>

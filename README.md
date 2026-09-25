@@ -55,7 +55,7 @@ De ahí las dos decisiones que definen el proyecto:
 ## Rendimiento
 
 *Ocho frameworks, contenedores idénticos, 120 mediciones sin un solo error ni una sola respuesta
-no-2xx. **Corrida del 25 de septiembre de 2026 sobre Cero 0.7.0**, en Linux sin virtualizar: 16
+no-2xx. **Corrida del 25 de septiembre de 2026 sobre Cero 0.8.0**, en Linux sin virtualizar: 16
 núcleos, el contenedor y el generador de carga en núcleos distintos, gobernador en `performance`,
 cero suspensiones.
 [Cómo se rehace](benchmarks/results/LEEME.md) · [tabla completa](benchmarks/results/RESULTS-docker.md).*
@@ -104,7 +104,7 @@ Está en Maven Central. Tres líneas y ya está:
 <dependency>
     <groupId>dev.ginit.cero</groupId>
     <artifactId>cero-core</artifactId>   <!-- arrastra cero-http -->
-    <version>0.7.0</version>
+    <version>0.8.0</version>
 </dependency>
 ```
 
@@ -205,7 +205,7 @@ declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo
 
 ## Estado
 
-**Versión 0.7.0**, publicada en Maven Central. El framework está completo en Java y el sitio de
+**Versión 0.8.0**, publicada en Maven Central. El framework está completo en Java y el sitio de
 este proyecto corre sobre él.
 
 Lo que cerró la fase 2 no fue una lista de casillas: fue que el framework tuvo su **primer
@@ -213,7 +213,7 @@ consumidor externo** y con él la primera auditoría de alguien que no lo escrib
 leyendo el código, dos explotables desde fuera sin credenciales. Los once están cerrados con
 prueba propia.
 
-La 0.7.0 salió de una segunda revisión externa, y el hallazgo mayor da la medida de para qué
+La 0.8.0 salió de una segunda revisión externa, y el hallazgo mayor da la medida de para qué
 sirven: **la cookie de sesión no viajaba en ninguna respuesta HTTP/2**. Dos implementaciones
 hermanas de la misma interfaz y solo una preguntaba por la cookie pendiente, así que sobre h2
 ningún cliente podía iniciar sesión — y sin sesión no hay token CSRF, con lo que toda escritura
