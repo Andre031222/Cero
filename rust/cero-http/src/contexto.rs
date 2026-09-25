@@ -3,6 +3,7 @@
 //! El contrato no dice cómo se llama nada de esto —`spec/ruteo.md` lo deja explícitamente fuera—,
 //! solo qué tiene que estar disponible y qué forma toma la respuesta.
 
+use crate::json::{self, Json};
 use crate::peticion::Peticion;
 use crate::sesion::Sesion;
 use std::collections::HashMap;
@@ -26,9 +27,13 @@ impl Respuesta {
         Respuesta::con(200, "text/plain; charset=utf-8", cuerpo.as_bytes().to_vec())
     }
 
-    /// RUT-019: un objeto se serializa a JSON. Sin serializador genérico —eso pide derivar, y
-    /// derivar en Rust pide una caja externa—, así que la acción entrega el JSON ya formado.
-    pub fn json(cuerpo: &str) -> Respuesta {
+    /// RUT-019: un valor se serializa a JSON.
+    pub fn json(v: Json) -> Respuesta {
+        Respuesta::con(200, "application/json; charset=utf-8", v.escribir().into_bytes())
+    }
+
+    /// JSON ya formado, para cuando la aplicación lo tiene en texto.
+    pub fn json_crudo(cuerpo: &str) -> Respuesta {
         Respuesta::con(200, "application/json; charset=utf-8", cuerpo.as_bytes().to_vec())
     }
 
@@ -125,6 +130,22 @@ impl<'p> Contexto<'p> {
         String::from_utf8_lossy(&self.peticion.cuerpo).into_owned()
     }
 
+    /// RUT-017: el cuerpo interpretado como JSON. `Err` es 400: el cliente mandó mal la petición,
+    /// no falló el servidor.
+    pub fn cuerpo_json(&self) -> Result<Json, Respuesta> {
+        json::leer(&self.cuerpo_texto())
+            .map_err(|e| Respuesta::estado(400, &format!("el cuerpo no es JSON válido: {}", e.0)))
+    }
+
+    /// Un campo de un formulario `application/x-www-form-urlencoded`.
+    pub fn campo(&self, nombre: &str) -> Option<String> {
+        pares(&self.cuerpo_texto()).into_iter().find_map(|(k, v)| (k == nombre).then_some(v))
+    }
+
+    pub fn campos(&self) -> Vec<(String, String)> {
+        pares(&self.cuerpo_texto())
+    }
+
     /// La sesión de esta petición, si ya existe. No la crea: `SES-001` dice que leer no puede
     /// crear, porque eso convierte a cualquier rastreador en un generador de sesiones huérfanas.
     pub fn sesion(&self) -> Option<&Arc<Mutex<Sesion>>> {
@@ -151,4 +172,40 @@ impl<'p> Contexto<'p> {
     pub(crate) fn sesion_final(&self) -> Option<Arc<Mutex<Sesion>>> {
         self.abierta.borrow().clone().or_else(|| self.sesion.clone())
     }
+}
+
+
+/// Parte `a=1&b=hola+mundo` y deshace el porcentaje. Un valor mal codificado no aborta la lectura
+/// entera: se conserva tal cual, porque tirar todo el formulario por un campo roto es peor.
+fn pares(cadena: &str) -> Vec<(String, String)> {
+    cadena
+        .split('&')
+        .filter(|p| !p.is_empty())
+        .map(|par| {
+            let (k, v) = par.split_once('=').unwrap_or((par, ""));
+            (desescapar(k), desescapar(v))
+        })
+        .collect()
+}
+
+fn desescapar(s: &str) -> String {
+    let bytes = s.replace('+', " ").into_bytes();
+    let mut salida = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
+            match u8::from_str_radix(hex, 16) {
+                Ok(b) => {
+                    salida.push(b);
+                    i += 3;
+                    continue;
+                }
+                Err(_) => {}
+            }
+        }
+        salida.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&salida).into_owned()
 }

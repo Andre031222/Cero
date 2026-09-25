@@ -154,7 +154,7 @@ impl Servidor {
                 _ => None,
             };
             if let Some(i) = informe {
-                return self.rematar(Respuesta { estado: i.estado, ..Respuesta::json(&i.cuerpo) },
+                return self.rematar(Respuesta { estado: i.estado, ..Respuesta::json_crudo(&i.cuerpo) },
                                     p, &camino, empezo, None);
             }
         }
