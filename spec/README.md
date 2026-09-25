@@ -32,7 +32,7 @@ Tres reglas, para que el documento no se convierta en literatura:
 
 ## Cómo va a crecer
 
-El contrato se extrae del banco que ya corre: **1 835 aserciones en 88 grupos**. Cada grupo es un
+El contrato se extrae del banco que ya corre: **1 764 comprobaciones en 88 grupos**. Cada grupo es un
 candidato a sección del contrato, y cada aserción a requisito numerado. El trabajo pendiente no
 es inventar el contrato — es transcribirlo y decidir, grupo a grupo, qué parte es contrato y qué
 parte es detalle de la implementación en Java.
@@ -41,7 +41,7 @@ parte es detalle de la implementación en Java.
 |---|---|---|
 | Protocolo HTTP/1.1 | 6 | [conformidad.md](conformidad.md) · **empezado** |
 | Protocolo HTTP/2 | 3 | [http2.md](http2.md) · **39 requisitos + h2spec** |
-| Ruteo y despacho | 5 | por escribir |
+| Ruteo y despacho | 5 | [ruteo.md](ruteo.md) · **37 requisitos** |
 | Petición y respuesta | 9 | por escribir |
 | Sesiones y cookies | 4 | [sesiones.md](sesiones.md) · **13 requisitos** |
 | Seguridad transversal | 8 | por escribir |
@@ -54,8 +54,11 @@ parte es detalle de la implementación en Java.
 Conviene que conste, porque un contrato incompleto que no admite estarlo hace más daño que uno
 que sí:
 
-- **Nada de ruteo, despacho ni observabilidad.** Son los bloques que siguen, y hasta que estén
-  escritos la referencia de esas áreas es `java/`.
+- **Nada de observabilidad, seguridad transversal ni forma de petición y respuesta.** Son los
+  bloques que siguen, y hasta que estén escritos la referencia de esas áreas es `java/`.
+- **Nada de cómo se registran las rutas ni cómo se declaran las dependencias.** El bloque de
+  ruteo especifica qué resuelve el router, no cómo se le dice qué tiene que resolver: eso es
+  donde Java mete reflexión y donde Rust no podrá, así que es decisión de cada implementación.
 - **Nada de la API en el lenguaje.** Que en Java se llame `Cero.app()` y en Rust se llame otra
   cosa es correcto. El contrato es el comportamiento, no los nombres.
 - **Nada de rendimiento.** Los números viven en `benchmarks/` y se miden; no se prometen.
