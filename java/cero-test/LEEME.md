@@ -11,7 +11,7 @@ Sin dependencias fuera del JDK.
 <dependency>
     <groupId>dev.ginit.cero</groupId>
     <artifactId>cero-test</artifactId>
-    <version>0.7.0</version>
+    <version>0.8.0</version>
     <scope>test</scope>
 </dependency>
 ```

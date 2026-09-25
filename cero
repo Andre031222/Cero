@@ -21,7 +21,12 @@ AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JAVA_DIR="$AQUI/java"
 MVN=(mvn -B -q)
 
-azul()  { printf '\033[38;5;205m%s\033[0m\n' "$*"; }
+# El azul de la marca (#38bdf8): exacto con truecolor, el 256 más cercano si no.
+case "${COLORTERM:-}" in
+  truecolor|24bit) MARCA='\033[38;2;56;189;248m' ;;
+  *)               MARCA='\033[38;5;75m' ;;
+esac
+azul()  { printf "$MARCA%s\033[0m\n" "$*"; }
 gris()  { printf '\033[38;5;245m%s\033[0m\n' "$*"; }
 malo()  { printf '\033[38;5;167m%s\033[0m\n' "$*" >&2; }
 

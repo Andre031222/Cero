@@ -13,7 +13,11 @@ $JavaDir = Join-Path $Aqui 'java'
 
 $e = [char]27
 $Vivo = $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
-if ($Vivo) { $Laton = "$e[38;5;205m"; $Tenue = "$e[38;5;245m"; $Rojo = "$e[38;5;167m"; $Fin = "$e[0m" }
+if ($Vivo) {
+    # El azul de la marca (#38bdf8). Windows Terminal habla truecolor; la consola vieja no.
+    $Laton = if ($env:WT_SESSION -or $env:COLORTERM -in 'truecolor','24bit') { "$e[38;2;56;189;248m" } else { "$e[38;5;75m" }
+    $Tenue = "$e[38;5;245m"; $Rojo = "$e[38;5;167m"; $Fin = "$e[0m"
+}
 else       { $Laton = ''; $Tenue = ''; $Rojo = ''; $Fin = '' }
 
 function Azul([string] $t) { Write-Host "$Laton$t$Fin" }

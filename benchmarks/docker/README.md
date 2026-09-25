@@ -33,7 +33,7 @@ Salida:
 ## Apps (mismos endpoints: `/plaintext`, `/json` y, con `BENCH_DB=1`, `/db`)
 | Framework | Versión | Runtime |
 |---|---|---|
-| **Cero** | 0.7.0 | servidor propio, un hilo virtual por conexión |
+| **Cero** | 0.8.0 | servidor propio, un hilo virtual por conexión |
 | Spring Boot | 3.3.4 | Tomcat embebido |
 | Quarkus | 3.11.3 (JVM) | fast-jar |
 | Micronaut | 4.10.16 | Netty |
