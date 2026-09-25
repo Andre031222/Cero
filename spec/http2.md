@@ -12,12 +12,19 @@ La suite de conformidad del ecosistema, escrita por otros. Es lo que separa «co
 nos ocurrió comprobar» de «comprueba lo que dice el RFC».
 
 ```
-146 tests, 145 passed, 0 skipped, 1 failed
+146 tests, 145 passed, 0 skipped, 1 failed     ← Java
+146 tests, 145 passed, 0 skipped, 1 failed     ← Rust
 ```
 
-**La primera corrida dio 124 de 146.** Los 22 fallos tenían pocas causas: no había máquina de
-estados de flujo, y faltaban las validaciones de forma de PRIORITY, RST_STREAM y SETTINGS. Ninguno
-lo veían las pruebas propias, que es exactamente el motivo de correr una de fuera.
+**La primera corrida en Java dio 124 de 146.** Los 22 fallos tenían pocas causas: no había máquina
+de estados de flujo, y faltaban las validaciones de forma de PRIORITY, RST_STREAM y SETTINGS.
+Ninguno lo veían las pruebas propias, que es exactamente el motivo de correr una de fuera.
+
+**La primera en Rust dio 130,** con las 131 pruebas propias en verde. Los 16 fallos salieron de seis
+causas, y de ellas nacen `H2-040` a `H2-049`: el contrato no las pedía porque a nadie se le habían
+ocurrido. Es el argumento de `spec/` funcionando al revés de lo previsto —se esperaba que el
+contrato guiara a la implementación, y aquí fue la segunda implementación la que completó el
+contrato—.
 
 **El que queda —`3.5.2`, «Sends invalid connection preface»— no aplica y no se va a arreglar.**
 Manda `INVALID CONNECTION PREFACE\r\n\r\n` y espera un GOAWAY. En un puerto compartido con
@@ -34,7 +41,8 @@ Corre en integración continua en cada cambio, y falla si aparece cualquier fall
 | HPACK — estática, dinámica y Huffman | los 32 vectores del apéndice C del RFC 7541 |
 | Capa de tramas y máquina de flujos | 24 vectores propios en `Http2Tests` |
 | Multiplexación | 24 peticiones de 120 ms en 129 ms sobre una conexión |
-| Control de flujo, conexión y flujo | 300 KB de bajada y 100 KB de subida, y `curl` con 533 KB |
+| Control de flujo de entrada | 300 KB de bajada y 100 KB de subida, y `curl` con 533 KB |
+| Control de flujo de salida | el crédito se reparte entre hilos y se espera cuando falta |
 | Respuestas por `stream()` | 384 KB en tramas, sin acumular y sin `content-length` |
 | CONTINUATION | 400 cabeceras que no caben en una trama |
 | Trailers | se descartan, pero se decodifican para no descolocar HPACK |
@@ -77,6 +85,8 @@ reintentar.
 | `H2-015` | Un índice de HPACK fuera de la tabla NO DEBE admitirse. | COMPRESSION_ERROR | 7541 §2.3.3 |
 | `H2-016` | El símbolo EOS dentro de una cadena Huffman NO DEBE admitirse. | COMPRESSION_ERROR | 7541 §5.2 |
 | `H2-017` | Un segundo bloque de cabeceras sin fin de flujo NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §8.1 |
+| `H2-045` | WINDOW_UPDATE sobre un flujo que todavía no ha existido NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §5.1 |
+| `H2-049` | PRIORITY sobre el flujo 0 NO DEBE admitirse. | PROTOCOL_ERROR | 9113 §6.3 |
 
 ### Errores de flujo
 
@@ -95,6 +105,9 @@ caída de todo lo que ese cliente tuviera en vuelo.
 | `H2-024` | Un pseudo-campo desconocido DEBE tratarse como malformado. | 9113 §8.3 |
 | `H2-025` | Una cabecera específica de conexión DEBE tratarse como malformada. | 9113 §8.2.2 |
 | `H2-026` | Un `TE` con un valor distinto de `trailers` DEBE tratarse como malformado. | 9113 §8.2.2 |
+| `H2-043` | Un `content-length` que no cuadre con el cuerpo recibido DEBE tratarse como malformado. | 9113 §8.1.2.6 |
+| `H2-044` | Un flujo que se declara dependiente de sí mismo DEBE cortar ese flujo. | 9113 §5.3.1 |
+| `H2-047` | Cabeceras sobre un flujo cuyo cliente ya dijo `END_STREAM` DEBEN cortar ese flujo. | 9113 §5.1 |
 
 ### Inundaciones
 
@@ -129,6 +142,37 @@ llegue a mandarlo.
 | `H2-033` | Los nombres de campo de la respuesta DEBEN ir en minúscula. | 9113 §8.2.1 |
 | `H2-034` | Las cabeceras de conexión NO DEBEN emitirse en la respuesta. | 9113 §8.2.2 |
 | `H2-035` | Los trailers DEBEN decodificarse aunque se descarten, o HPACK se descoloca. | 7541 §4 |
+| `H2-040` | El servidor NO DEBE mandar más DATA del que quepa en la ventana del cliente, ni en el flujo ni en la conexión. | 9113 §6.9.1 |
+| `H2-041` | Un WINDOW_UPDATE que suba una ventana por encima de 2^31-1 NO DEBE admitirse. | 9113 §6.9.1 |
+| `H2-042` | Los ajustes que manda el cliente valen para lo que él recibe; NO DEBEN mover los topes del servidor. | 9113 §6.5.2 |
+| `H2-046` | El tope de flujos concurrentes DEBE contar todo flujo vivo, incluido el que espera respuesta. | 9113 §5.1.2 |
+| `H2-048` | Un error de conexión DEBE poder leerse: el cierre no puede borrar el GOAWAY que lo explica. | 9113 §9.1 |
+
+Los tres últimos son un mismo descuido con tres caras, y salieron al portar el módulo a Rust: hay
+**dos juegos de ajustes por conexión** y es fácil escribir uno. Los nuestros dicen lo que
+admitimos recibir; los del cliente, lo que él admite recibir.
+
+- Tomar su `SETTINGS_INITIAL_WINDOW_SIZE` como ventana de entrada deja la **salida sin control de
+  flujo** (`H2-040`): el servidor manda todo lo que tiene en cuanto lo tiene, que va bien contra un
+  cliente que lee rápido y desborda al que no.
+- Y deja al cliente **subiendo por SETTINGS los topes que lo contienen** (`H2-042`). Es el más
+  grave de los tres y no parece un fallo de seguridad al leerlo: con
+  `SETTINGS_MAX_HEADER_LIST_SIZE` a 2^32-1 desaparece `H2-039`, y con
+  `SETTINGS_MAX_CONCURRENT_STREAMS` igual, el tope de flujos en vuelo. Dos defensas anuladas por
+  una trama perfectamente válida de seis octetos.
+
+`H2-041` es el reverso de `H2-040`: quien lleva la cuenta de una ventana tiene que rechazar al que
+se la desborda, o las dos puntas dejan de contar lo mismo.
+
+`H2-046` y `H2-048` son los dos que más tiempo llevaron y los dos que no se ven leyendo el código.
+
+- El tope de concurrencia parecía tener que descontar al flujo que ya dijo `END_STREAM` —a quien
+  terminó de hablar no se le debe nada— y es justo al revés: ese es el que tiene trabajo en marcha.
+  Con el descuento, el tope no llegaba a tocar nunca.
+- Y un GOAWAY se puede escribir bien y perderse igual. Cerrar un socket con octetos sin leer en el
+  búfer de recepción no manda un FIN, manda un RST, y un RST borra en la otra punta lo que todavía
+  no había leído. El cliente veía «connection reset by peer» en vez del motivo. La cura es media
+  conexión primero y vaciar lo que quede después (§9.1).
 
 ## Lo que no va a estar, y por qué
 
@@ -143,8 +187,6 @@ llegue a mandarlo.
 
 ## Lo que falta
 
-- **Prioridad de escritura entre flujos.** Con muchos flujos escribiendo a la vez, el orden lo
-  decide el candado de salida. Funciona, pero no hay una política.
 - **Prioridad de escritura entre flujos.** El orden lo decide el candado de salida. Funciona,
   pero no hay una política: un flujo que escribe mucho puede hacer esperar a otro que escribe
   poco.

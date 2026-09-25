@@ -4,7 +4,7 @@
 //! esta implementación no sea una traducción del código Java: el juez es el contrato.
 
 use std::collections::HashMap;
-use std::io::{BufRead, Read};
+use std::io::BufRead;
 
 /// Por qué se rechaza una petición. El estado que corresponde a cada motivo lo fija el RFC, no
 /// nosotros, así que viaja con el motivo en vez de decidirse en el sitio de la llamada.

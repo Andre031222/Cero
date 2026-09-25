@@ -195,13 +195,10 @@ fn desescapar(s: &str) -> String {
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
             let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
-            match u8::from_str_radix(hex, 16) {
-                Ok(b) => {
-                    salida.push(b);
-                    i += 3;
-                    continue;
-                }
-                Err(_) => {}
+            if let Ok(b) = u8::from_str_radix(hex, 16) {
+                salida.push(b);
+                i += 3;
+                continue;
             }
         }
         salida.push(bytes[i]);
