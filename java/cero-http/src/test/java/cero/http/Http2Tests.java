@@ -34,6 +34,7 @@ final class Http2Tests {
             cuerpos();
             ventanas();
             senales();
+            cuerpoTrasResponder();
             streaming();
             trailers();
         } finally {
@@ -345,6 +346,40 @@ final class Http2Tests {
             c.trama(Http2Cliente.PING, 0, 0, marca);
             Check.that("tras anular un flujo, la conexión sigue viva",
                     (c.esperar(Http2Cliente.PING).banderas() & Http2Cliente.RECONOCE) != 0);
+        }
+    }
+
+    /**
+     * El cuerpo que llega **después** de la respuesta se sigue validando.
+     *
+     * <p>Responder cierra nuestra mitad del flujo, no el flujo: el cliente puede seguir mandando
+     * hasta que ponga END_STREAM, y ese cuerpo tiene que seguir cuadrando con `content-length`.
+     * Un desajuste ahí es la puerta del contrabando de peticiones cuando hay un proxy delante.
+     *
+     * <p>El servidor olvidaba el flujo en cuanto el handler terminaba, así que la comprobación
+     * dejaba de existir cada vez que la respuesta le ganaba la carrera a la petición. Se colaba
+     * por intermitente: h2spec 8.1.2.6.1 fallaba una de cada cinco veces y las 432 pruebas del
+     * módulo pasaban siempre, porque ninguna esperaba a la respuesta antes de mandar el cuerpo.
+     *
+     * <p>Esta sí espera, y por eso es determinista: cuando llega el DATA el handler ha terminado
+     * seguro. Con el fallo, el servidor contestaba STREAM_CLOSED —«ese flujo ya no existe»— en
+     * vez de PROTOCOL_ERROR, que es lo que pide el RFC 9113 §8.1.1 para un cuerpo que no cuadra.
+     */
+    private static void cuerpoTrasResponder() throws Exception {
+        try (Http2Cliente c = new Http2Cliente(puerto)) {
+            c.saludar();
+            // `/` no lee el cuerpo: responde y se va, que es lo que abre la carrera.
+            int flujo = c.pedirSinCerrar("GET", "/", "content-length", "1");
+            Check.that("la respuesta llega antes de mandar el cuerpo",
+                    c.respuestaDe(flujo).estado() == 200);
+
+            // Cuatro octetos donde se declaró uno.
+            c.trama(Http2Cliente.DATA, Http2Cliente.FIN_FLUJO, flujo,
+                    "test".getBytes(StandardCharsets.US_ASCII));
+            Http2Cliente.Trama corte = c.esperar(Http2Cliente.RST_STREAM);
+            Check.that("un cuerpo que no cuadra con content-length se corta con PROTOCOL_ERROR,"
+                            + " aunque la respuesta ya haya salido",
+                    corte.codigoDeError() == 0x1);
         }
     }
 
