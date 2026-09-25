@@ -73,11 +73,17 @@ ahora_ms() {
   esac
 }
 
+# Con `-p` el tráfico pasa por el reenvío de puertos de Docker, y ese es el techo antes que el
+# servidor: medido en la corrida del 25 de septiembre, 76 452 rps por el puerto publicado contra
+# 94 212 yendo directo a la IP del contenedor, con la CPU del servidor al 74 % en el primer caso.
+# Se mide contra la IP para que el número hable del framework y no del demonio de Docker.
+BASE=""
+
 wait_up() {  # espera 200 en /plaintext, imprime ms de arranque
   local start now code
   start=$(ahora_ms)
   for _ in $(seq 1 600); do
-    code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/plaintext" 2>/dev/null || echo 000)
+    code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/plaintext" 2>/dev/null || echo 000)
     [ "$code" = "200" ] && { now=$(ahora_ms); echo $((now-start)); return 0; }
     sleep 0.1
   done
@@ -112,6 +118,9 @@ for fw in "${APPS[@]}"; do
     continue
   fi
 
+  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "bench_$fw" 2>/dev/null)
+  BASE="http://${ip:-localhost}:8080"
+  [ -n "$ip" ] || BASE="http://localhost:$PORT"
   startup_ms=$(wait_up) || startup_ms=-1
   if [ "$startup_ms" = "-1" ]; then
     echo "  $fw NO arrancó — logs:"; docker logs --tail 20 "bench_$fw" || true
@@ -124,7 +133,7 @@ for fw in "${APPS[@]}"; do
   # BENCH_DB=1 añade el endpoint /db (SELECT real sobre H2 in-memory).
   for ep in plaintext json ${BENCH_DB:+db}; do
     for r in $(seq 1 "$REPS"); do
-      line=$( (cd "$HERE/../load" && ${CLIENT_PREFIX[@]+"${CLIENT_PREFIX[@]}"} java LoadClient "http://localhost:$PORT/$ep" "$CONNS" "$DUR" 5) 2>/dev/null )
+      line=$( (cd "$HERE/../load" && ${CLIENT_PREFIX[@]+"${CLIENT_PREFIX[@]}"} java LoadClient "$BASE/$ep" "$CONNS" "$DUR" 5) 2>/dev/null )
       rss_mb=$(docker stats --no-stream --format '{{.MemUsage}}' "bench_$fw" | awk -F'/' '{gsub(/[^0-9.]/,"",$1); print $1}')
       echo "$fw,$image_mb,$startup_ms,$rss_mb,$line" >> "$CSV"
       # Validez: errores/no-2xx invalidan la medición (posible saturación del cliente o del server).
@@ -139,9 +148,11 @@ done
 echo "CSV crudo -> $CSV"
 
 # Mediana de la columna $2 (1-indexed del CSV) para el framework $1; filtro opcional de endpoint en $3.
+# La URL del CSV lleva la IP del contenedor, distinta en cada framework, así que el endpoint se
+# casa por el final y no por la cadena entera.
 med() {
   awk -F, -v f="$1" -v c="$2" -v ep="${3:-}" \
-    '$1==f && (ep=="" || $5==ep){print $c}' "$CSV" \
+    '$1==f && (ep=="" || substr($5, length($5)-length(ep)+1)==ep){print $c}' "$CSV" \
     | sort -n | awk '{a[NR]=$1} END{print (NR? a[int((NR+1)/2)] : "-")}'
 }
 
@@ -185,9 +196,9 @@ tope de montón para todos: sin él compara decisiones del recolector, no framew
     rs=$(med "$fw" 4)                                          # RSS: mediana
     # El filtro usa $PORT, no 8080 fijo: con BENCH_PORT distinto la tabla salía vacía
     # aunque el CSV tuviera los datos.
-    pt=$(med "$fw" 11 "http://localhost:$PORT/plaintext")
-    js=$(med "$fw" 11 "http://localhost:$PORT/json")
-    db=$(med "$fw" 11 "http://localhost:$PORT/db")            # "-" si no se corrió con BENCH_DB=1
+    pt=$(med "$fw" 11 "/plaintext")
+    js=$(med "$fw" 11 "/json")
+    db=$(med "$fw" 11 "/db")                                  # "-" si no se corrió con BENCH_DB=1
     err=$(awk -F, -v f="$fw" '$1==f{e+=$9+$10} END{print e+0}' "$CSV")
     flag=""; [ "${err:-0}" -gt 0 ] && flag=" ⚠"
     if [ -n "$im" ]; then
