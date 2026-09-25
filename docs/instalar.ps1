@@ -313,7 +313,7 @@ if ($script:PathTocado) {
 Escribe "  ${Tenue}Crear un proyecto y arrancarlo:${Fin}"
 Escribe ''
 Escribe "      ${Fuerte}cero new mi-app${Fin}"
-Escribe "      ${Fuerte}cd mi-app && mvn -q package && java -jar target\mi-app.jar${Fin}"
+Escribe "      ${Fuerte}cd mi-app && mvn -q package && java -Xmx64m -jar target\mi-app.jar${Fin}"
 Escribe ''
 Escribe "  ${Tenue}Guia completa:${Fin}  $Base/empezar"
 Escribe ''
