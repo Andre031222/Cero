@@ -112,3 +112,36 @@ privilegios en una máquina que hoy no lo tiene.
 **Lo que hace falta** es una instancia dedicada y desechable: Linux, sin virtualización anidada,
 vCPU dedicada, sin nada más encima, durante unas horas. Cuesta poco y se destruye al terminar.
 Esa es la corrida citable; esta no lo sería.
+
+## La máquina que sí vale: la portátil con Arch
+
+Bare-metal, sin virtualización anidada y sin servicios ajenos encima. Es el entorno que pide el
+protocolo. Antes de correr, cuatro cosas que ya nos costaron dos corridas tiradas:
+
+```bash
+# 1 · lo que hace falta
+sudo pacman -S --needed docker jdk-openjdk h2spec   # h2spec está en AUR si no aparece
+sudo systemctl start docker && sudo usermod -aG docker "$USER"   # entrar de nuevo a la sesión
+
+# 2 · que no se duerma ni baje la frecuencia
+systemd-inhibit --what=idle:sleep --why="banco" sleep infinity &   # o cerrar la tapa NO
+cat /sys/class/power_supply/AC*/online                             # 1 = enchufada
+
+# 3 · que no haya nada más compitiendo
+systemctl --user stop hyprland-session.target   # o medir desde una tty, sin Hyprland
+uptime                                          # la carga tiene que estar cerca de 0
+
+# 4 · la corrida
+cd benchmarks/docker && BENCH_DB=1 ./bench.sh 64 30 5
+```
+
+Con 8 núcleos o más conviene además aislar: `BENCH_CPUSET=0,1` para el contenedor y
+`BENCH_CLIENT_CPUS=4,5` para el cliente, que ya están contemplados en `bench.sh`. Eso resuelve lo
+que la corrida de macOS no pudo: que el cliente de carga deje de competir con el servidor, que es
+por lo que las peticiones por segundo no llegaban a distinguir entre los seis primeros.
+
+**Al terminar**, comprobar que no hubo suspensiones antes de creerse nada:
+
+```bash
+journalctl -b | grep -iE "suspend|hibernat" | tail
+```
