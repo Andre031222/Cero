@@ -132,6 +132,19 @@ impl Router {
         Ok(self)
     }
 
+    /// El patrón que atendió el camino, para que las métricas agrupen por él y no por la URL
+    /// (OBS-014). Sin esto, `/usuarios/{id}` genera una serie por identificador.
+    pub fn patron_de(&self, metodo: &str, camino: &str) -> Option<String> {
+        let buscado = if metodo == "HEAD" { "GET" } else { metodo };
+        let mut c: Vec<&Ruta> =
+            self.rutas.iter().filter(|r| r.patron.casa(camino).is_some()).collect();
+        c.sort_by_key(|r| std::cmp::Reverse(r.patron.literales()));
+        c.iter()
+            .find(|r| r.metodo == buscado)
+            .or_else(|| c.first())
+            .map(|r| r.patron.crudo.clone())
+    }
+
     pub fn resolver(&self, metodo: &str, camino: &str) -> Resolucion {
         // RUT-011: HEAD se resuelve contra la ruta GET del mismo camino.
         let buscado = if metodo == "HEAD" { "GET" } else { metodo };
