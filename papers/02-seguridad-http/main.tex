@@ -33,7 +33,25 @@
                   city={Puno}, country={Peru}}
 
 \begin{abstract}
-\pendiente{escribir al final}
+Test suites written alongside an implementation assert the behaviour that
+implementation was designed to exhibit, and are therefore weak instruments for
+finding requirements the developer never represented. We report a controlled
+instance. An HTTP/1.1 and HTTP/2 server that passed its own suite of 434 checks
+was subjected to three further instruments --- 23 conformance vectors written
+directly from RFC~9112 and RFC~9110, the third-party suite h2spec, and review by
+an external consumer --- and to deployment behind a reverse proxy. The original
+suite accounted for none of the fourteen defects the others found: four protocol
+violations, one of them a precondition for request smuggling; two defects whose
+common shape is an unexercised \emph{exit path} rather than an unexercised line,
+one of which is a second smuggling precondition; six security findings including
+two resource-exhaustion paths reachable without credentials; and two defects
+existing only in the program's relationship with its environment. We characterise which defect classes each instrument reaches,
+propose counting exit paths --- protocol version by response kind by message
+ordering --- as a coverage criterion for protocol components, and report that
+for defects that are races a conformance suite run once per commit samples
+rather than decides: fifty-five consecutive passes coexisted with a defect that
+an external suite failed on two of three continuous-integration runs. The
+implementation, the vectors and the scripts reproducing every result are public.
 \end{abstract}
 
 \begin{keyword}
@@ -162,10 +180,36 @@ matches the declared \texttt{content-length} --- the check that prevents the
 smuggling precondition --- was skipped.
 
 The defect was \emph{intermittent by construction}: it manifested only when the
-response won the race against the request body. h2spec failed approximately one
-run in five; the project suite passed always. A conformance tool run once in
-continuous integration is a sampling instrument, not a decision procedure, when
-the defect is a race.
+response won the race against the request body, and the project suite passed
+throughout. Its observed behaviour under h2spec is worth stating precisely,
+because it is the point of this subsection
+(Table~\ref{tab:intermittent}).
+
+\begin{table}[ht]
+\centering
+\caption{Observed failures of h2spec case 8.1.2.6.1 before and after the fix.
+         Warm-up state dominates: the defect hid whenever the JVM had already
+         been exercised.}
+\label{tab:intermittent}
+\begin{tabular}{llrr}
+\toprule
+Build & Condition & Runs & Failures \\
+\midrule
+Before fix & continuous integration, cold JVM & 3  & 2 \\
+Before fix & local, cold JVM                  & 5  & 1 \\
+Before fix & local, warm JVM                  & 55 & 0 \\
+After fix  & local, warm JVM                  & 42 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two consequences follow. First, a conformance tool run once per commit is a
+\emph{sampling} instrument, not a decision procedure, when the defect is a
+race. Second, and less obvious, fifty-five consecutive passes were not evidence
+of correctness: the same fifty-five passes occurred with the defect present.
+Establishing that the fix worked required reverting it and observing the
+deterministic test fail, which is the only step that distinguishes a repair from
+a coincidence.
 
 \subsection{Why line coverage cannot see either}
 
@@ -229,14 +273,82 @@ instrument applied to the program alone.
 \section{Results}
 \label{sec:results}
 
-\pendiente{tabla resumen: defectos por instrumento y por clase, con el coste de
-cada instrumento en horas}
+\begin{table}[ht]
+\centering
+\caption{Defects by instrument. The first row is the suite written alongside the
+         implementation; it accounted for none of the fourteen defects the other
+         instruments found.}
+\label{tab:results}
+\begin{tabular}{lrl}
+\toprule
+Instrument & Defects & Classes \\
+\midrule
+Project test suite (434 checks) & 0  & --- \\
+Conformance vectors (23)        & 4  & protocol conformance; one a smuggling precondition \\
+h2spec (146 tests)              & 1  & unexercised exit path, intermittent; smuggling precondition \\
+External review, v0.3.0         & 6  & session fixation, resource exhaustion, access control \\
+External review, v0.7.0         & 1  & unexercised exit path: no session over HTTP/2 \\
+Deployment behind a proxy       & 2  & environment assumptions \\
+\midrule
+Total                           & 14 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The first row is the result. A suite of 434 checks, written by the authors of
+the implementation and passing continuously, accounted for none of the fourteen
+defects that the other instruments found. This is not a statement about
+the quality of that suite: it is a statement about what a suite derived from an
+implementation can be expected to detect.
 
 \section{Discussion}
 \label{sec:discussion}
 
-\pendiente{qué clase de defecto detecta cada instrumento; coste-beneficio;
-recomendación para implementadores de servidores}
+\subsection{What each instrument can and cannot see}
+
+The four instruments are not interchangeable, and the boundary between them is
+not effort but \emph{provenance}.
+
+A suite written alongside an implementation encodes the developer's model of the
+problem. It detects regressions against that model, which is valuable and is
+why such suites exist. It cannot detect a requirement the developer never
+represented --- and \emph{absolute-form} request targets, an absolute session
+lifetime and a body arriving after a response are all requirements that were
+never represented here.
+
+Specification-derived vectors detect exactly that gap, at a cost proportional to
+the specification's size rather than the implementation's. Twenty-three vectors
+covering thirteen clauses is a few hours of work and is not a complete
+conformance suite; it was nonetheless sufficient to find four violations.
+
+Third-party suites add independence and, as Section~\ref{sec:exitpaths} shows,
+find defects in the interaction between protocol state machines and application
+concurrency that a specification reading alone would be unlikely to reach.
+
+External review found what all three automated instruments missed: resource
+exhaustion arising from a design decision --- an unbounded cache keyed by
+attacker-controlled input --- rather than from a wrong branch. Two of the six
+findings reduce to that single modelling error, which suggests reviewing
+\emph{key provenance and cardinality} as a checklist item rather than
+discovering each instance separately.
+
+\subsection{Counting exit paths}
+
+We propose, for protocol-handling components, a coverage criterion of
+\emph{exit paths}: the cross product of protocol version, response kind and
+message ordering. In the subject system that criterion would have flagged both
+unexercised-path defects before either shipped. Both were invisible to line
+coverage, since every line involved was executed by some test.
+
+\subsection{Recommendation}
+
+For implementers of HTTP servers, the ordering that our evidence supports is:
+write specification-derived vectors before growing the implementation-derived
+suite; run third-party conformance suites repeatedly rather than once, since a
+single pass does not distinguish a correct implementation from a race that
+happened not to lose; and treat deployment behind a proxy as an instrument in
+its own right, because two of our defects existed only in the relationship
+between the program and its environment.
 
 \section{Threats to validity}
 \label{sec:threats}
@@ -253,14 +365,31 @@ without reference to the code, and by cross-checking HTTP/2 against a suite we
 did not write \cite{h2spec}. The audit is the only fully independent instrument.
 
 \paragraph{Intermittent defects and sampling}
-Our estimate of one failure in five runs for the race described in
-Section~\ref{sec:exitpaths} is based on \pendiente{número de corridas} runs and
-is reported as an observation, not a measured rate.
+The failure counts in Table~\ref{tab:intermittent} are observations from a
+small number of runs on two machines, not an estimated failure rate. We report
+them to characterise the defect's dependence on warm-up state, not to quantify
+its probability.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-\pendiente{cerrar}
+We subjected an HTTP server that passed its own 434-check suite to three further
+instruments and to deployment behind a reverse proxy. Together they found
+fourteen defects that the original suite did not, including four violations of
+RFC~9112 and RFC~9110, two preconditions for request smuggling, and two
+resource-exhaustion paths reachable without credentials.
+
+The dividing line is provenance, not effort. A suite written from an
+implementation asserts the behaviour the implementation was built to exhibit,
+and is structurally unable to detect a requirement that was never represented.
+Twenty-three vectors written from the specification text --- a few hours of work
+--- found four such requirements.
+
+We also report a methodological observation with practical consequences: for
+defects that are races, a conformance suite executed once per commit samples
+rather than decides. Fifty-five consecutive passes coexisted with the defect
+present, and only reverting the repair and observing a deterministic test fail
+distinguished a fix from a coincidence.
 
 \section*{CRediT authorship contribution statement}
 

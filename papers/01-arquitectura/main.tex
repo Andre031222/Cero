@@ -67,6 +67,9 @@ conventional test-suite growth does not.
   \item A verification method organised around \emph{uncovered exit paths}
         rather than uncovered lines, together with the defects it found that a
         line-coverage criterion did not (Section~\ref{sec:method}).
+  \item Three checks that reveal when a comparative load benchmark is measuring
+        its own harness rather than the systems under test, and the factor-of-four
+        correction they produced here (Section~\ref{sec:harness}).
   \item A conformance-vector suite for RFC~9112 and RFC~9110 written from the
         specification text, and the four violations it exposed in an
         implementation that already passed its own test suite
@@ -149,6 +152,46 @@ won the race against the request body, which is why the module's own suite never
 saw it while an external conformance suite failed roughly one run in five.
 
 Line coverage does not distinguish either case. Counting exit paths does.
+
+\subsection{Validating the measurement harness before trusting it}
+\label{sec:harness}
+
+A comparative benchmark is an instrument, and an instrument that has not been
+checked measures itself. Ours did, in three independent ways, and all three were
+invisible in the output: every run completed, no framework errored, and the
+numbers looked plausible.
+
+\paragraph{Symptom 1: added load reduces throughput and server utilisation}
+Raising the connection count from 64 to 1024 lowered throughput from 76 to
+61~kreq/s \emph{and} lowered the server's CPU utilisation from 74\% to 55\%.
+A server that is the bottleneck saturates as load grows. One whose utilisation
+\emph{falls} as load grows is not the bottleneck: the constraint lies on the
+path to it.
+
+\paragraph{Symptom 2: throughput equals concurrency divided by latency}
+Measured throughput was 73\,679~req/s at a mean latency of 0.868~ms with 64
+connections; $64/0.000868 = 73\,733$. When Little's law holds to four
+significant figures, the experiment is reporting the offered concurrency, not
+the system's capacity.
+
+\paragraph{Symptom 3: neither endpoint is saturated}
+Per-core sampling showed the load generator pinned to two cores at 98--99\%
+while the server sat at 40\%. The harness was measuring its own client.
+
+\paragraph{What the checks found}
+Correcting the three yielded, for the same framework on the same machine:
+client cores raised from 2 to 12 (22 to 74~kreq/s), and the container's
+published port bypassed in favour of its address on the bridge network, since
+the port-forwarding path capped throughput at 76~kreq/s against 94~kreq/s
+direct --- 23\% consumed by the container runtime rather than by any framework
+under test.
+
+We report this because the corrected figures differ from the uncorrected ones by
+a factor of four, and because the uncorrected run produced a coherent, publishable
+looking table in which all nine contenders fell within 2\% of one another. That
+table was an artefact. Any comparative benchmark should report the utilisation
+of both endpoints and the relationship between concurrency, latency and
+throughput, so that a reader can see which component was actually measured.
 
 \subsection{Deploying for real}
 
