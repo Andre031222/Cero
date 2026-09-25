@@ -6,7 +6,7 @@ externa. Pensado desde el principio para vivir en más de un lenguaje.
 [![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=0b1220&color=38bdf8)](https://central.sonatype.com/namespace/dev.ginit.cero)
 [![Java 25+](https://img.shields.io/badge/java-25%2B-38bdf8?style=flat-square&labelColor=0b1220&logo=openjdk&logoColor=38bdf8)](https://openjdk.org/)
 [![Dependencias: 0](https://img.shields.io/badge/dependencias-0-38bdf8?style=flat-square&labelColor=0b1220)](#principios)
-[![Pruebas: 1762](https://img.shields.io/badge/pruebas-1%E2%80%AF762-38bdf8?style=flat-square&labelColor=0b1220)](#estado)
+[![Pruebas: 1764](https://img.shields.io/badge/pruebas-1%E2%80%AF764-38bdf8?style=flat-square&labelColor=0b1220)](#estado)
 [![Licencia: Apache 2.0](https://img.shields.io/badge/licencia-Apache_2.0-38bdf8?style=flat-square&labelColor=0b1220)](LICENSE)
 [![En vivo: cero.ginit.dev](https://img.shields.io/badge/en_vivo-cero.ginit.dev-38bdf8?style=flat-square&labelColor=0b1220&logo=googlechrome&logoColor=38bdf8)](https://cero.ginit.dev)
 
@@ -139,7 +139,7 @@ Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
 git clone https://github.com/Andre031222/Cero.git && cd Cero
-cd java && mvn install     # 1 762 pruebas, runner propio (sin JUnit)
+cd java && mvn install     # 1 764 pruebas, runner propio (sin JUnit)
 ./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
@@ -188,7 +188,7 @@ la reflexión.
 
 | Módulo | Pruebas | Qué trae |
 |---|---|---|
-| [`cero-http`](java/cero-http) | 432 | Servidor HTTP/1.1 y HTTP/2 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE), **HTTP/2** —h2c y h2 sobre TLS por ALPN— y confianza en proxy configurable |
+| [`cero-http`](java/cero-http) | 434 | Servidor HTTP/1.1 y HTTP/2 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE), **HTTP/2** —h2c y h2 sobre TLS por ALPN— y confianza en proxy configurable |
 | [`cero-core`](java/cero-core) | 834 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP**, **trazado W3C** y OpenAPI |
 | [`cero-view`](java/cero-view) | 93 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
 | [`cero-data`](java/cero-data) | 250 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
@@ -221,7 +221,7 @@ entero sin ejercitar. Ver [versiones.md](docs/versiones.md).
 
 Lo verificado, y cómo:
 
-- **1 762 pruebas** con runner propio, en macOS y en Linux, sobre JDK 25.
+- **1 764 pruebas** con runner propio, en macOS y en Linux, sobre JDK 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.

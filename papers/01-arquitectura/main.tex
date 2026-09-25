@@ -1,0 +1,213 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+% Un hueco marcado es un hueco. Una estimación con aire de medición es un error.
+\newcommand{\pendiente}[1]{\textcolor{red}{[\textbf{pendiente:} #1]}}
+
+\journal{Journal of Systems and Software}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Removing the servlet container: architecture and a verification
+       method for a dependency-free Java web framework}
+
+\author[una]{Richar Andre Vilca-Solorzano\corref{cor}}
+\ead{night.fury.oi.ma@gmail.com}
+\cortext[cor]{Corresponding author.}
+
+\author[una]{Ramiro Pedro Laura-Murillo}
+
+\affiliation[una]{organization={Universidad Nacional del Altiplano,
+                                Facultad de Ingeniería Estadística e Informática},
+                  city={Puno}, country={Peru}}
+
+\begin{abstract}
+\pendiente{escribir al final, cuando los resultados estén cerrados}
+\end{abstract}
+
+\begin{keyword}
+web framework \sep servlet container \sep Java \sep virtual threads \sep
+software architecture \sep software verification
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Deploying a Java web application has long implied a servlet container: package a
+WAR, install it into Tomcat or an equivalent, and rely on server configuration
+that lives outside the program. None of that is the program the developer wrote.
+
+This paper reports the design of \emph{Cero}, a Java web framework with its own
+HTTP server and no runtime dependencies beyond the JDK, and --- the part we
+argue is transferable --- the method used to verify that removing the container
+did not silently drop behaviour that the container used to provide.
+
+The contribution is not the measured numbers. It is a reproducible procedure for
+this class of migration, and the evidence that the procedure finds defects that
+conventional test-suite growth does not.
+
+\paragraph{Contributions}
+\begin{enumerate}
+  \item An architecture in which the dependency on the servlet API is reduced to
+        five interfaces, with a servlet adapter retained deliberately as an exit
+        door so that the migration stays reversible (Section~\ref{sec:architecture}).
+  \item A verification method organised around \emph{uncovered exit paths}
+        rather than uncovered lines, together with the defects it found that a
+        line-coverage criterion did not (Section~\ref{sec:method}).
+  \item A conformance-vector suite for RFC~9112 and RFC~9110 written from the
+        specification text, and the four violations it exposed in an
+        implementation that already passed its own test suite
+        (Section~\ref{sec:conformance}).
+  \item An evaluation against eight other JVM frameworks under identical
+        conditions, reported with the measurement decisions that change its
+        conclusions (Section~\ref{sec:evaluation}).
+\end{enumerate}
+
+\section{Background and related work}
+\label{sec:background}
+
+\pendiente{revisión de literatura: frameworks JVM ligeros, coste del contenedor
+de servlets, hilos virtuales (JEP 444), y trabajos previos sobre conformidad de
+servidores HTTP}
+
+\section{Architecture}
+\label{sec:architecture}
+
+\subsection{What the container actually provided}
+
+An application that appears bound to a servlet container is, in our case, bound
+to five interfaces: \texttt{HttpServletRequest}, \texttt{HttpServletResponse},
+\texttt{HttpSession}, \texttt{Cookie} and \texttt{Part}. Writing those in-house
+is what makes the container removable.
+
+\subsection{Module structure}
+
+\begin{table}[ht]
+\centering
+\caption{Modules, with measured size and the checks that exercise each one.}
+\label{tab:modules}
+\begin{tabular}{lrrl}
+\toprule
+Module & Classes & Lines & Responsibility \\
+\midrule
+\texttt{cero-http}    &  43 &  6\,752 & HTTP/1.1 and HTTP/2 server \\
+\texttt{cero-core}    &  71 &  7\,675 & routing, injection, JSON, security \\
+\texttt{cero-data}    &  16 &  1\,937 & JDBC access, migrations, sessions \\
+\texttt{cero-view}    &   9 &  1\,001 & template engine \\
+\texttt{cero-launcher} &  6 &     881 & CLI, project generator, packaging \\
+\texttt{cero-adapter-servlet} & 4 & 603 & the exit door \\
+\texttt{cero-test}    &   4 &     439 & end-to-end support for consumers \\
+\midrule
+Total                 & 153 & 19\,288 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The exit door}
+
+\texttt{cero-adapter-servlet} lets the same application deploy inside Tomcat
+without source changes. It is the only place in the project that references
+\texttt{jakarta.*}, and it is declared \emph{provided}. Its purpose is not
+interoperability for its own sake: it makes the decision to leave the container
+reversible, which is what allows the migration to be attempted at all.
+
+\section{Verification method}
+\label{sec:method}
+
+\subsection{Uncovered exit paths, not uncovered lines}
+
+The two most serious defects found in this project share one shape. Both were
+paths out of the system that no test traversed, not lines that no test executed.
+
+\paragraph{The session cookie over HTTP/2}
+Two sibling implementations of the same response interface existed; only one
+asked for the pending session cookie. Over HTTP/2 no client could therefore
+establish a session, and without a session there is no CSRF token, so every
+write returned 403 pointing at the wrong cause. None of the 432 checks in the
+module observed it, because all of them entered over HTTP/1.1.
+
+\paragraph{Body validation after the response}
+Finishing a response closes the local half of an HTTP/2 stream, not the stream
+(RFC~9113 §5.1). The server removed the stream as soon as the handler returned,
+so a \texttt{DATA} frame arriving afterwards was no longer checked against the
+declared \texttt{content-length} --- the precondition for request smuggling
+behind a proxy. The defect was intermittent: it appeared only when the response
+won the race against the request body, which is why the module's own suite never
+saw it while an external conformance suite failed roughly one run in five.
+
+Line coverage does not distinguish either case. Counting exit paths does.
+
+\subsection{Deploying for real}
+
+Two further defects appeared only behind a reverse proxy: a session cookie
+issued without \texttt{Secure} because the application did not know TLS was
+terminated upstream, and a deployment script that erased the certbot HTTPS block
+when rewriting the vhost.
+
+\section{Conformance vectors}
+\label{sec:conformance}
+
+No free conformance suite exists for HTTP/1.1 servers. We wrote 23 vectors
+covering 13 distinct sections of RFC~9112 and RFC~9110, each sent as raw bytes
+and each citing the clause it enforces. They exposed four violations in an
+implementation that already passed its own tests: \emph{absolute-form} and
+\emph{asterisk-form} request targets were rejected, \texttt{chunked} was
+accepted outside the final position of \texttt{Transfer-Encoding}, and null
+bytes were admitted in header values.
+
+For HTTP/2 we use h2spec, an existing suite: 146 tests, of which
+\pendiente{cifra final} pass.
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+\pendiente{tabla del banco; los absolutos esperan la corrida en Linux sin
+virtualizar, y la columna de peticiones por segundo no discrimina con el cliente
+de carga en el mismo equipo}
+
+\section{Threats to validity}
+\label{sec:threats}
+
+\paragraph{Measurement environment}
+All comparative figures were obtained under Docker Desktop on macOS, that is,
+inside a virtual machine, with the load generator on the same host. Conditions
+were identical for all nine frameworks, so relative comparisons hold; absolute
+figures are not citable and are reported as such.
+
+\paragraph{A measurement decision that inverts the conclusion}
+Without an explicit heap cap, the JVM sizes its maximum heap from the container
+limit, and a framework that allocates more per request fills it while one that
+allocates little does not. The resident-set column then compares garbage
+collector behaviour rather than frameworks. Under that setting our framework
+measured lowest of the group; with an identical \texttt{-Xmx} for every
+contender it measures highest. We report the capped configuration and state the
+cap, because a benchmark whose conclusion reverses when one variable is fixed
+must be published with that variable fixed.
+
+\paragraph{Single-team implementation}
+The framework, its test suite and its conformance vectors were written by the
+same authors. The external audit that produced eleven findings is the only
+independent evidence reported here.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\pendiente{cerrar cuando estén los resultados}
+
+\section*{Data availability}
+
+Source code, test suite, conformance vectors, benchmark harness and raw
+measurements are public at \url{https://github.com/Andre031222/Cero}.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{referencias}
+
+\end{document}
