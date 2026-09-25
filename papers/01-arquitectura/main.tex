@@ -4,6 +4,10 @@
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18, width=\linewidth,
+             every axis/.append style={font=\small, tick align=outside},
+             every axis legend/.append style={font=\footnotesize, draw=none, fill=none}}
 
 % Un hueco marcado es un hueco. Una estimación con aire de medición es un error.
 \newcommand{\pendiente}[1]{\textcolor{red}{[\textbf{pendiente:} #1]}}
@@ -14,8 +18,8 @@
 
 \begin{frontmatter}
 
-\title{Removing the servlet container: architecture and a verification
-       method for a dependency-free Java web framework}
+\title{Removing the servlet container: architecture and verification of a
+       dependency-free Java web framework}
 
 \author[una]{Richar Andre Vilca-Solorzano\corref{cor}}
 \ead{75521963@est.unap.edu.pe}
@@ -137,6 +141,12 @@ answers; it is the subject of separate work.
 
 \subsection{Benchmark methodology}
 
+Hasselbring~\cite{hasselbring2021} argues that benchmarks in software
+engineering research warrant an explicit reporting standard, and proposes a
+checklist for one. Section~\ref{sec:harness} can be read as a concrete
+instance of why such a checklist needs an item on validating the apparatus
+itself.
+
 Schiavio et al.~\cite{schiavio2026} argue that microbenchmarks on the JVM can
 mislead because performance depends on profiles the runtime collects during
 early execution, so a poorly shaped benchmark drives the compiler toward
@@ -228,6 +238,7 @@ invisible in the output: every run completed, no framework errored, and the
 numbers looked plausible.
 
 \paragraph{Symptom 1: added load reduces throughput and server utilisation}
+(Figure~\ref{fig:harness}.)
 Raising the connection count from 64 to 1024 lowered throughput from 76 to
 61~kreq/s \emph{and} lowered the server's CPU utilisation from 74\% to 55\%.
 A server that is the bottleneck saturates as load grows. One whose utilisation
@@ -243,6 +254,31 @@ the system's capacity.
 \paragraph{Symptom 3: neither endpoint is saturated}
 Per-core sampling showed the load generator pinned to two cores at 98--99\%
 while the server sat at 40\%. The harness was measuring its own client.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xlabel={Concurrent connections}, xmode=log, log basis x=2,
+  xtick={64,128,256,512,1024}, xticklabels={64,128,256,512,1024},
+  ylabel={Throughput (kreq/s)}, ymin=50, ymax=85,
+  axis y line*=left, axis x line*=bottom, height=5.5cm]
+\addplot[mark=*, thick] coordinates {(64,76.6) (128,68.5) (256,66.0) (512,60.9) (1024,61.2)};
+\end{axis}
+\begin{axis}[
+  ylabel={Server CPU utilisation (\%)}, ymin=40, ymax=100,
+  axis y line*=right, axis x line=none, xmode=log, log basis x=2, height=5.5cm,
+  legend pos=north east]
+\addlegendimage{mark=*, thick}\addlegendentry{throughput}
+\addplot[mark=square, dashed, thick] coordinates {(64,74) (128,66) (256,63) (512,59) (1024,55)};
+\addlegendentry{server CPU}
+\end{axis}
+\end{tikzpicture}
+\caption{The symptom of a harness that is not measuring the system under test:
+         offering more load lowers throughput \emph{and} lowers the server's CPU
+         utilisation. A server that is the bottleneck saturates as load grows.}
+\label{fig:harness}
+\end{figure}
 
 \paragraph{What the checks found}
 Correcting the three yielded, for the same framework on the same machine:
@@ -326,10 +362,68 @@ Spring Boot  & 325.0 & 2\,446 & 176.5 & 60\,903 & 64\,133 & 49\,870 \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, xmode=log, xmin=100, xmax=5000,
+  xlabel={Boot time (ms, log scale) --- lower is better},
+  symbolic y coords={Spring Boot,Micronaut,Quarkus,Helidon,Javalin,Vert.x,Jooby,Cero},
+  ytick=data, nodes near coords, nodes near coords align={horizontal},
+  point meta=explicit symbolic,
+  every node near coord/.append style={font=\footnotesize, xshift=4pt,
+                                       /pgf/number format/assume math mode},
+  height=7cm, enlarge y limits=0.08]
+\addplot coordinates {(2446,Spring Boot) [2446] (1102,Micronaut) [1102] (711,Quarkus) [711]
+                      (583,Helidon) [583] (518,Javalin) [518] (481,Vert.x) [481]
+                      (443,Jooby) [443] (155,Cero) [155]};
+\end{axis}
+\end{tikzpicture}
+\caption{Boot time, median of five runs, from \texttt{docker run} to the first
+         200 response. The axis is logarithmic because the range spans a factor
+         of sixteen.}
+\label{fig:boot}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xlabel={Resident set size (MB) --- lower is better},
+  ylabel={Throughput on \texttt{/json} (kreq/s)},
+  xmin=50, xmax=350, ymin=58, ymax=108,
+  height=6.5cm, grid=major, grid style={dotted},
+  nodes near coords, point meta=explicit symbolic,
+  every node near coord/.append style={font=\footnotesize}]
+\addplot[only marks, mark=o, mark size=2.5pt,
+         every node near coord/.append style={anchor=east, xshift=-3pt}] coordinates {
+  (104.7,76.5) [Micronaut]
+  (176.5,64.1) [Spring Boot]};
+\addplot[only marks, mark=o, mark size=2.5pt,
+         every node near coord/.append style={anchor=south, yshift=4pt}] coordinates {
+  (79.5,98.6)  [Vert.x]
+  (73.4,93.3)  [Jooby]};
+\addplot[only marks, mark=o, mark size=2.5pt,
+         every node near coord/.append style={anchor=north, yshift=-4pt}] coordinates {
+  (83.3,92.7)  [Helidon]};
+\addplot[only marks, mark=o, mark size=2.5pt,
+         every node near coord/.append style={anchor=west, xshift=3pt}] coordinates {
+  (104.6,91.8) [Quarkus]
+  (117.4,88.8) [Javalin]};
+\addplot[only marks, mark=square*, mark size=3pt] coordinates {(307.9,94.6) [Cero]};
+\end{axis}
+\end{tikzpicture}
+\caption{Memory against throughput. The subject (filled marker) sits in the
+         leading group on throughput and alone on the right of the memory axis,
+         at more than four times the resident size of the lightest contender.}
+\label{fig:memoria}
+\end{figure}
+
 \subsection{Results}
 
 \paragraph{Boot time separates decisively}
-At 155~ms the subject boots 2.9$\times$ faster than the next framework and
+Figure~\ref{fig:boot} shows the distribution. At 155~ms the subject boots
+2.9$\times$ faster than the next framework and
 15.8$\times$ faster than Spring Boot. No dispersion in our data approaches that
 distance.
 
@@ -344,7 +438,8 @@ every contender fell within 2\% of every other and no such statement was
 possible in either direction.
 
 \paragraph{Memory is the subject's worst result}
-At 307.9~MB resident the subject is last of eight, more than four times Jooby's
+Figure~\ref{fig:memoria} places the result. At 307.9~MB resident the subject
+is last of eight, more than four times Jooby's
 73.4~MB. This is not a leak: resident size plateaus, and with
 \texttt{-Xmx96m} the same traffic is served slightly faster in 176~MB. The
 subject allocates more per request than its peers and fills whatever heap it is
@@ -354,10 +449,18 @@ given. We report it as an open defect rather than omitting the column.
 \label{sec:threats}
 
 \paragraph{Measurement environment}
-All comparative figures were obtained under Docker Desktop on macOS, that is,
-inside a virtual machine, with the load generator on the same host. Conditions
-were identical for all nine frameworks, so relative comparisons hold; absolute
-figures are not citable and are reported as such.
+Comparative figures were obtained on bare-metal Linux with the container and the
+load generator pinned to disjoint cores. Two limits remain. The load generator
+shares the machine with the server, and neither saturates its cores: the ceiling
+is the container's bridge network path, identical for all eight, which makes the
+throughput figures a lower bound rather than a capacity. And the result is from
+one machine; the ranking of frameworks whose intervals overlap should not be
+assumed stable across hardware.
+
+\paragraph{One framework could not be measured}
+JxMVC is absent from Table~\ref{tab:evaluation}: its image requires a jar that
+is not redistributable, being another author's work. We report the row as
+missing rather than omitting the framework silently.
 
 \paragraph{A measurement decision that inverts the conclusion}
 Without an explicit heap cap, the JVM sizes its maximum heap from the container

@@ -4,6 +4,9 @@
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18, width=\linewidth,
+             every axis/.append style={font=\small, tick align=outside}}
 
 \newcommand{\pendiente}[1]{\textcolor{red}{[\textbf{pendiente:} #1]}}
 
@@ -13,9 +16,8 @@
 
 \begin{frontmatter}
 
-\title{Conformance vectors written from the specification find defects that
-       implementation-derived test suites do not: evidence from an HTTP
-       server}
+\title{Specification-derived conformance vectors find defects that
+       implementation-derived suites cannot: an HTTP server study}
 
 \author[una]{Richar Andre Vilca-Solorzano\corref{cor}}
 \ead{75521963@est.unap.edu.pe}
@@ -335,11 +337,33 @@ Total                           & 14 & \\
 \end{tabular}
 \end{table}
 
-The first row is the result. A suite of 434 checks, written by the authors of
+Figure~\ref{fig:instrumentos} shows the same distribution. The first row is
+the result. A suite of 434 checks, written by the authors of
 the implementation and passing continuously, accounted for none of the fourteen
 defects that the other instruments found. This is not a statement about
 the quality of that suite: it is a statement about what a suite derived from an
 implementation can be expected to detect.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, xmin=0, xmax=7,
+  xlabel={Defects attributed to each instrument},
+  symbolic y coords={{Project suite},{h2spec},{Review v0.7.0},{Proxy deployment},
+                     {Spec. vectors},{Review v0.3.0}},
+  ytick=data, nodes near coords, nodes near coords align={horizontal},
+  every node near coord/.append style={font=\footnotesize},
+  height=6cm, enlarge y limits=0.12, bar width=10pt]
+\addplot coordinates {(0,{Project suite}) (1,{h2spec}) (1,{Review v0.7.0})
+                      (2,{Proxy deployment}) (4,{Spec. vectors}) (6,{Review v0.3.0})};
+\end{axis}
+\end{tikzpicture}
+\caption{Defects by instrument. The project's own suite of 434 checks, written
+         alongside the implementation and passing throughout, accounts for none
+         of the fourteen defects the other instruments found.}
+\label{fig:instrumentos}
+\end{figure}
 
 \section{Discussion}
 \label{sec:discussion}
