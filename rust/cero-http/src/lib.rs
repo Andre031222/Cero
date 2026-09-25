@@ -4,9 +4,11 @@
 //! requisitos numerados, y lo juzgan los mismos vectores de conformidad.
 
 pub mod peticion;
+pub mod sesion;
 pub mod ruta;
 pub mod servidor;
 
 pub use peticion::{Peticion, Rechazo};
 pub use ruta::{Resolucion, Router};
+pub use sesion::{Almacen, Sesion};
 pub use servidor::{Respuesta, Servidor};

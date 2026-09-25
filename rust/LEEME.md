@@ -4,9 +4,14 @@ Segunda implementación del contrato de [`spec/`](../spec). No es una traducció
 la referencia son los requisitos numerados, y el juez son los mismos vectores de conformidad, que
 son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 1.** El objetivo de este hito es pasar los 23 vectores de RFC 9112 y 9110 y
-resolver las rutas según `RUT-001`–`RUT-011`. Nada más. Sesiones, HTTP/2, seguridad transversal y
-observabilidad vienen después, bloque a bloque.
+**Estado: hito 2.** El 1 pasaba los 23 vectores de RFC 9112 y 9110 y resolvía rutas según
+`RUT-001`–`RUT-011`. El 2 añade las sesiones: los trece requisitos de `spec/sesiones.md`, con una
+prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad vienen después.
+
+| Hito | Qué cubre | Estado |
+|---|---|---|
+| 1 | HTTP/1.1 y ruteo | 23 de 23 vectores |
+| 2 | Sesiones | 13 de 13 requisitos |
 
 ```bash
 cd rust && cargo test          # las pruebas de la implementación
@@ -40,9 +45,25 @@ Se toma la primera, y **el contrato no cambia**: ningún requisito de `spec/` ha
 eso siga siendo cierto cuando lleguen las sesiones y la concurrencia es justamente lo que hay que
 comprobar, no lo que se puede suponer.
 
+## Segundo hallazgo: el lenguaje decide si un requisito se puede incumplir por descuido
+
+`SES-011` dice que consultar la cookie pendiente **no es una lectura pura**: marca la cookie como
+emitida, así que repetirla la pierde. En Java eso es una nota en el contrato y una disciplina que
+hay que recordar — y no se recordó: Cero 0.6.0 tenía dos caminos de salida, uno por versión del
+protocolo, y solo uno preguntaba. Sobre HTTP/2 no había sesión, y sin sesión no había token CSRF.
+
+En Rust el método toma `&mut self`. Dos caminos de salida **no pueden consultarlo los dos** sin
+que el compilador lo señale. El requisito es el mismo y el comportamiento exigido es el mismo; lo
+que cambia es que en un lenguaje se puede incumplir por descuido y en el otro no.
+
+Eso no es una virtud de Rust que haya que celebrar: es un dato sobre qué parte del contrato
+depende de la disciplina del programador y qué parte puede delegarse al tipo. Un contrato
+poliglota debería decir cuáles de sus requisitos son de esa clase, y hoy no lo dice.
+
 ## Lo que este hito **no** hace
 
 - No hay HTTP/2, ni TLS, ni WebSocket.
-- No hay sesiones, ni seguridad transversal, ni observabilidad.
+- No hay seguridad transversal ni observabilidad.
+- Las sesiones viven en memoria: `SES-012` —almacén compartido entre instancias— no está.
 - No hay API de aplicación estable. Lo que hoy se llame `Servidor` puede llamarse otra cosa
   mañana: el contrato es el comportamiento, no los nombres.
