@@ -127,6 +127,16 @@ impl Log {
         self.lineas.lock().expect("log envenenado").push(linea);
     }
 
+    /// `OBS-010`: un error se registra con **su tipo** y su mensaje.
+    ///
+    /// El tipo importa tanto como el mensaje y se olvida más: dos errores distintos pueden decir
+    /// «no such file» y el que hay que arreglar es otro según de dónde venga. Rust no tiene
+    /// excepciones, así que el tipo se toma del tipo estático, que es el equivalente honesto.
+    pub fn con_error<E: std::fmt::Display>(&self, plantilla: &str, valores: &[&str], error: &E) {
+        let tipo = std::any::type_name::<E>().rsplit("::").next().unwrap_or("Error");
+        self.escribir(Nivel::Error, &format!("{plantilla}: {tipo}: {error}"), valores);
+    }
+
     pub fn lineas(&self) -> Vec<String> {
         self.lineas.lock().map(|l| l.clone()).unwrap_or_default()
     }

@@ -133,6 +133,10 @@ pub fn exento(camino: &str, exenciones: &[String]) -> bool {
     })
 }
 
+/// Dónde vive el token dentro de la sesión, y cómo se llama el campo con el que llega.
+pub const CLAVE_CSRF: &str = "csrf";
+pub const CAMPO_CSRF: &str = "_csrf";
+
 pub fn csrf_valido(metodo: &str, camino: &str, exenciones: &[String],
                    token_sesion: Option<&str>, token_peticion: Option<&str>) -> bool {
     if SEGUROS.contains(&metodo) || exento(camino, exenciones) {

@@ -153,3 +153,48 @@ fn lee_el_identificador_de_la_cabecera_cookie() {
     assert_eq!(sesion::id_de_cookie(Some("a=1")), None);
     assert_eq!(sesion::id_de_cookie(None), None);
 }
+
+/// `SES-012`: dos servidores con el **mismo** almacén reconocen las mismas sesiones. Es lo que
+/// separa poder poner una segunda instancia detrás del balanceador de no poder: sin esto, cada
+/// petición que cae en la otra instancia parece de alguien que nunca entró.
+#[test]
+fn ses_012_un_almacen_compartido_reconoce_la_sesion_en_otra_instancia() {
+    use std::sync::Arc;
+    use std::time::Duration;
+    use cero_http::{Almacen, Contexto, Peticion, Respuesta, Router, Servidor};
+
+    let compartido = Arc::new(Almacen::nuevo(Duration::from_secs(600), None));
+    let instancia = || {
+        let router = Router::nuevo()
+            .ruta("GET", "/entrar", "entrar").unwrap()
+            .ruta("GET", "/quien", "quien").unwrap();
+        Servidor::nuevo(router)
+            .sesiones(Arc::clone(&compartido))
+            .accion("entrar", |c: &Contexto| {
+                let s = c.abrir_sesion().expect("sesión");
+                s.lock().unwrap().poner("usuario", "ana").unwrap();
+                Respuesta::texto("dentro")
+            })
+            .accion("quien", |c: &Contexto| {
+                let quien = c.sesion()
+                    .and_then(|s| s.lock().ok().and_then(|g| g.leer("usuario").ok().flatten().cloned()));
+                Respuesta::texto(&quien.unwrap_or_else(|| "nadie".into()))
+            })
+    };
+    let (una, otra) = (instancia(), instancia());
+
+    let mut p = Peticion {
+        metodo: "GET".into(),
+        destino: "/entrar".into(),
+        version: "HTTP/1.1".into(),
+        cabeceras: [("host".to_string(), "x".to_string())].into_iter().collect(),
+        cuerpo: Vec::new(),
+    };
+    let entrada = una.responder(&p, "x");
+    let cookie = entrada.extra.iter().find(|(k, _)| k == "Set-Cookie")
+        .map(|(_, v)| v.split(';').next().unwrap().to_string()).expect("cookie");
+
+    p.destino = "/quien".into();
+    p.cabeceras.insert("cookie".into(), cookie);
+    assert_eq!(String::from_utf8_lossy(&otra.responder(&p, "x").cuerpo), "ana", "SES-012");
+}

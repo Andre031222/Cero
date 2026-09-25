@@ -3,8 +3,11 @@
 //! El contrato no dice cómo se llama nada de esto —`spec/ruteo.md` lo deja explícitamente fuera—,
 //! solo qué tiene que estar disponible y qué forma toma la respuesta.
 
+use crate::fallo::Fallo;
 use crate::json::{self, Json};
 use crate::peticion::Peticion;
+use crate::registro::Registro;
+use crate::seguridad::CLAVE_CSRF;
 use crate::sesion::Sesion;
 use std::collections::HashMap;
 use std::cell::RefCell;
@@ -86,6 +89,7 @@ pub struct Contexto<'p> {
     /// de `SES-010` otra vez, con otra cara.
     abierta: RefCell<Option<Arc<Mutex<Sesion>>>>,
     abrir: Box<dyn Fn() -> Option<Arc<Mutex<Sesion>>> + 'p>,
+    registro: &'p Registro,
 }
 
 impl<'p> Contexto<'p> {
@@ -94,8 +98,20 @@ impl<'p> Contexto<'p> {
         variables: HashMap<String, String>,
         sesion: Option<Arc<Mutex<Sesion>>>,
         abrir: Box<dyn Fn() -> Option<Arc<Mutex<Sesion>>> + 'p>,
+        registro: &'p Registro,
     ) -> Contexto<'p> {
-        Contexto { peticion, variables, sesion, abierta: RefCell::new(None), abrir }
+        Contexto { peticion, variables, sesion, abierta: RefCell::new(None), abrir, registro }
+    }
+
+    /// `RUT-032` a `RUT-036` desde la acción: las dependencias que montó el servidor.
+    pub fn registro(&self) -> &Registro {
+        self.registro
+    }
+
+    /// `RUT-018`: una cabecera ausente queda sin valor, no falla. Un `User-Agent` que no viene no
+    /// es una petición mal formada, y tratarlo como tal convierte en 400 lo que era un 200.
+    pub fn cabecera(&self, nombre: &str) -> Option<&str> {
+        self.peticion.cabecera(nombre)
     }
 
     /// RUT-002: la variable de ruta, por su nombre.
@@ -105,11 +121,11 @@ impl<'p> Contexto<'p> {
 
     /// RUT-014 y RUT-015: convertida al tipo que la acción pida. `Err` es 400 y no 500: el
     /// cliente mandó mal la petición.
-    pub fn variable_como<T: std::str::FromStr>(&self, nombre: &str) -> Result<T, Respuesta> {
+    pub fn variable_como<T: std::str::FromStr>(&self, nombre: &str) -> Result<T, Fallo> {
         self.variable(nombre)
-            .ok_or_else(|| Respuesta::estado(400, "falta la variable"))?
+            .ok_or_else(|| Fallo::nuevo(400, "falta la variable"))?
             .parse()
-            .map_err(|_| Respuesta::estado(400, "la variable no tiene el tipo esperado"))
+            .map_err(|_| Fallo::nuevo(400, "la variable no tiene el tipo esperado"))
     }
 
     pub fn consulta(&self, nombre: &str) -> Option<String> {
@@ -132,9 +148,9 @@ impl<'p> Contexto<'p> {
 
     /// RUT-017: el cuerpo interpretado como JSON. `Err` es 400: el cliente mandó mal la petición,
     /// no falló el servidor.
-    pub fn cuerpo_json(&self) -> Result<Json, Respuesta> {
+    pub fn cuerpo_json(&self) -> Result<Json, Fallo> {
         json::leer(&self.cuerpo_texto())
-            .map_err(|e| Respuesta::estado(400, &format!("el cuerpo no es JSON válido: {}", e.0)))
+            .map_err(|e| Fallo::nuevo(400, &format!("el cuerpo no es JSON válido: {}", e.0)))
     }
 
     /// Un campo de un formulario `application/x-www-form-urlencoded`.
@@ -166,6 +182,26 @@ impl<'p> Contexto<'p> {
         let nueva = (self.abrir)()?;
         *self.abierta.borrow_mut() = Some(Arc::clone(&nueva));
         Some(nueva)
+    }
+
+    /// `SEG-017`: el token CSRF de esta petición, creándolo si aún no lo hay.
+    ///
+    /// Que lo pida la aplicación y no lo ponga el framework en toda respuesta es deliberado: el
+    /// token va donde la aplicación lo necesite —un campo oculto del formulario, una cabecera para
+    /// el JavaScript— y emitirlo siempre obligaría a abrir sesión a todo el que pase, incluido el
+    /// rastreador que nunca va a mandar un POST. Es `SES-001` otra vez: leer no puede crear.
+    ///
+    /// **Abre sesión**, porque un token que no esté atado a una sesión no protege de nada: lo
+    /// podría pedir el propio sitio atacante.
+    pub fn token_csrf(&self) -> Option<String> {
+        let sesion = self.abrir_sesion()?;
+        let mut g = sesion.lock().ok()?;
+        if let Ok(Some(ya)) = g.leer(CLAVE_CSRF) {
+            return Some(ya.clone());
+        }
+        let token = crate::sesion::identificador().ok()?;
+        g.poner(CLAVE_CSRF, &token).ok()?;
+        Some(token)
     }
 
     /// La que haya que usar al emitir la cookie: la abierta si la hubo, si no la que llegó.

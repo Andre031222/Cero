@@ -4,9 +4,10 @@ Segunda implementación del contrato de [`spec/`](../spec). No es una traducció
 la referencia son los requisitos numerados, y el juez son los mismos vectores de conformidad, que
 son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 10.** HTTP/2 está entero salvo TLS: tramas, HPACK, flujos y control de flujo en los
-dos sentidos. **h2spec da 145 de 146**, el mismo número que Java y con el mismo único fallo, el
-`3.5.2`, que asume un puerto dedicado a h2c y no aplica aquí.
+**Estado: hito 11, y el contrato está cubierto salvo un requisito.** HTTP/2 entero salvo TLS,
+ruteo con middleware, manejo de fallos, contenedor de dependencias y validación. **h2spec da 145
+de 146**, el mismo número que Java y con el mismo único fallo, el `3.5.2`, que asume un puerto
+dedicado a h2c y no aplica aquí.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -20,11 +21,58 @@ dos sentidos. **h2spec da 145 de 146**, el mismo número que Java y con el mismo
 | 8 | HTTP/2 · HPACK | 5 requisitos más · 20 pruebas, con los vectores del RFC 7541 |
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · 25 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
+| 11 | Ruteo, fallos, dependencias y validación | 172 de los 173 requisitos · 36 pruebas |
 
-**155 de los 173 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco, y el
-resto citados uno a uno en las pruebas —`grep -o '[A-Z0-9]*-[0-9][0-9][0-9]' rust/` los cuenta—. Lo
-que queda son 18, y ninguno es de HTTP/2: son del ruteo avanzado, y la puerta de ALPN, que en Rust
-no se puede abrir sin escribir TLS —más abajo se explica por qué eso no se va a hacer—.
+**172 de los 173 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y el
+resto por una prueba que los cita. Se cuentan así:
+
+```bash
+grep -rhoE '(HTTP|OBS|RUT|SEG|SES|H2)-[0-9]{3}' cero-http/tests cero-data/tests | sort -u | wc -l
+```
+
+**En las pruebas, no en el código.** La cuenta de antes miraba también los comentarios de `src/`, y
+eso hacía que los 35 requisitos de ruteo figuraran como cubiertos **sin una sola prueba que los
+comprobara**: estaban citados donde se implementaban, que es justo donde citarlos no demuestra
+nada. Al mirar solo `tests/` la cifra honesta era 120, no 155.
+
+El que falta es **`SES-013`**, el nombre configurable de la tabla de sesiones, que presupone un
+almacén persistente. En Rust no lo hay todavía y no es un hueco de código sino una decisión: hoy
+`Sesion` se muta bajo un `Mutex` y el almacén no se entera, así que persistirla pide o escritura
+directa en cada cambio o un punto explícito de guardado. Java lo resolvió con `JdbcSessions` en
+`cero-data`. Aparte queda **ALPN sobre TLS**, que no cuenta como requisito y no se va a hacer: más
+abajo se explica por qué.
+
+## El hito 11: lo que el ruteo no tenía
+
+El bloque de ruteo estaba a medias y no se notaba, porque los 35 requisitos aparecían citados en
+`src/`. Faltaba código, no solo pruebas:
+
+- **Los fallos.** Una acción devolvía `Respuesta` y no podía fallar, así que `RUT-024` a `RUT-027`
+  no tenían dónde ocurrir. Ahora devuelve `Respuesta` **o** `Result`, y las dos valen: el rasgo
+  `EnRespuesta` existe para que una acción que no falla no tenga que decir que no falla. Sin eso,
+  añadir fallos obligaba a envolver en `Ok(...)` hasta la acción más tonta, y un framework que
+  cobra ceremonia por una función que nunca falla acaba teniendo acciones que se tragan sus errores
+  para no pagarla.
+- **El middleware** (`RUT-028` a `RUT-031`). Lo que había era un pipeline fijo. Se compone por
+  índice y no apilando clausuras: componer `Box<dyn Fn>` en Rust obliga a nombrar un tipo que se
+  anida consigo mismo, y lo que se gana es ilegible.
+- **El contenedor de dependencias** (`RUT-032` a `RUT-036`), que no existía. Java lo resuelve por
+  reflexión; aquí cada servicio se registra con la función que lo construye. Es la segunda vez que
+  `spec/` demuestra no llevar dentro una decisión de Java, después del ruteo. El ciclo se detecta
+  con una pila por hilo, y la fábrica corre **fuera** del candado: construir dentro sería un
+  candado no reentrante bloqueándose contra sí mismo en la segunda cadena de dos eslabones. Java
+  tropezó con la misma piedra con otra forma, `computeIfAbsent` recursivo sobre el mismo mapa.
+- **La validación** (`SEG-027` y `SEG-028`), que tampoco existía: 422 y no 400, porque el cuerpo se
+  entendió y lo que falla es su contenido.
+
+Y un agujero de verdad: **el token CSRF no se emitía nunca** (`SEG-017`). El servidor sabía
+validarlo y no sabía darlo, así que una ruta protegida por CSRF era imposible de usar — ningún
+cliente tenía de dónde sacar el token—. Además solo se aceptaba por cabecera, lo que dejaba fuera a
+un formulario HTML, que es donde el CSRF hace más falta.
+
+Para poder probar todo esto, el pipeline entero se puede llamar **sin socket**: `Servidor::responder`
+toma una petición y devuelve la respuesta. Es el mismo argumento que hace probable `Sesion` en
+HTTP/2, y de paso es lo que permite montar Cero dentro de otra cosa.
 
 ## El hito 10, y por qué hizo falta
 
