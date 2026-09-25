@@ -406,5 +406,5 @@ esac
 
 p "  ${TENUE}Crear un proyecto y arrancarlo:${FIN}\n\n"
 p "      ${FUERTE}cero new mi-app${FIN}\n"
-p "      ${FUERTE}cd mi-app && mvn -q package && java -jar target/mi-app.jar${FIN}\n\n"
+p "      ${FUERTE}cd mi-app && mvn -q package && java -Xmx64m -jar target/mi-app.jar${FIN}\n\n"
 p "  ${TENUE}Guía completa:${FIN}  %s/empezar\n\n" "$BASE"
