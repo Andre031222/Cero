@@ -4,9 +4,8 @@ Segunda implementación del contrato de [`spec/`](../spec). No es una traducció
 la referencia son los requisitos numerados, y el juez son los mismos vectores de conformidad, que
 son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 2.** El 1 pasaba los 23 vectores de RFC 9112 y 9110 y resolvía rutas según
-`RUT-001`–`RUT-011`. El 2 añade las sesiones: los trece requisitos de `spec/sesiones.md`, con una
-prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad vienen después.
+**Estado: hito 8.** HTTP/1.1, ruteo, sesiones, seguridad, observabilidad y el framework montado
+están; de HTTP/2 están las tramas y HPACK, y faltan los flujos y las tres puertas de entrada.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -14,13 +13,15 @@ prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad
 | 2 | Sesiones | 13 de 13 requisitos · 13 pruebas |
 | 3 | Seguridad transversal | 28 de 28 requisitos · 18 pruebas |
 | 4 | Observabilidad | 23 de 23 requisitos · 16 pruebas |
-
 | 5 | El framework montado | pipeline completo · aplicación de ejemplo |
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo de verdad |
-| 7 | HTTP/2 · capa de tramas | 13 de los 39 requisitos · 13 pruebas |
+| 7 | HTTP/2 · capa de tramas | 11 de los 39 requisitos · 13 pruebas |
+| 8 | HTTP/2 · HPACK | 5 requisitos más · 20 pruebas, con los vectores del RFC 7541 |
 
-**101 de los 163 requisitos del contrato**, con 47 pruebas que citan cada una el suyo, más los
-23 vectores del banco. Falta HTTP/2, que son los 39 restantes.
+**122 de los 163 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco, y 99
+más citados uno a uno en las pruebas —`grep -o '[A-Z0-9]*-[0-9][0-9][0-9]' rust/` los cuenta—. Lo
+que falta es casi todo HTTP/2: quedan 23 de sus 39, que son los flujos, el control de flujo y las
+tres puertas de entrada.
 
 ## Usarlo
 
@@ -211,7 +212,7 @@ anteriores —no cambia el diseño, solo la redacción— y por eso es fácil qu
 ## Lo que este hito **no** hace
 
 - No hay TLS ni WebSocket.
-- No hay HTTP/2, que es el bloque que queda.
+- HTTP/2 está a medias: tramas y HPACK sí, flujos y control de flujo no.
 - Las sesiones viven en memoria: `SES-012` —almacén compartido entre instancias— no está.
 - No hay API de aplicación estable. Lo que hoy se llame `Servidor` puede llamarse otra cosa
   mañana: el contrato es el comportamiento, no los nombres.
