@@ -3,6 +3,7 @@
 //! Implementa el contrato de `spec/` para HTTP/1.1 y ruteo. No mira el código Java: mira los
 //! requisitos numerados, y lo juzgan los mismos vectores de conformidad.
 
+pub mod observabilidad;
 pub mod peticion;
 pub mod sesion;
 pub mod ruta;
