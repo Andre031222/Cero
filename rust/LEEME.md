@@ -16,6 +16,7 @@ prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad
 | 4 | Observabilidad | 23 de 23 requisitos · 16 pruebas |
 
 | 5 | El framework montado | pipeline completo · aplicación de ejemplo |
+| 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo de verdad |
 
 **101 de los 163 requisitos del contrato**, con 47 pruebas que citan cada una el suyo, más los
 23 vectores del banco. Falta HTTP/2, que son los 39 restantes.
@@ -46,6 +47,32 @@ petición iba a alguna parte.
 punto que emite la cookie solo miraba la sesión que había llegado *con* la petición. El cliente
 abría sesión y no recibía nada. Es la familia de `SES-010` otra vez —el estado y el sitio que lo
 escribe, separados— con otra cara.
+
+## Lo que faltaba para que fuera usable
+
+Hasta el hito 5 era un framework que pasaba el contrato y con el que no se podía escribir una
+aplicación: para devolver un objeto había que construir el JSON a mano, no se podía leer un
+formulario y no servía un solo archivo. Eso no es un framework, es un experimento.
+
+**JSON propio.** Java tiene el suyo en `cero-core` por el mismo motivo: un framework que obliga a
+traer una biblioteca de JSON para devolver un objeto no tiene cero dependencias, tiene una
+escondida. El de aquí lee y escribe, con tres cosas que no son adorno:
+
+- Las claves salen **en orden estable**, así que dos respuestas iguales dan bytes iguales y se
+  pueden comparar y cachear. `HashMap` no lo garantiza.
+- Se escapan `<`, `>` y `&`. Un JSON incrustado en una página que contenga `</script` cierra la
+  etiqueta y lo que siga se ejecuta: es XSS a través de una respuesta perfectamente válida.
+- Hay **tope de anidamiento**. 5 000 corchetes son 10 KB de cuerpo y desbordan la pila de un
+  lector recursivo: denegación de servicio con una petición pequeña.
+
+**Formularios y JSON de entrada.** `cuerpo_json()` y `campo()`. Un cuerpo mal formado es 400 y no
+500: lo mandó mal el cliente.
+
+**Archivos estáticos.** Con la comprobación que de verdad importa: el camino se resuelve y
+**después** se comprueba que sigue dentro de la raíz. Filtrar `..` antes no basta, porque un
+enlace simbólico dentro de la raíz apunta fuera sin que aparezca ningún `..`. Y lo que no se
+reconoce se sirve como octetos, nunca adivinando el tipo — adivinar es justo lo que
+`nosniff` existe para impedir del otro lado.
 
 ## TLS y datos: las dos preguntas difíciles, respondidas
 

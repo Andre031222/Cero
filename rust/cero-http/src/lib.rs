@@ -4,6 +4,8 @@
 //! requisitos numerados, y lo juzgan los mismos vectores de conformidad.
 
 pub mod contexto;
+pub mod estaticos;
+pub mod json;
 pub mod observabilidad;
 pub mod peticion;
 pub mod sesion;
@@ -15,4 +17,5 @@ pub use peticion::{Peticion, Rechazo};
 pub use ruta::{Resolucion, Router};
 pub use sesion::{Almacen, Sesion};
 pub use contexto::{Contexto, Respuesta};
+pub use json::Json;
 pub use servidor::Servidor;
