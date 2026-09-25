@@ -96,8 +96,45 @@ implementation-derived suite could never have found.
 \section{Background and related work}
 \label{sec:background}
 
-\pendiente{revisión de literatura: conformidad de protocolos, request
-smuggling, fuzzing de servidores HTTP, suites de conformidad existentes}
+\subsection{Parsing discrepancies and request smuggling}
+
+The security consequence of HTTP parsing divergence is well established. Grenfeldt
+et al.~\cite{grenfeldt2021} tested six proxies and six servers empirically,
+finding nineteen vulnerable parsing behaviours and, by pairing proxies with
+origins, six workable attacks. Huang et al.~\cite{huang2022} approach the same
+problem from the defensive side, proposing a reverse proxy that rejects requests
+not conforming to the RFC before forwarding them. More recently, parsing
+discrepancies have been shown to bypass web application firewalls
+outright~\cite{waffled}.
+
+The closest work to ours in method is the HTTP Garden~\cite{httpgarden}, a
+coverage-guided differential fuzzer for HTTP/1.1 origin servers. It reported over
+one hundred parsing bugs across widely deployed servers, of which sixty-eight
+were fixed and thirty-nine assigned vulnerabilities. Differential fuzzing and
+specification-derived vectors are complementary: a differential fuzzer finds
+where implementations \emph{disagree with each other}, which requires several
+implementations and cannot label either side as wrong; vectors written from the
+specification find where an implementation disagrees with \emph{the text}, which
+works on a single implementation and yields a clause to cite. Two of the four
+violations we report --- \emph{absolute-form} and \emph{asterisk-form} request
+targets --- are cases where our server would have agreed with a permissive peer
+and disagreed only with the RFC.
+
+\subsection{Conformance suites}
+
+For HTTP/2 a free conformance suite exists and is widely used~\cite{h2spec}. For
+HTTP/1.1 we are not aware of an equivalent, which is why the vectors reported
+here were written from the specification text. \pendiente{confirmar esta
+afirmación con una búsqueda sistemática antes de enviar; es una afirmación de
+ausencia y hay que respaldarla}
+
+\subsection{Positioning}
+
+The studies above examine many implementations from the outside and report
+aggregate vulnerability counts. We report the complementary case: one
+implementation examined from the inside by four instruments of differing
+provenance, where the defects each instrument reached can be attributed and the
+suite that found none of them can be inspected.
 
 \section{Subject system and instruments}
 \label{sec:subject}

@@ -101,9 +101,47 @@ conventional test-suite growth does not.
 \section{Background and related work}
 \label{sec:background}
 
-\pendiente{revisión de literatura: frameworks JVM ligeros, coste del contenedor
-de servlets, hilos virtuales (JEP 444), y trabajos previos sobre conformidad de
-servidores HTTP}
+\subsection{Lightweight JVM frameworks}
+
+Quarkus, Micronaut, Helidon, Javalin, Jooby and Vert.x all reduce the cost the
+servlet container imposes, by compile-time dependency injection, ahead-of-time
+compilation or an event-driven core. Our subject differs in degree rather than
+in kind on that axis, and in one respect in kind: it declares no runtime
+dependency at all, and implements the five servlet interfaces its applications
+used rather than adopting a replacement abstraction.
+
+We note a gap the reader should weigh. Comparative figures for startup time and
+memory footprint across these frameworks circulate widely in practitioner
+writing, but we could not locate a peer-reviewed comparison, and the practitioner
+sources disagree with one another by margins larger than the differences they
+report. Section~\ref{sec:harness} offers a partial explanation: our own
+uncorrected harness produced a coherent table that was wrong by a factor of
+four. \pendiente{búsqueda sistemática de literatura revisada por pares antes de
+enviar; esto es una afirmación de ausencia}
+
+\subsection{Concurrency}
+
+Virtual threads~\cite{jep444} make a thread per connection viable again, which
+is what allows the direct blocking model used here to scale. Whether that model
+outperforms an event loop under a given workload is not a question this paper
+answers; it is the subject of separate work.
+
+\subsection{Benchmark methodology}
+
+Schiavio et al.~\cite{schiavio2026} argue that microbenchmarks on the JVM can
+mislead because performance depends on profiles the runtime collects during
+early execution, so a poorly shaped benchmark drives the compiler toward
+decisions an application would never produce. Our findings in
+Section~\ref{sec:harness} concern a different layer --- the load generator and
+the container's network path rather than the JIT --- but point the same way: a
+measurement apparatus must be validated before its output is interpreted.
+
+\subsection{Conformance testing of HTTP implementations}
+
+Differential fuzzing across many HTTP/1.1 servers has exposed large numbers of
+parsing defects~\cite{httpgarden}. Our use of conformance vectors written from
+the specification is complementary and is treated at length in the companion
+paper on this system's security evaluation.
 
 \section{Architecture}
 \label{sec:architecture}
