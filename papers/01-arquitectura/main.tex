@@ -69,8 +69,9 @@ WAR, install it into Tomcat or an equivalent, and rely on server configuration
 that lives outside the program. None of that is the program the developer wrote.
 
 This paper reports the design of \emph{Cero}, a Java web framework with its own
-HTTP server and no runtime dependencies beyond the JDK, and --- the part we
-argue is transferable --- the method used to verify that removing the container
+HTTP server, no runtime dependencies beyond the JDK and one virtual thread per
+connection \cite{jep444}, and --- the part we argue is transferable --- the
+method used to verify that removing the container
 did not silently drop behaviour that the container used to provide.
 
 The contribution is not the measured numbers. It is a reproducible procedure for
@@ -110,7 +111,7 @@ servidores HTTP}
 \subsection{What the container actually provided}
 
 An application that appears bound to a servlet container is, in our case, bound
-to five interfaces: \texttt{HttpServletRequest}, \texttt{HttpServletResponse},
+to five interfaces of the Jakarta Servlet specification \cite{servlet61}: \texttt{HttpServletRequest}, \texttt{HttpServletResponse},
 \texttt{HttpSession}, \texttt{Cookie} and \texttt{Part}. Writing those in-house
 is what makes the container removable.
 
@@ -162,7 +163,7 @@ module observed it, because all of them entered over HTTP/1.1.
 
 \paragraph{Body validation after the response}
 Finishing a response closes the local half of an HTTP/2 stream, not the stream
-(RFC~9113 §5.1). The server removed the stream as soon as the handler returned,
+(RFC~9113 §5.1) \cite{rfc9113}. The server removed the stream as soon as the handler returned,
 so a \texttt{DATA} frame arriving afterwards was no longer checked against the
 declared \texttt{content-length} --- the precondition for request smuggling
 behind a proxy. The defect was intermittent: it appeared only when the response
@@ -222,14 +223,15 @@ when rewriting the vhost.
 \label{sec:conformance}
 
 No free conformance suite exists for HTTP/1.1 servers. We wrote 23 vectors
-covering 13 distinct sections of RFC~9112 and RFC~9110, each sent as raw bytes
+covering 13 distinct sections of RFC~9112 \cite{rfc9112} and RFC~9110
+\cite{rfc9110}, each sent as raw bytes
 and each citing the clause it enforces. They exposed four violations in an
 implementation that already passed its own tests: \emph{absolute-form} and
 \emph{asterisk-form} request targets were rejected, \texttt{chunked} was
 accepted outside the final position of \texttt{Transfer-Encoding}, and null
 bytes were admitted in header values.
 
-For HTTP/2 we use h2spec, an existing suite: of its 146 tests, 144 pass, one is
+For HTTP/2 we use h2spec \cite{h2spec}, an existing suite: of its 146 tests, 144 pass, one is
 skipped, and one --- an invalid connection preface, where we close the
 connection without emitting a GOAWAY frame --- is a known and documented
 deviation.
