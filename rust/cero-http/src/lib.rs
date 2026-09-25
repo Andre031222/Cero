@@ -6,6 +6,7 @@
 pub mod peticion;
 pub mod sesion;
 pub mod ruta;
+pub mod seguridad;
 pub mod servidor;
 
 pub use peticion::{Peticion, Rechazo};

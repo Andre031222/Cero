@@ -11,7 +11,8 @@ prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores |
-| 2 | Sesiones | 13 de 13 requisitos |
+| 2 | Sesiones | 13 de 13 requisitos · 13 pruebas |
+| 3 | Seguridad transversal | 28 de 28 requisitos · 18 pruebas |
 
 ```bash
 cd rust && cargo test          # las pruebas de la implementación
@@ -59,6 +60,20 @@ que cambia es que en un lenguaje se puede incumplir por descuido y en el otro no
 Eso no es una virtud de Rust que haya que celebrar: es un dato sobre qué parte del contrato
 depende de la disciplina del programador y qué parte puede delegarse al tipo. Un contrato
 poliglota debería decir cuáles de sus requisitos son de esa clase, y hoy no lo dice.
+
+**El hito 3 lo repitió, y con una consecuencia incómoda.** `SEG-022` dice que la cuota del
+limitador no puede depender de la ruta. En Java eso es comprobable, porque la función recibía la
+ruta y había que verificar que no la usara. Aquí no la recibe: **el incumplimiento no se puede
+escribir**. Se intentó reintroducir el fallo para ver si la prueba lo cazaba, y no lo cazó porque
+no había fallo que cazar.
+
+Eso deja la prueba vacía, y una prueba que no puede fallar es peor que ninguna: ocupa sitio y da
+confianza que no ha ganado. Se sustituyó por otra que sí verifica algo —que el mapa de cuentas no
+crece con las peticiones— y el requisito quedó anotado como cumplido por la forma del tipo.
+
+Con dos casos ya se ve el patrón, y es material del artículo 6: **el contrato tiene requisitos de
+dos clases**, los que hay que probar y los que se pueden hacer irrepresentables. Cuál es cuál no
+lo decide el requisito: lo decide el lenguaje.
 
 ## Lo que este hito **no** hace
 
