@@ -157,32 +157,33 @@ Esto es lo que hace reversible la decisión: se puede volver al contenedor sin r
 
 ### Metas de la fase
 
-Mismo harness, mismas condiciones para los nueve contendientes. Medido el 24 de septiembre de
-2026 ([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones dentro de esa misma corrida,
-porque los absolutos dependen de la máquina.
+Mismo harness, mismas condiciones para los ocho contendientes. Medido el 25 de septiembre de
+2026 en Linux sin virtualizar ([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones
+dentro de esa misma corrida, porque los absolutos dependen de la máquina.
 
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
-| Arranque | < 150 ms | **87 ms** | jooby 383 ms | **sí**, y por 4,4× |
+| Arranque | < 150 ms | 155 ms | jooby 443 ms | **casi**: falla por 5 ms y gana por 2,9× |
 | JAR runtime | ≤ 400 KB | 416 KB | — | **no**, por 16 KB |
 | Dependencias | 0 | **0** | spring: decenas | **sí** |
-| rps `/json` | batir al mejor rival | 25 470 | quarkus 24 981 | **no se puede afirmar** |
-| RSS | < 120 MB | 332 MB | vertx 104 MB | **no**, y es el peor de los nueve |
+| rps `/json` | batir al mejor rival | 94 634 | vertx 98 589 | **no**, por un 4 % medible |
+| RSS | < 120 MB | 307,9 MB | jooby 73,4 MB | **no**, y es el peor de los ocho |
 
-Dos de cinco, y conviene leer las tres que fallan antes que las dos que pasan.
+Una de cinco limpia, y conviene leer las cuatro que fallan antes que la que pasa.
 
-**El RSS es el problema de verdad.** En agosto salió 136,4 MB, el más bajo de la tabla; en
-septiembre, 332 MB, el más alto. No cambió el framework tanto como el método: aquella corrida no
-acotaba el montón, así que medía lo que el recolector decidía tomar y no lo que el framework
-necesita. Con el mismo `-Xmx` para todos, Cero llena su montón y los demás no, porque asigna más
-por petición. No es una fuga —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico un 4 %
-más rápido en 176 MB—, es trabajo pendiente.
+**El RSS es el problema de verdad.** 307,9 MB contra los 73,4 de Jooby: el peor de los ocho, por
+más de cuatro veces. No es una fuga —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico
+algo más rápido en 176 MB—, es que asigna más por petición y llena el montón que se le da. Es lo
+siguiente que hay que arreglar, y está medido, no estimado.
 
-**El `/json` ya no se puede reclamar.** Los seis de arriba están dentro del 2 % unos de otros y
-el abanico de cada uno entre sus propias cinco repeticiones llega al 12,5 %. La medición no
-distingue, así que decir que Cero gana sería ruido.
+**El `/json` se pierde, y ahora se puede afirmar que se pierde.** Vert.x hace 98 589 contra
+94 634, y los intervalos de las cinco repeticiones no se solapan: Cero entre 93 095 y 95 777,
+Vert.x entre 97 913 y 99 828. Con Jooby y Helidon sí hay empate técnico. Esto solo se puede decir
+porque la corrida es bare-metal y con el generador de carga en núcleos propios; con el arnés
+anterior los ocho caían dentro del 2 % y la medida no distinguía nada.
 
-**El arranque sí.** 87 ms contra 383 del segundo: esa distancia no la explica ningún margen.
+**El arranque sí se gana.** 155 ms contra 443 del segundo: esa distancia no la explica ningún
+margen. La meta de 150 ms se falla por 5 ms, y eso también se dice.
 
 Falta repetir la corrida en Linux sin virtualizar: lo de arriba es Docker Desktop. Ver
 [docs/mediciones-locales.md](mediciones-locales.md).
