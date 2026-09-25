@@ -27,18 +27,112 @@ case "${COLORTERM:-}" in
   *)               MARCA='\033[38;5;75m' ;;
 esac
 azul()  { printf "$MARCA%s\033[0m\n" "$*"; }
+
+# ── Idioma ──────────────────────────────────────────────────────────────────────────────────
+#
+# El sitio es bilingüe desde el principio y la herramienta no lo era: quien llega de fuera se
+# encontraba un framework que le habla en un idioma que no lee. `CERO_LANG` manda sobre el
+# entorno, para poder forzarlo en un guion o en integración continua.
+case "${CERO_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}" in
+  es*|ES*) IDIOMA=es ;;
+  *)       IDIOMA=en ;;
+esac
+
+# Cada texto lleva su clave. Sin traducción cae al castellano, que es el idioma base: un hueco
+# tiene que verse raro, no quedarse en blanco.
+t() {
+  local k=$1; shift
+  local v
+  if [ "$IDIOMA" = es ]; then v=$(texto_es "$k"); else v=$(texto_en "$k"); [ -z "$v" ] && v=$(texto_es "$k"); fi
+  [ -z "$v" ] && v="$k"
+  printf "$v" "$@"
+}
+
+texto_es() {
+  case "$1" in
+    falta-maven)      printf '%s' 'falta Maven' ;;
+    falta-jdk)        printf '%s' 'falta un JDK' ;;
+    java-viejo)       printf '%s' 'Cero necesita Java 25 o superior (hilos virtuales); tienes %s' ;;
+    creando)          printf '%s' 'creando %s…' ;;
+    dime-nombre)      printf '%s' 'dime el nombre:  cero new mi-app [grupo] [motor]' ;;
+    compilando-ej)    printf '%s' 'compilando la aplicación de ejemplo…' ;;
+    arrancando)       printf '%s' 'arrancando en http://localhost:%s' ;;
+    probando)         printf '%s' 'probando %s' ;;
+    todas-pruebas)    printf '%s' 'corriendo todas las pruebas' ;;
+    empaquetando)     printf '%s' 'empaquetando…' ;;
+    instalando)       printf '%s' 'compilando, probando e instalando en ~/.m2' ;;
+    borrando)         printf '%s' 'borrando lo generado…' ;;
+    listo)            printf '%s' 'listo' ;;
+    arrancalo-con)    printf '%s' 'arráncalo con:  java -Xmx64m -jar %s' ;;
+    dist-limpio)      printf '%s' 'compilando desde cero, que es como lo va a compilar quien lo instale…' ;;
+    dist-no-compila)  printf '%s' 'no compila desde cero: no se empaqueta' ;;
+    dist-probando)    printf '%s' 'probando el paquete recién armado, no el repositorio…' ;;
+    dist-pasa)        printf '%s' '  el paquete pasa sus propias pruebas' ;;
+    dist-no-pasa)     printf '%s' 'el paquete NO pasa sus pruebas — no se publica' ;;
+    dist-huellas)     printf '%s' '  huellas en .sha256 · en %s' ;;
+    cache-vaciando)   printf '%s' 'vaciando la caché de Cero en ~/.m2…' ;;
+    cache-hecho)      printf '%s' 'artefactos de cero eliminados; la próxima compilación los rehace' ;;
+    falta-clase)      printf '%s' 'dime la clase principal: ./cero fatjar <modulo> <clase>' ;;
+    falta-driver)     printf '%s' 'hace falta un driver JDBC: exporta CERO_JDBC_JAR=/ruta/driver.jar' ;;
+    no-carpeta)       printf '%s' 'no existe la carpeta %s' ;;
+    no-migraciones)   printf '%s' 'no existe el directorio de migraciones %s' ;;
+    git-sucio)        printf '%s' 'el árbol de git de %s tiene cambios sin guardar.' ;;
+    git-commitea)     printf '%s' 'commitea o guarda antes: la migración usa git como red de seguridad.' ;;
+    uso-migrar)       printf '%s' 'uso: ./cero migrar <ruta-de-la-app> [--probar]' ;;
+    uso-migraciones)  printf '%s' 'uso: ./cero migraciones --verificar [directorio] [url-jdbc]' ;;
+    ayuda-titulo)     printf '%s' 'cero — órdenes de Cero' ;;
+    *)                printf '%s' '' ;;
+  esac
+}
+
+texto_en() {
+  case "$1" in
+    falta-maven)      printf '%s' 'Maven is missing' ;;
+    falta-jdk)        printf '%s' 'a JDK is missing' ;;
+    java-viejo)       printf '%s' 'Cero needs Java 25 or newer (virtual threads); you have %s' ;;
+    creando)          printf '%s' 'creating %s…' ;;
+    dime-nombre)      printf '%s' 'give it a name:  cero new my-app [group] [engine]' ;;
+    compilando-ej)    printf '%s' 'building the example application…' ;;
+    arrancando)       printf '%s' 'starting on http://localhost:%s' ;;
+    probando)         printf '%s' 'testing %s' ;;
+    todas-pruebas)    printf '%s' 'running every test' ;;
+    empaquetando)     printf '%s' 'packaging…' ;;
+    instalando)       printf '%s' 'building, testing and installing into ~/.m2' ;;
+    borrando)         printf '%s' 'removing build output…' ;;
+    listo)            printf '%s' 'done' ;;
+    arrancalo-con)    printf '%s' 'run it with:  java -Xmx64m -jar %s' ;;
+    dist-limpio)      printf '%s' 'building from scratch, the way whoever installs it will…' ;;
+    dist-no-compila)  printf '%s' 'it does not build from scratch: not packaging' ;;
+    dist-probando)    printf '%s' 'testing the package just built, not the repository…' ;;
+    dist-pasa)        printf '%s' '  the package passes its own tests' ;;
+    dist-no-pasa)     printf '%s' 'the package does NOT pass its tests — not publishing' ;;
+    dist-huellas)     printf '%s' '  checksums in .sha256 · in %s' ;;
+    cache-vaciando)   printf '%s' 'clearing the Cero cache in ~/.m2…' ;;
+    cache-hecho)      printf '%s' 'cero artifacts removed; the next build will rebuild them' ;;
+    falta-clase)      printf '%s' 'give it a main class: ./cero fatjar <module> <class>' ;;
+    falta-driver)     printf '%s' 'a JDBC driver is needed: export CERO_JDBC_JAR=/path/driver.jar' ;;
+    no-carpeta)       printf '%s' 'no such directory: %s' ;;
+    no-migraciones)   printf '%s' 'no such migrations directory: %s' ;;
+    git-sucio)        printf '%s' 'the git tree at %s has unsaved changes.' ;;
+    git-commitea)     printf '%s' 'commit or stash first: the migration uses git as its safety net.' ;;
+    uso-migrar)       printf '%s' 'usage: ./cero migrar <app-path> [--probar]' ;;
+    uso-migraciones)  printf '%s' 'usage: ./cero migraciones --verificar [directory] [jdbc-url]' ;;
+    ayuda-titulo)     printf '%s' 'cero — Cero commands' ;;
+    *)                printf '%s' '' ;;
+  esac
+}
 gris()  { printf '\033[38;5;245m%s\033[0m\n' "$*"; }
 malo()  { printf '\033[38;5;167m%s\033[0m\n' "$*" >&2; }
 
 requisitos() {
-  command -v mvn >/dev/null || { malo "falta Maven"; exit 1; }
-  command -v java >/dev/null || { malo "falta un JDK"; exit 1; }
+  command -v mvn >/dev/null || { malo "$(t falta-maven)"; exit 1; }
+  command -v java >/dev/null || { malo "$(t falta-jdk)"; exit 1; }
   local v
   v=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
   if [ "${v:-0}" -lt 25 ] 2>/dev/null; then
     # 25 y no 21: el pom compila con `release 25`, así que dejar pasar un 21 solo cambia este
     # mensaje por el de javac, que no dice qué hacer. Los instaladores de docs/ ya piden 25.
-    malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v"
+    malo "$(t java-viejo "$v")"
     exit 1
   fi
 }
@@ -60,9 +154,9 @@ case "${1:-ayuda}" in
 
   new|nuevo)
     requisitos
-    [ -n "${2:-}" ] || { malo "dime el nombre:  cero new mi-app [grupo] [motor]"; exit 1; }
+    [ -n "${2:-}" ] || { malo "$(t dime-nombre)"; exit 1; }
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
-    azul "creando $2…"
+    azul "$(t creando "$2")"
     java -cp "$JAVA_DIR/cero-launcher/target/classes" cero.launcher.Nuevo "${@:2}"
     ;;
 
@@ -75,9 +169,9 @@ case "${1:-ayuda}" in
     # instalación limpia: la compilación incremental reutilizaba clases viejas que todavía
     # cumplían la interfaz anterior, y aquí nadie lo notaba. Quien lo instalaba, sí.
     requisitos
-    azul "compilando desde cero, que es como lo va a compilar quien lo instale…"
+    azul "$(t dist-limpio)"
     (cd "$JAVA_DIR" && "${MVN[@]}" clean install -DskipTests) || {
-      malo "no compila desde cero: no se empaqueta"; exit 1; }
+      malo "$(t dist-no-compila)"; exit 1; }
 
     v=$(version)
     destino="$AQUI/dist"
@@ -109,13 +203,13 @@ case "${1:-ayuda}" in
     # tiene archivos que el paquete no lleva, y así se publicó uno cuyas pruebas de /instalar
     # fallaban porque docs/ no viajaba dentro. Se prueba lo que se entrega, no lo que se tiene.
     if [ "${2:-}" != "--sin-probar" ]; then
-      azul "probando el paquete recién armado, no el repositorio…"
+      azul "$(t dist-probando)"
       prueba=$(mktemp -d)
       tar -xzf "$destino/cero-$v.tar.gz" -C "$prueba"
       if (cd "$prueba/cero-$v" && mvn -B -q -f java/pom.xml test >"$prueba/salida.log" 2>&1); then
-        gris "  el paquete pasa sus propias pruebas"
+        gris "$(t dist-pasa)"
       else
-        malo "el paquete NO pasa sus pruebas — no se publica"
+        malo "$(t dist-no-pasa)"
         grep -E "XX |ERROR" "$prueba/salida.log" | head -12
         rm -rf "$prueba"
         exit 1
@@ -123,31 +217,31 @@ case "${1:-ayuda}" in
       rm -rf "$prueba"
     fi
 
-    gris "  huellas en .sha256 · en $destino"
+    gris "$(t dist-huellas "$destino")"
     ;;
 
   run|correr)
     requisitos
-    azul "compilando la aplicación de ejemplo…"
+    azul "$(t compilando-ej)"
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
-    azul "arrancando en http://localhost:${2:-8080}"
+    azul "$(t arrancando "${2:-8080}")"
     java -cp "$(classpath_ejemplo)" ejemplo.App "${2:-8080}"
     ;;
 
   test|probar)
     requisitos
     if [ -n "${2:-}" ]; then
-      azul "probando $2"
+      azul "$(t probando "$2")"
       (cd "$JAVA_DIR" && mvn -B -o -q -pl "$2" -am test)
     else
-      azul "corriendo todas las pruebas"
+      azul "$(t todas-pruebas)"
       (cd "$JAVA_DIR" && mvn -B -q test)
     fi
     ;;
 
   package|empaquetar)
     requisitos
-    azul "empaquetando…"
+    azul "$(t empaquetando)"
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests package)
     echo
     printf '  %-22s %10s\n' MÓDULO TAMAÑO
@@ -164,23 +258,23 @@ case "${1:-ayuda}" in
 
   install|instalar)
     requisitos
-    azul "compilando, probando e instalando en ~/.m2"
+    azul "$(t instalando)"
     (cd "$JAVA_DIR" && mvn -B install)
     ;;
 
   clean|limpiar)
-    azul "borrando lo generado…"
+    azul "$(t borrando)"
     (cd "$JAVA_DIR" && "${MVN[@]}" clean) || true
     rm -rf "$JAVA_DIR"/*/target "$AQUI"/legacy/*/target 2>/dev/null || true
     find "$AQUI" -name '*.class' -not -path '*/.git/*' -delete 2>/dev/null || true
-    gris "listo"
+    gris "$(t listo)"
     ;;
 
   cache)
     if [ "${2:-}" = "--purge" ]; then
-      azul "vaciando la caché de Cero en ~/.m2…"
+      azul "$(t cache-vaciando)"
       rm -rf "$HOME/.m2/repository/cero"
-      gris "artefactos de cero eliminados; la próxima compilación los rehace"
+      gris "$(t cache-hecho)"
     else
       printf '  %-34s %10s\n' UBICACIÓN TAMAÑO
       for d in "$HOME/.m2/repository/cero" "$JAVA_DIR"/*/target "$AQUI/legacy"/*/target; do
@@ -200,7 +294,7 @@ case "${1:-ayuda}" in
     if [ -z "$main" ]; then
       case "$modulo" in
         ejemplo) main="ejemplo.App" ;;
-        *) malo "dime la clase principal: ./cero fatjar <modulo> <clase>"; exit 1 ;;
+        *) malo "$(t falta-clase)"; exit 1 ;;
       esac
     fi
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
@@ -232,9 +326,9 @@ case "${1:-ayuda}" in
     # base de verdad, así que vale en integración continua.
     requisitos
     [ "${2:-}" = "--verificar" ] || {
-      malo "uso: ./cero migraciones --verificar [directorio] [url-jdbc]"; exit 1; }
+      malo "$(t uso-migraciones)"; exit 1; }
     dir="${3:-db/migraciones}"
-    [ -d "$dir" ] || { malo "no existe el directorio de migraciones $dir"; exit 1; }
+    [ -d "$dir" ] || { malo "$(t no-migraciones "$dir")"; exit 1; }
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests -pl cero-launcher -am install)
     # Las clases recién compiladas, no los jar de target/: ahí conviven versiones viejas y
     # la primera del listado gana.
@@ -242,7 +336,7 @@ case "${1:-ayuda}" in
     # El driver lo pone quien llama; si no dice nada, se usa el H2 de ~/.m2, que es el motor
     # de la base desechable por omisión.
     driver="${CERO_JDBC_JAR:-$(ls "$HOME"/.m2/repository/com/h2database/h2/*/h2-*.jar 2>/dev/null | head -1)}"
-    [ -n "$driver" ] || { malo "hace falta un driver JDBC: exporta CERO_JDBC_JAR=/ruta/driver.jar"; exit 1; }
+    [ -n "$driver" ] || { malo "$(t falta-driver)"; exit 1; }
     java -cp "$cp:$driver" cero.launcher.Migraciones "$dir" ${4:+"$4"}
     ;;
 
@@ -253,15 +347,15 @@ case "${1:-ayuda}" in
     # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
     # carpetas .bak por ahí.
     destino="${2:-}"
-    [ -n "$destino" ] || { malo "uso: ./cero migrar <ruta-de-la-app> [--probar]"; exit 1; }
-    [ -d "$destino" ] || { malo "no existe la carpeta $destino"; exit 1; }
+    [ -n "$destino" ] || { malo "$(t uso-migrar)"; exit 1; }
+    [ -d "$destino" ] || { malo "$(t no-carpeta "$destino")"; exit 1; }
     ensayo=""
     [ "${3:-}" = "--probar" ] || [ "${3:-}" = "--dry-run" ] && ensayo="1"
 
     if [ -z "$ensayo" ] && git -C "$destino" rev-parse --git-dir >/dev/null 2>&1; then
       if [ -n "$(git -C "$destino" status --porcelain)" ]; then
-        malo "el árbol de git de $destino tiene cambios sin guardar."
-        malo "commitea o guarda antes: la migración usa git como red de seguridad."
+        malo "$(t git-sucio "$destino")"
+        malo "$(t git-commitea)"
         exit 1
       fi
     fi
@@ -270,19 +364,51 @@ case "${1:-ayuda}" in
     ;;
 
   *)
-    azul "cero — órdenes de Cero"
+    azul "$(t ayuda-titulo)"
     echo
-    printf '  %-24s %s\n' "./cero new <nombre>"     "crea un proyecto nuevo y listo para arrancar"
-    printf '  %-24s %s\n' "./cero run [puerto]"     "arranca la aplicación de ejemplo"
-    printf '  %-24s %s\n' "./cero test [módulo]"    "corre las pruebas"
-    printf '  %-24s %s\n' "./cero package"          "genera los JAR y muestra sus tamaños"
-    printf '  %-24s %s\n' "./cero fatjar [módulo]"  "un solo jar ejecutable con java -jar"
-    printf '  %-24s %s\n' "./cero install"          "compila, prueba e instala en ~/.m2"
-    printf '  %-24s %s\n' "./cero dist"             "arma el .tar.gz y el .zip del instalador"
-    printf '  %-24s %s\n' "./cero clean"            "borra lo generado"
-    printf '  %-24s %s\n' "./cero cache [--purge]"  "qué ocupa la caché, o vaciarla"
-    printf '  %-24s %s\n' "./cero status"           "resumen del proyecto"
-    printf '  %-24s %s\n' "./cero migraciones"      "con --verificar, prueba las migraciones en una base desechable"
-    printf '  %-24s %s\n' "./cero migrar <ruta>"    "migra una aplicación anterior a Cero 0.6.0"
+    # Las órdenes no se traducen —son la interfaz— pero lo que hacen sí.
+    if [ "$IDIOMA" = es ]; then
+      set -- "crea un proyecto nuevo y listo para arrancar" "arranca la aplicación de ejemplo" \
+             "corre las pruebas" "genera los JAR y muestra sus tamaños" \
+             "un solo jar ejecutable con java -jar" "compila, prueba e instala en ~/.m2" \
+             "arma el .tar.gz y el .zip del instalador" "borra lo generado" \
+             "qué ocupa la caché, o vaciarla" "resumen del proyecto" \
+             "con --verificar, prueba las migraciones en una base desechable" \
+             "migra una aplicación anterior a Cero 0.6.0"
+    else
+      set -- "create a new project, ready to run" "start the example application" \
+             "run the tests" "build the JARs and show their sizes" \
+             "a single jar you can run with java -jar" "build, test and install into ~/.m2" \
+             "build the .tar.gz and .zip the installer serves" "remove build output" \
+             "what the cache holds, or empty it" "a summary of the project" \
+             "with --verificar, tries the migrations against a throwaway database" \
+             "migrate an application from an earlier Cero"
+    fi
+    # Los marcadores sí se traducen: no son la orden, son la pista de qué escribir.
+    if [ "$IDIOMA" = es ]; then
+      NOMBRE=nombre; PUERTO=puerto; MODULO=modulo; RUTA=ruta
+    else
+      NOMBRE=name; PUERTO=port; MODULO=module; RUTA=path
+    fi
+    # `%-24s` cuenta octetos, así que un acento corría la columna. Se rellena a mano contando
+    # caracteres, que es el mismo arreglo que ya lleva el instalador.
+    fila() {
+      local n=${#1}
+      printf '  %s' "$1"
+      while [ "$n" -lt 24 ]; do printf ' '; n=$((n + 1)); done
+      printf ' %s\n' "$2"
+    }
+    fila "./cero new <$NOMBRE>"       "$1"
+    fila "./cero run [$PUERTO]"       "$2"
+    fila "./cero test [$MODULO]"      "$3"
+    fila "./cero package"             "$4"
+    fila "./cero fatjar [$MODULO]"    "$5"
+    fila "./cero install"             "$6"
+    fila "./cero dist"                "$7"
+    fila "./cero clean"               "$8"
+    fila "./cero cache [--purge]"     "$9"
+    fila "./cero status"              "${10}"
+    fila "./cero migraciones"         "${11}"
+    fila "./cero migrar <$RUTA>"      "${12}"
     ;;
 esac

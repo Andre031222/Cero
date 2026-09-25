@@ -86,6 +86,142 @@ $Utf = [Console]::OutputEncoding.WebName -match 'utf'
 if ($Utf) { $Giros = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'.ToCharArray(); $Lleno='━'; $Vacio='─'; $Ok='✓'; $No='✗' }
 else      { $Giros = '|/-\'.ToCharArray();           $Lleno='#'; $Vacio='-'; $Ok='+'; $No='x' }
 
+# ─── idioma ─────────────────────────────────────────────────────────────────────────────
+# El instalador es lo primero que alguien ve de Cero, y hasta ahora solo hablaba castellano.
+# `CERO_LANG` manda sobre la cultura de la consola, para forzarlo en un guion o en CI.
+$Idioma = if ($env:CERO_LANG) { "$env:CERO_LANG" } else { "$PSUICulture" }
+$Idioma = if ($Idioma -match '^(?i)es') { 'es' } else { 'en' }
+
+$TextosEs = @{
+    'p-entorno'     = 'comprobando el entorno'
+    'p-version'     = 'consultando la version'
+    'p-bajando'     = 'bajando el paquete'
+    'p-huella'      = 'comprobando la huella'
+    'p-extrayendo'  = 'extrayendo'
+    'p-compilando'  = 'compilando los ocho modulos'
+    'p-compilando-t'= 'compilando los ocho modulos y corriendo las pruebas'
+    'p-instalando'  = 'instalando la orden cero'
+    'p-comprobando' = 'comprobando la instalacion'
+    'b-entorno'     = 'entorno'
+    'b-version'     = 'version'
+    'b-descargado'  = 'descargado'
+    'b-huella'      = 'huella'
+    'b-extraido'    = 'extraido'
+    'b-compilado'   = 'compilado'
+    'b-orden'       = 'orden cero'
+    'b-comprobado'  = 'comprobado'
+    'd-modulos'     = 'ocho modulos en ~\.m2 - {0} s'
+    'd-responde'    = 'cero status responde'
+    'e-sin-red'     = 'no se pudo hablar con {0} - hay conexion?'
+    'e-version'     = 'el servidor devolvio una version rara'
+    'e-descarga'    = 'no se pudo bajar {0}'
+    'e-sin-huella'  = 'no se pudo bajar la huella'
+    'e-contenido'   = 'el paquete no traia {0} dentro'
+    'e-compilar'    = 'la compilacion fallo'
+    'e-no-responde' = "quedo instalado pero 'cero status' no responde"
+    'e-huella-mal'  = 'la huella no coincide - el paquete llego cambiado, no lo instalo.'
+    'e-esperada'    = 'esperada'
+    'e-recibida'    = 'recibida'
+    'e-falta'       = 'falta: {0}'
+    'e-java-viejo'  = 'Cero necesita Java {0} o superior - hilos virtuales. Tienes {1}.'
+    'a-no-windows'  = 'no estas en Windows'
+    'a-usa-shell'   = 'usa el instalador de shell:  curl -fsSL {0}/instalar | sh'
+    't-necesita'    = 'Cero necesita un JDK {0} o superior y Maven.'
+    't-detectado'   = 'Detectado: {0} - gestor {1}'
+    't-ninguno'     = 'ninguno'
+    't-reabre'      = 'Cierra y abre PowerShell despues de instalarlos, para que entren en el PATH.'
+    'd-lema'        = 'framework web para Java'
+    'f-instalador'  = 'Cero - instalador'
+    'f-instalado'   = 'Cero {0} instalado'
+    'f-sistema'     = 'sistema'
+    'f-terminal'    = 'terminal'
+    'f-gestor'      = 'gestor'
+    'f-java'        = 'java'
+    'f-maven'       = 'maven'
+    'f-salida'      = 'salida'
+    'f-carpeta'     = 'carpeta'
+    'f-orden'       = 'orden'
+    'f-ninguno'     = 'ninguno conocido'
+    'f-no-hay'      = 'no encontrado'
+    'f-presente'    = 'presente'
+    'f-color'       = 'terminal con color'
+    'f-plana'       = 'plana (sin escapes)'
+    'f-para-java'   = 'Para tener Java {0} en tu sistema:'
+    'f-abre'        = 'Abre una terminal nueva'
+    'f-abre-resto'  = 'para que el PATH se entere de la orden'
+    'f-crear'       = 'Crear un proyecto y arrancarlo:'
+    'f-guia'        = 'Guia completa:'
+}
+
+$TextosEn = @{
+    'p-entorno'     = 'checking the environment'
+    'p-version'     = 'asking for the version'
+    'p-bajando'     = 'downloading the package'
+    'p-huella'      = 'verifying the checksum'
+    'p-extrayendo'  = 'extracting'
+    'p-compilando'  = 'building the eight modules'
+    'p-compilando-t'= 'building the eight modules and running the tests'
+    'p-instalando'  = 'installing the cero command'
+    'p-comprobando' = 'checking the installation'
+    'b-entorno'     = 'environment'
+    'b-version'     = 'version'
+    'b-descargado'  = 'downloaded'
+    'b-huella'      = 'checksum'
+    'b-extraido'    = 'extracted'
+    'b-compilado'   = 'built'
+    'b-orden'       = 'cero command'
+    'b-comprobado'  = 'checked'
+    'd-modulos'     = 'eight modules in ~\.m2 - {0} s'
+    'd-responde'    = 'cero status answers'
+    'e-sin-red'     = 'could not reach {0} - is there a connection?'
+    'e-version'     = 'the server returned an odd version'
+    'e-descarga'    = 'could not download {0}'
+    'e-sin-huella'  = 'could not download the checksum'
+    'e-contenido'   = 'the package did not contain {0}'
+    'e-compilar'    = 'the build failed'
+    'e-no-responde' = "it installed but 'cero status' does not answer"
+    'e-huella-mal'  = 'the checksum does not match - the package arrived altered, not installing it.'
+    'e-esperada'    = 'expected'
+    'e-recibida'    = 'received'
+    'e-falta'       = 'missing: {0}'
+    'e-java-viejo'  = 'Cero needs Java {0} or newer - virtual threads. You have {1}.'
+    'a-no-windows'  = 'you are not on Windows'
+    'a-usa-shell'   = 'use the shell installer:  curl -fsSL {0}/instalar | sh'
+    't-necesita'    = 'Cero needs a JDK {0} or newer and Maven.'
+    't-detectado'   = 'Detected: {0} - package manager {1}'
+    't-ninguno'     = 'none'
+    't-reabre'      = 'Close and reopen PowerShell after installing them, so they enter the PATH.'
+    'd-lema'        = 'web framework for Java'
+    'f-instalador'  = 'Cero - installer'
+    'f-instalado'   = 'Cero {0} installed'
+    'f-sistema'     = 'system'
+    'f-terminal'    = 'shell'
+    'f-gestor'      = 'manager'
+    'f-java'        = 'java'
+    'f-maven'       = 'maven'
+    'f-salida'      = 'output'
+    'f-carpeta'     = 'directory'
+    'f-orden'       = 'command'
+    'f-ninguno'     = 'none known'
+    'f-no-hay'      = 'not found'
+    'f-presente'    = 'present'
+    'f-color'       = 'terminal with colour'
+    'f-plana'       = 'plain (no escapes)'
+    'f-para-java'   = 'To get Java {0} on your system:'
+    'f-abre'        = 'Open a new terminal'
+    'f-abre-resto'  = 'so the PATH learns about the command'
+    'f-crear'       = 'Create a project and start it:'
+    'f-guia'        = 'Full guide:'
+}
+
+# Sin traduccion cae al castellano: un hueco tiene que verse raro, no quedarse en blanco.
+function T([string] $clave) {
+    $v = if ($Idioma -eq 'en') { $TextosEn[$clave] } else { $null }
+    if (-not $v) { $v = $TextosEs[$clave] }
+    if (-not $v) { $v = $clave }
+    return $v
+}
+
 function Escribe([string] $t) { Write-Host $t }
 function Borra { if ($Vivo) { Write-Host ("`r{0}[K" -f $e) -NoNewline } }
 
@@ -129,12 +265,12 @@ function Muere([string] $t, [string] $registro) {
 }
 
 function Marca {
-    if (-not $Vivo) { Escribe "Cero - instalador`n"; return }
+    if (-not $Vivo) { Escribe ("{0}`n" -f (T 'f-instalador')); return }
     Escribe ''
     Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Acento, $Fin)
     Escribe ("   {0}\{1}    {0}.{1}     {0}.{1}    {0}/{1}" -f $Acento, $Fin)
     Escribe (" {0}-{1}   {0}.{1}   {0}{2}###{1}   {0}.{1}   {0}-{1}      {2}Cero{1}" -f $Acento, $Fin, $Fuerte)
-    Escribe ("   {0}/{1}    {0}.{1}     {0}.{1}    {0}\{1}      {2}framework web para Java{1}" -f $Acento, $Fin, $Tenue)
+    Escribe ("   {0}/{1}    {0}.{1}     {0}.{1}    {0}\{1}      {2}{3}{1}" -f $Acento, $Fin, $Tenue, (T 'd-lema'))
     Escribe ("        {0}.{1}   {0}|{1}   {0}.{1}" -f $Acento, $Fin)
     Escribe ''
 }
@@ -173,15 +309,15 @@ function Girando([string] $registro, [string] $orden, [string[]] $argumentos) {
 if ($Detectar) {
     Marca
     $jv = VersionJava
-    Escribe ("  {0} {1}" -f 'sistema '.PadRight(14), $DetalleSo)
-    Escribe ("  {0} {1}" -f 'terminal'.PadRight(14), $Interprete)
-    Escribe ("  {0} {1}" -f 'gestor  '.PadRight(14), $(if ($Gestor) { $Gestor } else { 'ninguno conocido' }))
-    Escribe ("  {0} {1}" -f 'java    '.PadRight(14), $(if ($jv) { $jv } else { 'no encontrado' }))
-    Escribe ("  {0} {1}" -f 'maven   '.PadRight(14), $(if (Donde 'mvn') { 'presente' } else { 'no encontrado' }))
-    Escribe ("  {0} {1}" -f 'salida  '.PadRight(14), $(if ($Vivo) { 'terminal con color' } else { 'plana (sin escapes)' }))
+    Escribe ("  {0} {1}" -f (T 'f-sistema').PadRight(14), $DetalleSo)
+    Escribe ("  {0} {1}" -f (T 'f-terminal').PadRight(14), $Interprete)
+    Escribe ("  {0} {1}" -f (T 'f-gestor').PadRight(14), $(if ($Gestor) { $Gestor } else { T 'f-ninguno' }))
+    Escribe ("  {0} {1}" -f (T 'f-java').PadRight(14), $(if ($jv) { $jv } else { T 'f-no-hay' }))
+    Escribe ("  {0} {1}" -f (T 'f-maven').PadRight(14), $(if (Donde 'mvn') { T 'f-presente' } else { T 'f-no-hay' }))
+    Escribe ("  {0} {1}" -f (T 'f-salida').PadRight(14), $(if ($Vivo) { T 'f-color' } else { T 'f-plana' }))
     if ($jv -lt $JavaMinimo) {
         Escribe ''
-        Escribe "  Para tener Java $JavaMinimo en tu sistema:"
+        Escribe ("  " + ((T 'f-para-java') -f $JavaMinimo))
         Escribe ''
         Escribe ("      {0}" -f (OrdenJava))
         Escribe ''
@@ -191,44 +327,44 @@ if ($Detectar) {
 
 # ─── 1 · lo que hace falta ──────────────────────────────────────────────────────────────
 Marca
-Paso 'comprobando el entorno'
+Paso (T 'p-entorno')
 
 if (-not $EnWindows) {
-    Aviso 'no estás en Windows' "usa el instalador de shell:  curl -fsSL $Base/instalar | sh"
+    Aviso (T 'a-no-windows') ((T 'a-usa-shell') -f $Base)
 }
 
 $falta = @('java', 'mvn') | Where-Object { -not (Donde $_) }
 if ($falta) {
     Borra
-    Write-Host ("  {0}{1}  falta: {2}{3}" -f $Rojo, $No, ($falta -join ' '), $Fin)
+    Write-Host ("  {0}{1}  {2}{3}" -f $Rojo, $No, ((T 'e-falta') -f ($falta -join ' ')), $Fin)
     Escribe ''
-    Escribe "  Cero necesita un ${Fuerte}JDK $JavaMinimo${Fin} o superior y ${Fuerte}Maven${Fin}."
-    Escribe "  ${Tenue}Detectado: $DetalleSo - gestor $(if ($Gestor) { $Gestor } else { 'ninguno' })${Fin}"
+    Escribe ("  {0}{1}{2}" -f $Fuerte, ((T 't-necesita') -f $JavaMinimo), $Fin)
+    Escribe ("  {0}{1}{2}" -f $Tenue, ((T 't-detectado') -f $DetalleSo, $(if ($Gestor) { $Gestor } else { T 't-ninguno' })), $Fin)
     Escribe ''
     Escribe ("      {0}{1}{2}" -f $Fuerte, (OrdenJava), $Fin)
     Escribe ''
-    Escribe "  ${Tenue}Cierra y abre PowerShell despues de instalarlos, para que entren en el PATH.${Fin}"
+    Escribe ("  {0}{1}{2}" -f $Tenue, (T 't-reabre'), $Fin)
     exit 1
 }
 
 $javaV = VersionJava
 if ($javaV -lt $JavaMinimo) {
     Borra
-    Write-Host ("  {0}{1}  Cero necesita Java $JavaMinimo o superior - hilos virtuales. Tienes $javaV.{2}" -f $Rojo, $No, $Fin)
+    Write-Host ("  {0}{1}  {2}{3}" -f $Rojo, $No, ((T 'e-java-viejo') -f $JavaMinimo, $javaV), $Fin)
     Escribe ''
     Escribe ("      {0}{1}{2}" -f $Fuerte, (OrdenJava), $Fin)
     Escribe ''
     exit 1
 }
 $mavenV = ((& cmd.exe /c 'mvn -v' 2>$null) | Select-Object -First 1)
-Bien 'entorno' "$DetalleSo - Java $javaV"
+Bien (T 'b-entorno') "$DetalleSo - Java $javaV"
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
-Paso 'consultando la version'
+Paso (T 'p-version')
 try { $version = (Invoke-RestMethod -Uri "$Base/version" -TimeoutSec 20).ToString().Trim() }
-catch { Muere "no se pudo hablar con $Base - hay conexion?" }
-if ($version -notmatch '^[0-9][0-9.]*$') { Muere "el servidor devolvio una version rara: '$version'" }
-Bien 'version' "Cero $version"
+catch { Muere ((T 'e-sin-red') -f $Base) }
+if ($version -notmatch '^[0-9][0-9.]*$') { Muere ("{0}: '{1}'" -f (T 'e-version'), $version) }
+Bien (T 'b-version') "Cero $version"
 
 # ─── 3 · bajarlo ────────────────────────────────────────────────────────────────────────
 $paquete = "cero-$version.zip"
@@ -236,43 +372,43 @@ $tmp = Join-Path ([IO.Path]::GetTempPath()) ("cero-" + [Guid]::NewGuid().ToStrin
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 $zip = Join-Path $tmp $paquete
 
-Paso 'bajando el paquete'
+Paso (T 'p-bajando')
 try { Invoke-WebRequest -Uri "$Base/estaticos/$paquete" -OutFile $zip -TimeoutSec 300 }
-catch { Muere "no se pudo bajar $Base/estaticos/$paquete" }
-Bien 'descargado' ("{0} - {1} KB" -f $paquete, [int]((Get-Item $zip).Length / 1KB))
+catch { Muere ((T 'e-descarga') -f "$Base/estaticos/$paquete") }
+Bien (T 'b-descargado') ("{0} - {1} KB" -f $paquete, [int]((Get-Item $zip).Length / 1KB))
 
 # ─── 4 · comprobar la huella ────────────────────────────────────────────────────────────
-Paso 'comprobando la huella'
+Paso (T 'p-huella')
 try { $esperada = ((Invoke-RestMethod -Uri "$Base/estaticos/$paquete.sha256" -TimeoutSec 20) -split '\s+')[0] }
-catch { Muere 'no se pudo bajar la huella' }
+catch { Muere (T 'e-sin-huella') }
 $real = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
 if ($real -ne $esperada.ToLower()) {
-    Muere "la huella no coincide - el paquete llego cambiado, no lo instalo.`n      esperada  $esperada`n      recibida  $real"
+    Muere ("{0}`n      {1}  {2}`n      {3}  {4}" -f (T 'e-huella-mal'), (T 'e-esperada'), $esperada, (T 'e-recibida'), $real)
 }
-Bien 'huella' "sha256 $($real.Substring(0,16))..."
+Bien (T 'b-huella') "sha256 $($real.Substring(0,16))..."
 
 # ─── 5 · extraer ────────────────────────────────────────────────────────────────────────
-Paso 'extrayendo'
+Paso (T 'p-extrayendo')
 $destino = Join-Path $Raiz "cero-$version"
 if (Test-Path $destino) { Remove-Item $destino -Recurse -Force }
 New-Item -ItemType Directory -Path $Raiz -Force | Out-Null
 Expand-Archive -Path $zip -DestinationPath $Raiz -Force
-if (-not (Test-Path $destino)) { Muere "el paquete no traia cero-$version dentro" }
-Bien 'extraido' $destino
+if (-not (Test-Path $destino)) { Muere ((T 'e-contenido') -f "cero-$version") }
+Bien (T 'b-extraido') $destino
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
-Paso $(if ($ConPruebas) { 'compilando los ocho modulos y corriendo las pruebas' } else { 'compilando los ocho modulos' })
+Paso $(if ($ConPruebas) { T 'p-compilando-t' } else { T 'p-compilando' })
 $pom = Join-Path $destino 'java\pom.xml'
 $mvnArgs = @('-B', '-q', '-f', $pom, 'install')
 if (-not $ConPruebas) { $mvnArgs += '-DskipTests' }
 $registro = Join-Path $tmp 'mvn.log'
 # mvn en Windows es un .cmd, asi que va por cmd.exe
 $codigo = Girando $registro 'cmd.exe' (@('/c', 'mvn') + $mvnArgs)
-if ($codigo -ne 0) { Muere 'la compilacion fallo' $registro }
-Bien 'compilado' "ocho modulos en ~\.m2 - $script:Segundos s"
+if ($codigo -ne 0) { Muere (T 'e-compilar') $registro }
+Bien (T 'b-compilado') ((T 'd-modulos') -f $script:Segundos)
 
 # ─── 7 · dejar la orden a mano ──────────────────────────────────────────────────────────
-Paso 'instalando la orden cero'
+Paso (T 'p-instalando')
 $actual = Join-Path $Raiz 'actual'
 if (Test-Path $actual) { Remove-Item $actual -Recurse -Force }
 Copy-Item -Path $destino -Destination $actual -Recurse
@@ -289,33 +425,33 @@ if ($pathUsuario -notlike "*$Bin*") {
     $script:PathTocado = $true
 }
 $env:Path = "$env:Path;$Bin"
-Bien 'orden cero' (Join-Path $Bin 'cero.cmd')
+Bien (T 'b-orden') (Join-Path $Bin 'cero.cmd')
 
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
-Paso 'comprobando la instalacion'
+Paso (T 'p-comprobando')
 & cmd.exe /c "`"$Bin\cero.cmd`" estado" *> $null
-if ($LASTEXITCODE -ne 0) { Muere "quedo instalado pero 'cero status' no responde" }
-Bien 'comprobado' 'cero status responde'
+if ($LASTEXITCODE -ne 0) { Muere (T 'e-no-responde') }
+Bien (T 'b-comprobado') (T 'd-responde')
 
 # ─── resumen ────────────────────────────────────────────────────────────────────────────
 Escribe ''
-Escribe "  ${Verde}${Fuerte}Cero $version instalado${Fin}"
+Escribe ("  {0}{1}{2}{3}" -f $Verde, $Fuerte, ((T 'f-instalado') -f $version), $Fin)
 Escribe ''
-Escribe ("  {0} {1}" -f 'sistema '.PadRight(12), $DetalleSo)
-Escribe ("  {0} {1}" -f 'java    '.PadRight(12), "$javaV - $mavenV")
-Escribe ("  {0} {1}" -f 'carpeta '.PadRight(12), $destino)
-Escribe ("  {0} {1}" -f 'orden   '.PadRight(12), (Join-Path $Bin 'cero.cmd'))
+Escribe ("  {0} {1}" -f (T 'f-sistema').PadRight(12), $DetalleSo)
+Escribe ("  {0} {1}" -f (T 'f-java').PadRight(12), "$javaV - $mavenV")
+Escribe ("  {0} {1}" -f (T 'f-carpeta').PadRight(12), $destino)
+Escribe ("  {0} {1}" -f (T 'f-orden').PadRight(12), (Join-Path $Bin 'cero.cmd'))
 Escribe ''
 if ($script:PathTocado) {
-    Escribe "  ${Acento}Abre una terminal nueva${Fin} para que el PATH se entere de la orden ${Fuerte}cero${Fin}."
+    Escribe ("  {0}{1}{2} {3} {4}cero{2}." -f $Acento, (T 'f-abre'), $Fin, (T 'f-abre-resto'), $Fuerte)
     Escribe ''
 }
-Escribe "  ${Tenue}Crear un proyecto y arrancarlo:${Fin}"
+Escribe ("  {0}{1}{2}" -f $Tenue, (T 'f-crear'), $Fin)
 Escribe ''
 Escribe "      ${Fuerte}cero new mi-app${Fin}"
 Escribe "      ${Fuerte}cd mi-app && mvn -q package && java -Xmx64m -jar target\mi-app.jar${Fin}"
 Escribe ''
-Escribe "  ${Tenue}Guia completa:${Fin}  $Base/empezar"
+Escribe ("  {0}{1}{2}  {3}/empezar" -f $Tenue, (T 'f-guia'), $Fin, $Base)
 Escribe ''
 
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

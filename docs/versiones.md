@@ -10,6 +10,35 @@ auditoría del portal FINESI, y de ahí sale esta regla.
 
 ---
 
+## Sin publicar
+
+### La orden y los dos instaladores hablan inglés
+
+Cero se escribió entero en castellano —el código, los mensajes, la documentación— y eso se
+queda. Lo que no se sostiene es que la primera línea que alguien ve al instalarlo solo exista en
+castellano: quien llega desde fuera no puede ni leer en qué paso falló.
+
+El guion `cero`, `instalar.sh`, `instalar.ps1` y los mensajes de `cero new` eligen idioma con la
+misma regla, para que las cuatro piezas digan lo mismo en la misma terminal:
+
+    CERO_LANG  manda sobre todo lo demás      CERO_LANG=en ./cero test
+    si no está, LC_ALL, LC_MESSAGES o LANG
+    y en la orden `cero new`, la configuración regional de la JVM
+
+Sin coincidencia se sirve inglés; sin traducción para una clave concreta se cae al castellano. Un
+hueco tiene que verse raro, no quedarse en blanco.
+
+Dos cosas que la traducción sacó a la luz y que ya estaban mal:
+
+- Las columnas se alineaban con `%-24s`, que cuenta **bytes**. Una etiqueta con tilde ocupa un
+  byte más que caracteres tiene, así que `versión` y `entorno` no quedaban en la misma columna.
+  Ahora se rellena contando caracteres.
+- Las tablas de texto devolvían su cadena con `printf '%s'`… sin `'%s'`: `printf 'Cero %s
+  instalado'` sin argumentos **se come el hueco**, y el resumen final decía «Cero  instalado» sin
+  número de versión.
+
+---
+
 ## 0.8.0 · 25 de septiembre de 2026
 
 ### Un cuerpo que llegaba tras la respuesta dejaba de validarse
