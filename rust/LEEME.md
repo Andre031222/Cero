@@ -13,6 +13,10 @@ prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores |
 | 2 | Sesiones | 13 de 13 requisitos · 13 pruebas |
 | 3 | Seguridad transversal | 28 de 28 requisitos · 18 pruebas |
+| 4 | Observabilidad | 23 de 23 requisitos · 16 pruebas |
+
+**101 de los 163 requisitos del contrato**, con 47 pruebas que citan cada una el suyo. Falta
+HTTP/2, que son los 39 restantes.
 
 ```bash
 cd rust && cargo test          # las pruebas de la implementación
@@ -75,10 +79,25 @@ Con dos casos ya se ve el patrón, y es material del artículo 6: **el contrato 
 dos clases**, los que hay que probar y los que se pueden hacer irrepresentables. Cuál es cuál no
 lo decide el requisito: lo decide el lenguaje.
 
+## Tercer hallazgo: «lanzar» no significa lo mismo en los dos lenguajes
+
+`OBS-005` dice que una comprobación de salud **que lanza** debe dar 503 y no 500: lanzar es una
+forma de fallar, no un fallo del endpoint. En Java eso es atrapar una excepción, que es el
+mecanismo normal de error del lenguaje.
+
+En Rust el error normal es un valor —`Result`—, y lo que corresponde a «lanzar» es `panic!`, que
+es una condición excepcional y no un modo de error corriente. Atraparlo existe
+(`catch_unwind`) pero es raro y algunas configuraciones lo desactivan.
+
+El requisito se cumple y el comportamiento observado es el mismo, pero **el requisito estaba
+escrito con el vocabulario de un lenguaje**. «Que lanza» no es neutral: en Rust habría que decir
+«una comprobación que falla de forma no prevista». Es una contaminación más leve que las dos
+anteriores —no cambia el diseño, solo la redacción— y por eso es fácil que se cuele.
+
 ## Lo que este hito **no** hace
 
-- No hay HTTP/2, ni TLS, ni WebSocket.
-- No hay seguridad transversal ni observabilidad.
+- No hay TLS ni WebSocket.
+- No hay HTTP/2, que es el bloque que queda.
 - Las sesiones viven en memoria: `SES-012` —almacén compartido entre instancias— no está.
 - No hay API de aplicación estable. Lo que hoy se llame `Servidor` puede llamarse otra cosa
   mañana: el contrato es el comportamiento, no los nombres.
