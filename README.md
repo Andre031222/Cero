@@ -38,7 +38,9 @@ De ahí las dos decisiones que definen el proyecto:
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
 2. **No es solo Java.** El objetivo final es un *contrato* de framework —rutas, pipeline,
    request/response, inyección, configuración— definido de forma neutral e implementado en
-   **Java, Rust y C++**, con un mismo banco de conformidad para los tres.
+   **Java, Rust y C++**, con un mismo banco de conformidad para los tres. La idea es de
+   **Fred Torres-Cruz**, y es la que decide la arquitectura: por ella existe [`spec/`](spec/) en
+   vez de tomar el código Java como referencia.
 
 ## Principios
 
@@ -265,13 +267,15 @@ cero         Órdenes del proyecto: ./cero test, new, fatjar…
 
 Apache 2.0 — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
-Autores: **Richar Andre Vilca-Solorzano** y **Ramiro Pedro Laura-Murillo**.
-Universidad Nacional del Altiplano, Puno, Perú.
+Autores: **Richar Andre Vilca-Solorzano**, **Fred Torres-Cruz** y
+**Ramiro Pedro Laura-Murillo**. Universidad Nacional del Altiplano, Facultad de Ingeniería
+Estadística e Informática, Puno, Perú. Quién hizo qué, en [docs/autores.md](docs/autores.md).
 
 ```bibtex
 @software{vilcasolorzano2026cero,
   title  = {Cero: núcleo de framework web poliglota sin dependencias},
-  author = {Vilca-Solorzano, Richar Andre and Laura-Murillo, Ramiro Pedro},
+  author = {Vilca-Solorzano, Richar Andre and Torres-Cruz, Fred and
+            Laura-Murillo, Ramiro Pedro},
   year   = {2026},
   url    = {https://github.com/Andre031222/Cero}
 }
