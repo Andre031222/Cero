@@ -1,0 +1,250 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\newcommand{\pendiente}[1]{\textcolor{red}{[\textbf{pendiente:} #1]}}
+
+\journal{Computer Standards \& Interfaces}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Conformance vectors written from the specification find defects that
+       implementation-derived test suites do not: evidence from an HTTP
+       server}
+
+\author[una]{Richar Andre Vilca-Solorzano\corref{cor}}
+\ead{75521963@est.unap.edu.pe}
+\ead[orcid]{0009-0003-2385-5263}
+\cortext[cor]{Corresponding author.}
+
+\author[una]{Fred Torres-Cruz}
+\ead[orcid]{0000-0003-0834-6834}
+
+\author[una]{Ramiro Pedro Laura-Murillo}
+\ead[orcid]{0000-0003-1837-4871}
+
+\affiliation[una]{organization={Universidad Nacional del Altiplano,
+                                Facultad de Ingeniería Estadística e Informática},
+                  city={Puno}, country={Peru}}
+
+\begin{abstract}
+\pendiente{escribir al final}
+\end{abstract}
+
+\begin{keyword}
+HTTP \sep protocol conformance \sep request smuggling \sep software testing \sep
+RFC 9112 \sep RFC 9113 \sep web server security
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:introduction}
+
+A test suite written alongside an implementation tends to assert what the
+implementation was built to do. It is a poor instrument for finding what the
+specification requires and the implementation never considered.
+
+This paper reports a controlled instance of that gap. We took an HTTP server
+that passed its own suite of 434 checks and subjected it to two independent
+conformance instruments: a set of vectors we wrote directly from the text of
+RFC~9112 \cite{rfc9112} and RFC~9110 \cite{rfc9110}, and h2spec
+\cite{h2spec}, an existing suite for HTTP/2 \cite{rfc9113}. We report what each
+instrument found, what an external security audit found, and --- the part we
+believe generalises --- what distinguishes the defects that the
+implementation-derived suite could never have found.
+
+\paragraph{Contributions}
+\begin{enumerate}
+  \item A reusable set of 23 conformance vectors for HTTP/1.1 servers covering
+        13 clauses of RFC~9112 and RFC~9110, sent as raw bytes and each citing
+        the clause it enforces. No free conformance suite for HTTP/1.1 servers
+        exists, unlike for HTTP/2.
+  \item The four violations the vectors exposed in an implementation that
+        already passed its own tests (Section~\ref{sec:violations}).
+  \item Two defects of the request-smuggling family whose common shape is an
+        \emph{unexercised exit path}, not an unexercised line
+        (Section~\ref{sec:exitpaths}), one of which was intermittent and
+        therefore invisible to a pass/fail criterion applied once.
+  \item A characterisation of which defect classes each instrument detects, and
+        the cost of each (Section~\ref{sec:discussion}).
+\end{enumerate}
+
+\section{Background and related work}
+\label{sec:background}
+
+\pendiente{revisión de literatura: conformidad de protocolos, request
+smuggling, fuzzing de servidores HTTP, suites de conformidad existentes}
+
+\section{Subject system and instruments}
+\label{sec:subject}
+
+\subsection{Subject}
+
+Cero is a Java web framework with its own HTTP/1.1 and HTTP/2 server and no
+runtime dependencies beyond the JDK. The HTTP module comprises 43 classes and
+6\,752 lines, exercised by 434 checks of the project's own suite. The complete
+system is public.
+
+\subsection{Instruments}
+
+\begin{table}[ht]
+\centering
+\caption{The four instruments applied, and what each one is.}
+\label{tab:instruments}
+\begin{tabular}{lll}
+\toprule
+Instrument & Origin & Size \\
+\midrule
+Project test suite            & written with the implementation & 434 checks \\
+Conformance vectors (HTTP/1.1) & written from the RFC text      & 23 vectors, 13 clauses \\
+h2spec (HTTP/2)               & third party \cite{h2spec}       & 146 tests \\
+External security audit       & independent reviewer            & 11 findings \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The distinction that matters is the second column. Only the first instrument
+had access to the implementation while being written.
+
+\section{Violations found by specification-derived vectors}
+\label{sec:violations}
+
+The 23 vectors exposed four violations in a server that passed its own suite:
+
+\begin{enumerate}
+  \item \textbf{\emph{absolute-form} request targets rejected} (RFC~9112 §3.2.2).
+        A server must accept \texttt{GET http://host/path HTTP/1.1}; ours
+        returned 400.
+  \item \textbf{\emph{asterisk-form} rejected} (RFC~9112 §3.2.4).
+        \texttt{OPTIONS * HTTP/1.1} was not recognised.
+  \item \textbf{\texttt{chunked} accepted outside the final position} of
+        \texttt{Transfer-Encoding} (RFC~9112 §6.1). Accepting it is a known
+        precondition for request smuggling when an intermediary disagrees with
+        the origin about where a message ends.
+  \item \textbf{Null bytes admitted in header values} (RFC~9110 §5.5).
+\end{enumerate}
+
+None of the four is exotic. All four survived a suite written by the same
+authors who wrote the parser, because that suite asserted the behaviour the
+parser was designed for.
+
+\section{Unexercised exit paths}
+\label{sec:exitpaths}
+
+Two further defects share a shape that we argue is the more interesting
+finding, because neither is reachable by adding assertions to the existing
+suite.
+
+\subsection{The session cookie over HTTP/2}
+
+Two sibling implementations of the same response interface existed, one per
+protocol version. Only the HTTP/1.1 one asked for the pending session cookie.
+Over HTTP/2, therefore, no client could establish a session; and with no
+session there is no CSRF token, so every write returned 403 attributing the
+failure to the wrong cause.
+
+All 432 checks of the module passed throughout. Every one of them entered over
+HTTP/1.1.
+
+\subsection{Body validation after the response}
+
+Completing a response closes the local half of an HTTP/2 stream, not the stream
+(RFC~9113 §5.1) \cite{rfc9113}. The implementation removed the stream from its
+table as soon as the request handler returned. A \texttt{DATA} frame arriving
+afterwards therefore found no stream, and the check that the received body
+matches the declared \texttt{content-length} --- the check that prevents the
+smuggling precondition --- was skipped.
+
+The defect was \emph{intermittent by construction}: it manifested only when the
+response won the race against the request body. h2spec failed approximately one
+run in five; the project suite passed always. A conformance tool run once in
+continuous integration is a sampling instrument, not a decision procedure, when
+the defect is a race.
+
+\subsection{Why line coverage cannot see either}
+
+In both cases every line was executed by some test. What was never traversed was
+a \emph{path out of the system}: a response emitted over the second protocol, a
+frame arriving after the handler returned. We therefore propose counting exit
+paths --- protocol version $\times$ response kind $\times$ ordering --- as the
+coverage criterion for this class of component.
+
+\section{External audit}
+\label{sec:audit}
+
+An independent reviewer examining the source produced eleven findings, two of
+them exploitable from outside without credentials.
+\pendiente{tabla de los once, con clase y severidad, desde
+docs/auditoria-2026-08-01.md}
+
+Two additional defects appeared only after deployment behind a reverse proxy: a
+session cookie issued without \texttt{Secure}, because the application did not
+know TLS was terminated upstream, and a deployment script that erased the
+certbot HTTPS block when rewriting the virtual host. Neither is reachable by any
+instrument applied to the program alone.
+
+\section{Results}
+\label{sec:results}
+
+\pendiente{tabla resumen: defectos por instrumento y por clase, con el coste de
+cada instrumento en horas}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\pendiente{qué clase de defecto detecta cada instrumento; coste-beneficio;
+recomendación para implementadores de servidores}
+
+\section{Threats to validity}
+\label{sec:threats}
+
+\paragraph{Single subject}
+The findings come from one implementation. We report the shape of each defect
+rather than a frequency, and make no claim about how often these defects occur
+in HTTP servers generally.
+
+\paragraph{The vectors are ours}
+The 23 vectors were written by the same authors as the implementation, which
+weakens their independence. We mitigated this by writing them from the RFC text
+without reference to the code, and by cross-checking HTTP/2 against a suite we
+did not write \cite{h2spec}. The audit is the only fully independent instrument.
+
+\paragraph{Intermittent defects and sampling}
+Our estimate of one failure in five runs for the race described in
+Section~\ref{sec:exitpaths} is based on \pendiente{número de corridas} runs and
+is reported as an observation, not a measured rate.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\pendiente{cerrar}
+
+\section*{CRediT authorship contribution statement}
+
+\textbf{Richar Andre Vilca-Solorzano:} Conceptualization, Methodology,
+Software, Validation, Investigation, Writing --- original draft.
+\textbf{Fred Torres-Cruz:} Conceptualization, Methodology, Writing --- review
+\& editing, Supervision. \textbf{Ramiro Pedro Laura-Murillo:}
+Conceptualization, Writing --- review \& editing, Supervision.
+
+\section*{Declaration of competing interest}
+
+The authors declare no competing financial interests or personal relationships
+that could have appeared to influence the work reported in this paper.
+
+\section*{Data availability}
+
+The implementation, its test suite, the 23 conformance vectors and the scripts
+that reproduce every result are public at
+\url{https://github.com/Andre031222/Cero}.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{referencias}
+
+\end{document}
