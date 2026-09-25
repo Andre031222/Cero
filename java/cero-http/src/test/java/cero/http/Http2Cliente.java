@@ -238,11 +238,15 @@ final class Http2Cliente implements AutoCloseable {
     }
 
     /** Abre un flujo y lo deja abierto, para mandar el cuerpo o los trailers a mano. */
-    int pedirSinCerrar(String metodo, String ruta) throws IOException {
+    int pedirSinCerrar(String metodo, String ruta, String... cabecerasExtra) throws IOException {
         int flujo = siguienteFlujo;
         siguienteFlujo += 2;
-        trama(HEADERS, FIN_CABECERAS, flujo, cabeceras(
-                ":method", metodo, ":scheme", "http", ":path", ruta, ":authority", "127.0.0.1"));
+        String[] base = { ":method", metodo, ":scheme", "http", ":path", ruta,
+                          ":authority", "127.0.0.1" };
+        String[] todos = new String[base.length + cabecerasExtra.length];
+        System.arraycopy(base, 0, todos, 0, base.length);
+        System.arraycopy(cabecerasExtra, 0, todos, base.length, cabecerasExtra.length);
+        trama(HEADERS, FIN_CABECERAS, flujo, cabeceras(todos));
         return flujo;
     }
 

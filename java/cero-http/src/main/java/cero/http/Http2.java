@@ -64,6 +64,7 @@ final class Http2 {
 
     // Códigos de error (§7).
     private static final int SIN_ERROR = 0x0;
+    private static final int ERROR_NINGUNO = 0x0;
     private static final int ERROR_PROTOCOLO = 0x1;
     private static final int ERROR_INTERNO = 0x2;
     private static final int ERROR_CONTROL_FLUJO = 0x3;
@@ -456,7 +457,7 @@ final class Http2 {
         if (idFlujo <= ultimoFlujoVisto) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "identificador de flujo hacia atrás");
         }
-        if (flujos.size() >= maxFlujos) {
+        if (activos() >= maxFlujos) {
             // REFUSED_STREAM y no ENHANCE_YOUR_CALM: le dice al cliente que puede reintentar
             // ese flujo más tarde, que es exactamente lo que pasa. «Calma» significaría que se
             // está portando mal, y pedir tantos como se anunciaron no es portarse mal.
@@ -676,7 +677,22 @@ final class Http2 {
                 respuesta.error(500, "error interno");
             } finally {
                 flujo.cerrarEntrada();
-                flujos.remove(flujo.id);
+                // Terminar de responder cierra *nuestra* mitad, no el flujo (RFC 9113 §5.1:
+                // half-closed (local)). Mientras el cliente no mande END_STREAM sigue pudiendo
+                // mandar cuerpo, y ese cuerpo hay que seguir contrastándolo con content-length.
+                // Olvidarlo aquí se saltaba esa comprobación cada vez que la respuesta le ganaba
+                // la carrera a la petición: h2spec 8.1.2.6.1 fallaba una de cada cinco veces.
+                if (flujo.finEntrada) {
+                    flujos.remove(flujo.id);
+                } else {
+                    flujo.respondido = true;
+                    // Si la conexión ya se cayó, podar da igual: el flujo entero se va detrás.
+                    try {
+                        podarRespondidos();
+                    } catch (IOException seFue) {
+                        flujos.remove(flujo.id);
+                    }
+                }
             }
         });
     }
@@ -738,6 +754,9 @@ final class Http2 {
         if ((banderas & FIN_FLUJO) != 0) {
             f.finEntrada = true;
             f.cerrarEntrada();
+            if (f.respondido) {
+                flujos.remove(idFlujo);
+            }
         }
     }
 
@@ -976,6 +995,37 @@ final class Http2 {
      * gasta un despertar de hilo. Contarlas solo entre flujos deja pasar el uso normal, donde
      * siempre hay peticiones de por medio.
      */
+    /** Los que aún no han respondido. Un flujo retenido esperando END_STREAM ya no ocupa sitio. */
+    private int activos() {
+        int n = 0;
+        for (Flujo f : flujos.values()) {
+            if (!f.respondido) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
+     * Retener flujos respondidos a la espera de un END_STREAM que quizá no llegue es memoria que
+     * el cliente controla. Pasado el tope se anula el más viejo —ya le dimos su respuesta— y se
+     * suelta. Los identificadores crecen, así que el menor es el más antiguo.
+     */
+    private void podarRespondidos() throws IOException {
+        while (flujos.size() > maxFlujos * 2) {
+            int viejo = Integer.MAX_VALUE;
+            for (Flujo f : flujos.values()) {
+                if (f.respondido && f.id < viejo) {
+                    viejo = f.id;
+                }
+            }
+            if (viejo == Integer.MAX_VALUE || flujos.remove(viejo) == null) {
+                return;
+            }
+            escribirTrama(RST_STREAM, 0, viejo, deEntero(ERROR_NINGUNO));
+        }
+    }
+
     private void controlDeMas() {
         if (++controlSeguidas > maxControlSeguidas) {
             throw new ErrorConexion(ERROR_CALMA, "demasiadas tramas de control sin pedir nada");
@@ -1050,6 +1100,12 @@ final class Http2 {
         final Tuberia entrada = new Tuberia();
         final java.util.concurrent.atomic.AtomicInteger ventana;
         volatile boolean finEntrada;
+
+        /**
+         * Ya mandamos la respuesta entera. El flujo no está cerrado: está medio cerrado por
+         * nuestro lado, y el cliente todavía puede mandar cuerpo que hay que seguir validando.
+         */
+        volatile boolean respondido;
 
         /** Lo que la petición declaró en `content-length`, o -1 si no declaró nada. */
         volatile long declarado = -1;
