@@ -243,10 +243,10 @@ Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaci
 
 ```text
 java/         Los ocho módulos
+spec/         El contrato, neutral respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida
 docs/         Documentación
-spec/         Contrato del kernel, neutral respecto al lenguaje   (fase 3)
-rust/  cpp/   Implementaciones adicionales                        (fase 3)
+papers/       Los manuscritos, uno por carpeta
 cero         Órdenes del proyecto: ./cero test, new, fatjar…
 ```
 
