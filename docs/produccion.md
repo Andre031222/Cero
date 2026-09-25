@@ -194,6 +194,44 @@ tomar**, no cuánto necesita.
 Si necesitas que devuelva antes, `-XX:G1PeriodicGCInterval=5000` lo hace, aunque en nuestras
 medidas la diferencia fue pequeña: 86 MB contra 80.
 
+### Y el recolector, que cuesta más de lo que parece
+
+Con `-Xmx64m`, el desglose de memoria nativa dice esto:
+
+| | Comprometido |
+|---|---|
+| Montón | 64,0 MB |
+| **Estructuras de G1** | **52,9 MB** |
+| Código compilado | 8,5 MB |
+| Pilas de hilos | 2,0 MB |
+| Clases | 0,4 MB |
+
+G1 reserva sus tablas de recordatorio y mapas de marcado en proporción al montón **reservado**, y
+en montones pequeños esa proporción pesa: casi tanto como el montón que administra.
+
+Un recolector más simple no las necesita. Medido a carga real, 64 conexiones y 28 000 peticiones
+por segundo:
+
+| | RSS | rps | Pausas | Máx | Total |
+|---|---|---|---|---|---|
+| G1, `-Xmx64m` | 127 MB | 29 282 | 25 | 1,6 ms | 20 ms |
+| SerialGC, `-Xmx64m` | 115 MB | 28 513 | 47 | 2,9 ms | 28 ms |
+| SerialGC, `-Xmx32m` | 110 MB | 28 428 | 102 | 3,0 ms | 44 ms |
+
+**Cuándo usar cuál:**
+
+- **G1 y `-Xmx64m`** es el valor por defecto y el que recomienda esta guía: mejor rendimiento y
+  las pausas más cortas.
+- **SerialGC** si la memoria manda más que los últimos milisegundos: 12 MB menos a cambio de un
+  2,6 % de rendimiento y el doble de pausas, que siguen por debajo de 3 ms.
+
+```bash
+java -Xmx64m -XX:+UseSerialGC -jar mi-app.jar
+```
+
+Conviene medirlo en tu carga antes de fijarlo: estas cifras son de un servicio pequeño con poca
+retención, y un servicio que guarde mucho en memoria se comporta distinto.
+
 ### Lo que no funciona, para que no lo intentes
 
 Bajar el ritmo de asignación **no** baja el RSS por sí solo. Lo medimos: una reducción del 40 %
