@@ -33,7 +33,25 @@
                   city={Puno}, country={Peru}}
 
 \begin{abstract}
-\pendiente{escribir al final, cuando los resultados estén cerrados}
+A Java web application appears bound to a servlet container but is, in the case
+we report, bound to five interfaces. We describe the architecture of a framework
+that implements those interfaces in-house --- its own HTTP/1.1 and HTTP/2 server,
+one virtual thread per connection, no runtime dependency beyond the JDK --- and,
+more importantly, the method used to verify that removing the container dropped
+no behaviour. Two of the gravest defects found were unexercised \emph{exit
+paths} rather than unexercised lines: a response kind emitted only over the
+second protocol, and a frame arriving after the handler had returned. Every line
+involved was covered by some test. We propose counting exit paths as a coverage
+criterion for protocol components. We further report three checks that reveal
+when a comparative load benchmark measures its own harness rather than the
+systems under test; applying them changed our figures by a factor of four and
+replaced a table in which eight contenders fell within 2\% of one another with
+one that discriminates. Under the corrected harness, on bare-metal Linux, the
+framework boots in 155~ms, 2.9$\times$ faster than the closest of seven
+contenders and 15.8$\times$ faster than Spring Boot; it loses on throughput to
+Vert.x by a margin its dispersion cannot explain, and is last of eight on
+resident memory. Implementation, test suite, benchmark harness and raw
+measurements are public.
 \end{abstract}
 
 \begin{keyword}
@@ -211,15 +229,77 @@ implementation that already passed its own tests: \emph{absolute-form} and
 accepted outside the final position of \texttt{Transfer-Encoding}, and null
 bytes were admitted in header values.
 
-For HTTP/2 we use h2spec, an existing suite: 146 tests, of which
-\pendiente{cifra final} pass.
+For HTTP/2 we use h2spec, an existing suite: of its 146 tests, 144 pass, one is
+skipped, and one --- an invalid connection preface, where we close the
+connection without emitting a GOAWAY frame --- is a known and documented
+deviation.
 
 \section{Evaluation}
 \label{sec:evaluation}
 
-\pendiente{tabla del banco; los absolutos esperan la corrida en Linux sin
-virtualizar, y la columna de peticiones por segundo no discrimina con el cliente
-de carga en el mismo equipo}
+\subsection{Setup}
+
+Eight JVM frameworks were built into images sharing the same JRE base and run
+under identical limits: two CPU cores, 1~GB of memory and an identical
+\texttt{-Xmx256m} heap cap. The host is a 16-core AMD laptop running Arch Linux
+without virtualisation, with the CPU governor fixed to \texttt{performance}, the
+container pinned to two cores and the load generator pinned to twelve others.
+Load is 64 connections for 30~seconds after a 5~second warm-up, repeated five
+times per endpoint; we report medians. The run reported here comprises 120
+measurements with no errors and no non-2xx responses, and the system journal
+records no suspend events during the window.
+
+The harness checks of Section~\ref{sec:harness} were applied before this run and
+are the reason its figures are roughly four times those of our earlier
+virtualised runs.
+
+\begin{table}[ht]
+\centering
+\caption{Eight JVM frameworks, identical containers, medians of five runs.
+         Boot time is measured from \texttt{docker run} to the first 200
+         response.}
+\label{tab:evaluation}
+\begin{tabular}{lrrrrrr}
+\toprule
+Framework & Image & Boot & RSS & \multicolumn{3}{c}{req/s} \\
+\cmidrule(lr){5-7}
+          & (MB)  & (ms) & (MB) & plaintext & json & db \\
+\midrule
+\textbf{Cero} & 323.2 & \textbf{155} & 307.9 & 93\,577 & 94\,634 & 86\,690 \\
+Jooby        & 310.8 & 443  & \textbf{73.4}  & 94\,112 & 93\,281 & 84\,429 \\
+Vert.x       & 316.3 & 481  & 79.5  & \textbf{99\,241} & \textbf{98\,589} & \textbf{88\,368} \\
+Javalin      & 311.4 & 518  & 117.4 & 89\,193 & 88\,773 & 68\,686 \\
+Helidon      & \textbf{308.4} & 583 & 83.3 & 90\,078 & 92\,693 & 79\,402 \\
+Quarkus      & 321.0 & 711  & 104.6 & 93\,409 & 91\,823 & 65\,069 \\
+Micronaut    & 317.6 & 1\,102 & 104.7 & 76\,941 & 76\,465 & 64\,751 \\
+Spring Boot  & 325.0 & 2\,446 & 176.5 & 60\,903 & 64\,133 & 49\,870 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Results}
+
+\paragraph{Boot time separates decisively}
+At 155~ms the subject boots 2.9$\times$ faster than the next framework and
+15.8$\times$ faster than Spring Boot. No dispersion in our data approaches that
+distance.
+
+\paragraph{Throughput does not favour the subject}
+Vert.x is measurably faster: 98\,589 against 94\,634~req/s on \texttt{/json},
+and the five-run ranges do not overlap (subject 93\,095--95\,777, Vert.x
+97\,913--99\,828). Against Jooby and Helidon the differences fall inside each
+framework's own dispersion and we therefore claim no ordering. Per-framework
+spread across five runs is 1.0--3.9\%, which is what makes the Vert.x
+comparison assertable and the others not; under our earlier virtualised harness
+every contender fell within 2\% of every other and no such statement was
+possible in either direction.
+
+\paragraph{Memory is the subject's worst result}
+At 307.9~MB resident the subject is last of eight, more than four times Jooby's
+73.4~MB. This is not a leak: resident size plateaus, and with
+\texttt{-Xmx96m} the same traffic is served slightly faster in 176~MB. The
+subject allocates more per request than its peers and fills whatever heap it is
+given. We report it as an open defect rather than omitting the column.
 
 \section{Threats to validity}
 \label{sec:threats}
@@ -248,7 +328,25 @@ independent evidence reported here.
 \section{Conclusion}
 \label{sec:conclusion}
 
-\pendiente{cerrar cuando estén los resultados}
+Removing the servlet container from a Java web application required implementing
+five interfaces, not rewriting the application. The resulting framework boots in
+155~ms --- 2.9$\times$ faster than the closest of seven contenders --- carries no
+runtime dependency beyond the JDK, and retains a servlet adapter so that the
+decision remains reversible.
+
+The transferable part is the verification. Two of the most serious defects we
+found were unexercised \emph{exit paths} rather than unexercised lines, and were
+invisible to a suite in which every line was covered. Three further distortions
+lived in the measurement apparatus itself, and produced a coherent,
+publishable-looking table in which every contender fell within 2\% of every
+other; correcting them changed the figures by a factor of four and, for the
+first time, allowed statements about throughput to be made or withheld on
+evidence.
+
+Those statements are not uniformly favourable, and we report them as they are:
+the framework loses on throughput to Vert.x by a margin that its own dispersion
+cannot explain, and is last of eight on resident memory by a factor of four.
+Both are open work, stated with the measurement that establishes them.
 
 \section*{CRediT authorship contribution statement}
 
