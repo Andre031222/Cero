@@ -81,8 +81,7 @@ implementation-derived suite could never have found.
 \begin{enumerate}
   \item A reusable set of 23 conformance vectors for HTTP/1.1 servers covering
         13 clauses of RFC~9112 and RFC~9110, sent as raw bytes and each citing
-        the clause it enforces. No free conformance suite for HTTP/1.1 servers
-        exists, unlike for HTTP/2.
+        the clause it enforces.
   \item The four violations the vectors exposed in an implementation that
         already passed its own tests (Section~\ref{sec:violations}).
   \item Two defects of the request-smuggling family whose common shape is an
@@ -122,11 +121,15 @@ and disagreed only with the RFC.
 
 \subsection{Conformance suites}
 
-For HTTP/2 a free conformance suite exists and is widely used~\cite{h2spec}. For
-HTTP/1.1 we are not aware of an equivalent, which is why the vectors reported
-here were written from the specification text. \pendiente{confirmar esta
-afirmación con una búsqueda sistemática antes de enviar; es una afirmación de
-ausencia y hay que respaldarla}
+For HTTP/2 a free conformance suite exists and is widely used~\cite{h2spec}.
+For HTTP/1.1 the situation is thinner but not empty: h1spec~\cite{h1spec}
+targets RFC~9112 and 9110 explicitly and in the same spirit, though it is recent,
+has a short revision history and was written primarily to test one project. Our
+vectors were written independently of it and before we were aware of it, which
+we state because it bears on their independence rather than on their value: two
+sets of vectors derived separately from the same specification text agreeing on
+a clause is weak evidence, whereas either finding a violation is strong
+evidence.
 
 \subsection{Positioning}
 
