@@ -17,6 +17,7 @@ prueba por requisito que lo cita. HTTP/2, seguridad transversal y observabilidad
 
 | 5 | El framework montado | pipeline completo · aplicación de ejemplo |
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo de verdad |
+| 7 | HTTP/2 · capa de tramas | 13 de los 39 requisitos · 13 pruebas |
 
 **101 de los 163 requisitos del contrato**, con 47 pruebas que citan cada una el suyo, más los
 23 vectores del banco. Falta HTTP/2, que son los 39 restantes.
