@@ -4,8 +4,7 @@
 //! esta implementación no sea una traducción del código Java: el juez es el contrato.
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read};
-use std::net::TcpStream;
+use std::io::{BufRead, Read};
 
 /// Por qué se rechaza una petición. El estado que corresponde a cada motivo lo fija el RFC, no
 /// nosotros, así que viaja con el motivo en vez de decidirse en el sitio de la llamada.
@@ -68,13 +67,17 @@ impl Peticion {
     }
 }
 
-pub fn leer(flujo: &TcpStream) -> Result<Peticion, Rechazo> {
-    let mut lector = BufReader::new(flujo);
-    let inicial = linea(&mut lector)?;
+/// Lee una petición del lector, que **se conserva entre peticiones**.
+///
+/// Toma el lector y no el socket a propósito: un `BufReader` nuevo por petición tira lo que ya tenga
+/// en el búfer, y lo que tenga en el búfer puede ser la petición siguiente de un cliente que las
+/// encadena. Es un fallo que no se nota con un navegador y sí con `curl` mandando dos de una vez.
+pub fn leer<R: BufRead>(lector: &mut R) -> Result<Peticion, Rechazo> {
+    let inicial = linea(lector)?;
     let (metodo, destino, version) = partir_linea_inicial(&inicial)?;
-    let cabeceras = leer_cabeceras(&mut lector)?;
+    let cabeceras = leer_cabeceras(lector)?;
     comprobar_host(&version, &cabeceras)?;
-    let cuerpo = leer_cuerpo(&mut lector, &cabeceras)?;
+    let cuerpo = leer_cuerpo(lector, &cabeceras)?;
     Ok(Peticion { metodo, destino, version, cabeceras, cuerpo })
 }
 

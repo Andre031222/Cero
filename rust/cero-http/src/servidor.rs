@@ -7,12 +7,13 @@
 
 use crate::contexto::{Contexto, Respuesta};
 use crate::observabilidad::{self, Log, Metricas, Nivel, Salud};
-use crate::peticion::{self, Peticion, Rechazo};
+use crate::http2;
+use crate::peticion::{self, Peticion};
 use crate::ruta::{Resolucion, Router};
 use crate::seguridad::{self, Cabeceras, Cors, Decision, Limitador};
 use crate::sesion::{self, Almacen};
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{BufReader, Cursor, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -110,23 +111,43 @@ impl Servidor {
         for conexion in oyente.incoming() {
             let Ok(flujo) = conexion else { continue };
             let yo = Arc::clone(&yo);
-            std::thread::spawn(move || yo.atender(flujo));
+            std::thread::spawn(move || Servidor::atender(yo, flujo));
         }
         Ok(())
     }
 
-    fn atender(&self, mut flujo: TcpStream) {
+    fn atender(yo: Arc<Servidor>, mut flujo: TcpStream) {
         let cliente = flujo
             .peer_addr()
             .map(|a| a.ip().to_string())
             .unwrap_or_else(|_| "desconocido".into());
+
+        // La puerta de entrada por conocimiento previo. En un puerto compartido con HTTP/1.1 los
+        // primeros octetos son lo único que distingue los dos protocolos, y lo leído se devuelve
+        // para que no se pierda: equivocarse aquí deja a un cliente sin respuesta y sin saber por
+        // qué.
+        let prefijo = match http2::conexion::asomar_preambulo(&mut flujo) {
+            Ok(Some(visto)) => visto,
+            Ok(None) => {
+                let suyo = Arc::clone(&yo);
+                let de_quien = cliente.clone();
+                let atender = Arc::new(move |p: Peticion| suyo.pipeline(&p, &de_quien));
+                let _ = http2::conexion::servir(flujo, http2::Ajustes::default(), atender);
+                return;
+            }
+            Err(_) => return,
+        };
+
+        let Ok(copia) = flujo.try_clone() else { return };
+        let mut lector = BufReader::new(Cursor::new(prefijo).chain(copia));
+        let yo = &*yo;
         loop {
-            match peticion::leer(&flujo) {
+            match peticion::leer(&mut lector) {
                 Ok(p) => {
                     let cerrar = p.version == "HTTP/1.0"
                         || p.cabecera("connection").is_some_and(|c| c.eq_ignore_ascii_case("close"));
                     let solo_cabeceras = p.metodo == "HEAD";
-                    let r = self.pipeline(&p, &cliente);
+                    let r = yo.pipeline(&p, &cliente);
                     if escribir(&mut flujo, r, solo_cabeceras, cerrar).is_err() || cerrar {
                         return;
                     }

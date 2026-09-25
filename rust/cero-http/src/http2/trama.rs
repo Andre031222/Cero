@@ -61,7 +61,7 @@ fn mal(codigo: Error, porque: &'static str) -> FalloConexion {
     FalloConexion { codigo, porque }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Trama {
     pub tipo: u8,
     pub banderas: u8,
