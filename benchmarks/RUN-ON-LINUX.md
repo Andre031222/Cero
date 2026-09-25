@@ -81,3 +81,34 @@ Y en la tabla del paper, la mediana con su rango `[min, max]` — nunca la media
 ## Nota sobre el VPS
 No se recomienda correr la carga en el VPS de producción (comparte CPU con apps en vivo, y su
 JDK 25 no compila algunos frameworks que targetean 17/21). Arch bare-metal es la mejor opción.
+
+---
+
+## Por qué no vale el VPS de producción
+
+Medido el 24 de septiembre de 2026 sobre `ginit`, que es donde corre el sitio:
+
+| | |
+|---|---|
+| Núcleos | 6 · AMD EPYC (con IBPB) |
+| Memoria | 11 GB, de los que quedan libres 3,4 |
+| Disco | 59 GB libres |
+| Carga | 0,04 — está ocioso |
+| Docker | **no instalado** |
+| Servicios en marcha | `cero`, `apache2`, `direccion-api`, `direccion-web`, `egresados-api`, `egresados-web`, `finesi-api`, `finesi-web`, `frost`… |
+
+La carga baja y los 6 núcleos engañan. **Es una máquina de producción compartida**: sirve el sitio
+de Cero y al menos cuatro aplicaciones más. Medir ahí tiene dos problemas, y cada uno bastaría:
+
+1. **Contamina la medida.** El generador de carga y el contenedor competirían con servicios que
+   atienden tráfico real en momentos que no controlamos. Es el mismo defecto que ya nos costó dos
+   corridas en el portátil, con otro disfraz.
+2. **Degrada el servicio.** Saturar seis núcleos durante hora y media deja lentas a cinco
+   aplicaciones que usa gente.
+
+Instalar Docker ahí para esto tampoco es inocuo: son 5 GB de imágenes y un demonio nuevo con
+privilegios en una máquina que hoy no lo tiene.
+
+**Lo que hace falta** es una instancia dedicada y desechable: Linux, sin virtualización anidada,
+vCPU dedicada, sin nada más encima, durante unas horas. Cuesta poco y se destruye al terminar.
+Esa es la corrida citable; esta no lo sería.

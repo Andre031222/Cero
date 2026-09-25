@@ -178,10 +178,47 @@ coverage criterion for this class of component.
 \section{External audit}
 \label{sec:audit}
 
-An independent reviewer examining the source produced eleven findings, two of
-them exploitable from outside without credentials.
-\pendiente{tabla de los once, con clase y severidad, desde
-docs/auditoria-2026-08-01.md}
+The framework's first external consumer was a university portal. Its developer,
+who had not written the framework, reviewed the source and produced eleven
+findings, two of them exploitable from outside without credentials. Six are
+security defects and are listed in Table~\ref{tab:audit}; the remaining five
+were API and functional gaps.
+
+\begin{table}[ht]
+\centering
+\caption{Security findings from the external review. None was reachable by the
+         project's own suite at the time.}
+\label{tab:audit}
+\begin{tabular}{p{0.26\linewidth}p{0.62\linewidth}}
+\toprule
+Finding & Mechanism \\
+\midrule
+Session fixation &
+  The identifier held before authentication remained valid afterwards; the CSRF
+  token travelled with it. \\
+Memory exhaustion via static files &
+  The classpath resource cache stored \emph{absences}, keyed by the requested
+  path. Every 404 left two permanent entries in an unbounded map, so an
+  unauthenticated loop filled the heap. \\
+Rate limiter bypass &
+  The path formed part of the bucket key, so spreading the load across invented
+  URLs multiplied the quota while growing the map. \\
+Symbolic links followed &
+  \texttt{readAttributes} followed them although the adjacent line declared
+  otherwise. \\
+No absolute session lifetime &
+  Only inactivity was counted, so a session touched occasionally never expired. \\
+CSRF exemption by bare prefix &
+  Exempting \texttt{/api/public} also exempted
+  \texttt{/api/publicSECRET}. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two of these --- the unbounded cache and the rate-limiter key --- are resource
+exhaustion reachable without credentials. Both arise from the same modelling
+error: a cache key chosen from attacker-controlled input with no bound on
+cardinality.
 
 Two additional defects appeared only after deployment behind a reverse proxy: a
 session cookie issued without \texttt{Secure}, because the application did not
