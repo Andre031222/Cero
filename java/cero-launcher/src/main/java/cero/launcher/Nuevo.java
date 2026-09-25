@@ -21,19 +21,7 @@ public final class Nuevo {
 
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].startsWith("-")) {
-            System.err.println("""
-                    uso:  cero new <nombre> [grupo] [motor] [--front]
-
-                      nombre   nombre del proyecto y de la carpeta      (mi-app)
-                      grupo    groupId de Maven                         (com.ejemplo)
-                      motor    ninguno | h2 | postgresql | mysql        (ninguno)
-                      --front  separa en backend/ y frontend/, listo para React,
-                               Svelte o Vue, con la API sirviendo JSON
-
-                      cero new tienda                       sin base de datos
-                      cero new tienda h2                    con H2
-                      cero new tienda pe.unap mysql         grupo propio y MySQL
-                      cero new tienda h2 --front            con carpeta para el frontend""");
+            System.err.println(Idioma.t("nuevo-uso"));
             System.exit(1);
         }
 
@@ -59,7 +47,7 @@ public final class Nuevo {
 
         Path destino = Path.of(artefacto).toAbsolutePath();
         if (Files.exists(destino)) {
-            System.err.println("ya existe " + destino + " — elige otro nombre o bórralo");
+            System.err.println(Idioma.t("nuevo-existe", destino));
             System.exit(1);
         }
 
@@ -73,25 +61,25 @@ public final class Nuevo {
         }
 
         System.out.println("  " + destino);
-        System.out.println("  " + archivos + " archivos · " + peticion.grupo() + ":"
+        System.out.println("  " + Idioma.t("nuevo-archivos", archivos) + " · " + peticion.grupo() + ":"
                 + peticion.artefacto() + (peticion.motor().equals("ninguno") ? "" : " · " + peticion.motor())
-                + (conFrontend ? " · backend + frontend" : ""));
+                + (conFrontend ? " · " + Idioma.t("nuevo-ambos") : ""));
         System.out.println();
         if (conFrontend) {
             System.out.println("    cd " + artefacto + "/backend");
             System.out.println("    mvn -q package && java -Xmx64m -jar target/" + peticion.artefacto() + ".jar");
             System.out.println();
-            System.out.println("  El frontend va en frontend/. Cuando lo compiles, su salida se");
-            System.out.println("  copia a backend/src/main/resources/front/ y sale un solo jar.");
-            System.out.println("  Lo explica frontend/LEEME.md.");
+            System.out.println("  " + Idioma.t("nuevo-front-1"));
+            System.out.println("  " + Idioma.t("nuevo-front-2"));
+            System.out.println("  " + Idioma.t("nuevo-front-3"));
         } else {
             System.out.println("    cd " + artefacto);
             System.out.println("    mvn -q package && java -Xmx64m -jar target/" + peticion.artefacto() + ".jar");
         }
         System.out.println();
-        System.out.println("  El -Xmx64m no es un adorno: sin tope la JVM toma el 25 % de la");
-        System.out.println("  memoria de la máquina y no la devuelve mientras haya carga. Con 64 MB");
-        System.out.println("  el rendimiento no cambia y el proceso ocupa 131 MB en vez de 194.");
+        System.out.println("  " + Idioma.t("nuevo-xmx-1"));
+        System.out.println("  " + Idioma.t("nuevo-xmx-2"));
+        System.out.println("  " + Idioma.t("nuevo-xmx-3"));
     }
 
     private static int descomprimir(byte[] zip, Path destino) throws IOException {

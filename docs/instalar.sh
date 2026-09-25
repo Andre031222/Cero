@@ -68,6 +68,154 @@ esac
 
 p() { printf "$@"; }
 
+# ── Idioma ──────────────────────────────────────────────────────────────────────────────────
+#
+# El instalador es lo primero que alguien ve de Cero, y hasta ahora solo hablaba castellano.
+# `CERO_LANG` manda sobre el entorno, para forzarlo en un guion o en integración continua.
+case "${CERO_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}" in
+  es*|ES*) IDIOMA=es ;;
+  *)       IDIOMA=en ;;
+esac
+
+# Sin traducción cae al castellano: un hueco tiene que verse raro, no quedarse en blanco.
+t() {
+  v=""
+  [ "$IDIOMA" = en ] && v=$(texto_en "$1")
+  [ -z "$v" ] && v=$(texto_es "$1")
+  [ -z "$v" ] && v="$1"
+  printf '%s' "$v"
+}
+
+texto_es() {
+  case "$1" in
+    p-entorno)     printf '%s' 'comprobando el entorno' ;;
+    p-version)     printf '%s' 'consultando la versión' ;;
+    p-bajando)     printf '%s' 'bajando el paquete' ;;
+    p-huella)      printf '%s' 'comprobando la huella' ;;
+    p-extrayendo)  printf '%s' 'extrayendo' ;;
+    p-compilando)  printf '%s' 'compilando los ocho módulos' ;;
+    p-compilando-t) printf '%s' 'compilando los ocho módulos y corriendo las pruebas' ;;
+    p-instalando)  printf '%s' 'instalando la orden cero' ;;
+    p-comprobando) printf '%s' 'comprobando la instalación' ;;
+    b-entorno)     printf '%s' 'entorno' ;;
+    b-version)     printf '%s' 'versión' ;;
+    b-descargado)  printf '%s' 'descargado' ;;
+    b-huella)      printf '%s' 'huella' ;;
+    b-extraido)    printf '%s' 'extraído' ;;
+    b-compilado)   printf '%s' 'compilado' ;;
+    b-orden)       printf '%s' 'orden cero' ;;
+    b-comprobado)  printf '%s' 'comprobado' ;;
+    b-responde)    printf '%s' 'cero status responde' ;;
+    e-sin-red)     printf '%s' 'no se pudo hablar con %s — ¿hay conexión?' ;;
+    e-version)     printf '%s' 'el servidor devolvió una versión rara' ;;
+    e-descarga)    printf '%s' 'no se pudo bajar %s' ;;
+    e-sin-huella)  printf '%s' 'no se pudo bajar la huella' ;;
+    e-extraer)     printf '%s' 'el paquete no se pudo extraer' ;;
+    e-contenido)   printf '%s' 'el paquete no traía %s dentro' ;;
+    e-compilar)    printf '%s' 'la compilación falló' ;;
+    e-no-responde) printf '%s' 'quedó instalado pero "cero status" no responde' ;;
+    a-windows)     printf '%s' 'estás en Windows' ;;
+    a-sin-sha)     printf '%s' 'sin comprobar: no hay shasum ni sha256sum' ;;
+    f-instalado)   printf '%s' 'Cero %s instalado' ;;
+    f-sistema)     printf '%s' 'sistema' ;;
+    f-carpeta)     printf '%s' 'carpeta' ;;
+    f-orden)       printf '%s' 'orden' ;;
+    f-crear)       printf '%s' 'Crear un proyecto y arrancarlo:' ;;
+    f-guia)        printf '%s' 'Guía completa:' ;;
+    f-falta-paso)  printf '%s' 'Falta un paso' ;;
+    d-lema)        printf '%s' 'framework web para Java' ;;
+    f-instalador)  printf '%s' 'Cero - instalador' ;;
+    f-terminal)    printf '%s' 'terminal' ;;
+    f-gestor)      printf '%s' 'gestor' ;;
+    f-salida)      printf '%s' 'salida' ;;
+    f-ninguno)     printf '%s' 'ninguno conocido' ;;
+    f-no-hay)      printf '%s' 'no encontrado' ;;
+    f-color)       printf '%s' 'terminal con color' ;;
+    f-plana)       printf '%s' 'plana (sin escapes)' ;;
+    f-para-java)   printf '%s' 'Para tener Java %s en tu sistema:' ;;
+    e-falta)       printf '%s' 'falta:%s' ;;
+    t-necesita)    printf '%s' 'Cero necesita un JDK %s o superior y Maven.' ;;
+    t-detectado)   printf '%s' 'Detectado: %s · gestor %s' ;;
+    t-ninguno)     printf '%s' 'ninguno' ;;
+    e-java-viejo)  printf '%s' 'Cero necesita Java %s o superior — hilos virtuales. Tienes %s.' ;;
+    e-huella-mal)  printf '%s' 'la huella no coincide — el paquete llegó cambiado, no lo instalo.' ;;
+    e-esperada)    printf '%s' 'esperada' ;;
+    e-recibida)    printf '%s' 'recibida' ;;
+    f-path)        printf '%s' '%s no está en tu PATH. Añade esta línea a tu' ;;
+    f-perfil)      printf '%s' '%s y abre una terminal nueva:' ;;
+    f-java)        printf '%s' 'java' ;;
+    f-maven)       printf '%s' 'maven' ;;
+    d-modulos)     printf '%s' 'ocho módulos en ~/.m2 · %s s' ;;
+    d-responde)    printf '%s' 'cero status responde' ;;
+    *)             printf '%s' '' ;;
+  esac
+}
+
+texto_en() {
+  case "$1" in
+    p-entorno)     printf '%s' 'checking the environment' ;;
+    p-version)     printf '%s' 'asking for the version' ;;
+    p-bajando)     printf '%s' 'downloading the package' ;;
+    p-huella)      printf '%s' 'verifying the checksum' ;;
+    p-extrayendo)  printf '%s' 'extracting' ;;
+    p-compilando)  printf '%s' 'building the eight modules' ;;
+    p-compilando-t) printf '%s' 'building the eight modules and running the tests' ;;
+    p-instalando)  printf '%s' 'installing the cero command' ;;
+    p-comprobando) printf '%s' 'checking the installation' ;;
+    b-entorno)     printf '%s' 'environment' ;;
+    b-version)     printf '%s' 'version' ;;
+    b-descargado)  printf '%s' 'downloaded' ;;
+    b-huella)      printf '%s' 'checksum' ;;
+    b-extraido)    printf '%s' 'extracted' ;;
+    b-compilado)   printf '%s' 'built' ;;
+    b-orden)       printf '%s' 'cero command' ;;
+    b-comprobado)  printf '%s' 'checked' ;;
+    b-responde)    printf '%s' 'cero status answers' ;;
+    e-sin-red)     printf '%s' 'could not reach %s — is there a connection?' ;;
+    e-version)     printf '%s' 'the server returned an odd version' ;;
+    e-descarga)    printf '%s' 'could not download %s' ;;
+    e-sin-huella)  printf '%s' 'could not download the checksum' ;;
+    e-extraer)     printf '%s' 'the package could not be extracted' ;;
+    e-contenido)   printf '%s' 'the package did not contain %s' ;;
+    e-compilar)    printf '%s' 'the build failed' ;;
+    e-no-responde) printf '%s' 'it installed but "cero status" does not answer' ;;
+    a-windows)     printf '%s' 'you are on Windows' ;;
+    a-sin-sha)     printf '%s' 'not verified: no shasum or sha256sum available' ;;
+    f-instalado)   printf '%s' 'Cero %s installed' ;;
+    f-sistema)     printf '%s' 'system' ;;
+    f-carpeta)     printf '%s' 'directory' ;;
+    f-orden)       printf '%s' 'command' ;;
+    f-crear)       printf '%s' 'Create a project and start it:' ;;
+    f-guia)        printf '%s' 'Full guide:' ;;
+    f-falta-paso)  printf '%s' 'One step left' ;;
+    d-lema)        printf '%s' 'web framework for Java' ;;
+    f-instalador)  printf '%s' 'Cero - installer' ;;
+    f-terminal)    printf '%s' 'shell' ;;
+    f-gestor)      printf '%s' 'manager' ;;
+    f-salida)      printf '%s' 'output' ;;
+    f-ninguno)     printf '%s' 'none known' ;;
+    f-no-hay)      printf '%s' 'not found' ;;
+    f-color)       printf '%s' 'terminal with colour' ;;
+    f-plana)       printf '%s' 'plain (no escapes)' ;;
+    f-para-java)   printf '%s' 'To get Java %s on your system:' ;;
+    e-falta)       printf '%s' 'missing:%s' ;;
+    t-necesita)    printf '%s' 'Cero needs a JDK %s or newer and Maven.' ;;
+    t-detectado)   printf '%s' 'Detected: %s · package manager %s' ;;
+    t-ninguno)     printf '%s' 'none' ;;
+    e-java-viejo)  printf '%s' 'Cero needs Java %s or newer — virtual threads. You have %s.' ;;
+    e-huella-mal)  printf '%s' 'the checksum does not match — the package arrived altered, not installing it.' ;;
+    e-esperada)    printf '%s' 'expected' ;;
+    e-recibida)    printf '%s' 'received' ;;
+    f-path)        printf '%s' '%s is not on your PATH. Add this line to your' ;;
+    f-perfil)      printf '%s' '%s and open a new terminal:' ;;
+    f-java)        printf '%s' 'java' ;;
+    f-maven)       printf '%s' 'maven' ;;
+    d-modulos)     printf '%s' 'eight modules in ~/.m2 · %s s' ;;
+    d-responde)    printf '%s' 'cero status answers' ;;
+    *)             printf '%s' '' ;;
+  esac
+}
+
 PASO=0
 ETIQUETA=
 
@@ -157,14 +305,14 @@ muere() {
 
 marca() {
   if [ "$VIVO" = no ]; then
-    p "Cero - instalador\n\n"
+    p "%s\n\n" "$(t f-instalador)"
     return
   fi
   p "\n"
   p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n"
   p "   ${ACENTO}\\\\${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}/${FIN}\n"
   p " ${ACENTO}—${FIN}   ${ACENTO}·${FIN}   ${ACENTO}${FUERTE}███${FIN}   ${ACENTO}·${FIN}   ${ACENTO}—${FIN}      ${FUERTE}Cero${FIN}\n"
-  p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\\\${FIN}      ${TENUE}framework web para Java${FIN}\n"
+  p "   ${ACENTO}/${FIN}    ${ACENTO}·${FIN}     ${ACENTO}·${FIN}    ${ACENTO}\\\\${FIN}      ${TENUE}$(t d-lema)${FIN}\n"
   p "        ${ACENTO}·${FIN}   ${ACENTO}|${FIN}   ${ACENTO}·${FIN}\n\n"
 }
 
@@ -261,24 +409,24 @@ version_java() {
 if [ "$SOLO_DETECTAR" = si ]; then
   marca
   jv=$(version_java)
-  p "  %-14s %s\n" sistema  "$DETALLE_SO"
-  p "  %-14s %s\n" terminal "$INTERPRETE"
-  p "  %-14s %s\n" gestor   "${GESTOR:-ninguno conocido}"
-  p "  %-14s %s\n" java     "$( [ "${jv:-0}" -gt 0 ] 2>/dev/null && echo "$jv" || echo 'no encontrado' )"
-  p "  %-14s %s\n" maven    "$(command -v mvn >/dev/null 2>&1 && mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3 || echo 'no encontrado')"
-  p "  %-14s %s\n" salida   "$( [ "$VIVO" = si ] && echo 'terminal con color' || echo 'plana (sin escapes)' )"
+  p "  %s %s\n" "$(rellena "$(t f-sistema)" 14)"  "$DETALLE_SO"
+  p "  %s %s\n" "$(rellena "$(t f-terminal)" 14)" "$INTERPRETE"
+  p "  %s %s\n" "$(rellena "$(t f-gestor)" 14)"   "${GESTOR:-$(t f-ninguno)}"
+  p "  %s %s\n" "$(rellena "$(t f-java)" 14)"     "$( [ "${jv:-0}" -gt 0 ] 2>/dev/null && echo "$jv" || t f-no-hay )"
+  p "  %s %s\n" "$(rellena "$(t f-maven)" 14)"    "$(command -v mvn >/dev/null 2>&1 && mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3 || t f-no-hay)"
+  p "  %s %s\n" "$(rellena "$(t f-salida)" 14)"   "$( [ "$VIVO" = si ] && t f-color || t f-plana )"
   if [ "${jv:-0}" -lt "$JAVA_MINIMO" ] 2>/dev/null; then
-    p "\n  Para tener Java %s en tu sistema:\n\n      %s\n\n" "$JAVA_MINIMO" "$(orden_java)"
+    p "\n  $(t f-para-java)\n\n      %s\n\n" "$JAVA_MINIMO" "$(orden_java)"
   fi
   exit 0
 fi
 
 # ─── 1 · lo que hace falta ──────────────────────────────────────────────────────────────
 marca
-paso "comprobando el entorno"
+paso "$(t p-entorno)"
 
 if [ "$SISTEMA" = Windows ]; then
-  aviso "estás en Windows" "en PowerShell:  irm $BASE/instalar.ps1 | iex"
+  aviso "$(t a-windows)" "en PowerShell:  irm $BASE/instalar.ps1 | iex"
 fi
 
 falta=
@@ -286,47 +434,47 @@ for orden in curl tar java mvn; do
   command -v "$orden" >/dev/null 2>&1 || falta="$falta $orden"
 done
 if [ -n "$falta" ]; then
-  mal "falta:$falta"
-  p "\n  Cero necesita un ${FUERTE}JDK %s${FIN} o superior y ${FUERTE}Maven${FIN}.\n" "$JAVA_MINIMO"
-  p "  ${TENUE}Detectado: %s · gestor %s${FIN}\n\n" "$DETALLE_SO" "${GESTOR:-ninguno}"
+  mal "$(printf "$(t e-falta)" "$falta")"
+  p "\n  ${FUERTE}$(t t-necesita)${FIN}\n" "$JAVA_MINIMO"
+  p "  ${TENUE}$(t t-detectado)${FIN}\n\n" "$DETALLE_SO" "${GESTOR:-$(t t-ninguno)}"
   p "      ${FUERTE}%s${FIN}\n\n" "$(orden_java)"
   exit 1
 fi
 
 JAVA_V=$(version_java)
 if [ "${JAVA_V:-0}" -lt "$JAVA_MINIMO" ] 2>/dev/null; then
-  mal "Cero necesita Java $JAVA_MINIMO o superior — hilos virtuales. Tienes ${JAVA_V:-ninguno}."
-  p "\n  ${TENUE}Detectado: %s · gestor %s${FIN}\n\n" "$DETALLE_SO" "${GESTOR:-ninguno}"
+  mal "$(printf "$(t e-java-viejo)" "$JAVA_MINIMO" "${JAVA_V:-$(t t-ninguno)}")"
+  p "\n  ${TENUE}$(t t-detectado)${FIN}\n\n" "$DETALLE_SO" "${GESTOR:-$(t t-ninguno)}"
   p "      ${FUERTE}%s${FIN}\n\n" "$(orden_java)"
   exit 1
 fi
 MAVEN_V=$(mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3)
-bien "entorno" "$DETALLE_SO · Java $JAVA_V · $MAVEN_V"
+bien "$(t b-entorno)" "$DETALLE_SO · Java $JAVA_V · $MAVEN_V"
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
-paso "consultando la versión"
+paso "$(t p-version)"
 VERSION=$(curl -fsSL --max-time 20 "$BASE/version" 2>/dev/null) || \
-  muere "no se pudo hablar con $BASE — ¿hay conexión?"
+  muere "$(printf "$(t e-sin-red)" "$BASE")"
 case "$VERSION" in
-  ''|*[!0-9.]*) muere "el servidor devolvió una versión rara: '$VERSION'" ;;
+  ''|*[!0-9.]*) muere "$(t e-version): '$VERSION'" ;;
 esac
-bien "versión" "Cero $VERSION"
+bien "$(t b-version)" "Cero $VERSION"
 
 # ─── 3 · bajarlo ────────────────────────────────────────────────────────────────────────
 PAQUETE="cero-$VERSION.tar.gz"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/cero.XXXXXX")
 
-paso "bajando el paquete"
+paso "$(t p-bajando)"
 girando "$TMP/curl.log" \
   curl -fsSL --max-time 300 -o "$TMP/$PAQUETE" "$BASE/estaticos/$PAQUETE" \
-  || muere "no se pudo bajar $BASE/estaticos/$PAQUETE" "$TMP/curl.log"
+  || muere "$(printf "$(t e-descarga)" "$BASE/estaticos/$PAQUETE")" "$TMP/curl.log"
 KB=$(( $(wc -c < "$TMP/$PAQUETE") / 1024 ))
-bien "descargado" "$PAQUETE · ${KB} KB"
+bien "$(t b-descargado)" "$PAQUETE · ${KB} KB"
 
 # ─── 4 · comprobar la huella ────────────────────────────────────────────────────────────
-paso "comprobando la huella"
+paso "$(t p-huella)"
 ESPERADA=$(curl -fsSL --max-time 20 "$BASE/estaticos/$PAQUETE.sha256" 2>/dev/null | cut -d' ' -f1) \
-  || muere "no se pudo bajar la huella"
+  || muere "$(t e-sin-huella)"
 if command -v shasum >/dev/null 2>&1; then
   REAL=$(shasum -a 256 "$TMP/$PAQUETE" | cut -d' ' -f1)
 elif command -v sha256sum >/dev/null 2>&1; then
@@ -335,39 +483,39 @@ else
   REAL=''
 fi
 if [ -z "$REAL" ]; then
-  aviso "huella" "sin comprobar: no hay shasum ni sha256sum"
+  aviso "$(t b-huella)" "$(t a-sin-sha)"
 elif [ "$REAL" != "$ESPERADA" ]; then
-  muere "la huella no coincide — el paquete llegó cambiado, no lo instalo.
-      esperada  $ESPERADA
-      recibida  $REAL"
+  muere "$(t e-huella-mal)
+      $(t e-esperada)  $ESPERADA
+      $(t e-recibida)  $REAL"
 else
-  bien "huella" "sha256 $(printf '%s' "$REAL" | cut -c1-16)…"
+  bien "$(t b-huella)" "sha256 $(printf '%s' "$REAL" | cut -c1-16)…"
 fi
 
 # ─── 5 · extraer ────────────────────────────────────────────────────────────────────────
-paso "extrayendo"
+paso "$(t p-extrayendo)"
 DESTINO="$RAIZ/cero-$VERSION"
 mkdir -p "$RAIZ"
 rm -rf "$DESTINO"
-tar -xzf "$TMP/$PAQUETE" -C "$RAIZ" || muere "el paquete no se pudo extraer"
-[ -d "$DESTINO" ] || muere "el paquete no traía cero-$VERSION dentro"
-bien "extraído" "$DESTINO"
+tar -xzf "$TMP/$PAQUETE" -C "$RAIZ" || muere "$(t e-extraer)"
+[ -d "$DESTINO" ] || muere "$(printf "$(t e-contenido)" "cero-$VERSION")"
+bien "$(t b-extraido)" "$DESTINO"
 
 # ─── 6 · compilar ───────────────────────────────────────────────────────────────────────
 if [ "$PRUEBAS" = si ]; then
-  paso "compilando los ocho módulos y corriendo las pruebas"
+  paso "$(t p-compilando-t)"
   girando "$TMP/mvn.log" mvn -B -q -f "$DESTINO/java/pom.xml" install \
-    || muere "la compilación falló" "$TMP/mvn.log"
-  bien "compilado" "con las pruebas en verde · ${SEGUNDOS:-?} s"
+    || muere "$(t e-compilar)" "$TMP/mvn.log"
+  bien "$(t b-compilado)" "con las pruebas en verde · ${SEGUNDOS:-?} s"
 else
-  paso "compilando los ocho módulos"
+  paso "$(t p-compilando)"
   girando "$TMP/mvn.log" mvn -B -q -f "$DESTINO/java/pom.xml" -DskipTests install \
-    || muere "la compilación falló" "$TMP/mvn.log"
-  bien "compilado" "ocho módulos en ~/.m2 · ${SEGUNDOS:-?} s"
+    || muere "$(t e-compilar)" "$TMP/mvn.log"
+  bien "$(t b-compilado)" "$(printf "$(t d-modulos)" "${SEGUNDOS:-?}")"
 fi
 
 # ─── 7 · dejar la orden a mano ──────────────────────────────────────────────────────────
-paso "instalando la orden cero"
+paso "$(t p-instalando)"
 ln -sfn "$DESTINO" "$RAIZ/actual"
 mkdir -p "$BIN"
 cat > "$BIN/cero" <<GUION
@@ -376,35 +524,35 @@ cat > "$BIN/cero" <<GUION
 exec "$RAIZ/actual/cero" "\$@"
 GUION
 chmod +x "$BIN/cero"
-bien "orden cero" "$BIN/cero"
+bien "$(t b-orden)" "$BIN/cero"
 
 # ─── 8 · comprobar que sirve ────────────────────────────────────────────────────────────
-paso "comprobando la instalación"
-"$BIN/cero" estado >/dev/null 2>&1 || muere "quedó instalado pero 'cero status' no responde"
-bien "comprobado" "cero status responde"
+paso "$(t p-comprobando)"
+"$BIN/cero" estado >/dev/null 2>&1 || muere "$(t e-no-responde)"
+bien "$(t b-comprobado)" "$(t d-responde)"
 
 # ─── resumen ────────────────────────────────────────────────────────────────────────────
-p "\n  ${VERDE}${FUERTE}Cero %s instalado${FIN}\n\n" "$VERSION"
-p "  %-12s %s\n" sistema "$DETALLE_SO"
-p "  %-12s %s\n" java    "$JAVA_V · $MAVEN_V"
-p "  %-12s %s\n" carpeta "$DESTINO"
-p "  %-12s %s\n" orden   "$BIN/cero"
+p "\n  ${VERDE}${FUERTE}$(t f-instalado)${FIN}\n\n" "$VERSION"
+p "  %s %s\n" "$(rellena "$(t f-sistema)" 12)" "$DETALLE_SO"
+p "  %s %s\n" "$(rellena "$(t f-java)" 12)" "$JAVA_V · $MAVEN_V"
+p "  %s %s\n" "$(rellena "$(t f-carpeta)" 12)" "$DESTINO"
+p "  %s %s\n" "$(rellena "$(t f-orden)" 12)" "$BIN/cero"
 p "\n"
 
 case ":$PATH:" in
   *":$BIN:"*) ;;
   *)
-    p "  ${ACENTO}Falta un paso${FIN} — %s no está en tu PATH. Añade esta línea a tu\n" "$BIN"
+    p "  ${ACENTO}$(t f-falta-paso)${FIN} — $(t f-path)\n" "$BIN"
     case "$INTERPRETE" in
       zsh)  PERFIL='~/.zshrc' ;;
       fish) PERFIL='~/.config/fish/config.fish' ;;
       *)    PERFIL='~/.bashrc' ;;
     esac
-    p "  ${TENUE}%s${FIN} y abre una terminal nueva:\n\n" "$PERFIL"
+    p "  ${TENUE}$(t f-perfil)${FIN}\n\n" "$PERFIL"
     p "      ${FUERTE}export PATH=\"%s:\$PATH\"${FIN}\n\n" "$(printf '%s' "$BIN" | sed "s|^$HOME|\$HOME|")" ;;
 esac
 
-p "  ${TENUE}Crear un proyecto y arrancarlo:${FIN}\n\n"
+p "  ${TENUE}$(t f-crear)${FIN}\n\n"
 p "      ${FUERTE}cero new mi-app${FIN}\n"
 p "      ${FUERTE}cd mi-app && mvn -q package && java -Xmx64m -jar target/mi-app.jar${FIN}\n\n"
-p "  ${TENUE}Guía completa:${FIN}  %s/empezar\n\n" "$BASE"
+p "  ${TENUE}$(t f-guia)${FIN}  %s/empezar\n\n" "$BASE"

@@ -29,7 +29,7 @@ final class Frontend {
         Path recursos = backend.resolve("src/main/resources");
         Files.createDirectories(recursos.resolve("front"));
         escribir(recursos.resolve("front").resolve(".gitkeep"),
-                "Aquí se copia lo que compile el frontend.\n");
+                Idioma.t("front-leeme"));
 
         Path fuentes = backend.resolve("src/main/java").resolve(peticion.paquete().replace('.', '/'));
         escribir(fuentes.resolve("App.java"), appConFrontend(peticion));

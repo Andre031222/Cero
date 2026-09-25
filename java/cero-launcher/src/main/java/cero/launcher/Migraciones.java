@@ -29,8 +29,8 @@ public final class Migraciones {
             DataSources.register(DESECHABLE, Pool.to(url).validate(false).build());
             resultado = Migrations.from(directorio).verify(DESECHABLE);
         } catch (RuntimeException fallo) {
-            System.err.println("no se pudo abrir la base desechable " + url + ": " + fallo.getMessage());
-            System.err.println("el driver JDBC va en el classpath: CERO_JDBC_JAR=/ruta/driver.jar");
+            System.err.println(Idioma.t("mig-sin-base", url, fallo.getMessage()));
+            System.err.println(Idioma.t("mig-driver"));
             System.exit(2);
             return;
         }

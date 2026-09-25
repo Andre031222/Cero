@@ -148,12 +148,11 @@ public final class Packager {
             }
         }
         if (main == null || entradas.isEmpty()) {
-            System.err.println("uso: Packager --main <clase> [--out app.jar] <clases|jar>...");
+            System.err.println(Idioma.t("paq-uso"));
             System.exit(2);
             return;
         }
         int total = conMain(main).anadir(entradas).escribir(destino);
-        System.out.printf("%s · %d entradas · %.0f KB%n",
-                destino, total, Files.size(destino) / 1024.0);
+        System.out.println(Idioma.t("paq-entradas", destino, total, Files.size(destino) / 1024.0));
     }
 }
