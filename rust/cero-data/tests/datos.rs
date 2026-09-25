@@ -5,7 +5,7 @@
 
 use cero_data::memoria::EnMemoria;
 use cero_data::migraciones::{self, Migracion};
-use cero_data::{transaccion, Conexion, Fallo, Fila, Fuente, Repositorio, Valor};
+use cero_data::{transaccion, Fallo, Fila, Fuente, Repositorio, Valor};
 
 fn sembrada() -> EnMemoria {
     let m = EnMemoria::nueva();

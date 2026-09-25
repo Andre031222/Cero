@@ -4,8 +4,9 @@ Segunda implementación del contrato de [`spec/`](../spec). No es una traducció
 la referencia son los requisitos numerados, y el juez son los mismos vectores de conformidad, que
 son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 8.** HTTP/1.1, ruteo, sesiones, seguridad, observabilidad y el framework montado
-están; de HTTP/2 están las tramas y HPACK, y faltan los flujos y las tres puertas de entrada.
+**Estado: hito 10.** HTTP/2 está entero salvo TLS: tramas, HPACK, flujos y control de flujo en los
+dos sentidos. **h2spec da 145 de 146**, el mismo número que Java y con el mismo único fallo, el
+`3.5.2`, que asume un puerto dedicado a h2c y no aplica aquí.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -15,13 +16,47 @@ están; de HTTP/2 están las tramas y HPACK, y faltan los flujos y las tres puer
 | 4 | Observabilidad | 23 de 23 requisitos · 16 pruebas |
 | 5 | El framework montado | pipeline completo · aplicación de ejemplo |
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo de verdad |
-| 7 | HTTP/2 · capa de tramas | 11 de los 39 requisitos · 13 pruebas |
+| 7 | HTTP/2 · capa de tramas | 11 de los 49 requisitos · 13 pruebas |
 | 8 | HTTP/2 · HPACK | 5 requisitos más · 20 pruebas, con los vectores del RFC 7541 |
+| 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · 25 pruebas |
+| 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
 
-**122 de los 163 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco, y 99
-más citados uno a uno en las pruebas —`grep -o '[A-Z0-9]*-[0-9][0-9][0-9]' rust/` los cuenta—. Lo
-que falta es casi todo HTTP/2: quedan 23 de sus 39, que son los flujos, el control de flujo y las
-tres puertas de entrada.
+**155 de los 173 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco, y el
+resto citados uno a uno en las pruebas —`grep -o '[A-Z0-9]*-[0-9][0-9][0-9]' rust/` los cuenta—. Lo
+que queda son 18, y ninguno es de HTTP/2: son del ruteo avanzado, y la puerta de ALPN, que en Rust
+no se puede abrir sin escribir TLS —más abajo se explica por qué eso no se va a hacer—.
+
+## El hito 10, y por qué hizo falta
+
+Las 131 pruebas propias estaban en verde y h2spec daba 130 de 146. Los 16 fallos venían de seis
+causas, y la primera las explica casi todas: **hay dos juegos de ajustes por conexión y el puerto
+escribió uno**. Los nuestros dicen lo que admitimos recibir; los del cliente, lo que él admite
+recibir. Fundirlos hacía tres cosas a la vez, y solo una parecía un fallo:
+
+1. **La salida se quedaba sin control de flujo.** Su `SETTINGS_INITIAL_WINDOW_SIZE` se aplicaba a
+   la ventana de entrada, así que la de salida no existía: el servidor mandaba todo lo que tenía en
+   cuanto lo tenía. Contra un cliente que lee rápido funciona.
+2. **El cliente podía subir por SETTINGS los topes que lo contenían.** Con
+   `SETTINGS_MAX_HEADER_LIST_SIZE` a 2^32-1 desaparecía `H2-039`, la defensa contra la bomba de
+   descompresión de HPACK; con `SETTINGS_MAX_CONCURRENT_STREAMS`, el tope de flujos en vuelo. Dos
+   defensas anuladas por una trama válida de seis octetos. Java no lo tenía: ignora los ajustes del
+   cliente que no le tocan, y este fallo nació al portar.
+3. **Se leía del cable con el tope del cliente en vez de con el nuestro.**
+
+Las otras cinco causas están en `spec/http2.md` como `H2-043` a `H2-049`. Dos merecen contarse
+porque no se ven leyendo el código:
+
+**El GOAWAY se escribía bien y se perdía siempre.** Cerrar un socket con octetos sin leer en el
+búfer de recepción no manda un FIN, manda un RST, y un RST borra en la otra punta lo que todavía no
+había leído. El cliente veía «connection reset by peer» y nunca el motivo. Ninguna prueba propia
+podía verlo: todas leen la respuesta antes de cerrar. Se arregla con media conexión y un vaciado
+(§9.1), y de paso la suite de h2spec pasó de 35 segundos a 5: los timeouts eran esto.
+
+**El tope de concurrencia no llegaba a tocar nunca.** Descontaba al flujo que ya había dicho
+`END_STREAM` —a quien terminó de hablar no se le debe nada— y es justo ese el que tiene trabajo en
+marcha, esperando respuesta. Encima el conductor lo daba por respondido al *despacharlo*, no al
+responderlo. Ahora el hilo que responde se lo dice al que lee, que es toda la conversación que
+necesitan tener.
 
 ## Usarlo
 

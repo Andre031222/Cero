@@ -110,11 +110,11 @@ fn h2_029_y_030_los_flujos_son_independientes() {
     let mut s = sesion();
     pedir(&mut s, 1, &get(), false);
     pedir(&mut s, 3, &get(), false);
-    assert_eq!(s.flujos_abiertos(), 2, "H2-029: los dos a la vez, no en fila");
+    assert_eq!(s.activos(), 2, "H2-029: los dos a la vez, no en fila");
 
     let (acciones, _) = s.recibir(Trama::rst(1, Error::Anulado)).unwrap();
     assert_eq!(acciones, vec![Accion::Anulado(1)]);
-    assert_eq!(s.flujos_abiertos(), 1, "H2-030");
+    assert_eq!(s.activos(), 1, "H2-030");
     // Y el que queda sigue admitiendo cuerpo.
     let (mas, corte) = s.recibir(t(DATA, 0, 3, b"hola".to_vec())).unwrap();
     assert!(corte.is_none(), "H2-030: el flujo 3 no tiene la culpa");
@@ -125,23 +125,26 @@ fn h2_029_y_030_los_flujos_son_independientes() {
 /// del RFC deja al cliente mandando más de lo que este servidor dijo que admitía.
 #[test]
 fn h2_031_la_ventana_del_flujo_nuevo_es_la_negociada() {
-    let mut ajustes = Ajustes::default();
-    ajustes.ventana_inicial = 1_000;
+    let ajustes = Ajustes { ventana_inicial: 1_000, ..Ajustes::default() };
     let mut s = Sesion::nueva(ajustes);
     pedir(&mut s, 1, &get(), false);
     assert_eq!(s.ventana_de(1), Some(1_000), "H2-031");
 }
 
-/// Cambiar la ventana inicial a mitad mueve la de los flujos ya abiertos, no solo la de los
-/// siguientes (§6.9.2). Si no, el cliente y el servidor cuentan distinto y uno de los dos corta.
+/// La ventana inicial que anuncia el cliente es la de **salida**: dice lo que él admite recibir,
+/// no lo que nosotros admitimos. Aplicarla a la entrada era dejarle mover por SETTINGS el tope que
+/// lo contiene, y además dejaba la salida sin control de flujo, que es lo que h2spec marcaba.
+///
+/// Cambiarla a mitad mueve la de los flujos ya abiertos, no solo la de los siguientes (§6.9.2): si
+/// no, el cliente y el servidor cuentan distinto y uno de los dos corta.
 #[test]
-fn una_ventana_inicial_nueva_mueve_los_flujos_ya_abiertos() {
+fn una_ventana_inicial_nueva_mueve_la_salida_y_no_la_entrada() {
     let mut s = sesion();
     pedir(&mut s, 1, &get(), false);
-    assert_eq!(s.ventana_de(1), Some(65_535));
     // SETTINGS_INITIAL_WINDOW_SIZE = 1000.
-    s.recibir(t(SETTINGS, 0, 0, vec![0, 4, 0, 0, 0x03, 0xe8])).unwrap();
-    assert_eq!(s.ventana_de(1), Some(1_000));
+    let (acciones, _) = s.recibir(t(SETTINGS, 0, 0, vec![0, 4, 0, 0, 0x03, 0xe8])).unwrap();
+    assert!(acciones.contains(&Accion::Reajustar(1_000 - 65_535)), "§6.9.2, hacia la salida");
+    assert_eq!(s.ventana_de(1), Some(65_535), "la de entrada es nuestra y no la mueve él");
 }
 
 /// Terminar de responder cierra nuestra mitad, no el flujo: hasta que el cliente diga
@@ -151,38 +154,39 @@ fn responder_no_cierra_el_flujo_del_cliente() {
     let mut s = sesion();
     pedir(&mut s, 1, &get(), false);
     s.respondido(1);
-    assert_eq!(s.flujos_abiertos(), 1, "sigue vivo hasta el END_STREAM del cliente");
-    assert_eq!(s.activos(), 1);
+    assert_eq!(s.activos(), 1, "sigue vivo hasta el END_STREAM del cliente");
 
     let (acciones, corte) = s.recibir(t(DATA, FIN_FLUJO, 1, b"tarde".to_vec())).unwrap();
     assert!(corte.is_none(), "el cuerpo que llega después se sigue admitiendo y validando");
     assert!(matches!(acciones[0], Accion::Cuerpo { flujo: 1, fin: true, .. }));
     s.respondido(1);
-    assert_eq!(s.flujos_abiertos(), 0, "y ahora sí se suelta");
+    assert_eq!(s.activos(), 0, "y ahora sí se suelta");
 }
 
-/// Un flujo al que solo le falta el `END_STREAM` del cliente no cuesta trabajo, así que no debe
-/// cerrarle la puerta a otro: si contara, el tope de concurrencia se llenaría de flujos inertes.
+/// `H2-046`: el que ya dijo `END_STREAM` **sí** cuenta para el tope. Parecía al revés —a uno que
+/// terminó de hablar no le debemos nada— y es justo ese el que tiene trabajo en marcha: está
+/// esperando respuesta. Descontarlos dejaba el tope sin tocar nunca, y lo encontró h2spec, no las
+/// pruebas propias, porque hacía falta llenar la conexión de verdad para verlo.
 #[test]
-fn los_respondidos_no_cuentan_para_el_tope_de_concurrencia() {
+fn h2_046_el_que_espera_respuesta_cuenta_para_el_tope() {
     let mut s = sesion();
     pedir(&mut s, 1, &get(), true);
-    assert_eq!(s.flujos_abiertos(), 1);
-    assert_eq!(s.activos(), 0, "ya dijo END_STREAM: no hay nada más que esperarle");
+    assert_eq!(s.activos(), 1, "H2-046");
+    s.respondido(1);
+    assert_eq!(s.activos(), 0, "y deja de contar cuando se le contesta");
 }
 
 /// Pasarse del tope de concurrencia corta ese flujo con REFUSED_STREAM, no la conexión: el cliente
 /// puede reintentar esa petición sin perder las que ya tenía en vuelo.
 #[test]
 fn pasarse_del_tope_de_flujos_rechaza_solo_ese() {
-    let mut ajustes = Ajustes::default();
-    ajustes.max_flujos = 2;
+    let ajustes = Ajustes { max_flujos: 2, ..Ajustes::default() };
     let mut s = Sesion::nueva(ajustes);
     pedir(&mut s, 1, &get(), false);
     pedir(&mut s, 3, &get(), false);
     let acciones = pedir(&mut s, 5, &get(), false);
     assert_eq!(acciones, vec![Accion::Escribir(Trama::rst(5, Error::Rechazado))]);
-    assert_eq!(s.flujos_abiertos(), 2, "la conexión sigue");
+    assert_eq!(s.activos(), 2, "la conexión sigue");
 }
 
 // ── Bloques de cabeceras ────────────────────────────────────────────────────────────────────
@@ -333,8 +337,7 @@ fn el_credito_se_devuelve_al_leer_y_pasarse_corta() {
     assert!(acciones.contains(&Accion::Escribir(Trama::ventana(1, 100))), "ventana del flujo");
     assert_eq!(s.ventana_de(1), Some(65_535), "el flujo vuelve a estar entero");
 
-    let mut ajustes = Ajustes::default();
-    ajustes.ventana_inicial = 10;
+    let ajustes = Ajustes { ventana_inicial: 10, ..Ajustes::default() };
     let mut apretada = Sesion::nueva(ajustes);
     pedir(&mut apretada, 1, &get(), false);
     let fallo = apretada.recibir(t(DATA, 0, 1, vec![b'x'; 11])).unwrap_err();
@@ -449,4 +452,127 @@ fn h2_033_y_034_las_cabeceras_de_la_respuesta() {
     let nombres: Vec<&str> = leidas.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(nombres, vec![":status", "content-type", "x-propia"], "H2-033 y H2-034");
     assert_eq!(leidas[0].1, "200");
+}
+
+// ── Los dos juegos de ajustes ───────────────────────────────────────────────────────────────
+
+/// `H2-042`: los ajustes del cliente dicen lo que **él** admite recibir. Tomarlos por los nuestros
+/// le deja subir por SETTINGS los topes que lo contienen, y es el más grave de los del bloque
+/// porque no parece un fallo de seguridad al leerlo: con `SETTINGS_MAX_HEADER_LIST_SIZE` a 2^32-1
+/// desaparece `H2-039`, y con `SETTINGS_MAX_CONCURRENT_STREAMS`, el tope de flujos en vuelo. Dos
+/// defensas anuladas por una trama válida de seis octetos.
+#[test]
+fn h2_042_los_ajustes_del_cliente_no_mueven_los_nuestros() {
+    let mut s = sesion();
+    let nuestros = s.ajustes;
+    // MAX_CONCURRENT_STREAMS, MAX_HEADER_LIST_SIZE y MAX_FRAME_SIZE, los tres al máximo.
+    let carga = vec![
+        0, 3, 0xff, 0xff, 0xff, 0xff,
+        0, 6, 0xff, 0xff, 0xff, 0xff,
+        0, 5, 0x00, 0xff, 0xff, 0xff,
+    ];
+    s.recibir(t(SETTINGS, 0, 0, carga)).unwrap();
+
+    assert_eq!(s.ajustes.max_flujos, nuestros.max_flujos, "H2-042: el tope de flujos es nuestro");
+    assert_eq!(s.ajustes.max_cabeceras, nuestros.max_cabeceras, "H2-042: y el de cabeceras");
+    assert_eq!(s.ajustes.max_trama, nuestros.max_trama, "H2-042: y lo que admitimos leer");
+    assert_eq!(s.par.max_trama, 0x00ff_ffff, "los suyos sí se guardan: rigen lo que se le manda");
+}
+
+/// Hasta que el cliente diga los suyos hay que suponerle los del RFC, no los nuestros. Suponer los
+/// nuestros sería mandarle tramas de un tamaño que no ha aceptado.
+#[test]
+fn h2_042_al_cliente_se_le_suponen_los_del_rfc() {
+    let s = sesion();
+    assert_eq!(s.par.max_trama, 16_384);
+    assert_eq!(s.par.ventana_inicial, 65_535);
+}
+
+/// Un WINDOW_UPDATE es crédito para mandar, no un apunte que se lee y se tira. Sin esto la salida
+/// no tiene control de flujo, que es la mitad de lo que h2spec marcaba.
+#[test]
+fn h2_040_un_window_update_es_credito_de_salida() {
+    let mut s = sesion();
+    pedir(&mut s, 1, &get(), false);
+    let (acciones, _) = s.recibir(t(WINDOW_UPDATE, 0, 1, vec![0, 0, 0x10, 0])).unwrap();
+    assert_eq!(acciones, vec![Accion::Credito { flujo: 1, cuanto: 4_096 }]);
+    let (conexion, _) = s.recibir(t(WINDOW_UPDATE, 0, 0, vec![0, 0, 0x10, 0])).unwrap();
+    assert_eq!(conexion, vec![Accion::Credito { flujo: 0, cuanto: 4_096 }]);
+}
+
+// ── Lo que encontró h2spec y las pruebas propias no ─────────────────────────────────────────
+
+/// `H2-043`: un cuerpo que no mide lo que dijo `content-length` es el contrabando de HTTP/1.1 otra
+/// vez, ahora en binario. Pasarse se sabe al momento; quedarse corto, solo al cerrar el flujo.
+#[test]
+fn h2_043_el_cuerpo_tiene_que_medir_lo_que_dijo() {
+    for (declarado, cuerpo, fin) in [("5", "hola", true), ("2", "hola", false)] {
+        let mut s = sesion();
+        let mut cabeceras = get();
+        cabeceras[0] = (":method", "POST");
+        cabeceras.push(("content-length", declarado));
+        pedir(&mut s, 1, &cabeceras, false);
+        let banderas = if fin { FIN_FLUJO } else { 0 };
+        let (acciones, corte) = s.recibir(t(DATA, banderas, 1, cuerpo.as_bytes().to_vec())).unwrap();
+        assert_eq!(corte.expect("H2-043").codigo, Error::Protocolo);
+        assert_eq!(acciones, vec![Accion::Escribir(Trama::rst(1, Error::Protocolo))]);
+    }
+}
+
+/// Y el que cuadra pasa: la comprobación no puede costarle nada a una petición normal.
+#[test]
+fn h2_043_el_cuerpo_que_cuadra_pasa() {
+    let mut s = sesion();
+    let mut cabeceras = get();
+    cabeceras[0] = (":method", "POST");
+    cabeceras.push(("content-length", "4"));
+    pedir(&mut s, 1, &cabeceras, false);
+    let (_, corte) = s.recibir(t(DATA, FIN_FLUJO, 1, b"hola".to_vec())).unwrap();
+    assert!(corte.is_none());
+}
+
+/// `H2-044` y `H2-049`: PRIORITY está deprecada y se descarta, pero su forma se sigue mirando. Un
+/// flujo que depende de sí mismo no describe un árbol, y sobre el flujo 0 no describe nada.
+#[test]
+fn h2_044_y_049_la_prioridad_se_descarta_pero_se_mira() {
+    let mut s = sesion();
+    pedir(&mut s, 1, &get(), false);
+    let (acciones, corte) = s.recibir(t(PRIORITY, 0, 1, vec![0, 0, 0, 1, 16])).unwrap();
+    assert_eq!(corte.expect("H2-044").codigo, Error::Protocolo);
+    assert_eq!(acciones, vec![Accion::Escribir(Trama::rst(1, Error::Protocolo))]);
+
+    let fallo = s.recibir(t(PRIORITY, 0, 0, vec![0, 0, 0, 1, 16])).unwrap_err();
+    assert_eq!(fallo.codigo, Error::Protocolo, "H2-049");
+
+    let mut otra = sesion();
+    let (vacio, _) = otra.recibir(t(PRIORITY, 0, 1, vec![0, 0, 0, 3, 16])).unwrap();
+    assert!(vacio.is_empty(), "una prioridad bien formada se lee y se tira");
+}
+
+/// `H2-045`: a un flujo que todavía no ha existido no se le puede dar crédito. Ignorarlo dejaba al
+/// cliente esperando una respuesta que no iba a llegar, y h2spec lo veía como un plantón.
+#[test]
+fn h2_045_no_hay_credito_para_un_flujo_ocioso() {
+    let mut s = sesion();
+    let fallo = s.recibir(t(WINDOW_UPDATE, 0, 7, vec![0, 0, 0x10, 0])).unwrap_err();
+    assert_eq!(fallo.codigo, Error::Protocolo, "H2-045");
+}
+
+/// `H2-047`: el cliente ya dijo `END_STREAM`, así que por su lado no queda nada por decir. Ni
+/// siquiera trailers: los trailers van antes del fin, no después.
+#[test]
+fn h2_047_no_hay_cabeceras_despues_del_fin() {
+    let mut s = sesion();
+    pedir(&mut s, 1, &get(), true);
+    let acciones = pedir(&mut s, 1, &[("x", "y")], true);
+    assert_eq!(acciones, vec![Accion::Escribir(Trama::rst(1, Error::FlujoCerrado))], "H2-047");
+}
+
+/// `H2-035`: los trailers de verdad —antes del fin— sí valen, y se decodifican aunque se tiren.
+#[test]
+fn h2_035_los_trailers_antes_del_fin_siguen_valiendo() {
+    let mut s = sesion();
+    pedir(&mut s, 1, &get(), false);
+    let acciones = pedir(&mut s, 1, &[("x-final", "1")], true);
+    assert_eq!(acciones, vec![Accion::Cuerpo { flujo: 1, datos: Vec::new(), fin: true }]);
 }

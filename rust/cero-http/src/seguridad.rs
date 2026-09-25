@@ -257,7 +257,7 @@ fn limpiar_atributos(etiqueta: &str) -> String {
         return format!("{}>", &etiqueta[..corte]);
     }
     if bajo.contains("javascript:") {
-        let corte = bajo.find(|c| c == ' ').unwrap_or(etiqueta.len() - 1);
+        let corte = bajo.find(' ').unwrap_or(etiqueta.len() - 1);
         return format!("{}>", &etiqueta[..corte]);
     }
     etiqueta.to_string()

@@ -38,6 +38,10 @@ pub enum Accion {
     Cuerpo { flujo: u32, datos: Vec<u8>, fin: bool },
     /// El cliente anuló un flujo: si había trabajo en marcha, se abandona.
     Anulado(u32),
+    /// El cliente amplía lo que se le puede mandar. `flujo` 0 es la conexión entera.
+    Credito { flujo: u32, cuanto: i64 },
+    /// Una ventana inicial nueva: mueve la de salida de todos los flujos abiertos (§6.9.2).
+    Reajustar(i64),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -55,6 +59,13 @@ struct Flujo {
     /// Si ya llegó un bloque de cabeceras completo. El segundo son trailers, y solo valen con
     /// `END_STREAM` (`H2-017`).
     cabeceras_vistas: bool,
+    /// Un fallo que se ve en la trama pero no se puede contestar hasta haber decodificado el
+    /// bloque: saltarse la decodificación descoloca HPACK para todo lo que venga después.
+    malformado: Option<&'static str>,
+    /// Lo que la petición dijo que iba a mandar, y lo que lleva mandado. `H2-043`: si no cuadran,
+    /// dos intermediarios leen dos cuerpos distintos, que es el contrabando de HTTP/1.1 otra vez.
+    declarado: Option<u64>,
+    recibido: u64,
 }
 
 /// Los topes que convierten «tramas válidas» en «demasiadas tramas válidas».
@@ -80,7 +91,11 @@ impl Default for Topes {
 /// El estado de una conexión HTTP/2. Vive tanto como el socket: la tabla de HPACK y los
 /// identificadores de flujo no se pueden reiniciar a mitad.
 pub struct Sesion {
+    /// Los nuestros. Gobiernan la entrada, y por eso no los toca nadie más: si el cliente pudiera
+    /// moverlos, subiría por SETTINGS los topes que lo contienen.
     pub ajustes: Ajustes,
+    /// Los del cliente. Gobiernan lo que se le manda, y los mueve él.
+    pub par: Ajustes,
     pub topes: Topes,
     decodificador: Decodificador,
     flujos: HashMap<u32, Flujo>,
@@ -110,6 +125,7 @@ impl Sesion {
             anulados: 0,
             control_sin_flujo: 0,
             ajustes,
+            par: Ajustes::del_rfc(),
             topes: Topes::default(),
         }
     }
@@ -123,14 +139,12 @@ impl Sesion {
         octetos.len() >= PREAMBULO.len() && &octetos[..PREAMBULO.len()] == PREAMBULO
     }
 
-    pub fn flujos_abiertos(&self) -> usize {
-        self.flujos.len()
-    }
-
-    /// Cuántos flujos cuentan para el tope de concurrencia. Uno al que solo le falta que el cliente
-    /// diga `END_STREAM` ya no nos cuesta trabajo, así que no debe cerrar la puerta a otro.
+    /// `H2-046`. Cuántos flujos cuentan para el tope: todos los que siguen vivos, incluidos
+    /// los que ya dijeron `END_STREAM` y esperan respuesta. Contar solo los abiertos parecía más
+    /// justo —a uno que ya terminó de hablar no le debemos nada— y es justo al revés: ese es
+    /// precisamente el que tiene trabajo en marcha. Con ese filtro el tope no llegaba a tocar nunca.
     pub fn activos(&self) -> usize {
-        self.flujos.values().filter(|f| f.estado == Estado::Abierto).count()
+        self.flujos.len()
     }
 
     pub fn ventana_de(&self, flujo: u32) -> Option<i64> {
@@ -159,8 +173,7 @@ impl Sesion {
             HEADERS => self.headers(t),
             CONTINUATION => self.continuation(t),
             DATA => self.data(t),
-            // PRIORITY está deprecado por el 9113 §5.3.1: se lee y se tira.
-            PRIORITY => Ok((Vec::new(), None)),
+            PRIORITY => self.priority(t),
             GOAWAY => Ok((Vec::new(), None)),
             // Un tipo que no se conoce se ignora, no se rechaza (§4.1). Es lo que permite extender
             // el protocolo sin romper a quien no lo conoce.
@@ -182,16 +195,15 @@ impl Sesion {
             return Ok((Vec::new(), None));
         }
         self.control()?;
-        let delta = self.ajustes.aplicar(&t.carga)?;
-        // §6.9.2: cambiar la ventana inicial mueve la de los flujos ya abiertos, no solo la de los
-        // siguientes. Olvidarlo deja al cliente y al servidor contando distinto.
+        // Los suyos, no los nuestros: lo que dice aquí es lo que él admite recibir. La ventana
+        // inicial que anuncia es la de salida de cada flujo, y por eso el delta sale hacia fuera en
+        // vez de moverle nada a la entrada.
+        let delta = self.par.aplicar(&t.carga)?;
+        let mut acciones = vec![Accion::Escribir(Trama::settings_ack())];
         if delta != 0 {
-            for f in self.flujos.values_mut() {
-                f.ventana += delta;
-            }
+            acciones.push(Accion::Reajustar(delta));
         }
-        self.decodificador.max_lista = self.ajustes.max_cabeceras as usize;
-        Ok((vec![Accion::Escribir(Trama::settings_ack())], None))
+        Ok((acciones, None))
     }
 
     /// `H2-028`: misma carga, ACK puesto.
@@ -206,14 +218,36 @@ impl Sesion {
     fn window_update(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
         let cuanto = u32::from_be_bytes([t.carga[0] & 0x7f, t.carga[1], t.carga[2], t.carga[3]]) as i64;
         if t.flujo == 0 {
+            // El incremento cero sobre la conexión (`H2-013`) ya lo cazó `comprobar`.
             self.control()?;
-            return Ok((Vec::new(), None));
+            return Ok((vec![Accion::Credito { flujo: 0, cuanto }], None));
+        }
+        // `H2-045`: un flujo que todavía no ha existido no admite nada, ni siquiera crédito.
+        if t.flujo > self.ultimo {
+            return Err(conexion(Error::Protocolo, "WINDOW_UPDATE sobre un flujo ocioso"));
         }
         // Incremento cero sobre un flujo corta el flujo, no la conexión (§6.9).
         if cuanto == 0 {
             return Ok((
                 vec![Accion::Escribir(Trama::rst(t.flujo, Error::Protocolo))],
                 Some(Cortado { flujo: t.flujo, codigo: Error::Protocolo, porque: "incremento cero" }),
+            ));
+        }
+        Ok((vec![Accion::Credito { flujo: t.flujo, cuanto }], None))
+    }
+
+    /// `H2-044` y `H2-049`. El 9113 §5.3.1 deprecó el esquema de prioridades, así que la trama se
+    /// lee y se tira. Lo que no se puede tirar es su forma: un flujo que depende de sí mismo no
+    /// describe un árbol, y el RFC lo sigue pidiendo rechazar aunque nadie use la dependencia.
+    fn priority(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+        if t.flujo == 0 {
+            return Err(conexion(Error::Protocolo, "PRIORITY sobre la conexión"));
+        }
+        self.control()?;
+        if depende_de_si_mismo(&t.carga, t.flujo) {
+            return Ok((
+                vec![Accion::Escribir(Trama::rst(t.flujo, Error::Protocolo))],
+                Some(Cortado { flujo: t.flujo, codigo: Error::Protocolo, porque: "depende de sí mismo" }),
             ));
         }
         Ok((Vec::new(), None))
@@ -234,6 +268,15 @@ impl Sesion {
 
     fn headers(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
         let trailers = match self.flujos.get(&t.flujo) {
+            // `H2-047`: el cliente ya dijo `END_STREAM`, así que por su lado no queda nada por
+            // decir. Ni siquiera trailers: los trailers van **antes** del fin, no después.
+            Some(f) if f.estado == Estado::MitadCerradoRemoto => {
+                let porque = "cabeceras después del fin de flujo";
+                return Ok((
+                    vec![Accion::Escribir(Trama::rst(t.flujo, Error::FlujoCerrado))],
+                    Some(Cortado { flujo: t.flujo, codigo: Error::FlujoCerrado, porque }),
+                ));
+            }
             Some(f) if f.cabeceras_vistas => {
                 // `H2-017`: un segundo bloque solo vale como trailers, y los trailers cierran.
                 if !t.fin_flujo() {
@@ -263,6 +306,11 @@ impl Sesion {
                         // `H2-031`: la ventana del flujo nuevo es la negociada, no los 65 535 del RFC.
                         ventana: self.ajustes.ventana_inicial as i64,
                         cabeceras_vistas: false,
+                        malformado: prioridad_de(&t)
+                            .filter(|p| depende_de_si_mismo(p, t.flujo))
+                            .map(|_| "el flujo depende de sí mismo"),
+                        declarado: None,
+                        recibido: 0,
                     },
                 );
                 false
@@ -311,11 +359,16 @@ impl Sesion {
         // con el cliente, y saltarse un bloque la descoloca para todos los siguientes (`H2-035`).
         let cabeceras = self.decodificador.decodificar(&bloque)?;
 
+        let mut malformado = None;
         if let Some(f) = self.flujos.get_mut(&flujo) {
             f.cabeceras_vistas = true;
             if fin {
                 f.estado = Estado::MitadCerradoRemoto;
             }
+            malformado = f.malformado;
+        }
+        if let Some(porque) = malformado {
+            return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque })));
         }
         if trailers {
             return Ok((vec![Accion::Cuerpo { flujo, datos: Vec::new(), fin: true }], None));
@@ -324,13 +377,29 @@ impl Sesion {
         // `H2-018` a `H2-026`: una petición malformada corta **el flujo**. La conexión no tiene la
         // culpa de que una de las peticiones que lleva venga mal escrita.
         if let Err(porque) = validar(&cabeceras) {
-            self.flujos.remove(&flujo);
-            return Ok((
-                vec![Accion::Escribir(Trama::rst(flujo, Error::Protocolo))],
-                Some(Cortado { flujo, codigo: Error::Protocolo, porque }),
-            ));
+            return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque })));
+        }
+
+        // `H2-043`: un `content-length` que no se puede leer ya es mentira, y con `END_STREAM` en
+        // las cabeceras el cuerpo mide cero diga lo que diga.
+        let declarado = match declarado(&cabeceras) {
+            Err(porque) => return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque }))),
+            Ok(d) => d,
+        };
+        if fin && declarado.unwrap_or(0) != 0 {
+            let porque = "content-length sin cuerpo que lo respalde";
+            return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque })));
+        }
+        if let Some(f) = self.flujos.get_mut(&flujo) {
+            f.declarado = declarado;
         }
         Ok((vec![Accion::Peticion { flujo, cabeceras, fin }], None))
+    }
+
+    /// Un fallo de flujo: se anula, y la conexión sigue con las demás peticiones del mismo cliente.
+    fn cortar(&mut self, flujo: u32, _porque: &'static str) -> Vec<Accion> {
+        self.flujos.remove(&flujo);
+        vec![Accion::Escribir(Trama::rst(flujo, Error::Protocolo))]
     }
 
     fn data(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
@@ -358,6 +427,16 @@ impl Sesion {
                 }
                 if t.fin_flujo() {
                     f.estado = Estado::MitadCerradoRemoto;
+                }
+                f.recibido += tamano as u64;
+                // `H2-043`: pasarse se sabe al momento; quedarse corto, solo al final.
+                let miente = match f.declarado {
+                    Some(d) => f.recibido > d || (t.fin_flujo() && f.recibido != d),
+                    None => false,
+                };
+                if miente {
+                    let porque = "el cuerpo no mide lo que dijo content-length";
+                    return Ok((self.cortar(t.flujo, porque), Some(Cortado { flujo: t.flujo, codigo: Error::Protocolo, porque })));
                 }
                 Some(f.estado)
             }
@@ -399,6 +478,29 @@ impl Sesion {
             }
         }
     }
+}
+
+/// El bloque de prioridad de un HEADERS que lo traiga, saltándose el octeto de relleno si lo hay.
+fn prioridad_de(t: &Trama) -> Option<&[u8]> {
+    if t.banderas & PRIORIDAD == 0 {
+        return None;
+    }
+    let desde = if t.banderas & RELLENO != 0 { 1 } else { 0 };
+    t.carga.get(desde..desde + 4)
+}
+
+/// `content-length` tal como lo declaró la petición. Lo que no es un número no es un tamaño.
+fn declarado(cabeceras: &[(String, String)]) -> Result<Option<u64>, &'static str> {
+    match cabeceras.iter().find(|(n, _)| n == "content-length") {
+        None => Ok(None),
+        Some((_, v)) => v.parse().map(Some).map_err(|_| "content-length que no es un número"),
+    }
+}
+
+/// Los cuatro primeros octetos de un bloque de prioridad son el flujo del que se depende, con el
+/// bit de exclusividad arriba.
+fn depende_de_si_mismo(carga: &[u8], flujo: u32) -> bool {
+    carga.len() >= 4 && u32::from_be_bytes([carga[0] & 0x7f, carga[1], carga[2], carga[3]]) == flujo
 }
 
 /// Quita el relleno de una trama que lo declare, comprobando que quepa. `H2-004` y §6.1: un

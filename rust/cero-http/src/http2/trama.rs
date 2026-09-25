@@ -186,7 +186,11 @@ impl Trama {
     }
 }
 
-/// Los ajustes que el RFC 9113 §6.5.2 define y este servidor usa.
+/// Los ajustes que el RFC 9113 §6.5.2 define.
+///
+/// Hay dos juegos por conexión y confundirlos es un agujero, no un descuido: los nuestros dicen lo
+/// que admitimos recibir y los del cliente lo que él admite recibir. Dejar que los suyos pisen los
+/// nuestros deja al cliente subiendo nuestros propios topes por SETTINGS.
 #[derive(Debug, Clone, Copy)]
 pub struct Ajustes {
     pub max_flujos: u32,
@@ -202,6 +206,12 @@ impl Default for Ajustes {
 }
 
 impl Ajustes {
+    /// Los que hay que suponerle al cliente hasta que mande los suyos (§6.5.2). No son los
+    /// nuestros: suponer aquí lo que nosotros anunciamos sería mandarle tramas que no aceptó.
+    pub fn del_rfc() -> Ajustes {
+        Ajustes { max_flujos: u32::MAX, ventana_inicial: 65_535, max_trama: 16_384, max_cabeceras: u32::MAX }
+    }
+
     /// H2-027: el servidor manda los suyos como primera trama.
     pub fn trama(&self) -> Trama {
         let mut c = Vec::with_capacity(24);
@@ -231,7 +241,10 @@ impl Ajustes {
                     if v > 0x7fff_ffff {
                         return Err(mal(Error::ControlDeFlujo, "ventana inicial imposible"));
                     }
-                    delta = v as i64 - self.ventana_inicial as i64;
+                    // Se acumula: una misma trama puede traer el ajuste dos veces, y hay que
+                    // aplicarlos en orden (§6.5.3). Quedarse con el último delta en vez de la suma
+                    // da un total que no es ni el primero ni el segundo.
+                    delta += v as i64 - self.ventana_inicial as i64;
                     self.ventana_inicial = v;
                 }
                 0x5 => {
