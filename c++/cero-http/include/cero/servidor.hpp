@@ -1,12 +1,17 @@
 #pragma once
 
 #include <chrono>
+#include <expected>
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
+#include "cero/json.hpp"
 #include "cero/observabilidad.hpp"
 #include "cero/peticion.hpp"
 #include "cero/respuesta.hpp"
@@ -30,6 +35,9 @@ public:
     std::optional<std::string> consulta(std::string_view nombre) const;
     std::string consulta_o(std::string_view nombre, std::string_view defecto) const;
     std::optional<std::string> campo(std::string_view nombre) const;
+    // RUT-017: el cuerpo interpretado como JSON. Un cuerpo mal formado es 400 y no 500: lo mandó
+    // mal el cliente, no falló el servidor.
+    std::expected<Json, FalloJson> cuerpo_json() const;
 
     // SES-001: la de esta petición si llegó alguna. Leer no crea.
     const std::optional<Guardada>& sesion() const { return llegada_; }

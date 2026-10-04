@@ -2,8 +2,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <expected>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace cero {
 namespace {

@@ -3,6 +3,10 @@
 // Se parsea desde una cadena y no desde un socket: los mismos 23 vectores los corre después el
 // banco contra el proceso de verdad, así que aquí lo que se gana es saber **cuál** falló.
 
+#include <expected>
+#include <string>
+#include <string_view>
+
 #include "cero/peticion.hpp"
 #include "prueba.hpp"
 

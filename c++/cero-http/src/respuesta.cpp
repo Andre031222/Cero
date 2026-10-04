@@ -1,4 +1,11 @@
+#include <string>
+#include <string_view>
+#include <utility>
+
 #include "cero/respuesta.hpp"
+
+#include "cero/seguridad.hpp"
+#include "cero/formato.hpp"
 
 namespace cero {
 
@@ -16,6 +23,22 @@ Respuesta Respuesta::html(std::string_view cuerpo) {
 
 Respuesta Respuesta::codigo(unsigned estado, std::string_view cuerpo) {
     return {estado, "text/plain; charset=utf-8", std::string{cuerpo}, {}};
+}
+
+Respuesta Respuesta::descarga(std::string cuerpo, std::string_view nombre,
+                             std::string_view tipo) {
+    Respuesta r{200, std::string{tipo}, std::move(cuerpo), {}};
+    r.extra.emplace_back("Content-Disposition",
+                         formato("attachment; filename=\"{}\"", sanear_nombre(nombre)));
+    return r;
+}
+
+Respuesta Respuesta::nada() { return {204, "text/plain; charset=utf-8", {}, {}}; }
+
+Respuesta Respuesta::redirigir(std::string_view a) {
+    Respuesta r{302, "text/plain; charset=utf-8", {}, {}};
+    r.extra.emplace_back("Location", std::string{a});
+    return r;
 }
 
 Respuesta&& Respuesta::cabecera(std::string_view nombre, std::string_view valor) && {

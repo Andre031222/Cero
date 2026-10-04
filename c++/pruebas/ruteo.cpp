@@ -4,6 +4,11 @@
 // bloque figuraron cubiertos durante once hitos por estar citados junto a lo que los implementa,
 // que es justo donde citarlos no demuestra nada.
 
+#include <string>
+#include <string_view>
+#include <variant>
+#include <vector>
+
 #include "cero/ruta.hpp"
 #include "prueba.hpp"
 

@@ -1,8 +1,10 @@
 // Una prueba por requisito de `spec/observabilidad.md`, citándolo.
 
 #include <chrono>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include "cero/observabilidad.hpp"
 #include "prueba.hpp"

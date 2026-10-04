@@ -1,7 +1,11 @@
 // Una prueba por requisito de `spec/seguridad.md`, citándolo.
 
 #include <chrono>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <variant>
+#include <vector>
 
 #include "cero/seguridad.hpp"
 #include "prueba.hpp"
