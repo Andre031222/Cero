@@ -30,7 +30,7 @@ java/
   ejemplo/                Aplicación pequeña de punta a punta
   cero-launcher/           Fat-jar: java -jar app.jar   (pendiente)
 rust/                     Segunda implementación
-cpp/                      Tercera implementación
+c++/                      Tercera implementación
 benchmarks/               Harness comparativo
 ```
 
@@ -220,7 +220,7 @@ request/response, ciclo del pipeline, contrato de middleware, inyección de depe
 configuración, formato de errores. Acompañado de un banco de pruebas de conformidad —peticiones
 HTTP y respuestas esperadas— que **cualquier** implementación debe pasar.
 
-Después, `rust/` y luego `cpp/`.
+Después, `rust/` y luego `c++/`.
 
 **Rust va primero, y no es arbitrario.** Java resuelve el registro de rutas con reflexión y
 anotaciones en tiempo de ejecución. Ni Rust ni C++ tienen eso. Si el spec se escribe mirando solo

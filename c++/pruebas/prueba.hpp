@@ -4,9 +4,10 @@
 // del proyecto, y Java tiene el suyo propio por este mismo motivo.
 
 #include <cstddef>
-#include <print>
 #include <string_view>
 #include <vector>
+
+#include "cero/texto.hpp"
 
 namespace prueba {
 
@@ -33,7 +34,7 @@ inline std::string_view& corriendo() {
 inline void comprueba(bool bien, std::string_view porque) {
     if (bien) return;
     ++fallos();
-    std::println("  × {} — {}", corriendo(), porque);
+    cero::linea("  x {} — {}", corriendo(), porque);
 }
 
 inline int correr() {
@@ -41,9 +42,9 @@ inline int correr() {
         corriendo() = c.nombre;
         const int antes = fallos();
         c.cuerpo();
-        if (fallos() == antes) std::println("  ok {}", c.nombre);
+        if (fallos() == antes) cero::linea("  ok {}", c.nombre);
     }
-    std::println("{} casos · {} fallos", casos().size(), fallos());
+    cero::linea("{} casos · {} fallos", casos().size(), fallos());
     return fallos() == 0 ? 0 : 1;
 }
 
