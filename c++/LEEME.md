@@ -4,11 +4,13 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 1.** HTTP/1.1 y ruteo. **23 de 23 vectores del banco** y 20 pruebas propias.
+**Estado: hito 2.** HTTP/1.1, ruteo y sesiones. **23 de 23 vectores del banco** y 31 pruebas
+propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
+| 2 | Sesiones | `SES-001`–`SES-011` · 11 pruebas |
 
 ## Usarlo
 
@@ -60,6 +62,6 @@ motivo.
 
 ## Lo que falta
 
-Los hitos 2 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: sesiones, seguridad transversal, observabilidad, el framework montado, JSON y
+Los hitos 3 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: seguridad transversal, observabilidad, el framework montado, JSON y
 estáticos, HTTP/2 por capas, el contenedor de dependencias y las sesiones en tabla.
