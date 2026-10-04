@@ -24,7 +24,7 @@ add_executable(conforme cero-http/src/conforme.cpp)
 target_link_libraries(conforme PRIVATE cero-http)
 
 enable_testing()
-foreach(suite conformidad observabilidad ruteo seguridad sesiones)
+foreach(suite conformidad observabilidad pipeline ruteo seguridad sesiones)
     add_executable(pruebas-${suite} pruebas/${suite}.cpp)
     target_include_directories(pruebas-${suite} PRIVATE pruebas)
     target_link_libraries(pruebas-${suite} PRIVATE cero-http)
