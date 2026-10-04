@@ -239,12 +239,24 @@ versión, en [docs/publicar.md](docs/publicar.md).
 > programando. El parser HTTP es la superficie que da a internet y la que más castigo recibe:
 > hasta que no acumule kilómetros, no es honesto llamarlo maduro.
 
-Lo siguiente es la **fase 3**: el contrato neutral en `spec/` y las implementaciones en Rust y C++.
+### La fase 3, en marcha
+
+El contrato de [`spec/`](spec/) tiene **173 requisitos numerados** y **dos implementaciones los
+pasan todos**: `java/` y [`rust/`](rust/). Las dos dan 23 de 23 en el banco de conformidad y 145 de
+146 en h2spec, con el mismo único fallo, que asume un puerto dedicado a h2c.
+
+Lo que dice que el contrato no es una transcripción de Java: diez de esos requisitos —`H2-040` a
+`H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
+cumple, pero nadie los había escrito. Desde la 0.2 del contrato, en lo que éste cubre manda el
+contrato y no `java/`.
+
+Queda la tercera implementación, en **C++**.
 
 ## Estructura
 
 ```text
 java/         Los ocho módulos
+rust/         Segunda implementación del contrato — 173 de 173
 spec/         El contrato, neutral respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida
 docs/         Documentación

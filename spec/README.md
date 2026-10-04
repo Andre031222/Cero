@@ -1,10 +1,14 @@
 # spec — el contrato de Cero
 
-**Estado: borrador 0.1, derivado de la implementación en Java.** Todavía no manda: hoy la
-referencia sigue siendo `java/`. Este directorio existe para que deje de serlo.
+**Estado: 0.2. Manda en lo que cubre.** 173 requisitos numerados, y dos implementaciones los
+pasan todos. En las áreas que este directorio todavía no describe —forma de la petición y la
+respuesta, autenticación, trazado— la referencia sigue siendo `java/`, y eso está dicho más abajo.
 
-Hasta ahora el README prometía este contrato y aquí no había nada. Un directorio vacío citado en
-la portada es peor que una promesa sin escribir, porque parece que ya existe.
+El cambio de regla no es una declaración: es lo que pasó. La implementación en Rust se escribió
+contra estos requisitos y no contra el código Java, y diez de ellos —`H2-040` a `H2-049`— nacieron
+**ahí**, de los fallos que h2spec le encontró a la segunda implementación. Java los cumple, pero
+nadie los había escrito. Un contrato que solo transcribe la primera implementación no puede hacer
+eso.
 
 ## Para qué es
 
@@ -40,7 +44,7 @@ parte es detalle de la implementación en Java.
 | Área | Grupos de prueba | Estado del contrato |
 |---|---|---|
 | Protocolo HTTP/1.1 | 6 | [conformidad.md](conformidad.md) · **empezado** |
-| Protocolo HTTP/2 | 3 | [http2.md](http2.md) · **39 requisitos + h2spec** |
+| Protocolo HTTP/2 | 3 | [http2.md](http2.md) · **49 requisitos + h2spec** |
 | Ruteo y despacho | 5 | [ruteo.md](ruteo.md) · **37 requisitos** |
 | Petición y respuesta | 9 | por escribir |
 | Sesiones y cookies | 4 | [sesiones.md](sesiones.md) · **13 requisitos** |
@@ -67,27 +71,35 @@ que sí:
 ## Relación con las implementaciones
 
 ```text
-spec/                 el contrato — manda a partir de la fase 3
+spec/                 el contrato — manda en lo que cubre
 spec/banco/           el juez: bytes sobre un socket, sin lenguaje
-java/                 implementación de referencia hasta entonces
-rust/                 segunda implementación — hito 1
+java/                 primera implementación · referencia en lo que el contrato aún no cubre
+rust/                 segunda implementación · 173 de 173
 benchmarks/           mide, no especifica
 ```
 
 ## El banco ya no es una idea
 
 [`spec/banco/`](banco/) corre los 23 vectores de HTTP/1.1 contra cualquier servidor que escuche,
-en el lenguaje que sea. El 25 de septiembre de 2026 pasaron **las dos** implementaciones:
+en el lenguaje que sea. Y h2spec, que lo escribió otra gente, juzga HTTP/2 igual de ciego.
 
-| Implementación | Vectores |
-|---|---|
-| `java/` | 23 de 23 |
-| `rust/` | 23 de 23 |
+| Implementación | Banco HTTP/1.1 | h2spec | Requisitos |
+|---|---|---|---|
+| `java/` | 23 de 23 | 145 de 146 | los 173 |
+| `rust/` | 23 de 23 | 145 de 146 | los 173 |
 
-Rust pasó 22 a la primera. El que falló —`Content-Length` y `Transfer-Encoding` juntos, RFC 9112
-§6.3— es una precondición de contrabando de peticiones, y lo encontró el contrato el mismo día en
-que la implementación nació. Eso es exactamente para lo que existe este directorio.
+El fallo que les queda a las dos es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
+dedicado a h2c, y en uno compartido con HTTP/1.1 pide la respuesta equivocada.
 
-Mientras este directorio siga en borrador, **si el contrato y `java/` no coinciden, gana `java/`**
-y el contrato está mal escrito. Cuando se invierta esa regla, se dirá aquí y en el LEEME el mismo
-día.
+Rust pasó 22 de los 23 vectores a la primera. El que falló —`Content-Length` y `Transfer-Encoding`
+juntos, RFC 9112 §6.3— es una precondición de contrabando de peticiones, y lo encontró el contrato
+el mismo día en que la implementación nació. Eso es exactamente para lo que existe este directorio.
+
+## Qué manda cuando hay discrepancia
+
+**En lo que el contrato cubre, manda el contrato**, y una implementación que no coincida está mal.
+Era al revés hasta la 0.2, y se dijo que el día en que se invirtiera se diría aquí: es este.
+
+En lo que el contrato **no** cubre sigue mandando `java/`, y no es una concesión: es la regla 3 de
+este documento. No se especifica lo que no está probado, así que un área sin requisitos no tiene
+contrato que ganar.
