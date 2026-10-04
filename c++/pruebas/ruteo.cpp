@@ -78,8 +78,7 @@ PRUEBA(rut_009_a_011_no_hay_ruta_no_es_verbo_equivocado) {
 
     const auto res = r.resolver("POST", "/a");
     const auto* mal = std::get_if<cero::VerboNoPermitido>(&res);
-    const std::vector<std::string> esperados{"GET", "HEAD"};
-    COMPRUEBA(mal && mal->verbos == esperados, "RUT-010");
+    COMPRUEBA(mal && mal->verbos == std::vector<std::string>{"GET", "HEAD"}, "RUT-010");
     COMPRUEBA(atiende(r, "HEAD", "/a") == "ver", "RUT-011");
 }
 

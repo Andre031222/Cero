@@ -59,7 +59,10 @@ struct Registra {
     static const prueba::Registra registra_##nombre{#nombre, nombre}; \
     static void nombre()
 
-#define COMPRUEBA(condicion, porque) prueba::comprueba((condicion), (porque))
+// Variádico y no de dos argumentos: con dos, una condición que lleve llaves dentro —`T{a, b}`—
+// parte el macro por la coma y el error que sale no habla de eso. Al reenviar todo tal cual, la
+// coma vuelve a ser la coma de la llamada y la llave se escribe donde toca.
+#define COMPRUEBA(...) prueba::comprueba(__VA_ARGS__)
 
 #define PRUEBAS_MAIN \
     int main() { return prueba::correr(); }
