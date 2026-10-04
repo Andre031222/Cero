@@ -1,16 +1,19 @@
 #include "cero/ruta.hpp"
 
 #include <algorithm>
-#include <ranges>
 
 namespace cero {
 
-// RUT-004: la barra final se normaliza, así que `/a/7` y `/a/7/` trocean igual.
+// RUT-004: la barra final se normaliza, así que `/a/7` y `/a/7/` trocean igual. A mano y no con
+// `views::split`: el adaptador devuelve subrangos y convertirlos a `string_view` necesita un
+// constructor que libstdc++ no tiene hasta GCC 14. Esto son seis líneas y funciona en todas.
 std::vector<std::string_view> trocear(std::string_view camino) {
     std::vector<std::string_view> partes;
-    for (auto parte : std::views::split(camino, '/')) {
-        const std::string_view p{parte};
-        if (!p.empty()) partes.push_back(p);
+    while (!camino.empty()) {
+        const auto barra = camino.find('/');
+        if (const auto parte = camino.substr(0, barra); !parte.empty()) partes.push_back(parte);
+        if (barra == std::string_view::npos) break;
+        camino.remove_prefix(barra + 1);
     }
     return partes;
 }
@@ -98,9 +101,10 @@ Resolucion Router::resolver(std::string_view metodo, std::string_view camino) co
 
     std::vector<std::string> verbos;
     for (const Ruta* r : candidatas) verbos.push_back(r->metodo);
-    if (std::ranges::contains(verbos, "GET") && !std::ranges::contains(verbos, "HEAD")) {
-        verbos.emplace_back("HEAD");
-    }
+    const auto tiene = [&verbos](std::string_view v) {
+        return std::ranges::find(verbos, v) != verbos.end();
+    };
+    if (tiene("GET") && !tiene("HEAD")) verbos.emplace_back("HEAD");
     std::ranges::sort(verbos);
     verbos.erase(std::ranges::unique(verbos).begin(), verbos.end());
     return VerboNoPermitido{std::move(verbos)};

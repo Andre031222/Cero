@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 #include <cstring>
-#include <format>
-#include <print>
 #include <thread>
+
+#include "cero/texto.hpp"
 
 // Aquí está la decisión de fondo de esta implementación: **C++ no tiene sockets**. Java los trae
 // en el JDK y Rust en `std::net`; el estándar de C++ no trae ninguno, porque el Networking TS se
@@ -43,9 +43,9 @@ private:
 };
 
 std::string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
-    std::string salida = std::format("HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n",
-                                     r.estado, razon(r.estado), r.cuerpo.size(), r.tipo);
-    for (const auto& [nombre, valor] : r.extra) salida += std::format("{}: {}\r\n", nombre, valor);
+    auto salida = texto("HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n", r.estado,
+                        razon(r.estado), r.cuerpo.size(), r.tipo);
+    for (const auto& [nombre, valor] : r.extra) salida += texto("{}: {}\r\n", nombre, valor);
     salida += cerrar ? "Connection: close\r\n\r\n" : "\r\n";
     if (!solo_cabeceras) salida += r.cuerpo;
     return salida;
@@ -107,7 +107,7 @@ int Servidor::escuchar(unsigned short puerto) const {
     donde.sin_port = htons(puerto);
     if (::bind(oyente, reinterpret_cast<sockaddr*>(&donde), sizeof donde) < 0) return 1;
     if (::listen(oyente, 128) < 0) return 1;
-    std::println("cero · escuchando en :{}", puerto);
+    linea("cero · escuchando en :{}", puerto);
 
     while (true) {
         const int cliente = ::accept(oyente, nullptr, nullptr);

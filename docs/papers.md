@@ -115,7 +115,7 @@ Java resuelve el registro de rutas con reflexión y anotaciones en tiempo de eje
 eso. Escribir la segunda implementación es lo que descubre la contaminación. Rust va antes que C++
 porque es el que más presión pone sobre el diseño: sin recolector, sin reflexión y con *ownership*.
 
-El árbol del repositorio ya reserva `spec/`, `rust/` y `cpp/`. **No hace falta renombrar nada:**
+El árbol del repositorio ya reserva `spec/`, `rust/` y `c++/`. **No hace falta renombrar nada:**
 `java/` no pasa a llamarse «framework-java», porque el nombre del framework es Cero en los tres y
 lo que cambia es la implementación, no el producto.
 
