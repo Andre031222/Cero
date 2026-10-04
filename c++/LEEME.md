@@ -4,8 +4,8 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 7.** El framework usable sobre HTTP/1.1, y empezado HTTP/2 por la capa de tramas.
-**23 de 23 vectores del banco** y 103 pruebas propias, 111 requisitos citados.
+**Estado: hito 8.** El framework usable sobre HTTP/1.1, y de HTTP/2 las tramas y HPACK. **23 de 23
+vectores del banco**, **los 32 del apéndice C del RFC 7541** y 123 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -16,6 +16,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 5 | El framework montado | pipeline completo · 15 pruebas |
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo · 12 pruebas |
 | 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
+| 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 
 ## Usarlo
 
@@ -54,6 +55,18 @@ donde citarlos no demuestra nada. La cuenta solo mira `pruebas/`.
 respuesta. Es lo que hace probable el ruteo sin abrir un puerto, y de paso lo que permite montar
 Cero dentro de otra cosa.
 
+## Las tablas de HPACK no están escritas a mano
+
+Se generan de los apéndices A y B del RFC con un guion, igual que en Java y en Rust. Lo que las
+respalda es la **suma de Kraft** —la de dos elevado a menos cada longitud—, que en un código
+prefijo completo vale exactamente 1, y hay una prueba que la calcula: una tabla de 257 filas
+copiada a mano no revienta cuando se equivoca, decodifica mal y en silencio.
+
+Y los vectores del apéndice C son la única comprobación de todo el proyecto que no se puede
+escribir «de acuerdo con lo que hace el código»: los octetos vienen dados y **el estado de la tabla
+dinámica después de cada paso también**. Un decodificador que acierte el resultado y deje la tabla
+distinta pasaría cualquier prueba propia y fallaría en la petición siguiente.
+
 ## Las cabeceras se declaran a mano, y eso lo decidió el CI
 
 Dos veces falló en GitHub lo que aquí compilaba: `<print>` no existe hasta GCC 14 y `std::llround`
@@ -91,6 +104,6 @@ y anotar las métricas pasan por un único sitio.
 
 ## Lo que falta
 
-Los hitos 8 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: HPACK, los flujos y el control de flujo de salida, el contenedor de
-dependencias y las sesiones en tabla.
+Los hitos 9 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: los flujos y el control de flujo de salida, el contenedor de dependencias y
+las sesiones en tabla.
