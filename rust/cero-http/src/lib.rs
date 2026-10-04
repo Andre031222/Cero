@@ -25,5 +25,5 @@ pub use peticion::{Peticion, Rechazo};
 pub use registro::Registro;
 pub use ruta::{Resolucion, Router};
 pub use servidor::{Servidor, Siguiente};
-pub use sesion::{Almacen, Sesion};
+pub use sesion::{Almacen, Sesion, Sesiones};
 pub use validacion::{validar, Regla};

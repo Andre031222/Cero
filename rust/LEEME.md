@@ -4,9 +4,9 @@ Segunda implementación del contrato de [`spec/`](../spec). No es una traducció
 la referencia son los requisitos numerados, y el juez son los mismos vectores de conformidad, que
 son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 11, y el contrato está cubierto salvo un requisito.** HTTP/2 entero salvo TLS,
-ruteo con middleware, manejo de fallos, contenedor de dependencias y validación. **h2spec da 145
-de 146**, el mismo número que Java y con el mismo único fallo, el `3.5.2`, que asume un puerto
+**Estado: hito 12, y el contrato está cubierto entero.** HTTP/2 salvo TLS, ruteo con middleware,
+manejo de fallos, contenedor de dependencias, validación y sesiones en tabla. **h2spec da 145 de
+146**, el mismo número que Java y con el mismo único fallo, el `3.5.2`, que asume un puerto
 dedicado a h2c y no aplica aquí.
 
 | Hito | Qué cubre | Estado |
@@ -22,9 +22,10 @@ dedicado a h2c y no aplica aquí.
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · 25 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
 | 11 | Ruteo, fallos, dependencias y validación | 172 de los 173 requisitos · 36 pruebas |
+| 12 | Sesiones en tabla, y `cero-data` sabe escribir | **173 de 173** · 9 pruebas |
 
-**172 de los 173 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y el
-resto por una prueba que los cita. Se cuentan así:
+**Los 173 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y el resto por
+una prueba que los cita. Se cuentan así:
 
 ```bash
 grep -rhoE '(HTTP|OBS|RUT|SEG|SES|H2)-[0-9]{3}' cero-http/tests cero-data/tests | sort -u | wc -l
@@ -35,12 +36,39 @@ eso hacía que los 35 requisitos de ruteo figuraran como cubiertos **sin una sol
 comprobara**: estaban citados donde se implementaban, que es justo donde citarlos no demuestra
 nada. Al mirar solo `tests/` la cifra honesta era 120, no 155.
 
-El que falta es **`SES-013`**, el nombre configurable de la tabla de sesiones, que presupone un
-almacén persistente. En Rust no lo hay todavía y no es un hueco de código sino una decisión: hoy
-`Sesion` se muta bajo un `Mutex` y el almacén no se entera, así que persistirla pide o escritura
-directa en cada cambio o un punto explícito de guardado. Java lo resolvió con `JdbcSessions` en
-`cero-data`. Aparte queda **ALPN sobre TLS**, que no cuenta como requisito y no se va a hacer: más
-abajo se explica por qué.
+Queda fuera **ALPN sobre TLS**, que no es un requisito del contrato y no se va a hacer: más abajo
+se explica por qué.
+
+## El hito 12: las sesiones fuera del proceso
+
+`SES-013` —nombre configurable de la tabla— presuponía un almacén persistente, y para tenerlo
+había que arreglar antes dos cosas que no se veían:
+
+**`cero-data` no sabía escribir.** Tenía `por_clave`, `todos` y `borrar`, y ningún `guardar`. Un
+módulo de acceso a datos que lee y borra no es un módulo de acceso a datos, y la implementación en
+memoria solo entendía `SELECT` y `DELETE`, así que tampoco había con qué probarlo. `Repositorio`
+guarda ahora con `UPDATE` y, si no tocó nada, `INSERT`: dos órdenes y no un `UPSERT`, porque cada
+motor lo escribe distinto —`ON CONFLICT`, `ON DUPLICATE KEY`, `INSERT OR REPLACE`— y pedirle uno
+al driver sería meter el dialecto de un motor dentro del contrato.
+
+**Una sesión medía su edad con `Instant`,** que es monótono y local al proceso: no se puede guardar
+ni comparar con el de otra instancia. Ahora usa el reloj de pared, y las fechas se guardan como
+enteros porque el tipo temporal de cada motor es distinto.
+
+Con eso, `Sesiones` pasa a ser un rasgo y hay dos implementaciones: el almacén en memoria en
+`cero-http` y `AlmacenSql` en `cero-data`, que es donde vive `JdbcSessions` en Java por la misma
+razón —la capa HTTP define el contrato y quien sabe de bases de datos lo implementa—. Tres
+decisiones que no son evidentes:
+
+- **Se guarda en un solo punto**, el mismo que emite la cookie. `SES-010` nació de tener dos
+  salidas y hacer el trabajo en una.
+- **Solo si cambió.** Escribir en cada respuesta serían dos viajes a la base por cada `GET` que no
+  tocó nada, y eso convierte el almacén compartido en el cuello de botella del servidor.
+- **Rotar escribe la fila nueva antes de borrar la vieja.** Al revés, un fallo entre los dos pasos
+  pierde la sesión; así lo peor que deja es una fila de sobra que caduca sola.
+
+Y una caducada se borra al tocarla, no en un barrido: no hace falta un hilo que limpie, y la fila
+muerta no puede volver a autenticar a nadie por mucho que quede.
 
 ## El hito 11: lo que el ruteo no tenía
 

@@ -10,6 +10,7 @@
 
 pub mod memoria;
 pub mod migraciones;
+pub mod sesiones;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -75,6 +76,10 @@ impl Fila {
             Valor::Texto(t) => t.parse().ok(),
             _ => None,
         }
+    }
+
+    pub fn poner(&mut self, columna: &str, valor: Valor) {
+        self.columnas.insert(columna.into(), valor);
     }
 
     pub fn columnas(&self) -> Vec<&String> {
@@ -167,6 +172,44 @@ impl<'f> Repositorio<'f> {
     pub fn todos(&self, limite: u32) -> Resultado<Vec<Fila>> {
         let sql = format!("SELECT * FROM {} LIMIT ?", self.tabla);
         self.fuente.conexion()?.consultar(&sql, &[Valor::Entero(limite as i64)])
+    }
+
+    /// Guarda la fila: la actualiza si estaba y la inserta si no.
+    ///
+    /// Dos órdenes y no un `UPSERT`, que cada motor escribe distinto —`ON CONFLICT` en PostgreSQL,
+    /// `ON DUPLICATE KEY` en MySQL, `INSERT OR REPLACE` en SQLite—. Pedirle una de esas al driver
+    /// sería meter el dialecto de un motor dentro del contrato, que es justo lo que este módulo
+    /// evita. `UPDATE` y, si no tocó nada, `INSERT`: eso lo entiende cualquiera.
+    pub fn guardar(&self, fila: &Fila) -> Resultado<()> {
+        let clave = fila
+            .valor(&self.clave)
+            .ok_or_else(|| Fallo(format!("la fila no trae su clave {}", self.clave)))?
+            .clone();
+        let otras: Vec<&String> = fila.columnas().into_iter().filter(|c| **c != self.clave).collect();
+        if otras.is_empty() {
+            return Err(Fallo("una fila con solo la clave no tiene nada que guardar".into()));
+        }
+
+        let asigna: Vec<String> = otras.iter().map(|c| format!("{c} = ?")).collect();
+        let mut parametros: Vec<Valor> =
+            otras.iter().filter_map(|c| fila.valor(c).cloned()).collect();
+        parametros.push(clave.clone());
+
+        let sql = format!("UPDATE {} SET {} WHERE {} = ?", self.tabla, asigna.join(", "), self.clave);
+        let mut c = self.fuente.conexion()?;
+        if c.ejecutar(&sql, &parametros)? > 0 {
+            return Ok(());
+        }
+
+        let columnas: Vec<&str> = std::iter::once(self.clave.as_str())
+            .chain(otras.iter().map(|c| c.as_str()))
+            .collect();
+        let huecos = vec!["?"; columnas.len()].join(", ");
+        let sql = format!("INSERT INTO {} ({}) VALUES ({})", self.tabla, columnas.join(", "), huecos);
+        let mut valores = vec![clave];
+        valores.extend(otras.iter().filter_map(|c| fila.valor(c).cloned()));
+        c.ejecutar(&sql, &valores)?;
+        Ok(())
     }
 
     pub fn borrar(&self, valor: Valor) -> Resultado<u64> {

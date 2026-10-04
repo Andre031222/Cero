@@ -14,7 +14,7 @@ use crate::peticion::{self, Peticion};
 use crate::registro::Registro;
 use crate::ruta::{Captura, Resolucion, Router};
 use crate::seguridad::{self, Cabeceras, Cors, Decision, Limitador};
-use crate::sesion::{self, Almacen};
+use crate::sesion::{self, Sesiones};
 use std::collections::HashMap;
 use std::io::{BufReader, Cursor, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -40,7 +40,7 @@ pub struct Servidor {
     sin_registrar: Vec<String>,
     medios: Vec<Medio>,
     registro: Registro,
-    sesiones: Arc<Almacen>,
+    sesiones: Arc<dyn Sesiones>,
     cabeceras: Cabeceras,
     cors: Option<Cors>,
     limitador: Option<Limitador>,
@@ -65,7 +65,10 @@ impl Servidor {
             sin_registrar: Vec::new(),
             medios: Vec::new(),
             registro: Registro::nuevo(),
-            sesiones: Arc::new(Almacen::nuevo(Duration::from_secs(30 * 60), Some(Duration::from_secs(8 * 3600)))),
+            sesiones: Arc::new(sesion::Almacen::nuevo(
+                Duration::from_secs(30 * 60),
+                Some(Duration::from_secs(8 * 3600)),
+            )),
             cabeceras: Cabeceras::default(),
             cors: None,
             limitador: None,
@@ -137,8 +140,9 @@ impl Servidor {
     }
 
     /// `SES-012`: dos servidores con el **mismo** almacén reconocen las mismas sesiones. Es lo que
-    /// separa poder poner una segunda instancia detrás del balanceador de no poder.
-    pub fn sesiones(mut self, a: Arc<Almacen>) -> Servidor {
+    /// separa poder poner una segunda instancia detrás del balanceador de no poder. Con el almacén
+    /// en memoria eso vale dentro de un proceso; con el de `cero-data`, entre máquinas.
+    pub fn sesiones(mut self, a: Arc<dyn Sesiones>) -> Servidor {
         self.sesiones = a;
         self
     }
@@ -434,13 +438,15 @@ impl Servidor {
     ) -> Respuesta {
         r.extra.extend(self.cabeceras.aplicar(self.seguro));
 
-        // SES-008 y SES-011: se consulta una sola vez, aquí, y consultarla la consume.
+        // SES-008 y SES-011: se consulta una sola vez, aquí, y consultarla la consume. Guardar va
+        // en el mismo sitio y por el mismo motivo: dos salidas y el trabajo en una es `SES-010`.
         if let Some(s) = &sesion {
             if let Ok(mut g) = s.lock() {
                 if let Some(id) = g.cookie_pendiente() {
                     r.extra.push(("Set-Cookie".into(), sesion::cabecera_cookie(&id, self.seguro)));
                 }
             }
+            self.sesiones.guardar(s);
         }
 
         let patron = self.router.patron_de(&p.metodo, camino).unwrap_or_else(|| camino.to_string());

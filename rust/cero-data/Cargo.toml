@@ -9,4 +9,9 @@ description = "Acceso a datos de Cero en Rust. Define el contrato; el driver lo 
 # Igual que `cero-data` en Java: el módulo no declara ninguna dependencia de ejecución. Java
 # hereda la interfaz del JDK —`java.sql`— y aquí se define, porque `std` no trae ninguna. El
 # driver lo pone la aplicación, y esa es la misma y única excepción que ya declara el LEEME.
+# La única dependencia es el otro módulo del propio proyecto, y va en este sentido por lo mismo
+# que en Java: `cero-data` trae el almacén de sesiones sobre SQL —`JdbcSessions` allí,
+# `AlmacenSql` aquí—, así que necesita el contrato de sesiones que define `cero-http`. Al revés
+# sería un ciclo, y además pondría la base de datos dentro de la capa HTTP.
 [dependencies]
+cero-http = { path = "../cero-http" }

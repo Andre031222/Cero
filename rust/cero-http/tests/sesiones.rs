@@ -3,7 +3,7 @@
 //! No están copiadas de la batería de Java: están escritas leyendo el contrato. Si el contrato
 //! fuera una descripción de Java con otras palabras, aquí se notaría.
 
-use cero_http::sesion::{self, Almacen};
+use cero_http::sesion::{self, Almacen, Sesiones};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -163,7 +163,7 @@ fn ses_012_un_almacen_compartido_reconoce_la_sesion_en_otra_instancia() {
     use std::time::Duration;
     use cero_http::{Almacen, Contexto, Peticion, Respuesta, Router, Servidor};
 
-    let compartido = Arc::new(Almacen::nuevo(Duration::from_secs(600), None));
+    let compartido: Arc<dyn Sesiones> = Arc::new(Almacen::nuevo(Duration::from_secs(600), None));
     let instancia = || {
         let router = Router::nuevo()
             .ruta("GET", "/entrar", "entrar").unwrap()
