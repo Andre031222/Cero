@@ -2,20 +2,31 @@
 
 use cero_http::estaticos::Estaticos;
 
-fn raiz() -> std::path::PathBuf {
-    let d = std::env::temp_dir().join(format!("cero-est-{}", std::process::id()));
+/// Un árbol **por prueba**, no uno compartido.
+///
+/// Con un solo directorio para todas, que corren en paralelo, `fs::write` trunca antes de
+/// escribir: una leía `index.html` vacío justo mientras otra lo reescribía. Fallaba en Linux y no
+/// en macOS, que es la peor clase de prueba —la que falla en la máquina de otro—, y lo que estaba
+/// mal era esto y no el código que se prueba.
+fn raiz(prueba: &str) -> std::path::PathBuf {
+    let caja = std::env::temp_dir().join(format!("cero-est-{}-{prueba}", std::process::id()));
+    let d = caja.join("raiz");
     std::fs::create_dir_all(d.join("sub")).unwrap();
     std::fs::write(d.join("index.html"), "<h1>portada</h1>").unwrap();
     std::fs::write(d.join("estilo.css"), "body{}").unwrap();
     std::fs::write(d.join("sub/hondo.txt"), "hondo").unwrap();
-    // Fuera de la raíz, para intentar alcanzarlo.
-    std::fs::write(std::env::temp_dir().join("cero-secreto.txt"), "no deberías ver esto").unwrap();
+    // Justo fuera de la raíz, que es donde apunta el `..` que las pruebas intentan.
+    std::fs::write(caja.join("cero-secreto.txt"), "no deberías ver esto").unwrap();
     d
+}
+
+fn estaticos(prueba: &str) -> Estaticos {
+    Estaticos::en(raiz(prueba).to_str().unwrap()).unwrap()
 }
 
 #[test]
 fn sirve_lo_que_hay_con_su_tipo() {
-    let e = Estaticos::en(raiz().to_str().unwrap()).unwrap();
+    let e = estaticos("sirve");
     let r = e.servir("/index.html");
     assert_eq!(r.estado, 200);
     assert!(r.tipo.starts_with("text/html"), "{}", r.tipo);
@@ -27,13 +38,12 @@ fn sirve_lo_que_hay_con_su_tipo() {
 
 #[test]
 fn lo_que_no_esta_da_404() {
-    let e = Estaticos::en(raiz().to_str().unwrap()).unwrap();
-    assert_eq!(e.servir("/no-existe.txt").estado, 404);
+    assert_eq!(estaticos("no-esta").servir("/no-existe.txt").estado, 404);
 }
 
 #[test]
 fn no_se_puede_salir_de_la_raiz() {
-    let e = Estaticos::en(raiz().to_str().unwrap()).unwrap();
+    let e = estaticos("salir");
     for intento in [
         "/../cero-secreto.txt",
         "/../../etc/passwd",
@@ -49,7 +59,7 @@ fn no_se_puede_salir_de_la_raiz() {
 
 #[test]
 fn el_respaldo_atiende_las_rutas_de_cliente() {
-    let e = Estaticos::en(raiz().to_str().unwrap()).unwrap().con_respaldo("index.html");
+    let e = estaticos("respaldo").con_respaldo("index.html");
     // Una aplicación de una sola página resuelve sus rutas en el navegador: el servidor devuelve
     // la portada y deja que el cliente decida.
     let r = e.servir("/panel/usuarios/7");
@@ -66,7 +76,7 @@ fn el_respaldo_atiende_las_rutas_de_cliente() {
 
 #[test]
 fn lo_desconocido_no_se_adivina() {
-    let d = raiz();
+    let d = raiz("desconocido");
     std::fs::write(d.join("raro.xyz"), "datos").unwrap();
     let e = Estaticos::en(d.to_str().unwrap()).unwrap();
     assert_eq!(e.servir("/raro.xyz").tipo, "application/octet-stream",
