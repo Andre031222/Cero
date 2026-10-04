@@ -4,8 +4,8 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 6.** El framework usable de verdad sobre HTTP/1.1: JSON propio, formularios y
-archivos estáticos. **23 de 23 vectores del banco** y 88 pruebas propias, 99 requisitos citados.
+**Estado: hito 7.** El framework usable sobre HTTP/1.1, y empezado HTTP/2 por la capa de tramas.
+**23 de 23 vectores del banco** y 103 pruebas propias, 111 requisitos citados.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -15,6 +15,7 @@ archivos estáticos. **23 de 23 vectores del banco** y 88 pruebas propias, 99 re
 | 4 | Observabilidad | `OBS-001`–`OBS-022` menos dos del pipeline · 15 pruebas |
 | 5 | El framework montado | pipeline completo · 15 pruebas |
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo · 12 pruebas |
+| 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
 
 ## Usarlo
 
@@ -90,5 +91,6 @@ y anotar las métricas pasan por un único sitio.
 
 ## Lo que falta
 
-Los hitos 7 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: HTTP/2 por capas, el contenedor de dependencias y las sesiones en tabla.
+Los hitos 8 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: HPACK, los flujos y el control de flujo de salida, el contenedor de
+dependencias y las sesiones en tabla.
