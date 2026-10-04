@@ -1,8 +1,16 @@
 #include "cero/seguridad.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "cero/texto.hpp"
+#include "cero/formato.hpp"
 
 namespace cero {
 namespace {
@@ -64,7 +72,7 @@ Cors::Decision Cors::decidir(std::string_view metodo,
     // SEG-012: el preflight admitido responde 204 anunciando qué se permite y por cuánto tiempo.
     h.emplace_back("Access-Control-Allow-Methods", unir(metodos));
     h.emplace_back("Access-Control-Allow-Headers", unir(cabeceras));
-    h.emplace_back("Access-Control-Max-Age", texto("{}", max_age));
+    h.emplace_back("Access-Control-Max-Age", formato("{}", max_age));
     return Corta{204, std::move(h)};
 }
 
@@ -122,9 +130,9 @@ std::size_t Limitador::claves() const {
 
 // SEG-020 y SEG-021: el 429 lleva `Retry-After`, y toda respuesta anuncia límite y restante.
 Pares cabeceras_limite(const Veredicto& v) {
-    Pares h{{"X-RateLimit-Limit", texto("{}", v.limite)},
-            {"X-RateLimit-Remaining", texto("{}", v.restante)}};
-    if (!v.permitida) h.emplace_back("Retry-After", texto("{}", v.reintentar_en));
+    Pares h{{"X-RateLimit-Limit", formato("{}", v.limite)},
+            {"X-RateLimit-Remaining", formato("{}", v.restante)}};
+    if (!v.permitida) h.emplace_back("Retry-After", formato("{}", v.reintentar_en));
     return h;
 }
 

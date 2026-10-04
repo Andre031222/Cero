@@ -4,8 +4,8 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 5.** El framework montado entero sobre HTTP/1.1. **23 de 23 vectores del banco** y
-76 pruebas propias, 99 requisitos citados.
+**Estado: hito 6.** El framework usable de verdad sobre HTTP/1.1: JSON propio, formularios y
+archivos estáticos. **23 de 23 vectores del banco** y 88 pruebas propias, 99 requisitos citados.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -14,6 +14,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 3 | Seguridad transversal | `SEG-001`–`SEG-026` menos el token · 15 pruebas |
 | 4 | Observabilidad | `OBS-001`–`OBS-022` menos dos del pipeline · 15 pruebas |
 | 5 | El framework montado | pipeline completo · 15 pruebas |
+| 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo · 12 pruebas |
 
 ## Usarlo
 
@@ -52,6 +53,16 @@ donde citarlos no demuestra nada. La cuenta solo mira `pruebas/`.
 respuesta. Es lo que hace probable el ruteo sin abrir un puerto, y de paso lo que permite montar
 Cero dentro de otra cosa.
 
+## Las cabeceras se declaran a mano, y eso lo decidió el CI
+
+Dos veces falló en GitHub lo que aquí compilaba: `<print>` no existe hasta GCC 14 y `std::llround`
+no venía sin `<cmath>`. La causa de la segunda es que libc++ arrastra cabeceras que libstdc++ no,
+así que un archivo que *parecía* completo solo lo estaba en una implementación.
+
+Ahora **cada archivo incluye lo que usa**, sin heredarlo de otro. Es más líneas de `#include` y a
+cambio el proyecto compila igual en los dos sitios, que es la mitad del argumento de no tener
+dependencias: si el framework solo construye con un compilador, el compilador es la dependencia.
+
 ## Lo que el lenguaje pone fácil, y lo que no
 
 `std::expected` de C++23 es exactamente el `Result` de Rust, así que el parser se lee igual en los
@@ -79,5 +90,5 @@ y anotar las métricas pasan por un único sitio.
 
 ## Lo que falta
 
-Los hitos 6 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: JSON, formularios y estáticos, HTTP/2 por capas, el contenedor de dependencias y las sesiones en tabla.
+Los hitos 7 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: HTTP/2 por capas, el contenedor de dependencias y las sesiones en tabla.

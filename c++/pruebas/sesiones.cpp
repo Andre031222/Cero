@@ -5,7 +5,9 @@
 
 #include <atomic>
 #include <chrono>
+#include <optional>
 #include <set>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -86,7 +88,7 @@ PRUEBA(ses_007_dos_peticiones_simultaneas_no_se_pisan) {
         hilos.emplace_back([&g, h] {
             for (int i = 0; i < kVueltas; ++i) {
                 const auto tomado = g.tomar();
-                (void)g.sesion->poner(cero::texto("clave-{}-{}", h, i), "x");
+                (void)g.sesion->poner(cero::formato("clave-{}-{}", h, i), "x");
             }
         });
     }

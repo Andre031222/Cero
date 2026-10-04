@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-#include "cero/texto.hpp"
+#include "cero/formato.hpp"
 
 namespace prueba {
 

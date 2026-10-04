@@ -9,6 +9,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 add_library(cero-http
+    cero-http/src/estaticos.cpp
+    cero-http/src/json.cpp
     cero-http/src/observabilidad.cpp
     cero-http/src/seguridad.cpp
     cero-http/src/sesion.cpp
@@ -24,7 +26,7 @@ add_executable(conforme cero-http/src/conforme.cpp)
 target_link_libraries(conforme PRIVATE cero-http)
 
 enable_testing()
-foreach(suite conformidad observabilidad pipeline ruteo seguridad sesiones)
+foreach(suite conformidad estaticos json observabilidad pipeline ruteo seguridad sesiones)
     add_executable(pruebas-${suite} pruebas/${suite}.cpp)
     target_include_directories(pruebas-${suite} PRIVATE pruebas)
     target_link_libraries(pruebas-${suite} PRIVATE cero-http)

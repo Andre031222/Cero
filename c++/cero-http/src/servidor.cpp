@@ -7,9 +7,19 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <chrono>
+#include <expected>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#include "cero/texto.hpp"
+#include "cero/formato.hpp"
 
 // Aquí está la decisión de fondo de esta implementación: **C++ no tiene sockets**. Java los trae
 // en el JDK y Rust en `std::net`; el estándar de C++ no trae ninguno, porque el Networking TS se
@@ -45,9 +55,9 @@ private:
 };
 
 std::string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
-    auto salida = texto("HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n", r.estado,
+    auto salida = formato("HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n", r.estado,
                         razon(r.estado), r.cuerpo.size(), r.tipo);
-    for (const auto& [nombre, valor] : r.extra) salida += texto("{}: {}\r\n", nombre, valor);
+    for (const auto& [nombre, valor] : r.extra) salida += formato("{}: {}\r\n", nombre, valor);
     salida += cerrar ? "Connection: close\r\n\r\n" : "\r\n";
     if (!solo_cabeceras) salida += r.cuerpo;
     return salida;
@@ -125,6 +135,8 @@ std::string Contexto::consulta_o(std::string_view nombre, std::string_view defec
 std::optional<std::string> Contexto::campo(std::string_view nombre) const {
     return de_pares(peticion.cuerpo, nombre);
 }
+
+std::expected<Json, FalloJson> Contexto::cuerpo_json() const { return leer(peticion.cuerpo); }
 
 std::optional<Guardada> Contexto::abrir_sesion() const {
     if (abierta_) return abierta_;
@@ -351,7 +363,7 @@ int Servidor::escuchar(unsigned short puerto) const {
         auto cuanto = static_cast<socklen_t>(sizeof quien);
         const int cliente = ::accept(oyente, reinterpret_cast<sockaddr*>(&quien), &cuanto);
         if (cliente < 0) continue;
-        const auto desde = texto("{}.{}.{}.{}", quien.sin_addr.s_addr & 0xff,
+        const auto desde = formato("{}.{}.{}.{}", quien.sin_addr.s_addr & 0xff,
                                  (quien.sin_addr.s_addr >> 8) & 0xff,
                                  (quien.sin_addr.s_addr >> 16) & 0xff,
                                  (quien.sin_addr.s_addr >> 24) & 0xff);

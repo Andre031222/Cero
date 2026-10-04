@@ -1,6 +1,13 @@
 #include "cero/ruta.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <expected>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace cero {
 

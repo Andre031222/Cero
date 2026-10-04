@@ -2,8 +2,17 @@
 
 #include <array>
 #include <cstdio>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <shared_mutex>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "cero/texto.hpp"
+#include "cero/formato.hpp"
 
 namespace cero {
 
@@ -18,7 +27,7 @@ std::optional<std::string> identificador() {
     // base16 da 64 caracteres de 32 octetos: por encima del mínimo y sin alfabeto ambiguo.
     std::string id;
     id.reserve(crudo.size() * 2);
-    for (unsigned char b : crudo) id += texto("{:02x}", b);
+    for (unsigned char b : crudo) id += formato("{:02x}", b);
     return id;
 }
 
@@ -133,7 +142,7 @@ std::size_t Almacen::cuantas() const {
 }
 
 std::string cabecera_cookie(std::string_view id, bool seguro) {
-    auto c = texto("cero_sid={}; Path=/; HttpOnly; SameSite=Lax", id);
+    auto c = formato("cero_sid={}; Path=/; HttpOnly; SameSite=Lax", id);
     if (seguro) c += "; Secure";
     return c;
 }

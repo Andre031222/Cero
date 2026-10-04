@@ -1,15 +1,26 @@
 #include "cero/observabilidad.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <functional>
+#include <mutex>
+#include <optional>
+#include <shared_mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "cero/texto.hpp"
+#include "cero/formato.hpp"
 
 namespace cero {
 namespace {
 
 std::string comillas(const std::vector<std::string>& v) {
     std::string r;
-    for (const auto& s : v) r += (r.empty() ? "" : ",") + texto("\"{}\"", s);
+    for (const auto& s : v) r += (r.empty() ? "" : ",") + formato("\"{}\"", s);
     return r;
 }
 
@@ -26,7 +37,7 @@ Salud& Salud::comprobacion(std::string_view nombre, std::function<Comprobado()> 
 }
 
 Informe Salud::vivo() const {
-    return {200, texto("{{\"vivo\":true,\"activo_s\":{}}}", segundos_desde(arranque_))};
+    return {200, formato("{{\"vivo\":true,\"activo_s\":{}}}", segundos_desde(arranque_))};
 }
 
 Informe Salud::listo() const {
@@ -43,21 +54,21 @@ Informe Salud::listo() const {
         if (r.bien) {
             van.push_back(nombre);
         } else {
-            fallan.push_back(texto("{{\"nombre\":\"{}\",\"motivo\":\"{}\"}}", nombre, r.motivo));
+            fallan.push_back(formato("{{\"nombre\":\"{}\",\"motivo\":\"{}\"}}", nombre, r.motivo));
         }
     }
 
     if (fallan.empty()) {
         // OBS-007: en modo público y con todo en verde, solo que está listo.
         if (publico) return {200, "{\"listo\":true}"};
-        return {200, texto("{{\"listo\":true,\"comprobaciones\":[{}]}}", comillas(van))};
+        return {200, formato("{{\"listo\":true,\"comprobaciones\":[{}]}}", comillas(van))};
     }
     // OBS-003 y OBS-004: 503 diciendo cuál falló y sin ocultar las que sí van. OBS-006: en modo
     // público el código es el mismo y el detalle no sale.
     if (publico) return {503, "{\"listo\":false}"};
     std::string detalle;
     for (const auto& f : fallan) detalle += (detalle.empty() ? "" : ",") + f;
-    return {503, texto("{{\"listo\":false,\"fallan\":[{}],\"van\":[{}]}}", detalle, comillas(van))};
+    return {503, formato("{{\"listo\":false,\"fallan\":[{}],\"van\":[{}]}}", detalle, comillas(van))};
 }
 
 std::string interpolar(std::string_view plantilla,
@@ -100,14 +111,14 @@ void Log::escribir(Nivel nivel, std::string_view plantilla,
     // OBS-009: filtra por debajo y deja pasar por encima, y `Nada` calla todo.
     if (nivel < nivel_ || nivel_ == Nivel::Nada) return;
     // OBS-008: nivel, origen y los valores ya interpolados.
-    auto linea = texto("{} {} {}", nombre_de(nivel), origen_, interpolar(plantilla, valores));
+    auto linea = formato("{} {} {}", nombre_de(nivel), origen_, interpolar(plantilla, valores));
     const std::lock_guard tomado{candado_};
     lineas_.push_back(std::move(linea));
 }
 
 void Log::con_error(std::string_view plantilla, const std::vector<std::string_view>& valores,
                     std::string_view tipo, std::string_view mensaje) {
-    escribir(Nivel::Error, texto("{}: {}: {}", plantilla, tipo, mensaje), valores);
+    escribir(Nivel::Error, formato("{}: {}: {}", plantilla, tipo, mensaje), valores);
 }
 
 std::vector<std::string> Log::lineas() const {
@@ -167,10 +178,10 @@ std::string Metricas::json() const {
     std::string rutas;
     for (const auto& [patron, c] : por_patron_) {
         rutas += (rutas.empty() ? "" : ",") +
-                 texto("{{\"ruta\":\"{}\",\"peticiones\":{},\"errores\":{}}}", patron,
+                 formato("{{\"ruta\":\"{}\",\"peticiones\":{},\"errores\":{}}}", patron,
                        c.peticiones, c.errores);
     }
-    return texto("{{\"total\":{},\"activo_s\":{},\"rutas\":[{}]}}",
+    return formato("{{\"total\":{},\"activo_s\":{},\"rutas\":[{}]}}",
                  total_.load(std::memory_order_relaxed), segundos_desde(arranque_), rutas);
 }
 
@@ -178,7 +189,7 @@ std::string linea_acceso(std::string_view metodo, std::string_view destino, unsi
                          std::optional<std::string_view> usuario,
                          std::chrono::microseconds tardo) {
     using namespace std::chrono;
-    return texto("{} {} {} {} {}ms", metodo, destino, estado, usuario.value_or("-"),
+    return formato("{} {} {} {} {}ms", metodo, destino, estado, usuario.value_or("-"),
                  duration_cast<milliseconds>(tardo).count());
 }
 

@@ -5,7 +5,10 @@
 // acción sin emitir su cookie.
 
 #include <chrono>
+#include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include "cero/servidor.hpp"
 #include "prueba.hpp"
@@ -28,10 +31,6 @@ std::optional<std::string> cabecera(const cero::Respuesta& r, std::string_view n
         if (nombre == n) return valor;
     }
     return std::nullopt;
-}
-
-bool dice(const cero::Respuesta& r, std::string_view que) {
-    return r.cuerpo.find(que) != std::string::npos;
 }
 
 cero::Router router() {

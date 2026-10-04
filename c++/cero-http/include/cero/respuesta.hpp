@@ -19,6 +19,12 @@ struct Respuesta {
 
     static Respuesta texto(std::string_view cuerpo);
     static Respuesta json(std::string_view ya_formado);
+    // RUT-022: la descarga sanea el nombre antes de ponerlo en la cabecera. No es opcional: por
+    // ahí se intentó colar una cookie.
+    static Respuesta descarga(std::string cuerpo, std::string_view nombre, std::string_view tipo);
+    // RUT-020: devolver nada responde 204. RUT-021: la redirección es 302 con `Location`.
+    static Respuesta nada();
+    static Respuesta redirigir(std::string_view a);
     static Respuesta html(std::string_view cuerpo);
     static Respuesta codigo(unsigned estado, std::string_view cuerpo = {});
 
