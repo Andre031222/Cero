@@ -45,30 +45,79 @@ struct ConexionMemoria {
     copia: Option<HashMap<String, Vec<Fila>>>,
 }
 
-/// Parte `SELECT * FROM t WHERE c = ?` en sus piezas. Es deliberadamente limitado: esto no es un
-/// motor, y aceptar SQL arbitrario aquí daría una falsa sensación de que lo es.
-fn trocear(sql: &str) -> Option<(String, String, Option<String>, Option<u32>)> {
+/// Las cuatro órdenes que esta implementación entiende, ya troceadas.
+///
+/// Deliberadamente limitado: esto no es un motor, y aceptar SQL arbitrario daría la falsa
+/// sensación de que lo es. Lo que entiende es exactamente lo que `Repositorio` emite.
+enum Orden {
+    Select { tabla: String, columna: Option<String> },
+    Delete { tabla: String, columna: String },
+    Insert { tabla: String, columnas: Vec<String> },
+    Update { tabla: String, asigna: Vec<String>, columna: String },
+}
+
+/// La palabra que sigue a `aguja`. Las palabras clave se buscan en `bajo` y el nombre se saca del
+/// `sql` original: un identificador tiene que volver **como se escribió**, porque es la clave con
+/// la que se guardó la tabla. Bajarlo a minúsculas hacía que `AppSessions` se escribiera en
+/// `appsessions` y que quien la pidiera por su nombre no encontrara nada.
+fn tras(bajo: &str, sql: &str, aguja: &str) -> Option<String> {
+    let desde = bajo.find(aguja)? + aguja.len();
+    let palabra: String = sql[desde..]
+        .trim_start()
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+        .collect();
+    (!palabra.is_empty()).then_some(palabra)
+}
+
+/// Los nombres de una lista como `(a, b, c)` o `a = ?, b = ?`.
+fn nombres(trozo: &str) -> Vec<String> {
+    trozo
+        .split(',')
+        .filter_map(|p| {
+            let limpio: String = p
+                .trim()
+                .trim_start_matches('(')
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                .collect();
+            (!limpio.is_empty()).then_some(limpio)
+        })
+        .collect()
+}
+
+fn trocear(sql: &str) -> Option<Orden> {
     let bajo = sql.to_ascii_lowercase();
-    let verbo = bajo.split_whitespace().next()?.to_string();
-    let i = bajo.find(" from ").or_else(|| bajo.find("delete from "))?;
-    let resto = &sql[i + if bajo[i..].starts_with(" from ") { 6 } else { 12 }..];
-    let tabla = resto.split_whitespace().next()?.to_string();
-    let columna = bajo
-        .find(" where ")
-        .and_then(|w| sql[w + 7..].split_whitespace().next().map(str::to_string));
-    let limite = bajo
-        .find(" limit ")
-        .map(|_| u32::MAX); // el valor real llega como parámetro
-    Some((verbo, tabla, columna, limite))
+    let columna = || tras(&bajo, sql, " where ");
+    match bajo.split_whitespace().next()? {
+        "select" => Some(Orden::Select { tabla: tras(&bajo, sql, " from ")?, columna: columna() }),
+        "delete" => Some(Orden::Delete { tabla: tras(&bajo, sql, " from ")?, columna: columna()? }),
+        "insert" => {
+            let abre = bajo.find('(')?;
+            let cierra = bajo.find(')')?;
+            Some(Orden::Insert {
+                tabla: tras(&bajo, sql, "insert into ")?,
+                columnas: nombres(&sql[abre + 1..cierra]),
+            })
+        }
+        "update" => {
+            let set = bajo.find(" set ")? + 5;
+            let hasta = bajo.find(" where ")?;
+            Some(Orden::Update {
+                tabla: tras(&bajo, sql, "update ")?,
+                asigna: nombres(&sql[set..hasta]),
+                columna: columna()?,
+            })
+        }
+        _ => None,
+    }
 }
 
 impl Conexion for ConexionMemoria {
     fn consultar(&mut self, sql: &str, parametros: &[Valor]) -> Resultado<Vec<Fila>> {
-        let (verbo, tabla, columna, _) =
-            trocear(sql).ok_or_else(|| Fallo(format!("no sé leer: {sql}")))?;
-        if verbo != "select" {
-            return Err(Fallo(format!("consultar espera SELECT, no {verbo}")));
-        }
+        let Some(Orden::Select { tabla, columna }) = trocear(sql) else {
+            return Err(Fallo(format!("consultar espera SELECT: {sql}")));
+        };
         let datos = self.datos.lock().map_err(|_| Fallo("envenenado".into()))?;
         let filas = datos.tablas.get(&tabla).cloned().unwrap_or_default();
         let Some(col) = columna else {
@@ -83,27 +132,52 @@ impl Conexion for ConexionMemoria {
     }
 
     fn ejecutar(&mut self, sql: &str, parametros: &[Valor]) -> Resultado<u64> {
-        let (verbo, tabla, columna, _) =
-            trocear(sql).ok_or_else(|| Fallo(format!("no sé leer: {sql}")))?;
-        if verbo != "delete" {
-            return Err(Fallo(format!("esta implementación solo borra, no {verbo}")));
-        }
-        let col = columna.ok_or_else(|| Fallo("DELETE sin WHERE no se admite".into()))?;
-        // Una migración escribe el valor en el propio SQL, y eso es correcto: la escribe el
-        // programador, no el usuario. Sin parámetro, se lee el literal que sigue al `=`.
-        let propio;
-        let buscado = match parametros.first() {
-            Some(v) => v,
-            None => {
-                propio = literal(sql).ok_or_else(|| Fallo("falta el parámetro".into()))?;
-                &propio
-            }
-        };
+        let orden = trocear(sql).ok_or_else(|| Fallo(format!("no sé leer: {sql}")))?;
         let mut datos = self.datos.lock().map_err(|_| Fallo("envenenado".into()))?;
-        let filas = datos.tablas.entry(tabla).or_default();
-        let antes = filas.len();
-        filas.retain(|f| f.valor(&col) != Some(buscado));
-        Ok((antes - filas.len()) as u64)
+        match orden {
+            Orden::Insert { tabla, columnas } => {
+                if columnas.len() != parametros.len() {
+                    return Err(Fallo("el INSERT no cuadra con sus parámetros".into()));
+                }
+                let pares = columnas.iter().map(String::as_str).zip(parametros.iter().cloned());
+                datos.tablas.entry(tabla).or_default().push(Fila::de(pares.collect()));
+                Ok(1)
+            }
+            Orden::Update { tabla, asigna, columna } => {
+                // El valor del `WHERE` es el **último** parámetro: los de antes son el `SET`.
+                let (nuevos, clave) = parametros
+                    .split_at(parametros.len().checked_sub(1).ok_or_else(|| Fallo("UPDATE sin parámetros".into()))?);
+                if asigna.len() != nuevos.len() {
+                    return Err(Fallo("el UPDATE no cuadra con sus parámetros".into()));
+                }
+                let filas = datos.tablas.entry(tabla).or_default();
+                let mut tocadas = 0;
+                for f in filas.iter_mut().filter(|f| f.valor(&columna) == Some(&clave[0])) {
+                    for (c, v) in asigna.iter().zip(nuevos.iter()) {
+                        f.poner(c, v.clone());
+                    }
+                    tocadas += 1;
+                }
+                Ok(tocadas)
+            }
+            Orden::Delete { tabla, columna } => {
+                // Una migración escribe el valor en el propio SQL, y eso es correcto: la escribe
+                // el programador, no el usuario. Sin parámetro, se lee el literal tras el `=`.
+                let propio;
+                let buscado = match parametros.first() {
+                    Some(v) => v,
+                    None => {
+                        propio = literal(sql).ok_or_else(|| Fallo("falta el parámetro".into()))?;
+                        &propio
+                    }
+                };
+                let filas = datos.tablas.entry(tabla).or_default();
+                let antes = filas.len();
+                filas.retain(|f| f.valor(&columna) != Some(buscado));
+                Ok((antes - filas.len()) as u64)
+            }
+            Orden::Select { .. } => Err(Fallo("ejecutar no es para SELECT".into())),
+        }
     }
 
     fn empezar(&mut self) -> Resultado<()> {

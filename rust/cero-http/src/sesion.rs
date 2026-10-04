@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime};
 
 /// SES-002: al menos 40 caracteres de una fuente apta para criptografía.
 ///
@@ -29,13 +29,19 @@ pub(crate) fn identificador() -> std::io::Result<String> {
 pub struct Sesion {
     id: String,
     atributos: HashMap<String, String>,
-    creada: Instant,
-    tocada: Instant,
+    /// Reloj de pared y no `Instant`. `Instant` es monótono y **local al proceso**: no se puede
+    /// guardar ni comparar con el de otro, así que una sesión que vive en una tabla y la leen dos
+    /// instancias no puede medir su edad con él. Es `SES-012` y `SES-013` decidiendo el tipo.
+    creada: SystemTime,
+    tocada: SystemTime,
     /// SES-004: invalidar deja la sesión inutilizable, no la recrea en silencio.
     viva: bool,
     /// SES-008: la cookie se emite una vez. Que esto sea `bool` y no un cálculo es deliberado:
     /// SES-011 dice que consultarlo **no es una lectura pura**.
     cookie_pendiente: bool,
+    /// Si cambió desde la última vez que se guardó. Un almacén que escribe en cada respuesta
+    /// escribe también en cada `GET` que no tocó nada, y eso son dos viajes a la base por visita.
+    sucia: bool,
 }
 
 impl Sesion {
@@ -53,7 +59,8 @@ impl Sesion {
             return Err("la sesión está invalidada");
         }
         self.atributos.insert(clave.into(), valor.into());
-        self.tocada = Instant::now();
+        self.tocada = SystemTime::now();
+        self.sucia = true;
         Ok(())
     }
 
@@ -67,6 +74,46 @@ impl Sesion {
     pub fn invalidar(&mut self) {
         self.viva = false;
         self.atributos.clear();
+        self.sucia = true;
+    }
+
+    pub fn creada(&self) -> SystemTime {
+        self.creada
+    }
+
+    pub fn tocada(&self) -> SystemTime {
+        self.tocada
+    }
+
+    pub fn atributos(&self) -> &HashMap<String, String> {
+        &self.atributos
+    }
+
+    /// Lo que un almacén necesita saber para no escribir de más, y para dejar de deberlo cuando ya
+    /// escribió. Como `cookie_pendiente`, consultarlo **consume**: toma `&mut`.
+    pub fn sucia(&mut self) -> bool {
+        std::mem::take(&mut self.sucia)
+    }
+
+    /// Reconstruye una sesión que un almacén había guardado.
+    ///
+    /// No nace sucia ni con cookie pendiente: ya estaba guardada y el cliente ya tiene su cookie,
+    /// porque es la que usó para llegar hasta aquí.
+    pub fn rescatada(
+        id: &str,
+        atributos: HashMap<String, String>,
+        creada: SystemTime,
+        tocada: SystemTime,
+    ) -> Sesion {
+        Sesion {
+            id: id.into(),
+            atributos,
+            creada,
+            tocada,
+            viva: true,
+            cookie_pendiente: false,
+            sucia: false,
+        }
     }
 
     /// SES-011: marca la cookie como emitida. **No es una lectura pura**, y por eso toma `&mut`:
@@ -81,6 +128,25 @@ impl Sesion {
     }
 }
 
+/// Lo que el servidor le pide a un almacén de sesiones, sea el de memoria o uno en una tabla.
+///
+/// Que sea un rasgo es lo que hace cumplible `SES-013`: el nombre de la tabla es asunto de quien
+/// lo implementa, no del contrato. `cero-data` trae la implementación sobre SQL, igual que Java la
+/// trae en su `cero-data` con `JdbcSessions`.
+pub trait Sesiones: Send + Sync {
+    fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>>;
+    fn crear(&self) -> std::io::Result<Arc<Mutex<Sesion>>>;
+    fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str>;
+    fn cuantas(&self) -> usize;
+
+    /// Se llama **una vez por respuesta**, en el mismo sitio que emite la cookie.
+    ///
+    /// Que sea un solo punto no es estilo: `SES-010` nació de tener dos salidas y hacer el trabajo
+    /// en una. Un almacén en memoria no tiene nada que hacer aquí porque la sesión que mutó la
+    /// acción **es** la que él guarda; uno en una tabla, todo.
+    fn guardar(&self, _sesion: &Arc<Mutex<Sesion>>) {}
+}
+
 pub struct Almacen {
     sesiones: RwLock<HashMap<String, Arc<Mutex<Sesion>>>>,
     inactividad: Duration,
@@ -93,17 +159,28 @@ impl Almacen {
         Almacen { sesiones: RwLock::new(HashMap::new()), inactividad, vida_maxima }
     }
 
+    /// Si una sesión con estas marcas de tiempo ya caducó, por inactividad o por vida máxima.
+    /// Lo usan los dos almacenes, y por eso vive aquí y no dentro de uno.
+    pub fn caducada(&self, creada: SystemTime, tocada: SystemTime) -> bool {
+        let desde = |t: SystemTime| SystemTime::now().duration_since(t).unwrap_or_default();
+        desde(tocada) > self.inactividad || self.vida_maxima.is_some_and(|v| desde(creada) > v)
+    }
+
+    pub fn inactividad(&self) -> Duration {
+        self.inactividad
+    }
+}
+
+impl Sesiones for Almacen {
     /// SES-001: sin cookie no se recupera nada. Devuelve `None` en vez de crear una sesión: crear
     /// en la lectura es lo que convierte un rastreador en un generador de sesiones huérfanas.
-    pub fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>> {
+    fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>> {
         let id = id?;
         let mapa = self.sesiones.read().ok()?;
         let s = mapa.get(id)?.clone();
         let caduca = {
             let g = s.lock().ok()?;
-            !g.viva
-                || g.tocada.elapsed() > self.inactividad
-                || self.vida_maxima.is_some_and(|v| g.creada.elapsed() > v)
+            !g.viva || self.caducada(g.creada, g.tocada)
         };
         if caduca {
             drop(mapa);
@@ -113,8 +190,8 @@ impl Almacen {
         Some(s)
     }
 
-    pub fn crear(&self) -> std::io::Result<Arc<Mutex<Sesion>>> {
-        let ahora = Instant::now();
+    fn crear(&self) -> std::io::Result<Arc<Mutex<Sesion>>> {
+        let ahora = SystemTime::now();
         let s = Arc::new(Mutex::new(Sesion {
             id: identificador()?,
             atributos: HashMap::new(),
@@ -122,6 +199,7 @@ impl Almacen {
             tocada: ahora,
             viva: true,
             cookie_pendiente: true,
+            sucia: true,
         }));
         let id = s.lock().expect("recién creada").id.clone();
         self.sesiones.write().expect("almacén envenenado").insert(id, s.clone());
@@ -130,7 +208,7 @@ impl Almacen {
 
     /// SES-005: rota el identificador conservando los atributos y obliga a reemitir la cookie.
     /// SES-006: una sesión invalidada no se rota.
-    pub fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str> {
+    fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str> {
         let mut g = sesion.lock().map_err(|_| "sesión envenenada")?;
         if !g.viva {
             return Err("una sesión invalidada no se rota");
@@ -139,6 +217,7 @@ impl Almacen {
         let nuevo = identificador().map_err(|_| "sin fuente aleatoria")?;
         g.id = nuevo.clone();
         g.cookie_pendiente = true;
+        g.sucia = true;
         drop(g);
         let mut mapa = self.sesiones.write().map_err(|_| "almacén envenenado")?;
         mapa.remove(&viejo);
@@ -146,7 +225,7 @@ impl Almacen {
         Ok(nuevo)
     }
 
-    pub fn cuantas(&self) -> usize {
+    fn cuantas(&self) -> usize {
         self.sesiones.read().map(|m| m.len()).unwrap_or(0)
     }
 }
