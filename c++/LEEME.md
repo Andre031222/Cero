@@ -4,8 +4,8 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 4.** HTTP/1.1, ruteo, sesiones, seguridad y observabilidad. **23 de 23 vectores del
-banco** y 61 pruebas propias, 90 requisitos citados.
+**Estado: hito 5.** El framework montado entero sobre HTTP/1.1. **23 de 23 vectores del banco** y
+76 pruebas propias, 99 requisitos citados.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -13,6 +13,7 @@ banco** y 61 pruebas propias, 90 requisitos citados.
 | 2 | Sesiones | `SES-001`–`SES-011` · 11 pruebas |
 | 3 | Seguridad transversal | `SEG-001`–`SEG-026` menos el token · 15 pruebas |
 | 4 | Observabilidad | `OBS-001`–`OBS-022` menos dos del pipeline · 15 pruebas |
+| 5 | El framework montado | pipeline completo · 15 pruebas |
 
 ## Usarlo
 
@@ -62,8 +63,21 @@ GoogleTest serían la primera dependencia del proyecto, así que hay uno propio 
 [`pruebas/prueba.hpp`](pruebas/prueba.hpp) — cuarenta líneas, y Java tiene el suyo por este mismo
 motivo.
 
+## Los dos fallos que en Rust solo aparecieron al montarlo
+
+Aquí están comprobados desde el principio, porque ninguna prueba de módulo puede verlos.
+
+**El CSRF tapaba el 405.** Corría antes del ruteo, así que un verbo no admitido recibía 403 en vez
+de 405: la respuesta atribuía el fallo a la causa equivocada, que es lo que `RUT-009` prohíbe al
+exigir distinguir 404 de 405. Ahora el ruteo va primero y el CSRF después, ya sabiendo que la
+petición iba a alguna parte.
+
+**La sesión creada dentro de la acción no emitía su cookie.** `abrir_sesion()` la creaba, pero el
+punto que emite la cookie solo miraba la que había llegado **con** la petición. El cliente abría
+sesión y no recibía nada. Es `SES-010` con otra cara, y por eso emitir la cookie, guardar la sesión
+y anotar las métricas pasan por un único sitio.
+
 ## Lo que falta
 
-Los hitos 5 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: el framework montado, JSON y
-estáticos, HTTP/2 por capas, el contenedor de dependencias y las sesiones en tabla.
+Los hitos 6 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: JSON, formularios y estáticos, HTTP/2 por capas, el contenedor de dependencias y las sesiones en tabla.
