@@ -13,7 +13,7 @@ import java.util.List;
  * <p>Heredar de aquí no cambia nada de cómo se enrutan los métodos: sigue mandando {@code @Route}
  * y {@code @Get}. Lo único que da es no tener que arrastrar el {@code Context} por parámetro
  * cuando un controlador lo usa mucho, y un sitio donde poner lo que repites — comprobar permisos,
- * armar el modelo común de tus vistas, formatear tus errores.
+ * armar el modelo común de tus respuestas, formatear tus errores.
  *
  * <pre>{@code
  * @Route("/panel")
@@ -22,7 +22,7 @@ import java.util.List;
  *     @Get("/perfil")
  *     public Result perfil() {
  *         if (!autenticado()) return redirect("/auth/login");
- *         return view("perfil", Map.of("usuario", usuario().name()));
+ *         return json(Map.of("usuario", usuario().name()));
  *     }
  * }
  * }</pre>
@@ -99,10 +99,6 @@ public abstract class Controller {
     }
 
     // ── qué se responde ──────────────────────────────────────────────────────
-
-    protected final Result view(String plantilla, Object modelo) {
-        return Result.view(plantilla, modelo);
-    }
 
     protected final Result json(Object valor) {
         return Result.json(valor);

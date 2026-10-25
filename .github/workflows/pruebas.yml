@@ -80,7 +80,7 @@ jobs:
         working-directory: java
         run: |
           mvn -B -q dependency:list -DincludeScope=runtime -DexcludeGroupIds=dev.ginit.cero \
-              -DoutputFile=target/deps.txt -pl cero-http,cero-core,cero-view,cero-data,cero-test -am
+              -DoutputFile=target/deps.txt -pl cero-http,cero-core,cero-data,cero-test -am
           fuera=$(grep -h ':jar:' cero-*/target/deps.txt || true)
           if [ -n "$fuera" ]; then
             echo "::error::El núcleo arrastra dependencias externas:"; echo "$fuera"; exit 1

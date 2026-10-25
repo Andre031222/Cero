@@ -20,7 +20,6 @@ final class Dispatcher implements Handler {
     private final Registry registry;
     private final List<Middleware> middleware;
     private final Authenticator authenticator;
-    private final ViewRenderer views;
     private final List<Recovery> recoveries;
     private final Map<Class<?>, Object> controllers = new ConcurrentHashMap<>();
 
@@ -42,7 +41,7 @@ final class Dispatcher implements Handler {
     private final Handler fallback;
 
     Dispatcher(Router router, Registry registry, List<Middleware> middleware,
-               Authenticator authenticator, ViewRenderer views, Messages messages,
+               Authenticator authenticator, Messages messages,
                Handler fallback) {
         this.messages = messages;
         this.fallback = fallback;
@@ -50,7 +49,6 @@ final class Dispatcher implements Handler {
         this.registry = registry;
         this.middleware = List.copyOf(middleware);
         this.authenticator = authenticator;
-        this.views = views;
         this.recoveries = collectRecoveries(router);
         this.chain = buildChain();
     }
@@ -164,17 +162,6 @@ final class Dispatcher implements Handler {
             case EMPTY -> response.send(new byte[0]);
             // El Content-Type ya viaja en las cabeceras del Result, puestas más arriba.
             case BINARY -> response.send(result.bytes());
-            case VIEW -> {
-                if (views == null) {
-                    throw new HttpException(501, "no hay motor de vistas configurado");
-                }
-                // El mapa `t` va como global, no dentro del modelo: así una plantilla escribe
-                // {{ t.guardar }} sin que cada controlador se acuerde de meterlo, y olvidarlo
-                // en uno solo dejaría esa página sin traducir.
-                response.html(views.render(result.payload(), result.model(),
-                        messages == null ? java.util.Map.of()
-                                         : java.util.Map.of("t", new Textos(messages, context.idioma()))));
-            }
         }
     }
 

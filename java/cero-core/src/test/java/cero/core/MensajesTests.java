@@ -39,74 +39,14 @@ final class MensajesTests {
         }
     }
 
-    /**
-     * Un motor de vistas mínimo. No usa cero-view a propósito: aquí lo que se prueba es que el
-     * despachador entregue los textos como globales a QUIEN SEA que rinda, y cero-core no
-     * depende de cero-view — es al revés.
-     */
-    private static ViewRenderer vistaDePrueba() {
-        return new ViewRenderer() {
-            @Override
-            public String render(String plantilla, Object modelo) {
-                return render(plantilla, modelo, java.util.Map.of());
-            }
-
-            @Override
-            public String render(String plantilla, Object modelo, java.util.Map<String, Object> globales) {
-                @SuppressWarnings("unchecked")
-                java.util.Map<String, String> textos =
-                        (java.util.Map<String, String>) globales.get("t");
-                @SuppressWarnings("unchecked")
-                java.util.Map<String, Object> m = (java.util.Map<String, Object>) modelo;
-                return (textos == null ? "sin textos" : textos.get("saludo")) + "|" + m.get("nombre");
-            }
-        };
-    }
-
-    @Route("/vista")
-    static final class VistaController {
-        @Get
-        public Object pagina() {
-            return Result.view("saludo.html", java.util.Map.of("nombre", "Richar"));
-        }
-    }
-
     static void run() throws Exception {
         Check.group("textos");
         sinRed();
         sinLlamarABase();
-        elMapaDeLaPlantilla();
         baseEnOtroIdioma();
 
         Check.group("textos por HTTP");
         porHttp();
-
-        Check.group("textos en plantillas");
-        enPlantillas();
-    }
-
-    /**
-     * El mapa `t` tiene que llegar a la vista sin que el controlador lo meta en su modelo: ese
-     * es todo el motivo de que exista como global. Olvidarlo en un solo controlador dejaría esa
-     * página sin traducir, y nadie lo vería hasta que un usuario se quejara.
-     */
-    private static void enPlantillas() throws Exception {
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
-                .messages(Messages.from("textos", "en", "qu").base("es"))
-                .views(vistaDePrueba())
-                .controllers(VistaController.class)
-                .start();
-        String base = "http://127.0.0.1:" + servidor.port();
-        try {
-            String es = Cliente.get(base + "/vista").body();
-            Check.equal("la vista recibe los textos sin que el controlador los pase",
-                    es, "Hola, {0}|Richar");
-
-            String en = Cliente.get(base + "/vista", "Accept-Language", "en").body();
-            Check.equal("y en el idioma de la petición", en, "Hello, {0}|Richar");
-        } finally {
-            servidor.stop();
-        }
     }
 
     /**
@@ -136,29 +76,6 @@ final class MensajesTests {
                 t.get("qu", "saludo", "Richar"), "Rimaykullayki, Richar");
         Check.equal("el nuevo base es el último recurso de los demás",
                 t.get("en", "faltaEnIngles"), "Solo está en castellano");
-    }
-
-    /**
-     * El mapa que ve la plantilla tiene que ser un mapa de verdad, no solo responder a `get`.
-     * Con `containsKey` diciendo que sí a todo y `entrySet` vacío, un `if` sobre una clave que
-     * no existe era cierto y un `for` sobre los textos no recorría nada. Sin dar error.
-     */
-    private static void elMapaDeLaPlantilla() {
-        Messages t = Messages.from("textos", "en", "qu");
-        java.util.Map<String, String> mapa = new Textos(t, "es");
-
-        Check.that("una clave que existe está", mapa.containsKey("saludo"));
-        Check.that("una que no, no está", !mapa.containsKey("noExisteEstaClave"));
-        Check.that("el mapa no está vacío", !mapa.isEmpty());
-        Check.that("y su tamaño coincide con lo que recorre", mapa.size() == mapa.entrySet().size());
-        Check.that("recorrerlo da los textos, no las claves",
-                mapa.entrySet().stream().anyMatch(e -> "saludo".equals(e.getKey())
-                        && e.getValue().startsWith("Hola")));
-
-        java.util.Map<String, String> ingles = new Textos(t, "en");
-        Check.that("un idioma hereda las claves del base",
-                ingles.containsKey("faltaEnIngles"));
-        Check.equal("y su valor cae al base", ingles.get("faltaEnIngles"), "Solo está en castellano");
     }
 
     private static void sinRed() {

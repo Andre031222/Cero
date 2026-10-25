@@ -16,6 +16,13 @@ if [ -n "$salida" ]; then
   fallo=1
 fi
 
+salida=$(git grep -nE 'cero[.-]view|ViewRenderer|\bLive\b' -- java cero cero.ps1 .github)
+if [ -n "$salida" ]; then
+  echo "restos de las vistas:"
+  echo "$salida"
+  fallo=1
+fi
+
 if ! ./cero --version 2>/dev/null | grep -q 'Cero · por Andre Solorzano'; then
   echo "./cero --version no imprime el sello"
   fallo=1

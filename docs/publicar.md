@@ -24,7 +24,7 @@ tuyo. Es lo que impide que alguien publique paquetes haciéndose pasar por otro.
 2. Ve a **Namespaces** → *Add Namespace* y escribe `dev.ginit`.
 
    > Se registra `dev.ginit`, no `dev.ginit.cero`. Un *namespace* cubre todo lo que cuelgue de él,
-   > así que con este quedan cubiertos los seis módulos de Cero y cualquier otro proyecto que
+   > así que con este quedan cubiertos los cinco módulos de Cero y cualquier otro proyecto que
    > publiques bajo ese dominio en el futuro.
 
 3. Te da un **código de verificación**, algo como `abc123xyz`. Hay que ponerlo como registro TXT
@@ -142,7 +142,7 @@ mvn -Ppublicar deploy
 ```
 
 Va a pedirte la contraseña de la clave GPG. Tarda unos minutos: firma cada uno de los archivos de
-los seis módulos —el jar, el de fuentes, el de javadoc y el pom— y los sube.
+los cinco módulos —el jar, el de fuentes, el de javadoc y el pom— y los sube.
 
 **No se publica solo.** El perfil lleva `autoPublish` en falso a propósito: sube al portal y
 espera. Entra en [central.sonatype.com](https://central.sonatype.com) → *Deployments*, mira que
@@ -188,8 +188,8 @@ Y la prueba de verdad, en una carpeta vacía y sin nada en `~/.m2`:
 
 ## Qué se publica y qué no
 
-Se publican los **seis módulos que son bibliotecas**: `cero-http`, `cero-core`, `cero-view`,
-`cero-data`, `cero-adapter-servlet` y `cero-launcher`.
+Se publican los **cinco módulos que son bibliotecas**: `cero-http`, `cero-core`, `cero-data`,
+`cero-adapter-servlet` y `cero-launcher`.
 
 **`ejemplo` no.** Es la aplicación de demostración y nadie la va a declarar como dependencia. Se
 excluye con `<excludeArtifacts>` en el pom raíz, que es la única forma que entiende el plugin de
@@ -216,7 +216,7 @@ Central:
 | `Namespace not allowed` | El dominio no está verificado todavía, o registraste `dev.ginit.cero` en vez de `dev.ginit` |
 | `gpg: signing failed` | Falta la clave o la contraseña. `gpg --list-secret-keys` para ver si está |
 | `Missing signature` en el portal | La clave no está publicada en el servidor de claves; repite el `--send-keys` |
-| `Invalid POM: missing description` | No debería pasar: los seis módulos la tienen y se comprobó |
+| `Invalid POM: missing description` | No debería pasar: los cinco módulos la tienen y se comprobó |
 | `Skipping Central Release Publishing at user's request` | Hay un `skipPublishing` en algún módulo. Quítalo y excluye con `excludeArtifacts` |
 | `Unrecognized field "warnings"` | Fallo del plugin 0.7.0 con la API nueva. **El paquete ya subió**; comprueba el estado antes de repetir |
 
@@ -234,7 +234,7 @@ Ensayarlo antes sin firmar ni subir nada:
 mvn -Ppublicar -Dgpg.skip=true verify
 ```
 
-Eso genera los jar de fuentes y javadoc de los seis módulos y falla si falta algo de lo que Central
+Eso genera los jar de fuentes y javadoc de los cinco módulos y falla si falta algo de lo que Central
 exige. Es lo que se corrió al preparar la 0.6.0.
 
 ---

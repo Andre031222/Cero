@@ -137,7 +137,7 @@ requisitos() {
   fi
 }
 
-modulos() { echo "cero-http cero-core cero-view cero-data cero-adapter-servlet"; }
+modulos() { echo "cero-http cero-core cero-data cero-adapter-servlet"; }
 
 classpath_ejemplo() {
   local destino="$JAVA_DIR/ejemplo/target/classpath.txt"

@@ -5,7 +5,7 @@ import java.util.Map;
 
 public final class Result {
 
-    public enum Kind { TEXT, HTML, JSON, VIEW, REDIRECT,
+    public enum Kind { TEXT, HTML, JSON, REDIRECT,
         REDIRECT_EXTERNAL, EMPTY, BINARY }
 
     private final Kind kind;
@@ -42,10 +42,6 @@ public final class Result {
 
     public static Result raw(String rawJson) {
         return new Result(Kind.JSON, rawJson, null, 200);
-    }
-
-    public static Result view(String template, Object model) {
-        return new Result(Kind.VIEW, template, model, 200);
     }
 
     public static Result redirect(String location) {

@@ -34,22 +34,6 @@ final class Frontend {
         Path fuentes = backend.resolve("src/main/java").resolve(peticion.paquete().replace('.', '/'));
         escribir(fuentes.resolve("App.java"), appConFrontend(peticion));
         escribir(fuentes.resolve("InicioController.java"), apiConFrontend(peticion));
-
-        // Las plantillas y la hoja de estilo son del backend que sirve HTML; aquí lo pinta el
-        // frontend, y dejarlas confundiría a quien abra el proyecto.
-        borrarSiEstan(backend.resolve("src/main/resources/plantillas"));
-        borrarSiEstan(backend.resolve("src/main/resources/estaticos"));
-    }
-
-    private static void borrarSiEstan(Path directorio) throws IOException {
-        if (!Files.isDirectory(directorio)) {
-            return;
-        }
-        try (var contenido = Files.walk(directorio)) {
-            for (Path camino : contenido.sorted(java.util.Comparator.reverseOrder()).toList()) {
-                Files.deleteIfExists(camino);
-            }
-        }
     }
 
     private static String apiConFrontend(GeneradorProyecto.Peticion p) {

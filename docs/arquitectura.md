@@ -24,7 +24,6 @@ spec/                     Contrato del kernel, versionado, neutral respecto al l
 java/
   cero-http/               Servidor HTTP/1.1 propio (hilos virtuales). Cero deps.
   cero-core/               Router, pipeline, DI, configuración, resultados. Cero deps.
-  cero-view/               Motor de plantillas propio (sustituye a JSP)
   cero-data/               Db, Repository, Pool, Tx — JDBC directo, sin ORM
   cero-adapter-servlet/    Compatibilidad Jakarta/Tomcat para desplegar en un contenedor
   ejemplo/                Aplicación pequeña de punta a punta
@@ -122,8 +121,8 @@ medio.
 
 ### 1.4 Adiós JSP
 
-Las vistas no dependen de `jakarta.servlet.jsp`. Las resuelve `cero-view`: plantillas compiladas a
-Java en el arranque, cero dependencias, sin motor de JSP detrás.
+Cero no genera HTML: es solo backend y responde JSON. El motor de plantillas `cero-view` salió en
+la 0.9.0, y con él `Live`.
 
 ### 1.5 El lanzador · **hecho**
 
@@ -193,7 +192,7 @@ Falta repetir la corrida en Linux sin virtualizar: lo de arriba es Docker Deskto
 Los transversales —métricas, log, tareas, OAuth, contraseñas, caché, eventos, perfiles, OpenAPI—
 en los módulos nuevos, hecho. WebSockets propios sobre `cero-http` en lugar de
 `jakarta.websocket`, hecho. `cero-view` cubriendo todo lo que hacía JSP en el sitio de referencia,
-hecho.
+hecho (retirado después, en la 0.9.0).
 
 **Criterio de cierre — cumplido el 2 de agosto de 2026.** El sitio de referencia corre entero en
 modo autónomo, comprobado por 82 pruebas de punta a punta. Ese sitio vive hoy en su propio

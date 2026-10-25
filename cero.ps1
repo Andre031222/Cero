@@ -98,7 +98,7 @@ switch -Regex ($Orden) {
         Write-Host ''
         Write-Host ('  {0,-22} {1,10}' -f 'MÓDULO', 'TAMAÑO')
         $total = 0
-        foreach ($m in 'cero-http', 'cero-core', 'cero-view', 'cero-data', 'cero-adapter-servlet') {
+        foreach ($m in 'cero-http', 'cero-core', 'cero-data', 'cero-adapter-servlet') {
             $jar = Get-ChildItem (Join-Path $JavaDir "$m\target\$m-*.jar") -ErrorAction SilentlyContinue |
                    Select-Object -First 1
             if (-not $jar) { continue }

@@ -16,7 +16,6 @@ public final class Cero {
 
     private Config config = Config.empty();
     private Authenticator authenticator;
-    private ViewRenderer views;
     private ErrorReporter reporter = ErrorReporter.standardError();
     private ServerOptions options = ServerOptions.defaults();
     private Handler fallback;
@@ -34,7 +33,6 @@ public final class Cero {
     }
 
     private Messages messages;
-    private Live live;
 
     public Cero config(Config value) {
         config = value;
@@ -94,11 +92,6 @@ public final class Cero {
         return this;
     }
 
-    public Cero views(ViewRenderer value) {
-        views = value;
-        return this;
-    }
-
     public Cero reporter(ErrorReporter value) {
         reporter = value;
         return this;
@@ -122,30 +115,7 @@ public final class Cero {
         return this;
     }
 
-    /**
-     * Habilita las zonas que el servidor vuelve a pintar solo.
-     *
-     * <p>Registra el canal en {@code /cero/live} y el cliente en {@code /cero/live.js}. Se
-     * pide el motor de vistas aquí y no al empujar porque, si falta, es mejor enterarse al
-     * arrancar que la primera vez que alguien intente pintar una zona.
-     */
-    public Cero live(Live value) {
-        if (views == null) {
-            throw new IllegalStateException("live() necesita un motor de vistas: llama antes a views(...)");
-        }
-        value.views(views);
-        live = value;
-        router.get("/cero/live", context -> {
-            cero.http.WebSockets.accept(context.request(), context.response(), value.handler(),
-                    value.origenes());
-            return null;
-        });
-        router.get("/cero/live.js", context ->
-                Result.text(Live.GUION).header("Content-Type", "text/javascript; charset=utf-8"));
-        return this;
-    }
-
-    /** Los textos de la aplicación, para {@code context.t(...)} y para las plantillas. */
+    /** Los textos de la aplicación, para {@code context.t(...)}. */
     public Cero messages(Messages value) {
         messages = value;
         return this;
@@ -169,7 +139,7 @@ public final class Cero {
     }
 
     public Handler handler() {
-        return new Dispatcher(router, registry, middleware, authenticator, views, messages, fallback);
+        return new Dispatcher(router, registry, middleware, authenticator, messages, fallback);
     }
 
     public Server start() {

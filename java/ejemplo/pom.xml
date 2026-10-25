@@ -21,11 +21,6 @@
         </dependency>
         <dependency>
             <groupId>dev.ginit.cero</groupId>
-            <artifactId>cero-view</artifactId>
-            <version>0.8.0</version>
-        </dependency>
-        <dependency>
-            <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-data</artifactId>
             <version>0.8.0</version>
         </dependency>

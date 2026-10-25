@@ -43,9 +43,6 @@ public final class GeneradorProyecto {
             anadir(zip, "src/main/resources/application.properties", propiedades(peticion));
             anadir(zip, "src/main/java/" + ruta + "/App.java", app(peticion));
             anadir(zip, "src/main/java/" + ruta + "/InicioController.java", controlador(peticion));
-            anadir(zip, "src/main/resources/plantillas/base.html", base(peticion));
-            anadir(zip, "src/main/resources/plantillas/inicio.html", inicio(peticion));
-            anadir(zip, "src/main/resources/estaticos/estilo.css", estilo());
         }
         return salida.toByteArray();
     }
@@ -77,11 +74,6 @@ public final class GeneradorProyecto {
                         <dependency>
                             <groupId>dev.ginit.cero</groupId>
                             <artifactId>cero-core</artifactId>
-                            <version>@VERSION@</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>dev.ginit.cero</groupId>
-                            <artifactId>cero-view</artifactId>
                             <version>@VERSION@</version>
                         </dependency>
                 %s    </dependencies>
@@ -189,16 +181,12 @@ public final class GeneradorProyecto {
                 package %s;
 
                 import cero.core.Cero;
-                import cero.http.StaticFiles;
-                import cero.view.Templates;
-
+                
                 public final class App {
 
                     public static void main(String[] args) throws Exception {
                         Cero.app()
                            .port(args.length > 0 ? Integer.parseInt(args[0]) : 8080)
-                           .views(Templates.fromClasspath("plantillas").suffix(".html"))
-                           .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))
                            .controllers(InicioController.class)
                            .start()
                            .await();
@@ -222,7 +210,7 @@ public final class GeneradorProyecto {
 
                     @Get("")
                     public Result inicio() {
-                        return Result.view("inicio", Map.of("titulo", "%s"));
+                        return Result.json(Map.of("nombre", "%s", "estado", "funcionando"));
                     }
 
                     @Get("/salud")
@@ -231,46 +219,6 @@ public final class GeneradorProyecto {
                     }
                 }
                 """.formatted(p.paquete(), p.nombre());
-    }
-
-    private static String base(Peticion p) {
-        return """
-                <!doctype html>
-                <html lang="es">
-                <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>{%% block titulo %%}%s{%% end %%}</title>
-                    <link rel="stylesheet" href="/estaticos/estilo.css">
-                </head>
-                <body>
-                    <main>{%% block contenido %%}{%% end %%}</main>
-                </body>
-                </html>
-                """.formatted(p.nombre());
-    }
-
-    private static String inicio(Peticion p) {
-        return """
-                {%% extends "base" %%}
-
-                {%% block titulo %%}{{ titulo }}{%% end %%}
-
-                {%% block contenido %%}
-                <h1>%s</h1>
-                <p>Funcionando sobre Cero, sin contenedor y sin dependencias externas.</p>
-                <p>Edita <code>InicioController.java</code> y recarga.</p>
-                {%% end %%}
-                """.formatted(p.nombre());
-    }
-
-    private static String estilo() {
-        return """
-                :root { color-scheme: light dark; }
-                body { font: 16px/1.6 system-ui, sans-serif; max-width: 42rem; margin: 4rem auto; padding: 0 1rem; }
-                h1 { letter-spacing: -0.02em; }
-                code { background: rgba(127,127,127,.15); padding: .1em .35em; border-radius: .25rem; }
-                """;
     }
 
     private static String readme(Peticion p) {

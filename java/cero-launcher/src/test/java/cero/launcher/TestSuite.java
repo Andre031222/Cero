@@ -49,6 +49,7 @@ public final class TestSuite {
         }
 
         arrancaSolo(salida);
+        generaProyectoSinVistas();
 
         comprobar("sin clase principal no se empaqueta", lanza(() -> Packager.conMain("  ")));
         comprobar("sin entradas tampoco", lanza(() -> {
@@ -65,6 +66,30 @@ public final class TestSuite {
         if (fallidas > 0) {
             System.exit(1);
         }
+    }
+
+    private static void generaProyectoSinVistas() throws Exception {
+        byte[] zip = GeneradorProyecto.construir(
+                GeneradorProyecto.Peticion.de("com.ejemplo", "mi-app", "Mi app", "ninguno"));
+        boolean limpio = true;
+        String pom = "";
+        try (java.util.zip.ZipInputStream entrada =
+                     new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(zip))) {
+            for (java.util.zip.ZipEntry e = entrada.getNextEntry(); e != null; e = entrada.getNextEntry()) {
+                String texto = new String(entrada.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                if (e.getName().contains("plantillas/") || texto.contains("cero" + "-view")
+                        || texto.contains("View" + "Renderer") || texto.contains("plantillas/")) {
+                    limpio = false;
+                }
+                if (e.getName().equals("pom.xml")) {
+                    pom = texto;
+                }
+            }
+        }
+        comprobar("generaProyectoSinVistas: ningún archivo habla de vistas", limpio);
+        comprobar("generaProyectoSinVistas: el pom solo depende de cero-core",
+                pom.contains("<artifactId>cero-core</artifactId>")
+                        && pom.split("<dependency>", -1).length == 2);
     }
 
     /** La prueba de verdad: {@code java -jar}, sin classpath y sin nada instalado. */

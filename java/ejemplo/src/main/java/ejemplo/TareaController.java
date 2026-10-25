@@ -22,7 +22,7 @@ public class TareaController {
 
     @Get
     public Object index(Context context) {
-        return Result.view("lista.html", modelo(context, null));
+        return Result.json(modelo(context, null));
     }
 
     @Post("/tareas")
@@ -35,22 +35,23 @@ public class TareaController {
         if (!problemas.isEmpty()) {
             Map<String, Object> modelo = modelo(context, problemas.values().iterator().next());
             modelo.put("titulo", titulo);
-            return Result.view("lista.html", modelo).status(422);
+            return Result.json(modelo).status(422);
         }
-        tareas.insert(nueva);
-        return Result.redirect("/");
+        long id = tareas.insert(nueva);
+        return Result.created(tareas.findById(id));
     }
 
     @Post("/tareas/{id}/completar")
     public Object completar(@Path("id") long id) {
         tareas.completar(id);
-        return Result.redirect("/");
+        return Result.json(tareas.findById(id));
     }
 
     @Post("/tareas/{id}/borrar")
     public Object borrar(@Path("id") long id) {
-        tareas.deleteById(id);
-        return Result.redirect("/");
+        return tareas.deleteById(id) == 0
+                ? Result.status(404, "no existe la tarea " + id)
+                : Result.noContent();
     }
 
     private Map<String, Object> modelo(Context context, String error) {

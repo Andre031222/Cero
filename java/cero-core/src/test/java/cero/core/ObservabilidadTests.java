@@ -49,7 +49,7 @@ final class ObservabilidadTests {
 
         Check.group("log de acceso");
         acceso();
-        estadoRealAunqueFalleLaVista();
+        estadoRealAunqueFalleElControlador();
 
         Check.group("salud");
         salud();
@@ -153,28 +153,21 @@ final class ObservabilidadTests {
         return registro.isEmpty() ? "" : registro.get(0);
     }
 
-    /**
-     * El middleware envuelve también el pintado de la vista. Si no, una petición cuya plantilla
-     * revienta se registra como 200 —el estado que tenía cuando la cadena volvió— mientras el
-     * cliente recibe un 500.
-     */
-    private static void estadoRealAunqueFalleLaVista() throws Exception {
+    private static void estadoRealAunqueFalleElControlador() throws Exception {
         List<String> lineas = new ArrayList<>();
-        ViewRenderer vistaRota = (plantilla, modelo) -> {
-            throw new IllegalStateException("la plantilla no compila");
-        };
 
         Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
                 .use(AccessLog.combined().to(lineas::add))
-                .views(vistaRota)
-                .routes(r -> r.get("/pagina", ctx -> Result.view("rota", java.util.Map.of())))
+                .routes(r -> r.get("/pagina", ctx -> {
+                    throw new IllegalStateException("el controlador revienta");
+                }))
                 .start();
         try {
             var respuesta = Cliente.get("http://127.0.0.1:" + servidor.port() + "/pagina");
             Check.equal("el cliente recibe un 500", respuesta.statusCode(), 500);
             String linea = primeraLinea(lineas);
             Check.equal("y el log registra una línea", lineas.size(), 1);
-            Check.that("con el 500, no el 200 que tenía antes de pintar", linea.contains("\" 500 "));
+            Check.that("con el 500, no el 200 que tenía antes de responder", linea.contains("\" 500 "));
         } finally {
             servidor.stop();
         }

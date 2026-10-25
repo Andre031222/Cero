@@ -36,7 +36,6 @@
     <modules>
         <module>cero-http</module>
         <module>cero-core</module>
-        <module>cero-view</module>
         <module>cero-data</module>
         <module>cero-test</module>
         <module>cero-adapter-servlet</module>

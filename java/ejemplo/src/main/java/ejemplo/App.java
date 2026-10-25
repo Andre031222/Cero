@@ -8,8 +8,6 @@ import cero.core.SecurityHeaders;
 import cero.data.DataSources;
 import cero.data.Pool;
 import cero.http.Server;
-import cero.http.StaticFiles;
-import cero.view.Templates;
 
 public final class App {
 
@@ -31,8 +29,6 @@ public final class App {
         Tareas.crearEsquema();
 
         return Cero.app()
-                .views(Templates.fromClasspath("plantillas"))
-                .fallback(StaticFiles.fromClasspath("estaticos", "/estaticos"))
                 .use(SecurityHeaders.standard().csp("default-src 'self'"))
                 .use(Cors.allowing("https://tareas.local"))
                 .use(RateLimit.perMinute(300))

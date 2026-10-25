@@ -10,7 +10,16 @@ auditoría del portal FINESI, y de ahí sale esta regla.
 
 ---
 
-## Sin publicar
+## 0.9.0 · sin publicar
+
+### Cambio incompatible: fuera las vistas
+
+Sin `cero-view` ni `Live`; Cero es solo backend.
+
+Salen `cero-view` (el motor de plantillas), `ViewRenderer`, `Live`, `Cero.views(...)`,
+`Cero.live(...)`, `Result.view(...)` y `Controller.view(...)`. WebSocket y SSE se quedan en
+`cero-http`. `ejemplo` pasa a ser una API JSON, y `cero new` genera un proyecto que depende solo
+de `cero-core`.
 
 ### La orden y los dos instaladores hablan inglés
 
