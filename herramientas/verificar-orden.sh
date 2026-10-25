@@ -2,14 +2,14 @@
 cd "$(dirname "$0")/.." || exit 1
 fallo=0
 
-salida=$([ -f .superpowers/autores-ajenos ] && git grep -nI -f .superpowers/autores-ajenos --)
+salida=$([ -f .superpowers/autores-ajenos ] && git grep -nI -f .superpowers/autores-ajenos -- ':!herramientas/verificar-orden.sh')
 if [ -n "$salida" ]; then
   echo "autores ajenos:"
   echo "$salida"
   fallo=1
 fi
 
-salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results')
+salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results' ':!herramientas/verificar-orden.sh')
 if [ -n "$salida" ]; then
   echo "referencias a jxmvc:"
   echo "$salida"
