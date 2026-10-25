@@ -9,7 +9,7 @@ if [ -n "$salida" ]; then
   fallo=1
 fi
 
-salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results/*.csv')
+salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results')
 if [ -n "$salida" ]; then
   echo "referencias a jxmvc:"
   echo "$salida"

@@ -1,7 +1,7 @@
 # Autoría
 
-Cero es obra de Richar Andre Vilca-Solorzano, de la **Universidad Nacional del Altiplano**, Facultad de Ingeniería
-Estadística e Informática, Puno, Perú.
+Cero es obra de Richar Andre Vilca-Solorzano, de la **Universidad Nacional del Altiplano**,
+Facultad de Ingeniería Estadística e Informática, Puno, Perú.
 
 | Autor | ORCID | Aportación |
 |---|---|---|
