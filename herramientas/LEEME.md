@@ -1,0 +1,41 @@
+# Herramientas
+
+## comentarios.py
+
+Cero no lleva comentarios en el código: la explicación vive en los MD. Esta herramienta quita los comentarios y vigila que no vuelvan. Usa solo la biblioteca estándar de Python 3.
+
+```
+python3 herramientas/comentarios.py --quitar java rust c++
+python3 herramientas/comentarios.py --verificar java rust c++
+```
+
+- `--quitar` reescribe los archivos sin comentarios e imprime cuáles cambió y cuántos quitó.
+- `--verificar` no escribe nada. Imprime `archivo:línea` por cada comentario y sale con 1 si encuentra alguno, con 0 si no.
+- Extensiones: `.java`, `.rs`, `.cpp`, `.hpp`, `.h`, `.py`. Ignora `target/`, `build/`, `node_modules/` y `.git/`.
+- Sale con 2 si el uso es incorrecto o un archivo no se puede leer o analizar.
+
+### Cómo distingue un comentario de un texto
+
+Java, Rust y C++ pasan por un léxico por estados, no por expresiones regulares. Reconoce:
+
+- cadenas con escapes, y caracteres (`'/'`);
+- bloques de texto de Java (`"""`);
+- cadenas crudas de Rust (`r"..."`, `r#"..."#`, `br#"..."#`) y de C++ (`R"x(...)x"`);
+- los *lifetimes* de Rust (`'a`), que no abren un carácter;
+- los separadores de dígitos de C++ (`1'000'000`);
+- los comentarios de bloque anidados de Rust;
+- los comentarios de línea de C++ que continúan con `\`.
+
+Las directivas `#include` y `#pragma` no son comentarios y se conservan.
+
+Python usa `tokenize` para los `#` y `ast` para los docstrings de módulo, clase y función. Si un docstring es el único cuerpo de una clase o función, queda un `pass`. Se conservan el *shebang* y la línea de codificación.
+
+### Qué queda después de quitar
+
+Un comentario que ocupa una línea entera se lleva la línea. Uno que va al final de una línea se lleva también los espacios que lo precedían. No se generan dos líneas en blanco seguidas donde antes no las había. Los finales de línea `\r\n` se respetan.
+
+## pruebas_comentarios.py
+
+```
+python3 -I herramientas/pruebas_comentarios.py
+```
