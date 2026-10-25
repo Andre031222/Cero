@@ -104,7 +104,7 @@ desktop.ini
 # === Paquetes que arma ./cero dist (se rehacen; no se versionan) ===
 /dist/
 
-# El borrador del paper de JxMVC. No es de este repositorio y no se publica.
+# El PDF compilado de un paper no se versiona.
 main.pdf
 
 # === Credenciales, nunca ===

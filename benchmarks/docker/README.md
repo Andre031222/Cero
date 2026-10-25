@@ -41,7 +41,6 @@ Salida:
 | Helidon SE | 4.5.5 | Helidon Níma (hilos virtuales) |
 | Vert.x | 5.2.0 (+ `vertx-web`) | Netty, event loop |
 | Jooby | 4.5.4 | Netty |
-| JxMVC | 3.4.0 | WAR sobre Tomcat 10.1 (servlets) |
 
 Entre Spark Java y Jooby se eligió **Jooby**: Spark Java sigue en 2.9.4 (julio de 2022) y no
 tiene versiones nuevas, mientras que Jooby publica releases de forma habitual.
@@ -52,14 +51,10 @@ Dos notas de paridad para los nuevos:
   en el event loop no sería el uso idiomático del framework; `/plaintext` y `/json` sí van en
   el event loop.
 - **Jooby** devuelve `text/plain;charset=utf-8` en `/plaintext`; el cuerpo es el mismo `OK`.
-- **JxMVC** no se compila desde el código fuente —no está en este repositorio—: el Dockerfile
-  instala con `mvn install:install-file` el artefacto publicado `jxmvc-core-3.4.0` que hay en
-  `apps/jxmvc/lib/`. Su `/plaintext` devuelve `text/plain;charset=UTF-8`.
 
-Las imágenes comparten base `eclipse-temurin:21-jre`, con dos excepciones: Cero corre sobre
-`eclipse-temurin:25-jre` (su build usa JDK 25) y JxMVC sobre `tomcat:10.1-jre21`, porque se
-despliega como WAR en un contenedor de servlets. Son diferencias reales de la corrida y
-conviene tenerlas presentes al leer arranque y RSS.
+Las imágenes comparten base `eclipse-temurin:21-jre`, con una excepción: Cero corre sobre
+`eclipse-temurin:25-jre` (su build usa JDK 25). Es una diferencia real de la corrida y
+conviene tenerla presente al leer arranque y RSS.
 
 La app de Cero toma la versión del framework de `java/pom.xml` en tiempo de build, no de un
 número escrito a mano: fijarla fue justo lo que dejó a Cero fuera de la tabla durante días.

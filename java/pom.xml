@@ -24,11 +24,6 @@
             <url>https://orcid.org/0009-0003-2385-5263</url>
             <organization>Universidad Nacional del Altiplano</organization>
         </developer>
-        <developer>
-            <name>Ramiro Pedro Laura-Murillo</name>
-            <url>https://orcid.org/0000-0003-1837-4871</url>
-            <organization>Universidad Nacional del Altiplano</organization>
-        </developer>
     </developers>
 
     <scm>

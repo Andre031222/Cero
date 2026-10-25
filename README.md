@@ -38,9 +38,8 @@ De ahí las dos decisiones que definen el proyecto:
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
 2. **No es solo Java.** El objetivo final es un *contrato* de framework —rutas, pipeline,
    request/response, inyección, configuración— definido de forma neutral e implementado en
-   **Java, Rust y C++**, con un mismo banco de conformidad para los tres. La idea es de
-   **Fred Torres-Cruz**, y es la que decide la arquitectura: por ella existe [`spec/`](spec/) en
-   vez de tomar el código Java como referencia.
+   **Java, Rust y C++**, con un mismo banco de conformidad para los tres. Es lo que decide la
+   arquitectura: por eso existe [`spec/`](spec/) en vez de tomar el código Java como referencia.
 
 ## Principios
 
@@ -89,8 +88,7 @@ las diferencias caben dentro de la variación de cada uno.
 asigna más por petición y llena el montón que se le da. Es lo siguiente que hay que arreglar.
 
 > [!WARNING]
-> **JxMVC no se midió:** su imagen necesita un jar que no se versiona, por ser de otro autor.
-> Y aunque esta corrida es bare-metal, el generador de carga sigue compartiendo máquina con el
+> Aunque esta corrida es bare-metal, el generador de carga sigue compartiendo máquina con el
 > servidor: ni uno ni otro saturan su CPU, así que los rps son una **cota inferior** limitada por
 > el camino de red del contenedor, idéntico para todos.
 
@@ -279,16 +277,18 @@ cero         Órdenes del proyecto: ./cero test, new, fatjar…
 
 Apache 2.0 — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
-Autores: **Richar Andre Vilca-Solorzano**, **Fred Torres-Cruz** y
-**Ramiro Pedro Laura-Murillo**. Universidad Nacional del Altiplano, Facultad de Ingeniería
+Autor: **Richar Andre Vilca-Solorzano**. Universidad Nacional del Altiplano, Facultad de Ingeniería
 Estadística e Informática, Puno, Perú. Quién hizo qué, en [docs/autores.md](docs/autores.md).
 
 ```bibtex
 @software{vilcasolorzano2026cero,
   title  = {Cero: núcleo de framework web poliglota sin dependencias},
-  author = {Vilca-Solorzano, Richar Andre and Torres-Cruz, Fred and
-            Laura-Murillo, Ramiro Pedro},
+  author = {Vilca-Solorzano, Richar Andre},
   year   = {2026},
   url    = {https://github.com/Andre031222/Cero}
 }
 ```
+
+---
+
+Cero · por Andre Solorzano

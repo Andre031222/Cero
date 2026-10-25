@@ -58,6 +58,12 @@ function Classpath([string] $modulo) {
 
 switch -Regex ($Orden) {
 
+    '^(--version|-V|version)$' {
+        $pom = Select-String -Path (Join-Path $JavaDir 'pom.xml') -Pattern '<version>(.+?)</version>' | Select-Object -First 1
+        Write-Host ('cero ' + $pom.Matches[0].Groups[1].Value)
+        Write-Host 'Cero · por Andre Solorzano'
+    }
+
     '^(run|correr)$' {
         Requisitos
         $puerto = if ($Resto.Count -gt 0) { $Resto[0] } else { '8080' }

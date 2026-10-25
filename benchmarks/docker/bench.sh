@@ -39,7 +39,7 @@ OUT="$HERE/../results/RESULTS-docker.md"
 CSV="$HERE/../results/raw-docker.csv"
 
 # El contexto de build de cero es el REPO; el de los rivales, su propia carpeta.
-APPS=(cero spring quarkus micronaut javalin helidon vertx jooby jxmvc)
+APPS=(cero spring quarkus micronaut javalin helidon vertx jooby)
 # BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 

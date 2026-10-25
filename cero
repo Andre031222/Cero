@@ -152,6 +152,10 @@ version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<
 
 case "${1:-ayuda}" in
 
+  --version|-V|version)
+    printf 'cero %s\nCero · por Andre Solorzano\n' "$(version)"
+    ;;
+
   new|nuevo)
     requisitos
     [ -n "${2:-}" ] || { malo "$(t dime-nombre)"; exit 1; }

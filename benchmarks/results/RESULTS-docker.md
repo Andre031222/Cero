@@ -26,4 +26,3 @@ errores o respuestas no-2xx: esa fila NO es válida.
 | quarkus | 321.0 | 711 | 104.6 | 93409.0 | 91822.8 | 65069.3 |
 | micronaut | 317.6 | 1102 | 104.7 | 76941.1 | 76464.6 | 64750.8 |
 | spring | 325.0 | 2446 | 176.5 | 60903.3 | 64132.7 | 49869.5 |
-| jxmvc | (no se midió: build o arranque falló) | | | | | |

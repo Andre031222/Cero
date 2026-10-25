@@ -22,9 +22,9 @@ Datos tomados de la máquina donde se ejecutó la corrida del 23 de septiembre d
 
 ## Contenedores medidos
 
-- Límites: `--cpus=2 --memory=1g`, idénticos para los nueve
+- Límites: `--cpus=2 --memory=1g`, idénticos para los ocho
 - Base: `eclipse-temurin:21-jre` en siete; `eclipse-temurin:25-jre` en Cero (su build usa
-  JDK 25); `tomcat:10.1-jre21` en JxMVC (es un WAR sobre contenedor de servlets)
+  JDK 25)
 
 ## Configuración de carga
 
@@ -36,4 +36,4 @@ Datos tomados de la máquina donde se ejecutó la corrida del 23 de septiembre d
 ## Frameworks de la corrida
 
 cero (0.7.0), spring (3.3.4), quarkus (3.11.3 JVM), micronaut (4.10.16), javalin (6.3.0),
-helidon (4.5.5), vertx (5.2.0), jooby (4.5.4), jxmvc (3.4.0). Sin corrida nativa (GraalVM).
+helidon (4.5.5), vertx (5.2.0), jooby (4.5.4). Sin corrida nativa (GraalVM).

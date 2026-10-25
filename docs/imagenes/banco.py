@@ -19,7 +19,7 @@ CSV = AQUI / ".." / ".." / "benchmarks" / "results" / "raw-docker.csv"
 
 NOMBRES = {"cero": "Cero", "spring": "Spring Boot", "quarkus": "Quarkus",
            "micronaut": "Micronaut", "javalin": "Javalin", "helidon": "Helidon",
-           "vertx": "Vert.x", "jooby": "Jooby", "jxmvc": "JxMVC"}
+           "vertx": "Vert.x", "jooby": "Jooby"}
 
 TEMAS = {
     "oscuro": dict(destino="banco.png", fondo=(6, 6, 7), panel=(19, 19, 21),
