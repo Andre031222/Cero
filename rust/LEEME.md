@@ -23,7 +23,7 @@ dedicado a h2c y no aplica aquí.
 | 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
 | 11 | Ruteo, fallos, dependencias y validación | 172 de los 173 requisitos · 36 pruebas |
 | 12 | Sesiones en tabla, y `cero-data` sabe escribir | 173 de 173 · 9 pruebas |
-| 13 | Plazos, topes y HTTP/2 Bomb | **182 de 182** · 10 de 10 en `ataques.py` · 13 pruebas |
+| 13 | Plazos, topes y HTTP/2 Bomb | **182 de 182** · 11 de 11 en `ataques.py` · 13 pruebas |
 
 **Los 182 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y los otros 159
 por una prueba que los cita; los nueve de octubre, además, por `spec/banco/ataques.py`. Se cuentan así:

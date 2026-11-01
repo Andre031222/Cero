@@ -313,25 +313,48 @@ def h2_055(puerto: int):
     return True, "; ".join(vistos)
 
 
-def descarga_legitima(puerto: int):
-    c = H2(puerto)
-    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, get("/descarga")))
+def descargar(c: H2, flujo: int) -> tuple[bool, int]:
+    """Lee la respuesta de `flujo` dando crédito por cada trama; la conexión recupera también lo de otros flujos."""
     recibidos = 0
     limite = time.monotonic() + 60
     while time.monotonic() < limite and not c.cerrada:
         t = c.siguiente(limite)
         if t is None:
             break
-        if t.tipo == GOAWAY or (t.tipo == RST_STREAM and t.flujo == 1):
-            return False, f"{recibidos >> 20} MiB y el servidor corta: {c.visto()}"
-        if t.tipo == DATA and t.flujo == 1:
+        if t.tipo == GOAWAY or (t.tipo == RST_STREAM and t.flujo == flujo):
+            return False, recibidos
+        if t.tipo == DATA and t.carga:
+            credito = struct.pack(">I", len(t.carga))
+            c.mandar(trama(WINDOW_UPDATE, 0, 0, credito))
+            if t.flujo == flujo:
+                c.mandar(trama(WINDOW_UPDATE, 0, flujo, credito))
+        if t.tipo == DATA and t.flujo == flujo:
             recibidos += len(t.carga)
-            if t.carga:
-                credito = struct.pack(">I", len(t.carga))
-                c.mandar(trama(WINDOW_UPDATE, 0, 1, credito) + trama(WINDOW_UPDATE, 0, 0, credito))
             if t.banderas & FIN_FLUJO:
-                return recibidos == 32 << 20, f"32 MiB con un WINDOW_UPDATE por trama: {recibidos >> 20} MiB recibidos"
-    return False, f"{recibidos >> 20} MiB de 32 y no termina: {c.visto()}"
+                return True, recibidos
+    return False, recibidos
+
+
+def descarga_legitima(puerto: int):
+    c = H2(puerto)
+    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, get("/descarga")))
+    termino, recibidos = descargar(c, 1)
+    if not termino:
+        return False, f"{recibidos >> 20} MiB de 32 y el servidor corta o no termina: {c.visto()}"
+    return recibidos == 32 << 20, f"32 MiB con un WINDOW_UPDATE por trama: {recibidos >> 20} MiB recibidos"
+
+
+def anular_y_volver(puerto: int):
+    c = H2(puerto)
+    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, get("/descarga")))
+    if c.vigilar(3, lambda t: t.tipo == DATA and t.flujo == 1 or t.tipo == GOAWAY) is None:
+        return False, f"la primera descarga no empieza: {c.visto()}"
+    c.mandar(trama(RST_STREAM, 0, 1, struct.pack(">I", CANCEL))
+             + trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 3, get("/descarga")))
+    termino, recibidos = descargar(c, 3)
+    if not termino:
+        return False, f"anulada la primera, la segunda corta a los {recibidos >> 20} MiB: {c.visto()}"
+    return recibidos == 32 << 20, f"anula 32 MiB a medias y pide otros 32 por la misma conexión: {recibidos >> 20} MiB recibidos"
 
 
 def leer_respuesta(s: socket.socket) -> tuple[bytes, bytes]:
@@ -424,6 +447,7 @@ VECTORES = [
     ("H2-054", "presupuesto de respuestas en vuelo por conexión", h2_054),
     ("H2-055", "un cuerpo de más de 10 MiB: 413 o RST_STREAM NO_ERROR", h2_055),
     ("H2-038", "legítimo: una descarga de 32 MiB no es una inundación", descarga_legitima),
+    ("H2-054", "legítimo: anular una descarga y pedir otra por la misma conexión", anular_y_volver),
     ("HTTP-024", "keep-alive ocioso: la conexión se cierra", http_024),
     ("HTTP-026", "un cuerpo de más de 10 MiB recibe 413", http_026),
 ]

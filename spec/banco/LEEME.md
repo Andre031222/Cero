@@ -36,10 +36,11 @@ estado que se espera.
 
 ## Los ataques: `ataques.py`
 
-Diez vectores más, para los requisitos que solo se ven con el reloj en la mano o con un tope: los
-seis de HTTP/2 Bomb (`H2-050` a `H2-055`), los tres de HTTP/1.1 (`HTTP-024` a `HTTP-026`) y uno
-legítimo, para que el juez vigile también el exceso de defensa: una descarga de 32 MiB tiene que
-terminar. Este
+Once vectores más, para los requisitos que solo se ven con el reloj en la mano o con un tope: los
+seis de HTTP/2 Bomb (`H2-050` a `H2-055`), los tres de HTTP/1.1 (`HTTP-024` a `HTTP-026`) y dos
+legítimos, para que el juez vigile también el exceso de defensa: una descarga de 32 MiB tiene que
+terminar, y anular una descarga a medias y pedir otra por la misma conexión no es pasarse del
+presupuesto. Este
 no se conecta a un servidor que ya corre: **lo arranca él**, porque necesita plazos cortos y porque
 `HTTP-025` comprueba justo que el servidor se niegue a arrancar.
 
@@ -65,6 +66,7 @@ segundo, y tarda unos siete con C++ o Rust; algo más con Java, por el arranque 
 | `H2-054` | una petición a `/grande` sola, y después 40 con la ventana inicial a 0 | la sola se atiende; las 40, GOAWAY ENHANCE_YOUR_CALM |
 | `H2-055` | un `content-length` de 11 MiB sin cuerpo; después 11 MiB sin declarar a `/eco` y a `/`, respetando el control de flujo | 413 y RST NO_ERROR al declarado; a los otros, 413 o RST NO_ERROR |
 | `H2-038` (legítimo) | `GET /descarga`, 32 MiB, con un `WINDOW_UPDATE` de flujo y de conexión por cada DATA | la descarga termina: el crédito no es una inundación |
+| `H2-054` (legítimo) | `GET /descarga`, `RST_STREAM CANCEL` en cuanto llega el primer DATA, y otra `GET /descarga` por la misma conexión | la segunda termina: un flujo anulado suelta su parte del presupuesto (RFC 9113 §5.1) |
 | `HTTP-024` | una petición keep-alive, otra a media inactividad por la misma conexión, y silencio | las dos se atienden; la conexión se cierra, no antes de ¾ de la inactividad |
 | `HTTP-026` | `Content-Length` de 11 MiB y ningún octeto de cuerpo | 413 sin esperar al cuerpo |
 | `HTTP-025` | arrancar con un plazo de 0 y de -1 | el proceso termina con error y nadie escucha |

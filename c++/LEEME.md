@@ -6,7 +6,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 
 **Estado: hito 11.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
 `Upgrade: h2c` en el mismo puerto, con control de flujo de salida y las defensas de HTTP/2 Bomb.
-**23 de 23 vectores del banco**, **10 de 10 en los ataques**, **los 32 del apéndice C del RFC 7541**,
+**23 de 23 vectores del banco**, **11 de 11 en los ataques**, **los 32 del apéndice C del RFC 7541**,
 **145 de 146 en h2spec** —el que falta es el mismo que en Java y en Rust— y 203 pruebas propias.
 
 | Hito | Qué cubre | Estado |
@@ -21,7 +21,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 6 de robustez |
-| 11 | Plazos, topes y HTTP/2 Bomb | `H2-050`–`H2-055`, `HTTP-024`–`HTTP-026` · 10 de 10 en `ataques.py` · 11 pruebas |
+| 11 | Plazos, topes y HTTP/2 Bomb | `H2-050`–`H2-055`, `HTTP-024`–`HTTP-026` · 11 de 11 en `ataques.py` · 11 pruebas |
 
 ## Cuántos requisitos citan las pruebas
 
