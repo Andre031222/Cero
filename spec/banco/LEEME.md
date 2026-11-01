@@ -33,8 +33,8 @@ estado que se espera.
 
 ## Los ataques: `ataques.py`
 
-Siete vectores más, para los requisitos que solo se ven con el reloj en la mano: los cinco de
-HTTP/2 Bomb (`H2-050` a `H2-054`) y los dos de plazos de HTTP/1.1 (`HTTP-024`, `HTTP-025`). Este
+Nueve vectores más, para los requisitos que solo se ven con el reloj en la mano o con un tope: los
+seis de HTTP/2 Bomb (`H2-050` a `H2-055`) y los tres de HTTP/1.1 (`HTTP-024` a `HTTP-026`). Este
 no se conecta a un servidor que ya corre: **lo arranca él**, porque necesita plazos cortos y porque
 `HTTP-025` comprueba justo que el servidor se niegue a arrancar.
 
@@ -47,14 +47,16 @@ python3 spec/banco/ataques.py java -cp java/cero-http/target/classes:java/cero-h
 A la orden le añade `<puerto> <plazo en ms>`. El servidor de conformidad tiene que usar ese plazo
 para esperar crédito y para escribir, y el doble para la inactividad; con 0 o con un número
 negativo tiene que terminar con un código distinto de cero sin llegar a escuchar. El banco usa un
-segundo, y tarda unos cinco con C++ o Rust; algo más con Java, por el arranque de la JVM.
+segundo, y tarda unos siete con C++ o Rust; algo más con Java, por el arranque de la JVM.
 
 | Vector | El ataque | Lo que se espera |
 |---|---|---|
-| `H2-050` | una `cookie` en la tabla dinámica y 299 referencias de un octeto: 303 campos en 314 octetos | GOAWAY ENHANCE_YOUR_CALM |
+| `H2-050` | una `cookie` en la tabla dinámica y sus referencias de un octeto: 256 campos, y después 303 en 314 octetos; antes comprueba que la lista anunciada cabe | 256 se atienden; 303, GOAWAY ENHANCE_YOUR_CALM |
 | `H2-051` | una cabecera de 4 000 octetos referenciada hasta justo el tope anunciado, y una vez más | la primera se atiende; la segunda, GOAWAY ENHANCE_YOUR_CALM |
-| `H2-052` | ventana inicial 0 y un `WINDOW_UPDATE` de un octeto cada cuarto de plazo | RST_STREAM CANCEL antes de que salga la respuesta entera |
-| `H2-053` | ningún flujo y un `PING` cada medio plazo | GOAWAY NO_ERROR al pasar la inactividad |
-| `H2-054` | ventana inicial 0 y 40 peticiones a `/grande` | GOAWAY ENHANCE_YOUR_CALM |
-| `HTTP-024` | una petición keep-alive y después silencio | la conexión se cierra |
+| `H2-052` | ventana inicial 0 y un `WINDOW_UPDATE` de un octeto cada cuarto de plazo | RST_STREAM CANCEL antes de que salga la respuesta entera, y no antes de ¾ del plazo |
+| `H2-053` | ningún flujo y `PING`, `WINDOW_UPDATE`, `SETTINGS` y `PRIORITY` cada cuarto de plazo | GOAWAY NO_ERROR al pasar la inactividad, y no antes de ¾ de ella |
+| `H2-054` | una petición a `/grande` sola, y después 40 con la ventana inicial a 0 | la sola se atiende; las 40, GOAWAY ENHANCE_YOUR_CALM |
+| `H2-055` | `POST /eco` con 11 MiB de cuerpo, respetando el control de flujo | `:status 413` |
+| `HTTP-024` | una petición keep-alive, otra a media inactividad por la misma conexión, y silencio | las dos se atienden; la conexión se cierra, no antes de ¾ de la inactividad |
+| `HTTP-026` | `Content-Length` de 11 MiB y ningún octeto de cuerpo | 413 sin esperar al cuerpo |
 | `HTTP-025` | arrancar con un plazo de 0 y de -1 | el proceso termina con error y nadie escucha |

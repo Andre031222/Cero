@@ -22,7 +22,7 @@ from collections import namedtuple
 PLAZO = 1.0
 
 PREAMBULO = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
-DATA, HEADERS, RST_STREAM, SETTINGS, PING, GOAWAY, WINDOW_UPDATE = 0x0, 0x1, 0x3, 0x4, 0x6, 0x7, 0x8
+DATA, HEADERS, PRIORITY, RST_STREAM, SETTINGS, PING, GOAWAY, WINDOW_UPDATE = 0x0, 0x1, 0x2, 0x3, 0x4, 0x6, 0x7, 0x8
 FIN_FLUJO, FIN_CABECERAS, ACK = 0x1, 0x4, 0x1
 NO_ERROR, CANCEL, ENHANCE_YOUR_CALM = 0x0, 0x8, 0xB
 VENTANA_INICIAL, MAX_HEADER_LIST_SIZE = 0x4, 0x6
@@ -142,12 +142,51 @@ class H2:
         self.s.close()
 
 
+INACTIVIDAD = 2 * PLAZO
+CUERPO_DE_MAS = 11 << 20
+
+DIGITOS = {"00000": "0", "00001": "1", "00010": "2", "011001": "3", "011010": "4",
+           "011011": "5", "011100": "6", "011101": "7", "011110": "8", "011111": "9"}
+ESTATICOS = {8: "200", 9: "204", 10: "206", 11: "304", 12: "400", 13: "404", 14: "500"}
+
+
+def estado_h2(bloque: bytes) -> str:
+    """El :status de una respuesta, que va primero: indexado o literal, en claro o en Huffman."""
+    if bloque[0] & 0x80:
+        return ESTATICOS.get(bloque[0] & 0x7F, "?")
+    largo = bloque[1] & 0x7F
+    crudo = bloque[2:2 + largo]
+    if not bloque[1] & 0x80:
+        return crudo.decode("latin-1")
+    bits, texto = "".join(f"{b:08b}" for b in crudo), ""
+    while bits:
+        codigo = next((c for c in DIGITOS if bits.startswith(c)), None)
+        if codigo is None:
+            break
+        texto += DIGITOS[codigo]
+        bits = bits[len(codigo):]
+    return texto
+
+
+def con_cookies(campos: int) -> bytes:
+    return GET_RAIZ + a_la_tabla("cookie", "a=1") + REPITE_LA_ULTIMA * (campos - 4)
+
+
 def h2_050(puerto: int):
     c = H2(puerto)
-    bloque = GET_RAIZ + a_la_tabla("cookie", "a=1") + REPITE_LA_ULTIMA * 299
-    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, bloque))
+    tope = c.ajustes.get(MAX_HEADER_LIST_SIZE, 0)
+    coste = COSTE_GET_RAIZ + 300 * (6 + 3 + 32)
+    if tope < coste:
+        return False, f"anuncia una lista de {tope}: no cabrían ni los 303 campos, y el vector no distinguiría H2-050 de H2-051"
+    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, con_cookies(256)))
+    respuesta = c.vigilar(3, lambda t: t.flujo == 1 or t.tipo == GOAWAY)
+    if respuesta is None or respuesta.tipo != HEADERS:
+        return False, f"256 campos, que es el tope, no se atienden: {c.visto()}"
+    c.cerrar()
+    c = H2(puerto)
+    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, con_cookies(303)))
     ok = c.vigilar(3, goaway(ENHANCE_YOUR_CALM)) is not None
-    return ok, f"303 campos en {len(bloque)} octetos: {c.visto()}"
+    return ok, f"anuncia {tope}, atiende 256 campos y, con 303 en {coste} octetos de lista, {c.visto()}"
 
 
 def h2_051(puerto: int):
@@ -177,48 +216,114 @@ def h2_051(puerto: int):
 def h2_052(puerto: int):
     c = H2(puerto, struct.pack(">HI", VENTANA_INICIAL, 0))
     c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, GET_RAIZ))
+    empezo = time.monotonic()
     goteo = trama(WINDOW_UPDATE, 0, 1, struct.pack(">I", 1))
     fin = c.vigilar(6 * PLAZO, lambda t: t.flujo == 1 and t.tipo in (RST_STREAM, DATA) and
                     (t.tipo == RST_STREAM or t.banderas & FIN_FLUJO), PLAZO / 4, goteo)
-    ok = fin is not None and fin.tipo == RST_STREAM and codigo_de(fin) == CANCEL
-    return ok, f"un octeto de crédito cada {PLAZO / 4:.2f} s: {c.visto()}"
+    tardo = time.monotonic() - empezo
+    cortado = fin is not None and fin.tipo == RST_STREAM and codigo_de(fin) == CANCEL
+    ok = cortado and tardo >= 0.75 * PLAZO
+    return ok, f"un octeto de crédito cada {PLAZO / 4:.2f} s, corte a los {tardo:.1f} s (plazo {PLAZO:.0f} s): {c.visto()}"
 
 
 def h2_053(puerto: int):
     c = H2(puerto)
-    ping = trama(PING, 0, 0, b"latido!!")
+    sin_trabajo = (trama(PING, 0, 0, b"latido!!") + trama(WINDOW_UPDATE, 0, 0, struct.pack(">I", 1))
+                   + trama(SETTINGS, 0, 0, b"") + trama(PRIORITY, 0, 3, struct.pack(">IB", 0, 15)))
     empezo = time.monotonic()
-    ok = c.vigilar(5 * PLAZO, goaway(NO_ERROR), PLAZO / 2, ping) is not None
-    return ok, f"un PING cada {PLAZO / 2:.1f} s, {time.monotonic() - empezo:.1f} s: {c.visto()}"
+    adios = c.vigilar(5 * PLAZO, goaway(NO_ERROR), PLAZO / 4, sin_trabajo)
+    tardo = time.monotonic() - empezo
+    ok = adios is not None and tardo >= 0.75 * INACTIVIDAD
+    return ok, (f"PING, WINDOW_UPDATE, SETTINGS y PRIORITY cada {PLAZO / 4:.2f} s; GOAWAY a los "
+                f"{tardo:.1f} s (inactividad {INACTIVIDAD:.0f} s): {c.visto()}")
 
 
 def h2_054(puerto: int):
+    sola = H2(puerto, struct.pack(">HI", VENTANA_INICIAL, 0))
+    sola.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, get("/grande")))
+    if sola.vigilar(0.5 * PLAZO, lambda t: t.tipo == GOAWAY) is not None or sola.cerrada:
+        return False, f"una sola respuesta de 1 MiB ya pasa del presupuesto: {sola.visto()}"
+    sola.cerrar()
     c = H2(puerto, struct.pack(">HI", VENTANA_INICIAL, 0))
     for flujo in range(1, 80, 2):
         c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, flujo, get("/grande")))
     ok = c.vigilar(3 * PLAZO, goaway(ENHANCE_YOUR_CALM)) is not None
-    return ok, f"40 respuestas de 1 MiB con la ventana a 0: {c.visto()}"
+    return ok, f"una respuesta de 1 MiB sí; 40 con la ventana a 0, {c.visto()}"
+
+
+def h2_055(puerto: int):
+    c = H2(puerto)
+    c.mandar(trama(HEADERS, FIN_CABECERAS, 1, bytes([0x83, 0x86, 0x04]) + cadena("/eco")))
+    ventana = {0: 65535, 1: c.ajustes.get(VENTANA_INICIAL, 65535)}
+    mandados, respuesta = 0, None
+    hasta = time.monotonic() + 30
+    while respuesta is None and not c.cerrada and time.monotonic() < hasta:
+        trozo = min(16384, CUERPO_DE_MAS - mandados, ventana[0], ventana[1])
+        if trozo > 0:
+            mandados += trozo
+            ventana[0] -= trozo
+            ventana[1] -= trozo
+            c.mandar(trama(DATA, FIN_FLUJO if mandados == CUERPO_DE_MAS else 0, 1, b"x" * trozo))
+        t = c.siguiente(time.monotonic() + (0.001 if trozo > 0 else 3))
+        if t is None:
+            continue
+        if t.tipo == WINDOW_UPDATE and t.flujo in ventana:
+            ventana[t.flujo] += struct.unpack(">I", t.carga)[0] & 0x7FFFFFFF
+        elif (t.tipo == HEADERS and t.flujo == 1) or t.tipo in (RST_STREAM, GOAWAY):
+            respuesta = t
+    if respuesta is None or respuesta.tipo != HEADERS:
+        return False, f"{mandados >> 10} KiB mandados sin una respuesta: {c.visto()}"
+    estado = estado_h2(respuesta.carga)
+    return estado == "413", f"{mandados >> 20} MiB mandados de 11, y responde {estado}"
+
+
+def leer_respuesta(s: socket.socket) -> tuple[bytes, bytes]:
+    datos = b""
+    while b"\r\n\r\n" not in datos:
+        trozo = s.recv(4096)
+        if not trozo:
+            return datos, b""
+        datos += trozo
+    cabeza, cuerpo = datos.split(b"\r\n\r\n", 1)
+    largo = next((int(l.split(b":")[1]) for l in cabeza.split(b"\r\n") if l.lower().startswith(b"content-length")), 0)
+    while len(cuerpo) < largo:
+        cuerpo += s.recv(4096)
+    return cabeza, cuerpo
 
 
 def http_024(puerto: int):
     with socket.create_connection(("127.0.0.1", puerto), timeout=5) as s:
         s.sendall(b"GET / HTTP/1.1\r\nHost: x\r\n\r\n")
-        datos = b""
-        while b"\r\n\r\n" not in datos:
-            datos += s.recv(4096)
-        cabeza, cuerpo = datos.split(b"\r\n\r\n", 1)
-        largo = next(int(l.split(b":")[1]) for l in cabeza.split(b"\r\n") if l.lower().startswith(b"content-length"))
-        while len(cuerpo) < largo:
-            cuerpo += s.recv(4096)
+        cabeza, _ = leer_respuesta(s)
+        if not cabeza.startswith(b"HTTP/1.1 200") or b"connection: close" in cabeza.lower():
+            return False, f"la primera respuesta no deja la conexión abierta: {cabeza[:60]!r}"
+        time.sleep(INACTIVIDAD / 2)
+        s.sendall(b"GET / HTTP/1.1\r\nHost: x\r\n\r\n")
+        cabeza, _ = leer_respuesta(s)
+        if not cabeza.startswith(b"HTTP/1.1 200"):
+            return False, f"una segunda petición a media inactividad no se atiende: {cabeza[:60]!r}"
         empezo = time.monotonic()
-        s.settimeout(5 * PLAZO)
+        s.settimeout(INACTIVIDAD + 3 * PLAZO)
         try:
             cerro = s.recv(1) == b""
         except socket.timeout:
             cerro = False
         except OSError:
             cerro = True
-        return cerro, f"{'cerró' if cerro else 'sigue abierta'} tras {time.monotonic() - empezo:.1f} s ociosa"
+        tardo = time.monotonic() - empezo
+        ok = cerro and tardo >= 0.75 * INACTIVIDAD
+        return ok, (f"dos peticiones por la misma conexión; {'cerró' if cerro else 'sigue abierta'} "
+                    f"tras {tardo:.1f} s ociosa (inactividad {INACTIVIDAD:.0f} s)")
+
+
+def http_026(puerto: int):
+    with socket.create_connection(("127.0.0.1", puerto), timeout=5) as s:
+        s.sendall(f"POST /eco HTTP/1.1\r\nHost: x\r\nContent-Length: {CUERPO_DE_MAS}\r\n\r\n".encode())
+        try:
+            cabeza, _ = leer_respuesta(s)
+        except socket.timeout:
+            return False, "anuncia 11 MiB y el servidor se queda esperándolos"
+        return cabeza.startswith(b"HTTP/1.1 413"), f"anuncia 11 MiB: {cabeza.split(b'\r\n')[0]!r}"
 
 
 def escucha(puerto: int) -> bool:
@@ -257,9 +362,11 @@ VECTORES = [
     ("H2-050", "más de 256 campos, con cookies partidas", h2_050),
     ("H2-051", "el tope de lista anunciado es el que se aplica", h2_051),
     ("H2-052", "ventana a 0 y goteo de un octeto: el flujo se corta", h2_052),
-    ("H2-053", "los PING no reinician la inactividad", h2_053),
+    ("H2-053", "PING, WINDOW_UPDATE, SETTINGS y PRIORITY no reinician la inactividad", h2_053),
     ("H2-054", "presupuesto de respuestas en vuelo por conexión", h2_054),
+    ("H2-055", "un cuerpo de más de 10 MiB recibe 413", h2_055),
     ("HTTP-024", "keep-alive ocioso: la conexión se cierra", http_024),
+    ("HTTP-026", "un cuerpo de más de 10 MiB recibe 413", http_026),
 ]
 
 
