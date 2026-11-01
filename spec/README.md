@@ -49,7 +49,6 @@ parte es detalle de la implementación en Java.
 | Petición y respuesta | 9 | por escribir |
 | Sesiones y cookies | 4 | [sesiones.md](sesiones.md) · **13 requisitos** |
 | Seguridad transversal | 8 | [seguridad.md](seguridad.md) · **28 requisitos** |
-| Plantillas | 7 | fuera del núcleo: contrato aparte |
 | Datos | 9 | fuera del núcleo: contrato aparte |
 | Observabilidad | 4 | [observabilidad.md](observabilidad.md) · **23 requisitos** |
 

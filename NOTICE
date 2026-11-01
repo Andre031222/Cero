@@ -3,8 +3,8 @@ Copyright (c) 2026 Richar Andre Vilca-Solorzano
 
 Distribuido bajo la licencia Apache 2.0. Ver LICENSE.
 
-Los cinco módulos del núcleo -- cero-http, cero-core, cero-view, cero-data y
-cero-test -- no dependen de nada fuera del JDK, así que ningún jar de terceros se
+Los cuatro módulos del núcleo -- cero-http, cero-core, cero-data y cero-test --
+no dependen de nada fuera del JDK, así que ningún jar de terceros se
 redistribuye con ellos.
 
 cero-adapter-servlet declara jakarta.servlet-api en ámbito «provided»: lo pone
