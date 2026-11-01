@@ -71,6 +71,8 @@ texto_es() {
     ver-n-pruebas)    printf '%s' '%s pruebas' ;;
     ver-sin-motores)  printf '%s' 'motores reales sin probar (CI lo exige)' ;;
     ver-omitido)      printf '%s' 'omitido a pedido' ;;
+    ver-sin-h2)       printf '%s' 'no aplica: todavía no habla HTTP/2' ;;
+    ver-h2-na)        printf '%s' 'h2 n/a' ;;
     ver-no-ci)        printf '%s' 'lo demás está bien, pero esta corrida NO equivale a CI: motores reales omitidos a pedido' ;;
     ver-sin-vectores) printf '%s' 'sin resumen del banco' ;;
     ver-n-orden)      printf '%s' 'orden' ;;
@@ -136,6 +138,8 @@ texto_en() {
     ver-n-pruebas)    printf '%s' '%s tests' ;;
     ver-sin-motores)  printf '%s' 'real engines untested (CI requires them)' ;;
     ver-omitido)      printf '%s' 'skipped on request' ;;
+    ver-sin-h2)       printf '%s' 'not applicable: no HTTP/2 yet' ;;
+    ver-h2-na)        printf '%s' 'h2 n/a' ;;
     ver-no-ci)        printf '%s' 'the rest is fine, but this run is NOT equivalent to CI: real engines skipped on request' ;;
     ver-sin-vectores) printf '%s' 'no bench summary' ;;
     ver-n-orden)      printf '%s' 'order' ;;
@@ -195,9 +199,10 @@ classpath_ejemplo() {
 version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<.*/\1/'; }
 
 IMPLEMENTACIONES='
-java|java|mvn java|mvn -B install||java -cp cero-http/target/classes:cero-http/target/test-classes cero.http.Conforme||
-rust|rust|cargo|cargo test --all && cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|./target/release/conforme|cero-http/tests cero-data/tests|159
-c++|c++|cmake ctest|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release && cmake --build "$OBJ" -j && ctest --test-dir "$OBJ" --output-on-failure||"$OBJ/conforme"|pruebas|157
+java|java|mvn java|mvn -B install||java -cp cero-http/target/classes:cero-http/target/test-classes cero.http.Conforme|||h2
+rust|rust|cargo|cargo test --all && cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|./target/release/conforme|cero-http/tests cero-data/tests|159|h2
+c++|c++|cmake ctest|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release && cmake --build "$OBJ" -j && ctest --test-dir "$OBJ" --output-on-failure||"$OBJ/conforme"|pruebas|157|h2
+python|python|python3|python3 -B -I -m unittest discover -s pruebas -t . -v||python3 -B -m cero.conforme|--include=*.py pruebas|83|
 '
 
 V_PUERTO="${CERO_PUERTO:-8777}"
@@ -255,6 +260,7 @@ contar_pruebas() {
     /^  OK / { n++ }
     /^test result: / { for (i = 1; i <= NF; i++) if ($i == "passed;") n += $(i - 1) }
     /tests passed, .* out of/ { n += $NF }
+    /^Ran [0-9]+ tests? in / { n += $2 }
     END { print n + 0 }' "$1"
 }
 
@@ -342,8 +348,8 @@ paso_orden() {
 }
 
 paso_pruebas() {
-  local nombre dir herr probar preparar servidor req minimo f registro cifra rc
-  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+  local nombre dir herr probar preparar servidor req minimo h2 f registro cifra rc
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo h2; do
     [ -n "$nombre" ] || continue
     azul "$(t ver-comprobando "$nombre")"
     f=$(faltan $herr)
@@ -367,8 +373,8 @@ paso_pruebas() {
 }
 
 paso_banco() {
-  local nombre dir herr probar preparar servidor req minimo f registro etiqueta
-  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+  local nombre dir herr probar preparar servidor req minimo h2 f registro etiqueta solo
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo h2; do
     [ -n "$nombre" ] || continue
     export OBJ="$V_TMP/obj-$nombre"
 
@@ -396,20 +402,23 @@ paso_banco() {
       anotar_falta "$etiqueta" "$f"
     else
       registro="$V_TMP/$nombre-ataques.log"
-      if (cd "$AQUI/$dir" && eval "python3 \"$AQUI/spec/banco/ataques.py\" $servidor") </dev/null >"$registro" 2>&1; then
-        anotar "$etiqueta" "$(cifra_vectores "$registro")" ok
+      solo=""
+      [ -n "$h2" ] || solo="--solo-http1 "
+      if (cd "$AQUI/$dir" && eval "python3 \"$AQUI/spec/banco/ataques.py\" $solo$servidor") </dev/null >"$registro" 2>&1; then
+        anotar "$etiqueta" "$(cifra_vectores "$registro")${solo:+ · $(t ver-h2-na)}" ok
       else
-        anotar "$etiqueta" "$(cifra_vectores "$registro")" mal "$registro"
+        anotar "$etiqueta" "$(cifra_vectores "$registro")${solo:+ · $(t ver-h2-na)}" mal "$registro"
       fi
     fi
   done 3<<<"$IMPLEMENTACIONES"
 }
 
 paso_h2spec() {
-  local nombre dir herr probar preparar servidor req minimo f registro resumen fallos etiqueta
-  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+  local nombre dir herr probar preparar servidor req minimo h2 f registro resumen fallos etiqueta
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo h2; do
     [ -n "$nombre" ] || continue
     etiqueta="h2spec · $nombre"
+    if [ -z "$h2" ]; then anotar "$etiqueta" "$(t ver-sin-h2)" na; continue; fi
     azul "$(t ver-comprobando "$etiqueta")"
     f=$(faltan h2spec curl $herr)
     if [ -n "$f" ]; then anotar_falta "$etiqueta" "$f"; continue; fi
@@ -428,8 +437,8 @@ paso_h2spec() {
 }
 
 paso_requisitos() {
-  local nombre dir herr probar preparar servidor req minimo n
-  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+  local nombre dir herr probar preparar servidor req minimo h2 n
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo h2; do
     [ -n "$nombre" ] && [ -n "$minimo" ] || continue
     azul "$(t ver-comprobando "$(t ver-requisitos) $nombre")"
     n=$(cd "$AQUI/$dir" && grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' $req | tr a-z_ A-Z- | sort -u | wc -l | tr -d ' ')
@@ -458,6 +467,8 @@ tabla_verificar() {
     elif [ "${V_ESTADOS[$i]}" = omitido ]; then
       printf "  –\n"
       omitidos=$((omitidos + 1))
+    elif [ "${V_ESTADOS[$i]}" = na ]; then
+      printf "  n/a\n"
     else
       printf "  ${rojo}✗${fin}\n"
       fallos=$((fallos + 1))

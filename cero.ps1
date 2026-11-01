@@ -61,9 +61,10 @@ function Classpath([string] $modulo) {
 }
 
 $Implementaciones = @(
-    'java|java|mvn java|mvn -B install||java::-cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme||'
-    'rust|rust|cargo|cargo test --all ;; cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe::|cero-http\tests cero-data\tests|159'
-    'c++|c++|cmake ctest|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release ;; cmake --build %OBJ% --config Release -j ;; ctest --test-dir %OBJ% -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|157'
+    'java|java|mvn java|mvn -B install||java::-cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme|||h2'
+    'rust|rust|cargo|cargo test --all ;; cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe::|cero-http\tests cero-data\tests|159|h2'
+    'c++|c++|cmake ctest|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release ;; cmake --build %OBJ% --config Release -j ;; ctest --test-dir %OBJ% -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|157|h2'
+    'python|python|python3|%CERO_PY% -B -I -m unittest discover -s pruebas -t . -v||%CERO_PY%::-B -m cero.conforme|pruebas|83|'
 )
 
 $Codigo = if ($env:CERO_LANG) { $env:CERO_LANG } elseif ($env:LC_ALL) { $env:LC_ALL } elseif ($env:LANG) { $env:LANG } else { (Get-Culture).Name }
@@ -85,6 +86,8 @@ $TextoEs = @{
     'ver-n-pruebas'     = '{0} pruebas'
     'ver-sin-motores'   = 'motores reales sin probar (CI lo exige)'
     'ver-omitido'       = 'omitido a pedido'
+    'ver-sin-h2'        = 'no aplica: todavía no habla HTTP/2'
+    'ver-h2-na'         = 'h2 n/a'
     'ver-no-ci'         = 'lo demás está bien, pero esta corrida NO equivale a CI: motores reales omitidos a pedido'
     'ver-sin-vectores'  = 'sin resumen del banco'
     'ver-n-orden'       = 'orden'
@@ -116,6 +119,8 @@ $TextoEn = @{
     'ver-n-pruebas'     = '{0} tests'
     'ver-sin-motores'   = 'real engines untested (CI requires them)'
     'ver-omitido'       = 'skipped on request'
+    'ver-sin-h2'        = 'not applicable: no HTTP/2 yet'
+    'ver-h2-na'         = 'h2 n/a'
     'ver-no-ci'         = 'the rest is fine, but this run is NOT equivalent to CI: real engines skipped on request'
     'ver-sin-vectores'  = 'no bench summary'
     'ver-n-orden'       = 'order'
@@ -273,6 +278,7 @@ function ContarPruebas([string] $registro) {
         if ($l -match '^  OK ') { $n++ }
         elseif ($l -match '^test result: .* (\d+) passed;') { $n += [int]$Matches[1] }
         elseif ($l -match 'tests passed, .* out of (\d+)') { $n += [int]$Matches[1] }
+        elseif ($l -match '^Ran (\d+) tests? in ') { $n += [int]$Matches[1] }
     }
     return $n
 }
@@ -376,9 +382,11 @@ function PasoBanco {
         $registro = Join-Path $V.Tmp "$nombre-ataques.log"
         New-Item -ItemType File -Path $registro -Force | Out-Null
         $ataques = Join-Path $Aqui 'spec\banco\ataques.py'
-        $orden = @($V.Py, $ataques, (ExeServidor $dir $servidor)) + @(ArgumentosServidor $servidor)[0]
+        $solo = @(); $cola = ''
+        if (-not $p[8]) { $solo = @('--solo-http1'); $cola = " · $(T 'ver-h2-na')" }
+        $orden = @($V.Py, $ataques) + $solo + @(ExeServidor $dir $servidor) + @(ArgumentosServidor $servidor)[0]
         $ok = ((Ejecutar $dir @(, $orden) $registro) -eq 0)
-        Anotar $etiqueta (CifraVectores $registro) $ok $(if ($ok) { '' } else { $registro })
+        Anotar $etiqueta "$(CifraVectores $registro)$cola" $ok $(if ($ok) { '' } else { $registro })
     }
 }
 
@@ -387,6 +395,7 @@ function PasoH2spec {
         $p = $linea.Split('|')
         $nombre = $p[0]
         $etiqueta = "h2spec · $nombre"
+        if (-not $p[8]) { Anotar $etiqueta (T 'ver-sin-h2') 'na'; continue }
         Azul (T 'ver-comprobando' @($etiqueta))
         $f = Faltan (@('h2spec') + ($p[2] -split ' '))
         if ($f) { Anotar $etiqueta (T 'ver-falta' @($f)) $false; continue }
@@ -424,6 +433,7 @@ function Tabla {
     foreach ($f in $Filas) {
         if ($f.Estado -eq 'ok') { $marca = "${Laton}✓${Fin}" }
         elseif ($f.Estado -eq 'omitido') { $marca = '–'; $omitidos++ }
+        elseif ($f.Estado -eq 'na') { $marca = 'n/a' }
         else { $marca = "${Rojo}✗${Fin}"; $fallos++ }
         Write-Host ('  {0,-26}  {1,-46}  {2}' -f $f.Nombre, $f.Cifra, $marca)
     }
@@ -449,6 +459,7 @@ function Verificar([bool] $sinMotores) {
     New-Item -ItemType Directory -Path $V.Tmp | Out-Null
     try {
         $V.Py = BuscarPython
+        $env:CERO_PY = $V.Py
         $V.Sh = BuscarSh
         if ($V.Py) { Gris (T 'ver-python' @($V.Py, (& $V.Py -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])'))) }
         else { Write-Host "${Rojo}$(T 'ver-sin-python')${Fin}" }
