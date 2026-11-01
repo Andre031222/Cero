@@ -5,12 +5,14 @@ traducción del código de otro lenguaje: la referencia son los requisitos numer
 los mismos vectores de conformidad, que son bytes sobre un socket y no saben en qué lenguaje está
 escrito quien responde.
 
-**Estado: hito 1.** HTTP/1.1 y ruteo. **23 de 23 vectores del banco** y 50 pruebas propias.
+**Estado: hito 2.** HTTP/1.1, ruteo y sesiones. **23 de 23 vectores del banco** y 100 pruebas
+propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
 | 1 bis | Un solo archivo | `python3 -m cero.empaquetar` · 3 pruebas |
+| 2 | Sesiones | 13 de 13 requisitos · `SES-001`–`SES-013` · 50 pruebas, `SES-010` sin HTTP/2 que hablar |
 
 ## Usarlo
 
@@ -109,10 +111,98 @@ Aunque se pase, el bucle de `accept` ya no muere: ante `EMFILE`, `ENFILE`, `ENOB
 espera una décima y sigue, y si un hilo no arranca se devuelve el cupo y se cierra esa conexión.
 Hay una prueba que arranca el servidor con 40 descriptores y le abre 60 conexiones.
 
+## Sesiones
+
+Una acción pide la sesión a la petición. `sesion()` la recupera por la cookie o da `None`;
+`abrir_sesion()` la crea si no hay una viva:
+
+```python
+def entrar(peticion):
+    peticion.abrir_sesion().poner("usuario", "ana")
+    return "dentro"
+
+def quien(peticion):
+    sesion = peticion.sesion()
+    return sesion.leer("usuario") if sesion else "nadie"
+```
+
+`rotar()` cambia el identificador y conserva los atributos, `invalidar()` la borra del almacén, y
+una sesión invalidada lanza `SesionInvalidada` al leerla, escribirla o rotarla (`SES-004`,
+`SES-006`). Los atributos son cadenas en los dos almacenes, para que lo que funciona en memoria no
+falle al pasar a la tabla.
+
+**El almacén con tabla es `sqlite3`, de la biblioteca estándar.** Es una ventaja real de Python:
+Rust y C++ no traen ninguna base de datos, y para `SES-012` y `SES-013` tuvieron que escribir su
+propia capa de datos (`cero-data`) y esperar al hito 12. Aquí son dos clases en el mismo archivo:
+
+```python
+Servidor(router)                                              # en memoria, el defecto
+Servidor(router, sesiones=Tabla("app.db", "sesiones_app"))   # en una tabla, compartida
+```
+
+`Tabla` no tiene nombre de tabla por omisión (`SES-013`) y lo valida, porque un identificador no
+puede ir como parámetro en SQL: solo letras, dígitos y `_`, y nada que empiece por `sqlite_`. Dos
+servidores sobre el mismo archivo se reconocen las sesiones, y hay una prueba que lo comprueba
+desde otro proceso (`SES-012`). Abre una conexión por operación, así que no hay conexión
+compartida entre hilos que proteger. El límite es el de SQLite: un archivo en una máquina, no un
+almacén en red.
+
+**Las escrituras se funden, no se sobrescriben (`SES-007`).** Rust y C++ comparten un único objeto
+sesión entre peticiones y lo protegen con un candado. Eso no sirve para una tabla, donde cada
+petición lee su propia copia: la que guarde la última se llevaría por delante lo que escribió la
+otra. Aquí cada petición recibe una vista y anota sus cambios clave por clave, y al guardar se
+releen los atributos dentro de un `BEGIN IMMEDIATE`, se aplican los cambios y se escribe. El
+almacén en memoria hace lo mismo bajo su candado, así que los dos se comportan igual. Para ver que
+las pruebas no estaban vacías se cambió la fusión por una sobrescritura: fallaron las cinco de
+`SES-007`, en memoria, en tabla y por el pipeline. Lo que no evita es que dos peticiones hagan
+leer-sumar-escribir sobre la **misma** clave; eso es una carrera de la aplicación, no del almacén.
+Y un cambio que llegue con el identificador viejo justo después de una rotación se pierde, porque
+esa fila ya no existe con ese nombre.
+
+**Solo se escribe si cambió.** Una petición que solo lee no toca la tabla; la inactividad se
+renueva al leer cuando ya ha pasado la mitad del plazo, que es una escritura cada quince minutos
+como mucho y no una por petición. Una prueba lo cuenta con un *trigger* de SQLite. La caducidad usa
+el reloj de pared, `time.time()`, porque la fecha la leen otras instancias, y una sesión caducada
+se borra al tocarla. El almacén en memoria además barre las caducadas al crear, como mucho una vez
+por plazo, para que las que nadie vuelve a pedir no se acumulen.
+
+El identificador son 32 bytes de `secrets.token_hex`, 64 caracteres (`SES-002`); una colisión,
+que no va a pasar, se vuelve a sortear (`SES-003`). La cookie es
+`cero_sid=…; Path=/; HttpOnly; SameSite=Lax`, y lleva `; Secure` cuando y solo cuando
+`peticion.segura` es cierto (`SES-009`). Hoy ningún socket lo pone a cierto, porque el servidor no
+habla TLS todavía; el pipeline ya lo respeta. Una cookie que no tenga la forma de un identificador
+no llega al almacén.
+
+### `SES-010`: un solo sitio, y sin HTTP/2 con que probarlo
+
+La cookie se guarda y se emite en `Servidor.responder`, que es la función por la que pasa toda
+petición sea cual sea el protocolo: lo que viene detrás solo serializa. La respuesta que lleva la
+cookie es una copia, para no ensuciar una `Respuesta` que la acción tenga guardada y reutilice.
+
+Las pruebas de `SES-010` llaman a `responder` con `HTTP/1.0`, `HTTP/1.1`, `HTTP/2` y `HTTP/3`, y con
+la cookie partida en varias cabeceras, que es como la manda h2 (RFC 9113 §8.2.3). Pero
+`spec/sesiones.md` dice que la prueba de verdad **tiene que hablar h2**, y esta implementación no
+habla h2: la biblioteca estándar no lo trae y el hito de HTTP/2 no ha llegado. Así que `SES-010`
+queda **cumplido por construcción y verificado a medias**, no irrepresentable: cuando exista la
+segunda salida, la prueba tiene que entrar por ella.
+
+### `SES-011` en Python es disciplina, como en Java
+
+Consultar la cookie pendiente la consume. En Rust el método toma `&mut self` y dos caminos que la
+consulten los dos no compilan; en Python, como en Java, se puede escribir. La prueba lo vigila
+contando las llamadas: una por respuesta que tiene sesión, ninguna por la que no la tiene.
+
+### Lo que no se pudo representar
+
+Nada. Ningún requisito de sesiones necesita algo fuera de la biblioteca estándar, y ninguno es
+imposible de escribir en Python. Lo único pendiente es probar `SES-010` sobre h2, y eso depende de
+un hito, no del lenguaje.
+
 ## Lo que trae la biblioteca estándar de Python
 
 `socket` y `threading` los trae también Rust. `unittest` ahorra el corredor de pruebas propio que
-C++ y Java tuvieron que escribir. Y lo que ni Rust ni C++ traen es **`ssl`**. Rust y C++ dejan TLS
+C++ y Java tuvieron que escribir. Y lo que ni Rust ni C++ traen es **`ssl`** y **`sqlite3`**; el
+segundo ya sostiene las sesiones en tabla. Rust y C++ dejan TLS
 fuera del proceso porque escribirlo sin dependencias no se puede comprobar desde fuera. Python
 lo trae enlazado a OpenSSL, así que TLS dentro del proceso deja de ser una dependencia nueva. Si se
 usa o no es una decisión del hito de HTTP/2, no de este.
@@ -160,5 +250,10 @@ y solo en `pruebas/`:
 grep -rhoiE --include='*.py' '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u
 ```
 
-Hoy son `RUT-001`–`RUT-013` y `HTTP-022`, que el banco ya cubre y aquí se prueba además con
-extensiones de trozo y trailers.
+Hoy son 30: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` y `HTTP-017`, `HTTP-019`, `HTTP-021` y
+`HTTP-022`, que el banco ya cubre y aquí se prueban además por otro lado. Los de sesiones se
+cuentan solos:
+
+```bash
+grep -rhoiE --include='*.py' 'SES[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 13
+```
