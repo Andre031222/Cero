@@ -238,7 +238,10 @@ inundación son política del servidor, holgados para un cliente normal y finito
 `conexion.rs` lleva un hilo del sistema **por flujo** (`H2-029`), una salida con candado y no con
 canal —una trama sale entera o no sale—, el cuerpo partido por el tamaño máximo de trama y por el
 crédito, y el candado cogido por trama para no parar a los demás flujos mientras se espera
-crédito. `:authority` pasa a `host`. El preámbulo se ojea sin consumirlo. `credito.rs` está aparte
+crédito. Si el sistema no da un hilo más, ni el servidor ni la conexión caen: el flujo se
+rechaza con `RST_STREAM REFUSED_STREAM`, y una conexión nueva se cierra, como en C++; antes
+`thread::spawn` entraba en pánico y una conexión de más tumbaba el proceso
+(`tests/sin_hilos.rs`, que agota los hilos de verdad). `:authority` pasa a `host`. El preámbulo se ojea sin consumirlo. `credito.rs` está aparte
 porque lo gastan varios hilos y lo repone el que lee. En `hpack.rs`, el índice 1 es la entrada más
 reciente; una entrada que no cabe vacía la tabla (§4.4); el entero de longitud variable tiene tope
 de cinco septetos; el codificador no indexa. `hpack_tablas.rs` son tablas estáticas, tomadas de los apéndices A y B del RFC 7541 y no generadas por ningún guion; las respaldan la prueba de la suma de Kraft y los vectores del apéndice C.

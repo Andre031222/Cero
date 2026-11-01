@@ -188,7 +188,7 @@ impl Servidor {
         for conexion in oyente.incoming() {
             let Ok(flujo) = conexion else { continue };
             let yo = Arc::clone(&yo);
-            std::thread::spawn(move || Servidor::atender(yo, flujo));
+            let _ = std::thread::Builder::new().spawn(move || Servidor::atender(yo, flujo));
         }
         Ok(())
     }

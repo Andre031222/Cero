@@ -339,14 +339,22 @@ fn lanzar<F>(
     let peticion = armar(cabeceras, cuerpo);
     let solo_cabeceras = peticion.metodo == "HEAD";
 
-    let comun = Arc::clone(comun);
+    let suyo = Arc::clone(comun);
     let atender = Arc::clone(atender);
-    let terminados = terminados.clone();
-    hilos.push(std::thread::spawn(move || {
+    let avisar = terminados.clone();
+    let hilo = std::thread::Builder::new().spawn(move || {
         let r = atender(peticion);
-        responder(&comun, flujo, r, solo_cabeceras);
-        let _ = terminados.send(flujo);
-    }));
+        responder(&suyo, flujo, r, solo_cabeceras);
+        let _ = avisar.send(flujo);
+    });
+    match hilo {
+        Ok(h) => hilos.push(h),
+        Err(_) => {
+            comun.escribir(&Trama::rst(flujo, Error::Rechazado));
+            comun.credito.anular(flujo);
+            let _ = terminados.send(flujo);
+        }
+    }
     hilos.retain(|h| !h.is_finished());
 }
 
