@@ -6,10 +6,12 @@ que es la parte donde una implementación descuidada se convierte en un agujero.
 **Origen:** cada requisito de aquí sale de un vector que ya corre en
 `java/cero-http/src/test/java/cero/http/ConformidadTests.java`. Ninguno está inventado: el orden y
 la redacción se han pasado a forma normativa, pero lo que exigen es exactamente lo que la
-implementación en Java hace hoy y verifica en cada compilación.
+implementación en Java hace hoy y verifica en cada compilación. Los dos de plazos (`HTTP-024` y
+`HTTP-025`) son posteriores y nacieron de un vector del banco, como los de HTTP/2 Bomb.
 
 **Cómo leerlo.** `DEBE` y `NO DEBE` en el sentido del RFC 2119. La columna «RFC» cita el apartado
-que lo obliga. Una implementación conforme pasa los 23.
+que lo obliga. Una implementación conforme cumple los 25: veintitrés se comprueban con
+los vectores de `banco/conformidad-http1.json` y los dos de plazos con `banco/ataques.py`.
 
 ## Forma de la petición
 
@@ -63,6 +65,24 @@ Aquí es donde vive el *request smuggling*, y por eso los cinco son rechazos y n
 | `HTTP-020` | `chunked` DEBE ser la última codificación de la lista; en cualquier otra posición NO DEBE admitirse. | 9112 §7.1 |
 | `HTTP-021` | Un tamaño de trozo que no es hexadecimal NO DEBE admitirse. | 9112 §7.1 |
 | `HTTP-022` | Una petición `chunked` bien formada DEBE atenderse. | 9112 §7.1 |
+
+## Plazos
+
+Una conexión abierta ocupa un hilo y su memoria aunque no pida nada. Si esperar no tiene fin, basta
+con abrir conexiones y no hablar.
+
+| # | Requisito | RFC |
+|---|---|---|
+| `HTTP-024` | Una conexión que espera la siguiente petición más del plazo de inactividad configurado DEBE cerrarse. | 9112 §9.5 |
+| `HTTP-025` | Un plazo configurado a 0 o negativo DEBE rechazarse al arrancar: el servidor no llega a escuchar. | — |
+
+`HTTP-025` existe porque los dos errores son silenciosos. En un socket, un plazo de 0 suele querer
+decir «sin plazo», y en una cuenta atrás quiere decir «ya pasó». Cualquiera de las dos lecturas
+convierte una errata de configuración en una conexión eterna o en un servidor que corta todo, y
+ninguna avisa. Rechazarlo al arrancar es la única que se ve.
+
+Los dos se comprueban desde fuera en [`banco/ataques.py`](banco/ataques.py), que arranca el
+servidor él mismo: con un plazo de 0 y con uno negativo tiene que negarse a escuchar.
 
 ## Lo que falta en este bloque
 

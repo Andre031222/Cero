@@ -1,6 +1,6 @@
 # spec — el contrato de Cero
 
-**Estado: 0.2. Manda en lo que cubre.** 173 requisitos numerados, y dos implementaciones los
+**Estado: 0.2. Manda en lo que cubre.** 180 requisitos numerados, y dos implementaciones los
 pasan todos. En las áreas que este directorio todavía no describe —forma de la petición y la
 respuesta, autenticación, trazado— la referencia sigue siendo `java/`, y eso está dicho más abajo.
 
@@ -43,8 +43,8 @@ parte es detalle de la implementación en Java.
 
 | Área | Grupos de prueba | Estado del contrato |
 |---|---|---|
-| Protocolo HTTP/1.1 | 6 | [conformidad.md](conformidad.md) · **empezado** |
-| Protocolo HTTP/2 | 3 | [http2.md](http2.md) · **49 requisitos + h2spec** |
+| Protocolo HTTP/1.1 | 6 | [conformidad.md](conformidad.md) · **25 requisitos** |
+| Protocolo HTTP/2 | 3 | [http2.md](http2.md) · **54 requisitos + h2spec** |
 | Ruteo y despacho | 5 | [ruteo.md](ruteo.md) · **37 requisitos** |
 | Petición y respuesta | 9 | por escribir |
 | Sesiones y cookies | 4 | [sesiones.md](sesiones.md) · **13 requisitos** |
@@ -74,8 +74,8 @@ que sí:
 spec/                 el contrato — manda en lo que cubre
 spec/banco/           el juez: bytes sobre un socket, sin lenguaje
 java/                 primera implementación · referencia en lo que el contrato aún no cubre
-rust/                 segunda implementación · 173 de 173
-c++/                  tercera implementación · en marcha, hito 8
+rust/                 segunda implementación · 180 de 180
+c++/                  tercera implementación · en marcha, hito 11
 python/ y php/        planeadas, en ese orden
 benchmarks/           mide, no especifica
 ```
@@ -83,17 +83,19 @@ benchmarks/           mide, no especifica
 ## El banco ya no es una idea
 
 [`spec/banco/`](banco/) corre los 23 vectores de HTTP/1.1 contra cualquier servidor que escuche,
-en el lenguaje que sea. Y h2spec, que lo escribió otra gente, juzga HTTP/2 igual de ciego.
+en el lenguaje que sea, y los siete ataques de plazos y HTTP/2 Bomb contra el binario que se le
+dé, que arranca él mismo con plazos cortos. Y h2spec, que lo escribió otra gente, juzga HTTP/2
+igual de ciego.
 
-| Implementación | Banco HTTP/1.1 | h2spec | Requisitos |
-|---|---|---|---|
-| `java/` | 23 de 23 | 145 de 146 | los 173 |
-| `rust/` | 23 de 23 | 145 de 146 | los 173 |
-| `c++/` | 23 de 23 | por llegar | 116 citados en pruebas |
-| `python/` | por empezar | por empezar | por empezar |
-| `php/` | por empezar | por empezar | por empezar |
+| Implementación | Banco HTTP/1.1 | Ataques | h2spec | Requisitos |
+|---|---|---|---|---|
+| `java/` | 23 de 23 | 7 de 7 | 145 de 146 | los 180 |
+| `rust/` | 23 de 23 | 7 de 7 | 145 de 146 | los 180 |
+| `c++/` | 23 de 23 | 7 de 7 | 145 de 146 | 155 citados en pruebas |
+| `python/` | por empezar | por empezar | por empezar | por empezar |
+| `php/` | por empezar | por empezar | por empezar | por empezar |
 
-El fallo que les queda a las dos es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
+El fallo que les queda a las tres es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
 dedicado a h2c, y en uno compartido con HTTP/1.1 pide la respuesta equivocada.
 
 Rust pasó 22 de los 23 vectores a la primera. El que falló —`Content-Length` y `Transfer-Encoding`

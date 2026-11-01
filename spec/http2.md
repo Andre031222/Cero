@@ -129,6 +129,46 @@ tabla dinámica y referenciarla cien veces, a un octeto por referencia. Hay que 
 y el tope se anuncia además en `SETTINGS_MAX_HEADER_LIST_SIZE` para que un cliente educado no
 llegue a mandarlo.
 
+### HTTP/2 Bomb
+
+La familia de junio de 2026 (CVE-2026-49975; en Envoy, CVE-2026-47774) junta tres cosas que por
+separado parecían cubiertas. Un octeto de HPACK que referencia una entrada grande de la tabla
+dinámica se expande a una cabecera entera, miles de veces por bloque. Una ventana inicial a 0 deja
+cada respuesta construida y sin poder salir. Y un `WINDOW_UPDATE` de un octeto de vez en cuando
+reinicia los plazos de envío, así que la memoria de cada petición no se libera nunca. `H2-039`
+limitaba el tamaño de lo que sale de HPACK; no el número de campos, ni lo que la respuesta retiene
+mientras espera.
+
+| # | Requisito | Código | RFC / CVE |
+|---|---|---|---|
+| `H2-050` | Un bloque de cabeceras que al decodificarse pasa de **256 campos** NO DEBE admitirse. Cada `cookie` partida cuenta como un campo. | GOAWAY ENHANCE_YOUR_CALM | CVE-2026-49975 |
+| `H2-051` | El servidor DEBE anunciar `SETTINGS_MAX_HEADER_LIST_SIZE`, admitir una lista decodificada que quepa en él y NO DEBE admitir una que lo pase. | GOAWAY ENHANCE_YOUR_CALM | 9113 §6.5.2 |
+| `H2-052` | Un flujo que pasa el plazo configurado sin poder mandar una trama DATA completa por falta de ventana DEBE cortarse. Gotear `WINDOW_UPDATE` de un octeto NO DEBE reiniciar ese plazo. | RST_STREAM CANCEL | CVE-2026-49975 |
+| `H2-053` | El plazo de inactividad de la conexión solo DEBE reiniciarse con HEADERS o DATA. `PING`, `WINDOW_UPDATE`, `SETTINGS` y `PRIORITY` NO DEBEN reiniciarlo. | GOAWAY NO_ERROR | 9113 §9.1 |
+| `H2-054` | Los octetos de respuesta construidos y todavía sin mandar en una conexión NO DEBEN pasar del presupuesto configurado, que por defecto son 32 MiB. | GOAWAY ENHANCE_YOUR_CALM | CVE-2026-49975 |
+
+Los cinco se comprueban desde fuera en [`banco/ataques.py`](banco/ataques.py), con el servidor
+arrancado con plazos cortos.
+
+- **`H2-050` existe aunque esté `H2-051`.** Cada campo cuesta al menos 32 octetos en la cuenta del
+  RFC, así que 16 KiB de lista dejan pasar quinientos campos vacíos, y lo caro de un campo no es su
+  tamaño sino lo que el servidor hace con él después. nginx cerró la suya igual, con un tope de
+  número (`max_headers`). Se cuenta lo que sale de HPACK, **antes** de juntar las `cookie`: juntarlas
+  primero dejaría pasar diez mil trozos como una sola cabecera.
+- **`H2-051` es `H2-039` con el número a la vista.** El tope que se aplica es el que se anuncia, ni
+  más ni menos, y se comprueba al decodificar, campo a campo, no al terminar: una lista expandida
+  que se deja crecer hasta el final ya ha ocupado la memoria que el tope quería ahorrar.
+- **`H2-052` mide tramas, no octetos.** Un plazo que se reinicia con cada octeto de crédito no es un
+  plazo: es lo que el goteo explota. Cada trama de hasta 16 KiB tiene que salir entera en el plazo;
+  un cliente que lee de verdad, aunque lento, lo cumple, y uno que gotea un octeto cada minuto no.
+- **`H2-053` mira el trabajo, no el tráfico.** Un `PING` cada pocos segundos es una trama válida que
+  no pide nada; si reinicia el reloj, cualquier conexión puede quedarse para siempre. Mientras un
+  flujo tenga una respuesta en marcha no hay inactividad: de esos se encarga `H2-052`.
+- **`H2-054` es el lector lento.** Con la ventana abierta y el socket leído a unos cientos de octetos
+  por segundo, cada flujo construye su respuesta entera y espera turno. El presupuesto cuenta lo
+  construido y no mandado; cuando lo pasa, la conexión se cierra, porque no hay forma de que ese
+  cliente se ponga al día.
+
 ### Comportamiento
 
 | # | Requisito | RFC |
