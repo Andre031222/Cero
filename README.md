@@ -222,7 +222,7 @@ la reflexión.
 | [`ejemplo`](java/ejemplo) | 59 | Aplicación pequeña de punta a punta: API REST paginada con validación, base de datos, sesiones y CSRF |
 
 El núcleo son tres módulos —`cero-http`, `cero-core` y `cero-data`—, no declaran ninguna dependencia
-externa y pesan **378 796 bytes** (`ls -l` de los tres jars de `0.8.0` tras `mvn install`: 137 857 +
+externa y pesan **378 796 bytes** (≈ 370 KiB, `ls -l` de los tres jars de `0.8.0` tras `mvn install`: 137 857 +
 187 306 + 53 633). La única referencia a `jakarta.*` en todo el proyecto está en
 `cero-adapter-servlet`, en *scope* `provided`.
 

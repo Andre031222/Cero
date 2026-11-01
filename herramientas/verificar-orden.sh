@@ -33,9 +33,13 @@ if ! git ls-files -z -- java rust c++ herramientas | xargs -0 python3 herramient
   fallo=1
 fi
 
-if grep -qiE 'bare-metal|sin virtualizar' README.md && grep -qi 'docker desktop' benchmarks/results/ENV.md; then
-  echo "el README dice bare-metal o sin virtualizar, y ENV.md describe Docker Desktop"
-  fallo=1
+if grep -qi 'docker desktop' benchmarks/results/ENV.md; then
+  salida=$(git grep -nIiE 'bare-metal|sin virtualizar' -- README.md docs)
+  if [ -n "$salida" ]; then
+    echo "bare-metal o sin virtualizar, y ENV.md describe Docker Desktop:"
+    echo "$salida"
+    fallo=1
+  fi
 fi
 
 if ! grep -qx 'Soft_Cero-Web/' .gitignore; then

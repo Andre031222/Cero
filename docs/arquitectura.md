@@ -164,7 +164,7 @@ corrida no está descrito en un `ENV.md` propio; el que hay describe Docker Desk
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
 | Arranque | < 150 ms | 155 ms | jooby 443 ms | **casi**: falla por 5 ms y gana por 2,9× |
-| JAR runtime | ≤ 400 KB | 378 796 bytes (`cero-http` + `cero-core` + `cero-data`, sin `cero-view`) | — | **sí** |
+| JAR runtime | ≤ 400 KB | 378 796 bytes (≈ 370 KiB; `cero-http` + `cero-core` + `cero-data`, sin `cero-view`) | — | **sí** |
 | Dependencias | 0 | **0** | spring: decenas | **sí** |
 | rps `/json` | batir al mejor rival | 94 634 | vertx 98 589 | **no**, por un 4 % medible |
 | RSS | < 120 MB | 307,9 MB | jooby 73,4 MB | **no**, y es el peor de los ocho |
@@ -234,6 +234,6 @@ framework de Java.
 
 ## Fuera de alcance
 
-La corrida de benchmark en Arch bare-metal, el DOI de Zenodo y la autoría con ORCID son trabajo de
+Repetir el benchmark con su propio `ENV.md`, el DOI de Zenodo y la autoría con ORCID son trabajo de
 publicación y siguen su curso aparte: ver [papers.md](papers.md). No bloquean al framework ni el
 framework depende de ellos.

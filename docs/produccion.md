@@ -112,8 +112,9 @@ Lo que sale de ahí, sin adornos:
   25 931. `/db` es el que mide el framework haciendo trabajo de verdad.
 - **Imagen: 110,3 MB**, segunda por 0,2 MB. La base JRE domina el tamaño.
 
-**Criterio que sigue abierto:** repetir la corrida en el mismo Arch bare-metal que usó el paper.
-Lo medido es en Docker Desktop: los números relativos son justos, los absolutos no son citables.
+**Criterio que sigue abierto:** repetir la corrida con su propio `ENV.md` que describa el entorno.
+El `ENV.md` que hay describe Docker Desktop sobre macOS; de la virtualización de las demás corridas
+no se afirma nada. Los números relativos dentro de una corrida valen, los absolutos no son citables.
 
 **Sobre el RSS:** era el punto flojo —298 MB— y resultó ser un fallo, no un peso. El vigilante
 programaba una tarea por petición que al cancelarse no salía de la cola; con eso corregido bajó a
@@ -246,9 +247,9 @@ En orden, porque cada paso informa al siguiente. Tachado lo que ya está:
 1. ~~Migrar métricas y logger~~ — hecho, con log de acceso incluido.
 2. ~~Correr `cero-data` contra PostgreSQL y MySQL reales~~ — hecho, y encontró un fallo.
 3. ~~Fuzzing dirigido del parser~~ — hecho; falta el banco de **conformidad** HTTP/1.1.
-4. ~~Correr la suite en Linux~~ — hecho, en cada push, sobre JDK 21 y 25.
+4. ~~Correr la suite en Linux~~ — hecho, en cada push, sobre JDK 25.
 5. ~~Levantar el sitio de referencia en standalone~~ — hecho.
-6. Benchmark en Arch bare-metal, con los números buenos.
+6. Repetir el benchmark con su propio `ENV.md`, sin afirmar nada que ese archivo no diga.
 7. Prueba de carga sostenida con conexiones hostiles.
 8. Elegir **una** app pequeña y de bajo riesgo, ponerla en producción detrás de un proxy inverso,
    y dejarla correr semanas antes de mover nada importante.

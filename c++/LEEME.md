@@ -18,6 +18,14 @@ vectores del banco**, **los 32 del apéndice C del RFC 7541** y 123 pruebas prop
 | 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 
+## Cuántos requisitos citan las pruebas
+
+La cuenta que hace la integración continua, desde `c++/`: **116** requisitos distintos.
+
+```bash
+grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
+```
+
 ## Usarlo
 
 ```bash
