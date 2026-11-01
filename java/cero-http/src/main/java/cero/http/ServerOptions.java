@@ -46,11 +46,9 @@ public record ServerOptions(
         if (maxRequestLineBytes < 64 || maxHeaderBytes < 64) {
             throw new IllegalArgumentException("límites de cabecera demasiado pequeños");
         }
-        if (maxBodyBytes < 0) {
-            throw new IllegalArgumentException("maxBodyBytes negativo");
-        }
-        if (idleTimeoutMillis <= 0 || handlerTimeoutMillis <= 0 || writeTimeoutMillis <= 0) {
-            throw new IllegalArgumentException("los plazos tienen que ser mayores que cero");
+        if (idleTimeoutMillis <= 0 || handlerTimeoutMillis <= 0 || writeTimeoutMillis <= 0
+                || maxBodyBytes <= 0 || http2MaxEnVuelo <= 0) {
+            throw new IllegalArgumentException("los plazos y los topes tienen que ser mayores que cero");
         }
     }
 

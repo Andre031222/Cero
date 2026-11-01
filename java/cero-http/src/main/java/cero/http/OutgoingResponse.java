@@ -20,6 +20,7 @@ final class OutgoingResponse implements Response {
     private boolean committed;
     private boolean keepAlive = true;
     private volatile boolean upgraded;
+    private volatile long escrituraHasta;
     private ChunkedOutput chunked;
     private ByteReader source;
 
@@ -37,6 +38,10 @@ final class OutgoingResponse implements Response {
 
     boolean upgraded() {
         return upgraded;
+    }
+
+    long escrituraHasta() {
+        return escrituraHasta;
     }
 
     @Override
@@ -196,7 +201,7 @@ final class OutgoingResponse implements Response {
 
             @Override
             public OutputStream out() {
-                return target;
+                return new ConPlazo();
             }
 
             @Override
@@ -323,6 +328,43 @@ final class OutgoingResponse implements Response {
     static final class UncheckedHttpException extends RuntimeException {
         UncheckedHttpException(IOException cause) {
             super(cause);
+        }
+    }
+
+    private interface Escritura {
+        void hacer() throws IOException;
+    }
+
+    private final class ConPlazo extends OutputStream {
+
+        @Override
+        public void write(int b) throws IOException {
+            conPlazo(() -> target.write(b));
+        }
+
+        @Override
+        public void write(byte[] datos, int desde, int largo) throws IOException {
+            conPlazo(() -> target.write(datos, desde, largo));
+        }
+
+        @Override
+        public void flush() throws IOException {
+            conPlazo(target::flush);
+        }
+
+        @Override
+        public void close() throws IOException {
+            target.close();
+        }
+
+        private void conPlazo(Escritura escritura) throws IOException {
+            long hasta = System.nanoTime() + options.writeTimeoutMillis() * 1_000_000L;
+            escrituraHasta = hasta == 0 ? 1 : hasta;
+            try {
+                escritura.hacer();
+            } finally {
+                escrituraHasta = 0;
+            }
         }
     }
 }

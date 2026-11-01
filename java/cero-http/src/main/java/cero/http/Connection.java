@@ -36,7 +36,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
     @Override
     public long limiteNanos() {
         OutgoingResponse respuesta = enCurso;
-        return respuesta != null && respuesta.upgraded() ? 0 : limiteNanos;
+        return respuesta != null && respuesta.upgraded() ? respuesta.escrituraHasta() : limiteNanos;
     }
 
     @Override

@@ -92,7 +92,8 @@ Se pueden subir, pero conviene saber contra qué protege cada uno:
 | `http2MaxListaCabeceras` | La bomba de HPACK: tres kilobytes comprimidos pueden ser trescientos. Se anuncia en `SETTINGS_MAX_HEADER_LIST_SIZE` |
 | `http2MaxAnulados` | CVE-2023-44487, «Rapid Reset»: abrir y anular saca el flujo del tope al instante |
 | `http2MaxControlSeguidas` | PING, SETTINGS, WINDOW_UPDATE y PRIORITY sin abrir flujos; abrir uno reinicia la cuenta |
-| `http2MaxEnVuelo` | CVE-2026-49975, «HTTP/2 Bomb», y el lector lento: 32 MiB de respuestas construidas y sin mandar por conexión; pasarlos es GOAWAY `ENHANCE_YOUR_CALM` (`H2-054`) |
+| `http2MaxEnVuelo` | «HTTP/2 Bomb» y el lector lento: 32 MiB de respuestas construidas y sin mandar por conexión; pasarlos es GOAWAY `ENHANCE_YOUR_CALM` (`H2-054`). Una respuesta que llega sola pasa siempre, para no romper una descarga grande |
+| `maxBodyBytes` | también en h2: un cuerpo de más de 10 MiB deja de guardarse, quien lo lee recibe 413 y el flujo se cierra con `RST_STREAM NO_ERROR` (`H2-055`). Una acción que no lee el cuerpo no ve el 413, pero tampoco retiene nada |
 
 Y uno que no se configura: un bloque que se expande a más de **256 campos** corta la conexión
 (`H2-050`), cada `cookie` por separado. La lista se mide mientras se decodifica, campo a campo, y no
@@ -100,18 +101,23 @@ al terminar: una lista expandida que se deja crecer hasta el final ya ocupó la 
 
 ### Los plazos
 
-Tres, y ninguno admite 0 ni negativo: `ServerOptions` lanza `IllegalArgumentException` y el servidor
-no llega a escuchar (`HTTP-025`). Antes, 0 quería decir «sin plazo», que es justo la errata que
+Tres, y ninguno admite 0 ni negativo, igual que `http2MaxEnVuelo` y `maxBodyBytes`: `ServerOptions`
+lanza `IllegalArgumentException` y el servidor no llega a escuchar (`HTTP-025`). Antes, 0 quería decir «sin plazo», que es justo la errata que
 deja una conexión abierta para siempre.
 
 | Opción | Por defecto | Qué cubre |
 |---|---|---|
 | `idleTimeoutMillis` | 30 s | la espera de la siguiente petición en HTTP/1.1 (`HTTP-024`) y, en h2, el tiempo sin `HEADERS` ni `DATA` mientras ningún flujo trabaja; `PING` y compañía no lo reinician (`H2-053`) |
 | `handlerTimeoutMillis` | 30 s | lo que tarda un manejador en HTTP/1.1; una conexión que ya cambió de protocolo —un WebSocket— deja de contar |
-| `writeTimeoutMillis` | 60 s | cada trama de h2: escribirla en el socket y, antes, esperar su crédito. Un flujo sin ventana en ese plazo se corta con `RST_STREAM CANCEL`, aunque el cliente gotee `WINDOW_UPDATE` de un octeto (`H2-052`) |
+| `writeTimeoutMillis` | 60 s | cada trama de h2: escribirla en el socket y, antes, esperar su crédito. Un flujo sin ventana en ese plazo se corta con `RST_STREAM CANCEL`, aunque el cliente gotee `WINDOW_UPDATE` de un octeto (`H2-052`). Y cada escritura de un WebSocket: un cliente que no lee no retiene el hilo ni el socket |
 
 `handlerTimeoutMillis` a 0 era también la forma de no cortar un WebSocket a los 30 s. Ya no hace
-falta: el plazo del manejador se suelta en cuanto la respuesta cambia de protocolo.
+falta: el plazo del manejador se suelta en cuanto la respuesta cambia de protocolo, y desde ahí lo
+que vigila el `Watchdog` es cada escritura, con `writeTimeoutMillis`. Es un cambio de API: quien
+usara 0 para tareas largas tiene que poner un número.
+
+Un flujo rechazado por el tope de flujos decodifica su bloque igual: la tabla dinámica de HPACK es
+de la conexión, y saltárselo descolocaba las cabeceras de las peticiones siguientes (`H2-035`).
 
 El servidor del banco es `Conforme`, entre las pruebas:
 `java -cp target/classes:target/test-classes cero.http.Conforme 8777`. Con un segundo argumento,

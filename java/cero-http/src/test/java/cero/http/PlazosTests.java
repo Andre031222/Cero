@@ -28,12 +28,38 @@ final class PlazosTests {
         } finally {
             servidor.close();
         }
+        ServerOptions estrechas = ServerOptions.builder().port(0)
+                .http2MaxEnVuelo(1 << 20).maxBodyBytes(100).build();
+        try (Server estrecho = Server.start(estrechas, PlazosTests::rutas, ErrorReporter.silent())) {
+            unaSolaPasaDelPresupuesto(estrecho.port());
+            cuerpoDeMas(estrecho.port());
+        }
         plazosNoValidos();
     }
 
-    private static void rutas(Request peticion, Response respuesta) {
+    private static void unaSolaPasaDelPresupuesto(int puerto) throws Exception {
+        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+            Http2Cliente.Respuesta r = c.respuestaDe(c.pedir("GET", "/grande"));
+            Check.equal("H2-054: con nada más en vuelo, 4 MiB salen enteros con un presupuesto de 1 MiB",
+                    r.cuerpo().length, 4 << 20);
+        }
+    }
+
+    private static void cuerpoDeMas(int puerto) throws Exception {
+        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+            int flujo = c.pedirSinCerrar("POST", "/eco");
+            c.trama(Http2Cliente.DATA, 0, flujo, new byte[60]);
+            c.trama(Http2Cliente.DATA, 0, flujo, new byte[60]);
+            Check.equal("H2-055: pasar de 100 octetos de cuerpo es 413", c.respuestaDe(flujo).estado(), 413);
+            Check.equal("H2-055: y RST_STREAM NO_ERROR para que deje de mandar",
+                    c.esperar(Http2Cliente.RST_STREAM).codigoDeError(), 0);
+        }
+    }
+
+    private static void rutas(Request peticion, Response respuesta) throws Exception {
         switch (peticion.path()) {
             case "/grande" -> respuesta.text("x".repeat(4 << 20));
+            case "/eco" -> respuesta.send(peticion.bodyBytes());
             default -> respuesta.text("x".repeat(100));
         }
     }
@@ -83,14 +109,27 @@ final class PlazosTests {
     private static void pingsSinTrabajo(int puerto) throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
             AtomicBoolean parar = new AtomicBoolean();
-            Thread latido = latir(c, parar, Http2Cliente.PING, 0, "12345678".getBytes(StandardCharsets.US_ASCII));
+            Thread latido = Thread.ofVirtual().start(() -> {
+                try {
+                    while (!parar.get()) {
+                        c.trama(Http2Cliente.PING, 0, 0, "12345678".getBytes(StandardCharsets.US_ASCII));
+                        c.trama(Http2Cliente.WINDOW_UPDATE, 0, 0, Http2Cliente.entero(1));
+                        c.trama(Http2Cliente.SETTINGS, 0, 0, new byte[0]);
+                        c.trama(Http2Cliente.PRIORITY, 0, 3, new byte[] { 0, 0, 0, 0, 15 });
+                        Thread.sleep(100);
+                    }
+                } catch (IOException | InterruptedException seAcabo) {
+                }
+            });
             long empezo = System.nanoTime();
             Http2Cliente.Trama adios = c.esperar(Http2Cliente.GOAWAY);
             long tardo = (System.nanoTime() - empezo) / 1_000_000;
             parar.set(true);
             latido.join();
-            Check.equal("H2-053: PING no es trabajo, y la conexión se despide", adios.codigoDeError(), 0);
-            Check.that("H2-053: dentro del plazo de inactividad (" + tardo + " ms)", tardo < 2_000);
+            Check.equal("H2-053: PING, WINDOW_UPDATE, SETTINGS y PRIORITY no son trabajo, y la conexión se despide",
+                    adios.codigoDeError(), 0);
+            Check.that("H2-053: dentro del plazo de inactividad y no antes (" + tardo + " ms)",
+                    tardo >= 300 && tardo < 2_000);
         }
     }
 
@@ -107,15 +146,23 @@ final class PlazosTests {
     private static void keepAliveOcioso(int puerto) throws Exception {
         try (Socket s = new Socket("127.0.0.1", puerto)) {
             s.setSoTimeout(5_000);
-            s.getOutputStream().write("GET / HTTP/1.1\r\nHost: a\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            byte[] pedido = "GET / HTTP/1.1\r\nHost: a\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
             InputStream in = s.getInputStream();
+            s.getOutputStream().write(pedido);
+            String primera = Fixture.readHead(in);
+            in.readNBytes(100);
+            Check.that("HTTP-024: la primera petición se atiende y la conexión sigue",
+                    primera.startsWith("HTTP/1.1 200") && !primera.toLowerCase().contains("connection: close"));
+            Thread.sleep(200);
+            s.getOutputStream().write(pedido);
+            Check.that("HTTP-024: una segunda a media inactividad se atiende por la misma conexión",
+                    Fixture.readHead(in).startsWith("HTTP/1.1 200"));
+            in.readNBytes(100);
             long empezo = System.nanoTime();
-            byte[] todo = in.readAllBytes();
+            byte[] resto = in.readAllBytes();
             long tardo = (System.nanoTime() - empezo) / 1_000_000;
-            Check.that("HTTP-024: la primera petición se atiende",
-                    new String(todo, StandardCharsets.US_ASCII).startsWith("HTTP/1.1 200"));
-            Check.that("HTTP-024: callar después cierra la conexión dentro del plazo (" + tardo + " ms)",
-                    tardo < 2_000);
+            Check.that("HTTP-024: callar después cierra la conexión, dentro del plazo y no antes (" + tardo + " ms)",
+                    resto.length == 0 && tardo >= 300 && tardo < 2_000);
         }
     }
 
@@ -127,6 +174,10 @@ final class PlazosTests {
                     rechazado(ServerOptions.builder().handlerTimeoutMillis(malo)));
             Check.that("HTTP-025: writeTimeoutMillis(" + malo + ") no arranca",
                     rechazado(ServerOptions.builder().writeTimeoutMillis(malo)));
+            Check.that("HTTP-025: http2MaxEnVuelo(" + malo + ") no arranca",
+                    rechazado(ServerOptions.builder().http2MaxEnVuelo(malo)));
+            Check.that("HTTP-025: maxBodyBytes(" + malo + ") no arranca",
+                    rechazado(ServerOptions.builder().maxBodyBytes(malo)));
         }
     }
 

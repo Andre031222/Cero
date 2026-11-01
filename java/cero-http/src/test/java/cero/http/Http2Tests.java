@@ -41,10 +41,43 @@ final class Http2Tests {
             servidor.stop();
         }
 
+        rechazadoSinDescolocar();
+
         Check.group("HTTP/2 · las tres puertas");
         porUpgrade();
         porAlpn();
         apagado();
+    }
+
+    private static void rechazadoSinDescolocar() throws Exception {
+        Check.group("HTTP/2 · un flujo rechazado no descoloca HPACK");
+        ServerOptions opciones = ServerOptions.builder().port(0).http2MaxFlujos(1).build();
+        Handler rutas = (peticion, respuesta) -> {
+            if (peticion.path().equals("/lento")) {
+                Thread.sleep(300);
+            }
+            respuesta.text(String.valueOf(peticion.header("x-secreto")));
+        };
+        try (Server tope = Server.start(opciones, rutas, ErrorReporter.silent());
+             Http2Cliente c = new Http2Cliente(tope.port()).saludar()) {
+            int lento = c.pedir("GET", "/lento");
+            byte[] nombre = "x-secreto".getBytes(StandardCharsets.US_ASCII);
+            byte[] valor = "valor".getBytes(StandardCharsets.US_ASCII);
+            java.io.ByteArrayOutputStream rechazado = new java.io.ByteArrayOutputStream();
+            rechazado.write(new byte[] { (byte) 0x82, (byte) 0x86, (byte) 0x84, 0x40, (byte) nombre.length });
+            rechazado.write(nombre);
+            rechazado.write(valor.length);
+            rechazado.write(valor);
+            c.trama(Http2Cliente.HEADERS, Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 3,
+                    rechazado.toByteArray());
+            Check.equal("con el tope lleno, el flujo 3 se rechaza",
+                    c.esperar(Http2Cliente.RST_STREAM).codigoDeError(), 0x7);
+            c.respuestaDe(lento);
+            c.trama(Http2Cliente.HEADERS, Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 5,
+                    new byte[] { (byte) 0x82, (byte) 0x86, (byte) 0x84, (byte) (0x80 | 62) });
+            Check.equal("H2-035: el bloque rechazado se decodificó, y su entrada de la tabla sirve al siguiente",
+                    c.respuestaDe(5).texto(), "valor");
+        }
     }
 
     private static void apagado() throws Exception {

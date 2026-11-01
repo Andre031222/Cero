@@ -80,6 +80,7 @@ final class Http2 implements Watchdog.Vigilada {
     private final int maxAnulados;
     private final int maxControlSeguidas;
     private final long maxEnVuelo;
+    private final long maxCuerpo;
     private final int escrituraMillis;
     private final int inactividadMillis;
 
@@ -110,6 +111,7 @@ final class Http2 implements Watchdog.Vigilada {
         this.maxAnulados = o.http2MaxAnulados();
         this.maxControlSeguidas = o.http2MaxControlSeguidas();
         this.maxEnVuelo = o.http2MaxEnVuelo();
+        this.maxCuerpo = o.maxBodyBytes();
         this.escrituraMillis = o.writeTimeoutMillis();
         this.inactividadMillis = o.idleTimeoutMillis();
         this.hpackIn = new Hpack.Decodificador(Hpack.TAMANO_TABLA, maxListaCabeceras, Hpack.MAX_CAMPOS);
@@ -216,7 +218,7 @@ final class Http2 implements Watchdog.Vigilada {
 
         if (deUpgrade != null) {
             ultimoFlujoVisto = 1;
-            Flujo f = new Flujo(1, ventanaInicialFlujo);
+            Flujo f = new Flujo(1, ventanaInicialFlujo, maxCuerpo);
             flujos.put(1, f);
             f.finEntrada = true;
             lanzar(f, deUpgrade);
@@ -390,23 +392,20 @@ final class Http2 implements Watchdog.Vigilada {
         if (idFlujo <= ultimoFlujoVisto) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "identificador de flujo hacia atrás");
         }
+        ultimoFlujoVisto = idFlujo;
+        boolean dependeDeSi = (banderas & PRIORIDAD) != 0
+                && dependeDeSiMismo(idFlujo, carga, (banderas & RELLENO) != 0 ? 1 : 0);
+        List<Hpack.Campo> campos = hpackIn.decodificar(leerBloqueDeCabeceras(idFlujo, banderas, carga));
         if (activos() >= maxFlujos) {
-            ultimoFlujoVisto = Math.max(ultimoFlujoVisto, idFlujo);
             escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_RECHAZADO));
             return;
         }
-        ultimoFlujoVisto = idFlujo;
         controlSeguidas = 0;
-
-        List<Hpack.Campo> campos;
-        try {
-            campos = hpackIn.decodificar(leerBloqueDeCabeceras(idFlujo, banderas, carga));
-        } catch (ErrorFlujo malFormada) {
-            ultimoFlujoVisto = idFlujo;
+        if (dependeDeSi) {
             escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
             return;
         }
-        Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo);
+        Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo, maxCuerpo);
         flujos.put(idFlujo, flujo);
         if ((banderas & FIN_FLUJO) != 0) {
             flujo.finEntrada = true;
@@ -448,9 +447,6 @@ final class Http2 implements Watchdog.Vigilada {
             recorte = carga[pos++] & 0xFF;
         }
         if ((banderas & PRIORIDAD) != 0) {
-            if (dependeDeSiMismo(idFlujo, carga, pos)) {
-                throw new ErrorFlujo("un flujo no puede depender de sí mismo");
-            }
             pos += 5;
         }
         if (pos + recorte > carga.length) {
@@ -570,6 +566,13 @@ final class Http2 implements Watchdog.Vigilada {
                 respuesta.error(500, "error interno");
             } finally {
                 enCurso.decrementAndGet();
+                if (flujo.entrada.desbordada() && !flujo.finEntrada) {
+                    flujo.finEntrada = true;
+                    try {
+                        escribirTrama(RST_STREAM, 0, flujo.id, deEntero(ERROR_NINGUNO));
+                    } catch (IOException seFue) {
+                    }
+                }
                 flujo.cerrarEntrada();
                 if (flujo.finEntrada) {
                     flujos.remove(flujo.id);
@@ -816,7 +819,7 @@ final class Http2 implements Watchdog.Vigilada {
     }
 
     private synchronized boolean cabe(int octetos) {
-        if (porMandar + octetos > maxEnVuelo) {
+        if (porMandar > 0 && porMandar + octetos > maxEnVuelo) {
             return false;
         }
         porMandar += octetos;
@@ -964,7 +967,7 @@ final class Http2 implements Watchdog.Vigilada {
     static final class Flujo {
 
         final int id;
-        final Tuberia entrada = new Tuberia();
+        final Tuberia entrada;
         final java.util.concurrent.atomic.AtomicInteger ventana;
         volatile boolean finEntrada;
 
@@ -975,8 +978,9 @@ final class Http2 implements Watchdog.Vigilada {
         final java.util.concurrent.atomic.AtomicLong recibido =
                 new java.util.concurrent.atomic.AtomicLong();
 
-        Flujo(int id, int ventanaInicial) {
+        Flujo(int id, int ventanaInicial, long maxCuerpo) {
             this.id = id;
+            this.entrada = new Tuberia(maxCuerpo);
             this.ventana = new java.util.concurrent.atomic.AtomicInteger(ventanaInicial);
         }
 
@@ -988,12 +992,31 @@ final class Http2 implements Watchdog.Vigilada {
     static final class Tuberia extends InputStream {
 
         private final ArrayList<byte[]> trozos = new ArrayList<>();
+        private final long max;
+        private long recibidos;
         private int indice;
         private int desplazamiento;
         private boolean cerrada;
+        private boolean desbordada;
+
+        Tuberia(long max) {
+            this.max = max;
+        }
+
+        synchronized boolean desbordada() {
+            return desbordada;
+        }
 
         synchronized void aportar(byte[] datos, int desde, int largo) {
-            if (largo <= 0 || cerrada) {
+            if (largo <= 0 || cerrada || desbordada) {
+                return;
+            }
+            recibidos += largo;
+            if (recibidos > max) {
+                desbordada = true;
+                trozos.clear();
+                indice = 0;
+                notifyAll();
                 return;
             }
             trozos.add(java.util.Arrays.copyOfRange(datos, desde, desde + largo));
@@ -1015,6 +1038,9 @@ final class Http2 implements Watchdog.Vigilada {
         @Override
         public synchronized int read(byte[] destino, int desde, int largo) throws IOException {
             while (indice >= trozos.size()) {
+                if (desbordada) {
+                    throw new HttpException(413, "cuerpo demasiado grande");
+                }
                 if (cerrada) {
                     return -1;
                 }

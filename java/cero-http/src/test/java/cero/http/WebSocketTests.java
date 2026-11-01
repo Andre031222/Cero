@@ -32,6 +32,31 @@ final class WebSocketTests {
         origen();
         textoMalFormado();
         longitudNoMinima();
+        lectorQueNoLee();
+    }
+
+    private static void lectorQueNoLee() throws Exception {
+        CountDownLatch cerrado = new CountDownLatch(1);
+        ServerOptions opciones = ServerOptions.builder().port(0).writeTimeoutMillis(300).build();
+        try (Server server = Server.start(opciones, (peticion, respuesta) -> WebSockets.accept(peticion,
+                respuesta, new WebSocketHandler() {
+                    @Override
+                    public void onMessage(WebSocket socket, String texto) {
+                        byte[] mucho = new byte[64 << 10];
+                        for (int i = 0; i < 4_000; i++) {
+                            socket.send(mucho);
+                        }
+                    }
+
+                    @Override
+                    public void onClose(WebSocket socket, int codigo, String motivo) {
+                        cerrado.countDown();
+                    }
+                }), ErrorReporter.silent()); Socket socket = abrir(server.port())) {
+            enviarTexto(socket, "dame");
+            Check.that("un cliente que no lee no retiene un WebSocket: cada escritura tiene writeTimeoutMillis",
+                    cerrado.await(5, TimeUnit.SECONDS));
+        }
     }
 
     private static void origen() throws Exception {
