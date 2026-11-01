@@ -25,6 +25,7 @@ final class PlazosTests {
             pingsSinTrabajo(servidor.port());
             presupuesto(servidor.port());
             keepAliveOcioso(servidor.port());
+            descargaLarga(servidor.port());
         } finally {
             servidor.close();
         }
@@ -53,6 +54,27 @@ final class PlazosTests {
             Check.equal("H2-055: pasar de 100 octetos de cuerpo es 413", c.respuestaDe(flujo).estado(), 413);
             Check.equal("H2-055: y RST_STREAM NO_ERROR para que deje de mandar",
                     c.esperar(Http2Cliente.RST_STREAM).codigoDeError(), 0);
+
+            int anunciado = c.pedirSinCerrar("POST", "/eco", "content-length", "1000");
+            Check.equal("H2-055: un content-length de más es 413 antes de mandar nada y de correr la acción",
+                    c.respuestaDe(anunciado).estado(), 413);
+            Check.equal("H2-055: también con RST_STREAM NO_ERROR",
+                    c.esperar(Http2Cliente.RST_STREAM).codigoDeError(), 0);
+
+            int sinLeer = c.pedirSinCerrar("POST", "/");
+            Check.equal("una acción que no lee el cuerpo responde antes", c.respuestaDe(sinLeer).estado(), 200);
+            c.trama(Http2Cliente.DATA, 0, sinLeer, new byte[60]);
+            c.trama(Http2Cliente.DATA, 0, sinLeer, new byte[60]);
+            Http2Cliente.Trama corte = c.esperar(Http2Cliente.RST_STREAM);
+            Check.that("H2-055: con la respuesta ya dada, pasar del tope es RST_STREAM NO_ERROR",
+                    corte.flujo() == sinLeer && corte.codigoDeError() == 0);
+        }
+    }
+
+    private static void descargaLarga(int puerto) throws Exception {
+        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+            Check.equal("H2-038: 16 MiB con un WINDOW_UPDATE por trama no son una inundación",
+                    c.respuestaDe(c.pedir("GET", "/descarga")).cuerpo().length, 16 << 20);
         }
     }
 
@@ -60,6 +82,7 @@ final class PlazosTests {
         switch (peticion.path()) {
             case "/grande" -> respuesta.text("x".repeat(4 << 20));
             case "/eco" -> respuesta.send(peticion.bodyBytes());
+            case "/descarga" -> respuesta.text("x".repeat(16 << 20));
             default -> respuesta.text("x".repeat(100));
         }
     }

@@ -137,7 +137,7 @@ final class Http2Respuesta implements Response {
                 && estado != 204 && estado != 304;
         try {
             cabeceras.set("content-length", String.valueOf(conCuerpo ? cuerpo.length : 0));
-            conexion.mandarCabeceras(flujo.id, campos(), !conCuerpo);
+            conexion.mandarCabeceras(flujo, campos(), !conCuerpo);
             if (conCuerpo) {
                 conexion.mandarDatos(flujo, cuerpo, true);
             }
@@ -220,7 +220,7 @@ final class Http2Respuesta implements Response {
             if (!comprometida) {
                 comprometida = true;
                 cabeceras.remove("content-length");
-                conexion.mandarCabeceras(flujo.id, campos(), false);
+                conexion.mandarCabeceras(flujo, campos(), false);
             }
             byte[] trozo = pendiente.toByteArray();
             pendiente.reset();

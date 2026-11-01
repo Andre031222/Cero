@@ -201,7 +201,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
         try {
             request.drainBody();
             return true;
-        } catch (IOException cause) {
+        } catch (IOException | HttpException cause) {
             return false;
         }
     }

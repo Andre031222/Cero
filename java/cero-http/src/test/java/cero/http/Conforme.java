@@ -15,6 +15,7 @@ class Conforme {
         switch (peticion.path()) {
             case "/eco" -> respuesta.send(peticion.bodyBytes());
             case "/grande" -> respuesta.text("x".repeat(1 << 20));
+            case "/descarga" -> respuesta.text("x".repeat(32 << 20));
             default -> respuesta.text("cero, conforme\n");
         }
     }

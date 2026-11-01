@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -427,6 +428,10 @@ final class Http2 implements Watchdog.Vigilada {
             flujos.remove(idFlujo);
             return;
         }
+        if (flujo.declarado > maxCuerpo) {
+            cuerpoDeMas(flujo);
+            return;
+        }
 
         IncomingRequest peticion;
         try {
@@ -566,13 +571,6 @@ final class Http2 implements Watchdog.Vigilada {
                 respuesta.error(500, "error interno");
             } finally {
                 enCurso.decrementAndGet();
-                if (flujo.entrada.desbordada() && !flujo.finEntrada) {
-                    flujo.finEntrada = true;
-                    try {
-                        escribirTrama(RST_STREAM, 0, flujo.id, deEntero(ERROR_NINGUNO));
-                    } catch (IOException seFue) {
-                    }
-                }
                 flujo.cerrarEntrada();
                 if (flujo.finEntrada) {
                     flujos.remove(flujo.id);
@@ -629,6 +627,10 @@ final class Http2 implements Watchdog.Vigilada {
             return;
         }
         f.entrada.aportar(carga, pos, utiles);
+        if (f.entrada.desbordada()) {
+            cuerpoDeMas(f);
+            return;
+        }
         if (carga.length > 0) {
             escribirTrama(WINDOW_UPDATE, 0, idFlujo, deEntero(carga.length));
         }
@@ -710,7 +712,9 @@ final class Http2 implements Watchdog.Vigilada {
         if (flujo != 0 && estadoDe(flujo) == Estado.OCIOSO) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "WINDOW_UPDATE sobre un flujo ocioso");
         }
-        controlDeMas();
+        if (flujo == 0 && activos() == 0) {
+            controlDeMas();
+        }
         if (flujo == 0) {
             if (ventanaSalida.addAndGet(incremento) > 0x7FFFFFFFL) {
                 throw new ErrorConexion(ERROR_CONTROL_FLUJO, "ventana desbordada");
@@ -764,14 +768,17 @@ final class Http2 implements Watchdog.Vigilada {
         }
     }
 
-    void mandarCabeceras(int flujo, List<Hpack.Campo> campos, boolean fin) throws IOException {
+    void mandarCabeceras(Flujo dueno, List<Hpack.Campo> campos, boolean fin) throws IOException {
         byte[] bloque = hpackOut.codificar(campos);
-        int banderas = FIN_CABECERAS | (fin ? FIN_FLUJO : 0);
-        if (bloque.length <= tramaMaxima) {
-            escribirTrama(HEADERS, banderas, flujo, bloque);
-            return;
-        }
+        int flujo = dueno.id;
         synchronized (candadoEscritura) {
+            if (dueno.cortado || !dueno.empezada.compareAndSet(false, true)) {
+                return;
+            }
+            if (bloque.length <= tramaMaxima) {
+                escribirTrama(HEADERS, FIN_CABECERAS | (fin ? FIN_FLUJO : 0), flujo, bloque);
+                return;
+            }
             escribirTrama(HEADERS, fin ? FIN_FLUJO : 0, flujo,
                     java.util.Arrays.copyOfRange(bloque, 0, tramaMaxima));
             int pos = tramaMaxima;
@@ -786,8 +793,10 @@ final class Http2 implements Watchdog.Vigilada {
 
     void mandarDatos(Flujo flujo, byte[] cuerpo, boolean fin) throws IOException {
         if (cuerpo.length == 0) {
-            if (fin) {
-                escribirTrama(DATA, FIN_FLUJO, flujo.id, new byte[0]);
+            synchronized (candadoEscritura) {
+                if (fin && !flujo.cortado) {
+                    escribirTrama(DATA, FIN_FLUJO, flujo.id, new byte[0]);
+                }
             }
             return;
         }
@@ -800,8 +809,13 @@ final class Http2 implements Watchdog.Vigilada {
                 while (pos < finTrama) {
                     int trozo = esperarHueco(flujo, finTrama - pos, hasta);
                     boolean ultimo = fin && pos + trozo >= cuerpo.length;
-                    escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
-                            java.util.Arrays.copyOfRange(cuerpo, pos, pos + trozo));
+                    synchronized (candadoEscritura) {
+                        if (flujo.cortado) {
+                            return;
+                        }
+                        escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
+                                java.util.Arrays.copyOfRange(cuerpo, pos, pos + trozo));
+                    }
                     pos += trozo;
                     descargar(trozo);
                 }
@@ -809,6 +823,20 @@ final class Http2 implements Watchdog.Vigilada {
         } finally {
             descargar(cuerpo.length - pos);
         }
+    }
+
+    private void cuerpoDeMas(Flujo flujo) throws IOException {
+        synchronized (candadoEscritura) {
+            if (flujo.empezada.compareAndSet(false, true)) {
+                escribirTrama(HEADERS, FIN_CABECERAS | FIN_FLUJO, flujo.id, hpackOut.codificar(List.of(
+                        new Hpack.Campo(":status", "413"), new Hpack.Campo("content-length", "0"))));
+            }
+            flujo.cortado = true;
+            escribirTrama(RST_STREAM, 0, flujo.id, deEntero(ERROR_NINGUNO));
+        }
+        flujo.finEntrada = true;
+        flujos.remove(flujo.id);
+        flujo.cerrarEntrada();
     }
 
     private void cargar(int octetos) throws IOException {
@@ -968,6 +996,8 @@ final class Http2 implements Watchdog.Vigilada {
 
         final int id;
         final Tuberia entrada;
+        final AtomicBoolean empezada = new AtomicBoolean();
+        volatile boolean cortado;
         final java.util.concurrent.atomic.AtomicInteger ventana;
         volatile boolean finEntrada;
 
@@ -1008,7 +1038,7 @@ final class Http2 implements Watchdog.Vigilada {
         }
 
         synchronized void aportar(byte[] datos, int desde, int largo) {
-            if (largo <= 0 || cerrada || desbordada) {
+            if (largo <= 0 || desbordada) {
                 return;
             }
             recibidos += largo;
@@ -1016,7 +1046,10 @@ final class Http2 implements Watchdog.Vigilada {
                 desbordada = true;
                 trozos.clear();
                 indice = 0;
-                notifyAll();
+                desplazamiento = 0;
+                return;
+            }
+            if (cerrada) {
                 return;
             }
             trozos.add(java.util.Arrays.copyOfRange(datos, desde, desde + largo));
@@ -1038,10 +1071,10 @@ final class Http2 implements Watchdog.Vigilada {
         @Override
         public synchronized int read(byte[] destino, int desde, int largo) throws IOException {
             while (indice >= trozos.size()) {
-                if (desbordada) {
-                    throw new HttpException(413, "cuerpo demasiado grande");
-                }
                 if (cerrada) {
+                    if (desbordada) {
+                        throw new HttpException(413, "cuerpo demasiado grande");
+                    }
                     return -1;
                 }
                 try {
@@ -1049,9 +1082,6 @@ final class Http2 implements Watchdog.Vigilada {
                 } catch (InterruptedException cortado) {
                     Thread.currentThread().interrupt();
                     throw new IOException("interrumpido leyendo el cuerpo");
-                }
-                if (indice >= trozos.size() && cerrada) {
-                    return -1;
                 }
             }
             byte[] trozo = trozos.get(indice);

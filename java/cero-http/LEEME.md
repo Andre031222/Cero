@@ -91,9 +91,9 @@ Se pueden subir, pero conviene saber contra qué protege cada uno:
 | `http2MaxBloqueCabeceras` | CVE-2024-27316: HEADERS y CONTINUATION sin fin, ninguna inválida por separado |
 | `http2MaxListaCabeceras` | La bomba de HPACK: tres kilobytes comprimidos pueden ser trescientos. Se anuncia en `SETTINGS_MAX_HEADER_LIST_SIZE` |
 | `http2MaxAnulados` | CVE-2023-44487, «Rapid Reset»: abrir y anular saca el flujo del tope al instante |
-| `http2MaxControlSeguidas` | PING, SETTINGS, WINDOW_UPDATE y PRIORITY sin abrir flujos; abrir uno reinicia la cuenta |
+| `http2MaxControlSeguidas` | PING, SETTINGS, WINDOW_UPDATE y PRIORITY sin abrir flujos; abrir uno reinicia la cuenta. Un `WINDOW_UPDATE` de un flujo, o de la conexión con algún flujo vivo, no cuenta: es lo que hace quien descarga |
 | `http2MaxEnVuelo` | «HTTP/2 Bomb» y el lector lento: 32 MiB de respuestas construidas y sin mandar por conexión; pasarlos es GOAWAY `ENHANCE_YOUR_CALM` (`H2-054`). Una respuesta que llega sola pasa siempre, para no romper una descarga grande |
-| `maxBodyBytes` | también en h2: un cuerpo de más de 10 MiB deja de guardarse, quien lo lee recibe 413 y el flujo se cierra con `RST_STREAM NO_ERROR` (`H2-055`). Una acción que no lee el cuerpo no ve el 413, pero tampoco retiene nada |
+| `maxBodyBytes` | también en h2: un `content-length` de más recibe 413 sin que corra la acción, y un cuerpo sin longitud que pasa de 10 MiB deja de guardarse y recibe 413 si la respuesta no ha empezado, o `RST_STREAM NO_ERROR` si ya empezó; lo que la acción escriba después se descarta (`H2-055`) |
 
 Y uno que no se configura: un bloque que se expande a más de **256 campos** corta la conexión
 (`H2-050`), cada `cookie` por separado. La lista se mide mientras se decodifica, campo a campo, y no
