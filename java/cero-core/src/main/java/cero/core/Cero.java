@@ -102,20 +102,12 @@ public final class Cero {
         return this;
     }
 
-    /**
-     * Publica {@code /cero/vivo} y {@code /cero/listo}.
-     *
-     * <p>Las rutas se registran aquí y no en {@code start()} para que cuenten en el número de
-     * rutas del arranque: un endpoint que no aparece donde aparecen los demás es un endpoint que
-     * nadie recuerda que existe.
-     */
     public Cero health(Health checks) {
         router.get("/cero/vivo", checks.liveEndpoint());
         router.get("/cero/listo", checks.readyEndpoint());
         return this;
     }
 
-    /** Los textos de la aplicación, para {@code context.t(...)}. */
     public Cero messages(Messages value) {
         messages = value;
         return this;

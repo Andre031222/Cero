@@ -98,7 +98,6 @@ public final class TestSuite {
                 "DENY".equals(cliente().get("/api/tareas").header("x-frame-options")));
     }
 
-    /** Un 403 no puede ser una página en blanco: tiene que decir qué se rechazó y por qué. */
     private static void prohibido() {
         TestResponse prohibido = cliente().form("/tareas", Map.of("titulo", "intruso"));
         check("un alta sin sesión da 403", prohibido.status() == 403);
@@ -190,7 +189,6 @@ public final class TestSuite {
         check("borrar lo inexistente da 404", cliente.delete("/api/tareas/9999").status() == 404);
     }
 
-    /** La cookie de sesión se perdía sobre HTTP/2: aquí se comprueba desde una app real. */
     private static void sesionSobreHttp2() {
         TestClient cliente = app.client().http2();
         TestResponse portada = cliente.get("/");
@@ -208,7 +206,6 @@ public final class TestSuite {
                 app.client().http2().form("/tareas", Map.of("titulo", "intruso")).status() == 403);
     }
 
-    /** Un cliente nuevo por grupo: su propio tarro de cookies, o sea su propia sesión. */
     private static void cors() {
         String permitido = "https://tareas.local";
 

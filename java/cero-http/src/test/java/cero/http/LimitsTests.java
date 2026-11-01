@@ -25,11 +25,6 @@ final class LimitsTests {
         keepAliveCeiling();
     }
 
-    /**
-     * El vigilante marca un límite por petición y lo borra al terminar. Si se le olvidara
-     * borrarlo, la siguiente petición de la misma conexión heredaría un plazo ya vencido y
-     * moriría sin motivo. Con un plazo corto y muchas peticiones seguidas eso salta enseguida.
-     */
     private static void handlerTimeoutNoCortaLoRapido() throws Exception {
         ServerOptions options = ServerOptions.builder()
                 .port(0)
@@ -172,9 +167,6 @@ final class LimitsTests {
             }
         });
 
-        // Con margen de sobra: este tiempo está para que la prueba no se cuelgue, no para medir
-        // velocidad. Con 3 segundos fallaba de vez en cuando al correr la suite entera, con la
-        // máquina saturada — y una prueba que falla a cara o cruz no dice nada de nadie.
         Check.that("el handler arrancó", entered.await(30, TimeUnit.SECONDS));
         server.stop();
         client.join(30_000);

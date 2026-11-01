@@ -183,7 +183,6 @@ final class GuardTests {
         corsConCredenciales();
     }
 
-    /** Comodín y credenciales a la vez deja leer las respuestas autenticadas a cualquiera. */
     private static void corsConCredenciales() throws Exception {
         Check.raises("anyOrigin con credenciales no se deja construir",
                 IllegalStateException.class, () -> Cors.anyOrigin().credentials(true));
@@ -195,7 +194,6 @@ final class GuardTests {
         Check.that("y una lista concreta con credenciales también",
                 Cors.allowing("https://app.pe").credentials(true) != null);
 
-        // Con lista concreta el eco es correcto: la lista la puso quien configuró.
         Server credenciales = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Cors.allowing("https://app.pe").credentials(true))
                 .controllers(ApiController.class)
@@ -292,8 +290,6 @@ final class GuardTests {
             Check.equal("y sin cupo restante",
                     cuarta.headers().firstValue("x-ratelimit-remaining").orElse(null), "0");
 
-            // Antes cada ruta llevaba su propia cuenta, y eso convertía el limitador en un
-            // adorno: bastaba repartir la carga entre URLs para multiplicar la cuota.
             Check.equal("cambiar de ruta no da cuota nueva",
                     send(base + "/api/token", "GET").statusCode(), 429);
 
@@ -313,7 +309,6 @@ final class GuardTests {
                 Sanitize.html("a<iframe src=x></iframe>b"), "ab");
         Check.equal("elimina manejadores de evento",
                 Sanitize.html("<div onclick=\"malo()\">x</div>"), "<div>x</div>");
-        // Antes se recortaba el esquema y quedaba `href="malo()"`; ahora cae el atributo entero.
         Check.equal("elimina el protocolo javascript",
                 Sanitize.html("<a href=\"javascript:malo()\">x</a>"), "<a>x</a>");
         Check.equal("conserva el marcado inocuo",

@@ -2,14 +2,6 @@ package cero.http;
 
 import java.util.List;
 
-/**
- * HPACK contra los vectores del apéndice C del RFC 7541.
- *
- * <p>No son casos inventados: son los ejemplos que el propio RFC da con su volcado hexadecimal,
- * incluidas las tres peticiones seguidas que enseñan cómo crece la tabla dinámica entre una y
- * otra. Es la única forma de saber que el decodificador está de acuerdo con el resto del mundo y
- * no solo consigo mismo.
- */
 final class HpackTests {
 
     private HpackTests() {
@@ -51,8 +43,6 @@ final class HpackTests {
         Check.equal("la 61 es www-authenticate", HpackTablas.ESTATICA[60][0], "www-authenticate");
         Check.equal("Huffman tiene 257 símbolos con EOS", HpackTablas.CODIGO.length, 257);
 
-        // Kraft: la suma de 2^-longitud de un código prefijo completo vale exactamente 1. Si la
-        // tabla se copió mal —un símbolo de menos, una longitud cambiada— esto no da 1.
         double kraft = 0;
         for (byte largo : HpackTablas.LARGO) {
             kraft += Math.pow(2, -largo);
@@ -61,7 +51,6 @@ final class HpackTests {
                 Math.abs(kraft - 1.0) < 1e-12);
     }
 
-    /** §C.1: 10 y 1337 con prefijo de cinco bits, y 42 empezando en octeto. */
     private static void enteros() {
         Check.equal("10 con prefijo de 5", leer(hex("0a"), 5), 10);
         Check.equal("1337 con prefijo de 5", leer(hex("1f9a0a"), 5), 1337);
@@ -75,20 +64,17 @@ final class HpackTests {
     }
 
     private static void huffman() {
-        // §C.4.1: «www.example.com» comprimido son doce octetos.
         byte[] codificado = hex("f1e3 c2e5 f23a 6ba0 ab90 f4ff");
         Check.equal("decodifica www.example.com",
                 Hpack.huffmanDecodificar(codificado), "www.example.com");
         Check.that("y codificarlo devuelve los mismos bytes",
                 java.util.Arrays.equals(Hpack.huffmanCodificar("www.example.com"), codificado));
 
-        // §C.6.1: una fecha, que es donde Huffman más ahorra.
         Check.equal("decodifica una fecha",
                 Hpack.huffmanDecodificar(hex("d07a be94 1054 d444 a820 0595 040b 8166 e082 a62d 1bff")),
                 "Mon, 21 Oct 2013 20:13:21 GMT");
     }
 
-    /** §C.3: tres peticiones seguidas por la misma conexión, sin Huffman. */
     private static void peticionesSinHuffman() {
         Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
 
@@ -111,7 +97,6 @@ final class HpackTests {
         Check.equal("y tres", d.entradas(), 3);
     }
 
-    /** §C.4: las mismas tres, ahora con las cadenas comprimidas. */
     private static void peticionesConHuffman() {
         Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
 
@@ -129,13 +114,9 @@ final class HpackTests {
                         + "custom-key: custom-value\n");
     }
 
-    /**
-     * §C.5: respuestas con la tabla limitada a 256 bytes, que es donde se ve la expulsión.
-     * En la tercera, la tabla ya ha tirado entradas de la primera.
-     */
     private static void respuestasConTablaPequena() {
         Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
-        d.decodificar(hex("3f e1 1f"));   // §6.3: bajar la tabla a 256
+        d.decodificar(hex("3f e1 1f"));
 
         Check.equal("C.5.1 · primera respuesta",
                 texto(d.decodificar(hex("4803 3330 3258 0770 7269 7661 7465 611d 4d6f 6e2c"
@@ -165,7 +146,6 @@ final class HpackTests {
                         + "set-cookie: foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1\n");
     }
 
-    /** Lo que este servidor emite tiene que poder leerlo su propio decodificador. */
     private static void idaYVuelta() {
         List<Hpack.Campo> campos = List.of(
                 new Hpack.Campo(":status", "200"),
@@ -181,7 +161,6 @@ final class HpackTests {
                 bloque.length < texto(campos).length());
     }
 
-    /** Lo que manda un cliente roto, o uno que no lo está siendo por accidente. */
     private static void entradasHostiles() {
         rechaza("índice 0, que no existe", "80");
         rechaza("índice más allá de la tabla", "ff00");

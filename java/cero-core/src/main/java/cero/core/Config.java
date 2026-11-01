@@ -13,8 +13,6 @@ import java.util.Set;
 
 public final class Config {
 
-    /** El prefijo y su longitud van juntos a propósito: al renombrar el framework, un
-     *  substring con el número escrito a mano se desincroniza en silencio. */
     private static final String PREFIJO_ENTORNO = "CERO_";
     private static final String PREFIJO_PROPIEDAD = "cero.";
 
@@ -22,11 +20,8 @@ public final class Config {
 
     private final Map<String, String> values = new LinkedHashMap<>();
 
-    /** Clave traducida -> variable de origen, para poder nombrar la variable en el aviso. */
     private final Map<String, String> desdeEntorno = new LinkedHashMap<>();
 
-    /** Toda clave por la que alguien ha preguntado; es el registro de claves conocidas que no
-     *  hay que mantener a mano. Incluye las ausentes: preguntar por una clave la declara. */
     private final Set<String> consultadas = new LinkedHashSet<>();
 
     private boolean entornoLeido;
@@ -132,8 +127,6 @@ public final class Config {
         absorbEnvironment(System.getenv());
     }
 
-    /** Aparte de {@link #readEnvironment()} por lo mismo que {@link #claveDeEntorno}: el entorno
-     *  real no se puede tocar dentro del proceso, y sin esta puerta el aviso no tiene prueba. */
     void absorbEnvironment(Map<String, String> entorno) {
         entornoLeido = true;
         entorno.forEach((name, value) -> {
@@ -145,15 +138,6 @@ public final class Config {
         });
     }
 
-    /**
-     * Traduce una variable de entorno a clave de configuración, o devuelve {@code null} si no
-     * lleva el prefijo. {@code CERO_SERVER_PORT} pasa a ser {@code server.port}.
-     *
-     * <p>Está aparte para poder probarlo: {@code System.getenv()} no se puede tocar dentro del
-     * proceso, así que si la traducción vive dentro del bucle no la cubre ninguna prueba. Ahí se
-     * escondió un fallo al renombrar el framework — el prefijo pasó de cuatro letras a seis y el
-     * recorte seguía escrito a mano.
-     */
     static String claveDeEntorno(String nombre) {
         if (nombre == null || !nombre.startsWith(PREFIJO_ENTORNO)) {
             return null;
@@ -161,12 +145,6 @@ public final class Config {
         return nombre.substring(PREFIJO_ENTORNO.length()).toLowerCase().replace('_', '.');
     }
 
-    /**
-     * Avisa de las variables {@code CERO_*} que no han acabado en ninguna clave que alguien lea.
-     * Se llama al final del arranque, cuando ya han preguntado todos: una variable mal escrita, o
-     * con el nombre de una clave en camelCase (que {@link #claveDeEntorno} pasa a minúsculas y por
-     * tanto nunca casa), se aplicaba sin efecto y en silencio.
-     */
     void revisarEntorno() {
         revisarEntorno(System.getenv());
     }

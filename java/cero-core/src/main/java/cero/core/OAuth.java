@@ -14,32 +14,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Autenticación con un proveedor OAuth 2.0 / OpenID Connect, con PKCE obligatorio.
- * Trae Google, Microsoft y GitHub configurados; cualquier otro se declara a mano.
- *
- * <pre>
- *   OAuth google = OAuth.google(idCliente, secreto, "https://miapp.pe/entrar/google");
- *
- *   // 1 — mandar al usuario al proveedor
- *   return Result.redirect(google.autorizar(ctx).url());
- *
- *   // 2 — el proveedor vuelve con ?code=…&amp;state=…
- *   OAuth.Identidad quien = google.intercambiar(ctx);
- * </pre>
- *
- * <p>Guía: https://cero.ginit.dev/guia#sesiones
- */
 public final class OAuth {
 
     private static final SecureRandom ALEATORIO = new SecureRandom();
     private static final Base64.Encoder URL64 = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder URL64_DEC = Base64.getUrlDecoder();
 
-    /** Dónde viven el verificador y el estado entre el paso 1 y el 2. */
     private static final String SESION = "cero.oauth";
 
-    /** Juegos de claves ya descargados, por URL. */
     private static final Map<String, Claves> CACHE_CLAVES = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final long VIDA_CLAVES_MILLIS = 10 * 60_000L;
@@ -85,20 +67,17 @@ public final class OAuth {
         return new OAuth(proveedor, idCliente, secreto, redireccion, List.of(valores));
     }
 
-    /** Paso 1, guardando verificador y estado en la sesión. La forma recomendada. */
     public Salida autorizar(Context contexto) {
         Salida salida = autorizar();
         contexto.session().set(SESION, salida.verificador() + "|" + salida.estado());
         return salida;
     }
 
-    /** Paso 2, comprobando el {@code state} guardado. Sin eso, un tercero fija la cuenta. */
     public Identidad intercambiar(Context contexto) {
         Object guardado = contexto.session().get(SESION);
         if (!(guardado instanceof String pareja) || pareja.indexOf('|') < 0) {
             throw new OAuthException("no hay un intercambio OAuth en curso en esta sesión");
         }
-        // De un solo uso: se borra antes de canjear, para que un reintento no vuelva a valer.
         contexto.session().remove(SESION);
 
         int barra = pareja.indexOf('|');
@@ -112,7 +91,6 @@ public final class OAuth {
         return intercambiar(contexto.query("code"), verificador);
     }
 
-    /** Paso 1: la URL a la que mandar al usuario, con su verificador y estado. */
     public Salida autorizar() {
         String verificador = azar(64);
         String estado = azar(32);
@@ -134,7 +112,6 @@ public final class OAuth {
         return new Salida(url.toString(), verificador, estado);
     }
 
-    /** Paso 2: canjea el código por los tokens y devuelve quién es el usuario. */
     public Identidad intercambiar(String codigo, String verificador) {
         if (codigo == null || codigo.isBlank()) {
             throw new IllegalArgumentException("falta el código de autorización");
@@ -168,10 +145,6 @@ public final class OAuth {
         return desdePerfil(acceso);
     }
 
-    /**
-     * Verifica la firma y las reivindicaciones de un id_token contra las claves del proveedor.
-     * Comprueba algoritmo, audiencia, emisor y caducidad; rechaza {@code alg: none}.
-     */
     public Identidad verificarIdToken(String idToken) {
         String[] partes = idToken.split("\\.");
         if (partes.length != 3) {
@@ -245,11 +218,9 @@ public final class OAuth {
         if (verificaCon(clavesDelProveedor(false), partes, kid)) {
             return true;
         }
-        // Los proveedores rotan sus claves: un fallo puede ser una caché vieja, no una firma mala.
         return verificaCon(clavesDelProveedor(true), partes, kid);
     }
 
-    /** El juego de claves, de la caché si vale y del proveedor si no. */
     private List<?> clavesDelProveedor(boolean forzar) {
         String url = proveedor.claves();
         Claves guardadas = CACHE_CLAVES.get(url);
@@ -339,7 +310,6 @@ public final class OAuth {
         return valor;
     }
 
-    /** Quién es el usuario, según el proveedor. */
     public record Identidad(String sujeto, String correo, boolean correoVerificado,
                             String nombre, String foto, String accessToken, String idToken) {
 
@@ -348,7 +318,6 @@ public final class OAuth {
         }
     }
 
-    /** Lo que hay que guardar en sesión antes de mandar al usuario al proveedor. */
     public record Salida(String url, String verificador, String estado) {
     }
 
@@ -384,7 +353,6 @@ public final class OAuth {
             if (emisor == null) {
                 return false;
             }
-            // Google emite indistintamente con y sin esquema
             return recibido.equals(emisor)
                     || recibido.equals(emisor.replace("https://", ""))
                     || recibido.startsWith(emisor);

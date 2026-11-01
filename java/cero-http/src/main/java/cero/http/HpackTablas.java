@@ -1,22 +1,12 @@
 package cero.http;
 
-/**
- * Las dos tablas fijas de HPACK (RFC 7541): la estática y el código de Huffman.
- *
- * <p><b>Generado, no escrito.</b> Salen de los apéndices A y B del propio RFC, parseados y
- * comprobados: la estática tiene que dar 61 entradas exactas, y la suma de Kraft del código de
- * Huffman —la de dos elevado a menos cada longitud— tiene que valer 1 justo, que es lo que
- * demuestra que es un código prefijo completo y que no se ha perdido ni añadido un símbolo.
- * Una tabla de 257 filas copiada a mano falla en silencio: no revienta, decodifica mal.
- */
 final class HpackTablas {
 
     private HpackTablas() {
     }
 
-    /** Apéndice A. El índice 1 del protocolo es la posición 0 de aquí. */
     static final String[][] ESTATICA = {
-            {":authority", ""},   // 1
+            {":authority", ""},
             {":method", "GET"},
             {":method", "POST"},
             {":path", "/"},
@@ -26,7 +16,7 @@ final class HpackTablas {
             {":status", "200"},
             {":status", "204"},
             {":status", "206"},
-            {":status", "304"},   // 11
+            {":status", "304"},
             {":status", "400"},
             {":status", "404"},
             {":status", "500"},
@@ -36,7 +26,7 @@ final class HpackTablas {
             {"accept-ranges", ""},
             {"accept", ""},
             {"access-control-allow-origin", ""},
-            {"age", ""},   // 21
+            {"age", ""},
             {"allow", ""},
             {"authorization", ""},
             {"cache-control", ""},
@@ -46,7 +36,7 @@ final class HpackTablas {
             {"content-length", ""},
             {"content-location", ""},
             {"content-range", ""},
-            {"content-type", ""},   // 31
+            {"content-type", ""},
             {"cookie", ""},
             {"date", ""},
             {"etag", ""},
@@ -56,7 +46,7 @@ final class HpackTablas {
             {"host", ""},
             {"if-match", ""},
             {"if-modified-since", ""},
-            {"if-none-match", ""},   // 41
+            {"if-none-match", ""},
             {"if-range", ""},
             {"if-unmodified-since", ""},
             {"last-modified", ""},
@@ -66,7 +56,7 @@ final class HpackTablas {
             {"proxy-authenticate", ""},
             {"proxy-authorization", ""},
             {"range", ""},
-            {"referer", ""},   // 51
+            {"referer", ""},
             {"refresh", ""},
             {"retry-after", ""},
             {"server", ""},
@@ -76,10 +66,9 @@ final class HpackTablas {
             {"user-agent", ""},
             {"vary", ""},
             {"via", ""},
-            {"www-authenticate", ""},   // 61
+            {"www-authenticate", ""},
     };
 
-    /** Apéndice B: el código de cada símbolo, alineado al bit menos significativo. */
     static final int[] CODIGO = {
         0x1ff8, 0x7fffd8, 0xfffffe2, 0xfffffe3, 0xfffffe4, 0xfffffe5, 0xfffffe6, 0xfffffe7, 0xfffffe8,
         0xffffea, 0x3ffffffc, 0xfffffe9, 0xfffffea, 0x3ffffffd, 0xfffffeb, 0xfffffec, 0xfffffed,
@@ -110,7 +99,6 @@ final class HpackTablas {
         0x7ffffee, 0x7ffffef, 0x7fffff0, 0x3ffffee, 0x3fffffff
     };
 
-    /** Y su longitud en bits. El símbolo 256 es EOS y no puede aparecer decodificado. */
     static final byte[] LARGO = {
         13, 23, 28, 28, 28, 28, 28, 28, 28, 24, 30, 28, 28, 30, 28, 28, 28, 28, 28, 28, 28, 28, 30, 28,
         28, 28, 28, 28, 28, 28, 28, 28, 6, 10, 10, 12, 13, 6, 8, 11, 10, 10, 8, 11, 8, 6, 6, 6,

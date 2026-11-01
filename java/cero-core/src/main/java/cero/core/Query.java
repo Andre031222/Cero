@@ -10,7 +10,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface Query {
-    /** Centinela de «no se declaró defecto»: la cadena vacía es un valor legítimo de orElse. */
     String SIN_DEFECTO = "\u0000cero.sin-defecto";
 
     String value();

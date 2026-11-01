@@ -37,20 +37,6 @@ public final class Tls {
         }
     }
 
-    /**
-     * Un contexto TLS cuyo certificado se puede cambiar sin reiniciar el servidor.
-     *
-     * <pre>
-     *   Tls.Certificado cert = Tls.reloadable(Path.of("cert.p12"), "clave".toCharArray());
-     *   Server servidor = Server.start(opciones.tls(cert.context()), handler);
-     *
-     *   cert.reload();   // tras renovarlo, sin cortar nada
-     * </pre>
-     *
-     * <p>El {@link SSLContext} es siempre el mismo objeto —el socket de escucha se creó con él—
-     * pero por dentro consulta el certificado en cada apretón de manos. Las conexiones ya
-     * abiertas siguen con el anterior; las nuevas usan el nuevo.
-     */
     public static Certificado reloadable(Path keystore, char[] password) {
         return new Certificado(keystore, password, "PKCS12");
     }
@@ -89,7 +75,6 @@ public final class Tls {
             return keystore;
         }
 
-        /** Relee el archivo. Si el nuevo no sirve, deja el anterior en pie y lanza. */
         public void reload() {
             actual.set(leerClaves(keystore, password, type));
         }
@@ -117,7 +102,6 @@ public final class Tls {
         }
     }
 
-    /** Pregunta por el certificado en cada apretón de manos, en lugar de quedárselo. */
     private static final class Delegante extends X509ExtendedKeyManager {
 
         private final AtomicReference<X509ExtendedKeyManager> fuente;

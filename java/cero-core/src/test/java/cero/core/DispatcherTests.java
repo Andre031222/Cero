@@ -13,7 +13,6 @@ final class DispatcherTests {
     private DispatcherTests() {
     }
 
-    /** Los 256 valores de un byte, con el 0 y el 0xFF dentro a propósito. */
     private static final byte[] TODOS_LOS_BYTES = todosLosBytes();
 
     private static byte[] todosLosBytes() {
@@ -51,7 +50,6 @@ final class DispatcherTests {
             return "raíz";
         }
 
-        /** Los 256 bytes posibles: si algo se codifica por el camino, aquí se nota. */
         @Get("/binario")
         public Object binario() {
             return Result.bytes(TODOS_LOS_BYTES, "application/octet-stream");
@@ -256,8 +254,6 @@ final class DispatcherTests {
         Check.equal("parámetro con valor por defecto",
                 Cliente.get(base + "/api/buscar?q=cero").body(), "{\"q\":\"cero\",\"pagina\":1}");
 
-        // orElse = "" declara la cadena vacía como defecto; antes era indistinguible de no
-        // declarar defecto y el parámetro llegaba null.
         Check.equal("orElse vacío es un defecto declarado",
                 Cliente.get(base + "/api/filtrar").body(), "{\"nivel\":\"\",\"sede\":null}");
 
@@ -337,14 +333,6 @@ final class DispatcherTests {
         Check.that("y el mensaje", ausente.body().contains("el artículo no existe"));
     }
 
-    /**
-     * El binario tiene que llegar byte a byte.
-     *
-     * <p>Se comprueba con los 256 valores posibles porque el modo de fallar es sutil: si el
-     * cuerpo pasa por un String, los bytes sobre 0x7F se convierten en el carácter de sustitución
-     * y el archivo llega con un tamaño parecido pero corrupto. Un «hola» en ASCII pasaría la
-     * prueba sin enterarse de nada.
-     */
     private static void binarios(String base) throws Exception {
         HttpResponse<byte[]> crudo = Cliente.bytes(base + "/api/binario");
         Check.equal("el binario responde 200", crudo.statusCode(), 200);
@@ -358,7 +346,6 @@ final class DispatcherTests {
                 descarga.headers().firstValue("Content-Disposition").orElse(""),
                 "attachment; filename=\"informe final.bin\"");
 
-        // Un nombre con comillas y un salto de línea podría cerrar la cabecera y colar otra.
         HttpResponse<byte[]> trampa = Cliente.bytes(base + "/api/descarga-con-trampa");
         String disposicion = trampa.headers().firstValue("Content-Disposition").orElse("");
         Check.equal("el nombre de archivo sale saneado",
@@ -379,13 +366,6 @@ final class DispatcherTests {
                 String.join(",", traza), "entra,dentro");
     }
 
-    /**
-     * El fallback pasa por los middlewares, como cualquier otra respuesta.
-     *
-     * <p>Antes no: se resolvía delante del despachador y se saltaba la cadena entera. El
-     * documento HTML de un SPA —lo único que un atacante puede meter en un iframe— salía sin
-     * X-Frame-Options mientras la API sí la llevaba, y los estáticos no tenían freno de tasa.
-     */
     private static void fallback() throws Exception {
         List<String> traza = new ArrayList<>();
         Server server = Cero.app()
@@ -416,8 +396,6 @@ final class DispatcherTests {
             Check.equal("y también lleva las cabeceras",
                     api.headers().firstValue("X-Frame-Options").orElse(""), "DENY");
 
-            // Un verbo equivocado sobre una ruta que existe es un 405, no la página del SPA:
-            // devolver HTML ahí escondería el error de quien llama a la API.
             Check.equal("un verbo no permitido sigue dando 405",
                     Cliente.method(base + "/api/ping", "DELETE").statusCode(), 405);
         } finally {

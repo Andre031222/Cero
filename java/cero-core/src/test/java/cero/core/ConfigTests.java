@@ -52,9 +52,6 @@ final class ConfigTests {
             System.clearProperty("cero.prueba.valor");
         }
 
-        // Regresión: el prefijo pasó de cuatro letras a seis y el recorte estaba escrito a
-        // mano, así que CERO_SERVER_PORT se leía como "o.server.port". No lo cazó nadie porque
-        // System.getenv() no se puede tocar en el proceso y este camino no tenía prueba.
         Check.equal("CERO_ se recorta por la longitud del prefijo, no a mano",
                 Config.claveDeEntorno("CERO_SERVER_PORT"), "server.port");
         Check.equal("y un solo tramo también",
@@ -68,7 +65,6 @@ final class ConfigTests {
         avisosDeEntorno();
     }
 
-    /** Una variable con el nombre viejo o mal escrito se aplicaba sin efecto y sin decir nada. */
     private static void avisosDeEntorno() {
         Map<String, String> entorno = new LinkedHashMap<>();
         entorno.put("CERO_SERVER_PORT", "9000");

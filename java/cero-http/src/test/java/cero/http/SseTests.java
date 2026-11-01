@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/** Eventos del servidor al navegador. */
 final class SseTests {
 
     private SseTests() {
@@ -42,10 +41,6 @@ final class SseTests {
         }
     }
 
-    /**
-     * Lo único que de verdad importa: que cada evento salga en cuanto se manda. Si el servidor
-     * los acumula y los suelta al cerrar, esto deja de ser tiempo real y no sirve para nada.
-     */
     private static void lleganUnoAUno() throws Exception {
         CountDownLatch primero = new CountDownLatch(1);
         CountDownLatch seguir = new CountDownLatch(1);
@@ -54,7 +49,7 @@ final class SseTests {
             try (Sse eventos = Sse.open(res)) {
                 eventos.send("uno");
                 primero.countDown();
-                seguir.await(10, TimeUnit.SECONDS);   // no se manda el segundo hasta que se pida
+                seguir.await(10, TimeUnit.SECONDS);
                 eventos.send("dos");
             }
         };
@@ -96,7 +91,6 @@ final class SseTests {
         }
     }
 
-    /** Si el navegador cierra la pestaña, el bucle del servidor tiene que enterarse y salir. */
     private static void seEnteraDeQueElClienteSeFue() throws Exception {
         CountDownLatch salio = new CountDownLatch(1);
 

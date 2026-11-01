@@ -1,6 +1,5 @@
 package cero.http;
 
-/** Qué hacer con una conexión WebSocket. Todos los métodos tienen una implementación vacía. */
 public interface WebSocketHandler {
 
     default void onOpen(WebSocket socket) {
@@ -12,7 +11,6 @@ public interface WebSocketHandler {
     default void onBinary(WebSocket socket, byte[] datos) {
     }
 
-    /** Llega una vez, siempre, tanto si cerró el cliente como si cerró el servidor. */
     default void onClose(WebSocket socket, int codigo, String motivo) {
     }
 

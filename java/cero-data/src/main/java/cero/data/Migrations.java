@@ -16,35 +16,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Aplica los archivos {@code .sql} de un directorio, en orden y una sola vez.
- *
- * <pre>{@code
- * int aplicadas = Migrations.from(Path.of("db/migraciones")).run();
- * }</pre>
- *
- * <p>Cada archivo corre dentro de su propia transacción y queda anotado en una tabla con su
- * huella. Si un archivo ya aplicado cambia de contenido, {@link #run()} falla en vez de
- * ignorarlo: editar una migración ya corrida deja dos entornos distintos creyéndose iguales, y
- * eso solo se descubre cuando algo se rompe en producción. Si la corrección es legítima y no
- * altera lo que la migración dejó en el esquema, {@link #repair()} reescribe la huella.
- *
- * <h2>Hasta dónde llega la transacción</h2>
- *
- * <p>Una migración que falla <b>nunca queda anotada</b>, así que se reintenta en la siguiente
- * corrida. Lo que sí depende del motor es si sus efectos se deshacen:
- *
- * <ul>
- *   <li><b>PostgreSQL</b> tiene DDL transaccional: un {@code create table} a medias se deshace y
- *       la base queda como estaba.</li>
- *   <li><b>MySQL, H2, Oracle</b> confirman de forma implícita en cada DDL. Si una migración crea
- *       dos tablas y falla en la segunda, la primera <b>se queda creada</b>.</li>
- * </ul>
- *
- * <p>Ahí la regla es <b>una migración, un cambio</b>: así, cuando una falla, o no hizo nada o lo
- * hizo entero. Es la misma limitación que tienen Flyway y Liquibase, y por el mismo motivo — no
- * es algo que una herramienta pueda arreglar.
- */
 public final class Migrations {
 
     private static final String CLAVE_FORANEA = "23503";
@@ -77,7 +48,6 @@ public final class Migrations {
         return this;
     }
 
-    /** Aplica lo que falte y devuelve cuántas se aplicaron. */
     public int run() {
         Db db = Db.open(fuente);
         crearTablaDeControl(db);
@@ -95,7 +65,6 @@ public final class Migrations {
         return aplicadas;
     }
 
-    /** Las ya aplicadas, en el orden en que se aplicaron. */
     public List<String> applied() {
         Db db = Db.open(fuente);
         crearTablaDeControl(db);
@@ -106,13 +75,6 @@ public final class Migrations {
         return nombres;
     }
 
-    /**
-     * Recalcula la huella de las ya aplicadas y reescribe las que hayan cambiado, sin reejecutar
-     * nada. Es la salida para una migración corregida que no altera lo que dejó en el esquema:
-     * sin esto, el arranque se para en todos los entornos y solo queda editar la tabla a mano.
-     *
-     * @return los nombres cuyas huellas se reescribieron
-     */
     public List<String> repair() {
         Db db = Db.open(fuente);
         crearTablaDeControl(db);
@@ -129,12 +91,6 @@ public final class Migrations {
         return reparadas;
     }
 
-    /**
-     * Aplica el lote completo contra otro origen de datos —una base vacía y desechable, pensada
-     * para integración continua— y devuelve el resultado en vez de lanzar.
-     *
-     * @param fuenteDesechable nombre de un origen ya registrado en {@link DataSources}
-     */
     public Verificacion verify(String fuenteDesechable) {
         Migrations ensayo = new Migrations(fuenteDesechable, origen).table(tabla);
         try {
@@ -150,7 +106,6 @@ public final class Migrations {
         }
     }
 
-    /** Lo que dejó {@link #verify(String)}: {@code migracion} y {@code fallo} solo si algo falló. */
     public record Verificacion(boolean correcta, int aplicadas, String migracion, String fallo) {
 
         public String resumen() {
@@ -169,8 +124,6 @@ public final class Migrations {
 
     private void aplicar(Migracion migracion) {
         List<String> sentencias = sentencias(migracion.sql);
-        // Con Tx.run() la transacción sale siempre del origen por omisión, así que una migración
-        // sobre otro origen acababa aplicándose contra la base equivocada.
         Tx.call(fuente, () -> {
             Db db = Db.open(fuente);
             for (int i = 0; i < sentencias.size(); i++) {
@@ -186,10 +139,6 @@ public final class Migrations {
         });
     }
 
-    /**
-     * El motor solo dice qué restricción se violó, no en qué archivo iba la sentencia. Eso lo
-     * sabe el runner, y sin ello el fallo llega como un {@code SQLException} suelto.
-     */
     static DataException explicar(String migracion, int numero, RuntimeException fallo) {
         SQLException motor = causaSql(fallo);
         String detalle = motor == null ? fallo.getMessage() : detalleDelMotor(motor);
@@ -230,15 +179,6 @@ public final class Migrations {
         }
     }
 
-    /**
-     * Parte por punto y coma. No se hace en el driver porque muchos no admiten varias sentencias
-     * en un mismo {@code execute}, y una migración casi siempre son varias.
-     *
-     * <p>Un {@code split(";")} a secas parte por la mitad cualquier cuerpo de función
-     * {@code $$ … $$}, literal o comentario que lleve dentro un punto y coma, y el motor responde
-     * con un error de sintaxis que no señala la causa. Por eso se recorre el texto respetando
-     * literales, identificadores entre comillas, comentarios y cadenas con etiqueta de dólar.
-     */
     static List<String> sentencias(String sql) {
         List<String> partes = new ArrayList<>();
         StringBuilder actual = new StringBuilder();
@@ -281,7 +221,6 @@ public final class Migrations {
         }
     }
 
-    /** En PostgreSQL los comentarios de bloque anidan, así que no vale buscar el primer cierre. */
     private static int finDelBloque(String sql, int inicio) {
         int abiertos = 1;
         int i = inicio + 2;
@@ -318,7 +257,6 @@ public final class Migrations {
         return i;
     }
 
-    /** {@code $$} o {@code $etiqueta$} en esta posición; {@code null} si no abre ninguna. */
     private static String etiquetaDolar(String sql, int inicio) {
         if (sql.charAt(inicio) != '$') {
             return null;
@@ -390,10 +328,6 @@ public final class Migrations {
         }
     }
 
-    /**
-     * Dentro de un jar no se puede listar un directorio del classpath, así que las migraciones se
-     * enumeran en un {@code indice.txt} junto a ellas, un nombre por línea.
-     */
     private record EnClasspath(String prefijo) implements Origen {
 
         @Override

@@ -1,12 +1,5 @@
 package cero.http;
 
-/**
- * La cabecera {@code Range} de RFC 9110 §14, en su forma útil: un solo intervalo de bytes.
- *
- * <p>Con varios intervalos se devuelve {@code null} y quien llama sirve el recurso entero, que es
- * lo que el RFC permite explícitamente. {@code multipart/byteranges} no lo pide nadie para lo que
- * sirve esto: reanudar una descarga y buscar dentro de un vídeo.
- */
 record Ranges(long desde, long hasta) {
 
     static final Ranges NO_SATISFACIBLE = new Ranges(-1, -1);
@@ -19,10 +12,6 @@ record Ranges(long desde, long hasta) {
         return desde >= 0;
     }
 
-    /**
-     * @return el intervalo pedido, {@link #NO_SATISFACIBLE} si lo pedido cae fuera del recurso,
-     *         o {@code null} si no hay que hacer nada especial
-     */
     static Ranges parse(String cabecera, long tamano) {
         if (cabecera == null || tamano <= 0) {
             return null;

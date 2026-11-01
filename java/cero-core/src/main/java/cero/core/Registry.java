@@ -47,14 +47,6 @@ public final class Registry {
                     + "; regístralo con add() o anótalo con @Service");
         }
 
-        // La construcción va FUERA del mapa, a propósito. build() vuelve a entrar en get() por
-        // cada dependencia del constructor, así que resolver dentro de computeIfAbsent anida
-        // llamadas sobre el mismo ConcurrentHashMap: en cuanto dos eslabones de la cadena caen
-        // en el mismo bin, lanza IllegalStateException("Recursive update"). No era un límite de
-        // profundidad, era una colisión de bins que con cadenas largas deja de ser casualidad.
-        //
-        // El cerrojo por tipo conserva lo que daba computeIfAbsent —una sola instancia aunque
-        // dos hilos pidan el mismo servicio a la vez— sin meter la recursión dentro del mapa.
         Object cerrojo = cerrojos.computeIfAbsent(type, clave -> new Object());
         synchronized (cerrojo) {
             Object yaEstaba = instances.get(type);

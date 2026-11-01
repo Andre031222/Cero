@@ -32,7 +32,6 @@ final class TrazadoTests {
         Check.equal("la cabecera es version-traza-tramo-banderas",
                 t.traceparent(), "00-" + t.traza() + "-" + t.tramo() + "-01");
 
-        // Dos trazas seguidas no pueden coincidir, o el trazado no distingue nada.
         Set<String> vistas = new java.util.HashSet<>();
         for (int i = 0; i < 500; i++) {
             vistas.add(Trace.nueva().traza());
@@ -53,17 +52,12 @@ final class TrazadoTests {
                 "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
         Check.that("y también cuando dice que no", !sinMuestrear.muestreada());
 
-        // Una versión futura mantiene los cuatro primeros campos en su sitio: se acepta.
         Trace futura = Trace.deCabecera(
                 "cc-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-loquesea");
         Check.equal("una versión futura con campos de más se sigue entendiendo",
                 futura.traza(), "4bf92f3577b34da6a3ce929d0e0e4736");
     }
 
-    /**
-     * Una cabecera rota no tumba la petición: se descarta y se empieza traza propia. Devolver
-     * 400 por esto convertiría un proxy mal configurado en una caída.
-     */
     private static void cabeceraQueNoVale() {
         String heredada = "4bf92f3577b34da6a3ce929d0e0e4736";
         List<String> malas = List.of(
@@ -86,7 +80,6 @@ final class TrazadoTests {
         Check.that("sin cabecera también empieza una", Trace.deCabecera(null).traza().length() == 32);
     }
 
-    /** El motivo de todo esto: que el identificador salga en el log sin pasarlo a mano. */
     private static void enElLog() {
         List<String> lineas = new ArrayList<>();
         Log.Nivel antes = Log.nivel();
@@ -116,10 +109,6 @@ final class TrazadoTests {
         }
     }
 
-    /**
-     * Dos servicios de verdad: el de fuera llama al de dentro con {@link Http}, y la traza tiene
-     * que ser la misma en los dos. Es la única prueba que dice si esto sirve para algo.
-     */
     private static void deExtremoAExtremo() throws Exception {
         ConcurrentLinkedQueue<String> vistas = new ConcurrentLinkedQueue<>();
 
@@ -157,7 +146,6 @@ final class TrazadoTests {
             Check.that("y el de dentro la recibe de él, no una nueva",
                     ordenadas.contains("dentro:" + heredada));
 
-            // Segunda petición por la misma conexión: la traza no puede arrastrarse.
             vistas.clear();
             Http.to("http://127.0.0.1:" + fuera.port() + "/fuera").get();
             String segunda = new ArrayList<>(vistas).get(0);

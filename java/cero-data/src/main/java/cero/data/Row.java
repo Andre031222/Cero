@@ -13,13 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Una fila: un mapa de columna a valor, de solo lectura y con búsqueda insensible a mayúsculas.
- *
- * <p>Es un {@link Map} para que al anidarse en una respuesta JSON se serialice como objeto en vez
- * de introspeccionarse por getters. Las operaciones de escritura del contrato lanzan
- * {@link UnsupportedOperationException}: una fila se construye con {@link #of} o {@link #from}.
- */
 public final class Row extends AbstractMap<String, Object> {
 
     private final Map<String, Object> values = new LinkedHashMap<>();

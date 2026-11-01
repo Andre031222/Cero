@@ -23,7 +23,6 @@ public final class App {
         return app(jdbc).port(puerto).start();
     }
 
-    /** La aplicación sin arrancar: así las pruebas la levantan en un puerto libre. */
     public static Cero app(String jdbc) {
         DataSources.registerDefault(Pool.to(jdbc).maxSize(8).build());
         Tareas.crearEsquema();

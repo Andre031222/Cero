@@ -7,38 +7,7 @@ import cero.http.Session;
 
 import java.util.List;
 
-/**
- * Base <b>opcional</b> para controladores.
- *
- * <p>Heredar de aquí no cambia nada de cómo se enrutan los métodos: sigue mandando {@code @Route}
- * y {@code @Get}. Lo único que da es no tener que arrastrar el {@code Context} por parámetro
- * cuando un controlador lo usa mucho, y un sitio donde poner lo que repites — comprobar permisos,
- * armar el modelo común de tus respuestas, formatear tus errores.
- *
- * <pre>{@code
- * @Route("/panel")
- * public class PanelController extends Controller {
- *
- *     @Get("/perfil")
- *     public Result perfil() {
- *         if (!autenticado()) return redirect("/auth/login");
- *         return json(Map.of("usuario", usuario().name()));
- *     }
- * }
- * }</pre>
- *
- * <p>Quien no quiera heredar sigue recibiendo el {@code Context} como parámetro y no se entera de
- * que esto existe. Las dos formas conviven en la misma aplicación.
- *
- * <p><b>Por qué no guarda la petición en un campo.</b> Del controlador hay una sola instancia,
- * compartida por todas las peticiones, y Cero atiende cada conexión en su propio hilo virtual.
- * Un campo con la petición dentro sería una carrera: dos peticiones a la vez se lo pisarían y una
- * acabaría respondiendo con los datos de la otra. Por eso todo sale de {@link Current}, que es por
- * hilo. Es la diferencia entre esta base y la de un framework pensado para un hilo por petición.
- */
 public abstract class Controller {
-
-    // ── la petición ──────────────────────────────────────────────────────────
 
     protected final Context ctx() {
         return Current.context();
@@ -84,8 +53,6 @@ public abstract class Controller {
         return ctx().parts();
     }
 
-    // ── quién llama ──────────────────────────────────────────────────────────
-
     protected final Session session() {
         return ctx().session();
     }
@@ -97,8 +64,6 @@ public abstract class Controller {
     protected final boolean autenticado() {
         return ctx().authenticated();
     }
-
-    // ── qué se responde ──────────────────────────────────────────────────────
 
     protected final Result json(Object valor) {
         return Result.json(valor);
@@ -128,7 +93,6 @@ public abstract class Controller {
         return Result.status(codigo, cuerpo);
     }
 
-    /** Corta la petición: {@code throw fallo(404, "no existe")}. */
     protected final HttpException fallo(int codigo, String mensaje) {
         return new HttpException(codigo, mensaje);
     }

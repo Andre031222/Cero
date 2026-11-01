@@ -33,8 +33,6 @@ final class TransversalesTests {
         openapi();
     }
 
-    // ── OpenAPI ──────────────────────────────────────────────────────────────
-
     record Articulo(long id, String titulo, boolean publicado) {
     }
 
@@ -129,8 +127,6 @@ final class TransversalesTests {
         Check.raises("sin router no se describe nada", IllegalArgumentException.class,
                 () -> OpenApi.describing(null));
     }
-
-    // ── caché ────────────────────────────────────────────────────────────────
 
     private static void cacheBasico() {
         Cache cache = Cache.named("prueba");
@@ -266,8 +262,6 @@ final class TransversalesTests {
         Check.that("evict llega al backend", !cache.has("k"));
     }
 
-    // ── eventos ──────────────────────────────────────────────────────────────
-
     record Creado(long id, String email) {
     }
 
@@ -354,8 +348,6 @@ final class TransversalesTests {
         bus.publish(new Creado(1, "a@b.c"));
         Check.equal("un oyente que revienta no impide los demás", vistos.size(), 1);
     }
-
-    // ── perfiles ─────────────────────────────────────────────────────────────
 
     private static void perfiles() {
         Profiles vacio = Profiles.from(Config.empty());

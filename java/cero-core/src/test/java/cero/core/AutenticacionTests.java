@@ -120,10 +120,6 @@ final class AutenticacionTests {
                 () -> google.intercambiar("", "verificador"));
     }
 
-    /**
-     * Levanta un Google de mentira —con sus endpoints de token y de claves— y recorre el flujo
-     * entero: canje del código, verificación de la firma del id_token y lectura de la identidad.
-     */
     private static void googleCompleto() throws Exception {
         KeyPair par = generar();
         RSAPublicKey publica = (RSAPublicKey) par.getPublic();
@@ -191,7 +187,6 @@ final class AutenticacionTests {
             Check.that("con sus roles",
                     quien.comoPrincipal("alumno").hasRole("alumno"));
 
-            // ── ahora lo que debe rechazar ──
             String otraAudiencia = firmar(privada, kid, Map.of(
                     "iss", "https://accounts.google.com", "aud", "app-ajena",
                     "sub", "1", "exp", Instant.now().plusSeconds(600).getEpochSecond()));
@@ -240,10 +235,6 @@ final class AutenticacionTests {
         }
     }
 
-    /**
-     * El retorno del proveedor tiene que ser el de esta sesión. Sin comprobar el estado, un
-     * tercero manda su propio código y la víctima acaba dentro de la cuenta de otro.
-     */
     private static void estadoEnSesion(OAuth cliente) throws Exception {
         Check.group("OAuth · el estado ata el retorno a la sesión");
 
@@ -288,7 +279,6 @@ final class AutenticacionTests {
             Check.that("porque el estado era de un solo uso",
                     repetido.body().contains("no hay un intercambio"));
 
-            // Otra sesión, con el estado robado de la primera: la pareja vive en la sesión.
             String suyo = pedir(conGalletas(), base + "/entrar").body();
             Check.equal("el estado de otra sesión no sirve en esta",
                     pedir(conCookies, base + "/volver?code=codigo-de-google&state=" + suyo)
@@ -298,7 +288,6 @@ final class AutenticacionTests {
         }
     }
 
-    /** El juego de claves se guarda: cien entradas no son cien viajes al proveedor. */
     private static void clavesEnCache(OAuth cliente, String idToken) {
         Check.group("OAuth · claves del proveedor");
 

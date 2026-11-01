@@ -11,16 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Un cliente HTTP/2 mínimo, para las pruebas.
- *
- * <p>`curl` ya comprueba que un cliente de verdad se entiende con el servidor, pero no sirve para
- * lo que hace falta aquí: mandar una trama cortada, un identificador de flujo hacia atrás o un
- * CONTINUATION suelto. Un cliente correcto se niega a construir eso — que es justo su trabajo.
- *
- * <p>Por eso este habla a nivel de trama y no valida nada: se le pide lo que se quiere mandar,
- * incluso si está mal, y se mira qué contesta el servidor.
- */
 final class Http2Cliente implements AutoCloseable {
 
     static final int DATA = 0x0;
@@ -38,7 +28,6 @@ final class Http2Cliente implements AutoCloseable {
     static final int FIN_CABECERAS = 0x4;
     static final int RECONOCE = 0x1;
 
-    /** Una trama tal como llegó, sin interpretar. */
     record Trama(int tipo, int banderas, int flujo, byte[] carga) {
 
         int comoEntero() {
@@ -46,7 +35,6 @@ final class Http2Cliente implements AutoCloseable {
                     | ((carga[2] & 0xFF) << 8) | (carga[3] & 0xFF);
         }
 
-        /** El código de error de un GOAWAY o un RST_STREAM. */
         int codigoDeError() {
             int desde = tipo == GOAWAY ? 4 : 0;
             return ((carga[desde] & 0xFF) << 24) | ((carga[desde + 1] & 0xFF) << 16)
@@ -54,7 +42,6 @@ final class Http2Cliente implements AutoCloseable {
         }
     }
 
-    /** Una respuesta completa: sus cabeceras y su cuerpo. */
     record Respuesta(Map<String, String> cabeceras, byte[] cuerpo) {
 
         int estado() {
@@ -73,13 +60,6 @@ final class Http2Cliente implements AutoCloseable {
     private final Hpack.Decodificador decodificador = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
     private int siguienteFlujo = 1;
 
-    /**
-     * Lo que va llegando de cada flujo, para poder pedir las respuestas en cualquier orden.
-     *
-     * <p>Con multiplexación las tramas de varios flujos vienen entrelazadas. Un cliente que lea
-     * buscando solo las de uno y tire el resto pierde las de los demás — y luego se queda
-     * esperando datos que ya pasaron y descartó él mismo.
-     */
     private final Map<Integer, Parcial> enCurso = new LinkedHashMap<>();
 
     private static final class Parcial {
@@ -96,14 +76,12 @@ final class Http2Cliente implements AutoCloseable {
         out = socket.getOutputStream();
     }
 
-    /** El preámbulo y los SETTINGS vacíos, que es lo que hace un cliente correcto al abrir. */
     Http2Cliente saludar() throws IOException {
         out.write(Http2.PREAMBULO);
         trama(SETTINGS, 0, 0, new byte[0]);
         return this;
     }
 
-    /** Solo el preámbulo, sin SETTINGS: para probar qué hace el servidor si falta algo. */
     Http2Cliente preambulo() throws IOException {
         out.write(Http2.PREAMBULO);
         out.flush();
@@ -124,7 +102,6 @@ final class Http2Cliente implements AutoCloseable {
         out.flush();
     }
 
-    /** Una trama con la longitud declarada que se le diga, mienta o no. */
     void tramaConLargoFalso(int tipo, int banderas, int flujo, int largoDeclarado, byte[] carga)
             throws IOException {
         out.write(new byte[] {
@@ -143,13 +120,6 @@ final class Http2Cliente implements AutoCloseable {
         return codificador.codificar(campos);
     }
 
-    /**
-     * Un bloque HPACK sin normalizar nada, ni siquiera las mayúsculas.
-     *
-     * <p>El codificador de verdad pasa los nombres a minúscula porque es lo que manda el RFC, así
-     * que con él es imposible mandar la cabecera malformada que hay que probar. Esto la escribe a
-     * pelo: literal sin indexar, nombre y valor tal cual, sin Huffman.
-     */
     byte[] cabecerasCrudas(String... paresPlanos) {
         ByteArrayOutputStream salida = new ByteArrayOutputStream();
         for (int i = 0; i < paresPlanos.length; i += 2) {
@@ -164,23 +134,14 @@ final class Http2Cliente implements AutoCloseable {
         return salida.toByteArray();
     }
 
-    /**
-     * Un bloque que se expande al descomprimirse: la bomba de HPACK.
-     *
-     * <p>Mete un valor grande en la tabla dinámica con un literal indexado, y luego lo referencia
-     * {@code veces} veces con un octeto por referencia. En el cable son unos pocos kilobytes; al
-     * salir son megabytes. Es el ataque que hace que limitar el bloque comprimido no baste.
-     */
     byte[] bombaHpack(int tamanoValor, int veces) {
         ByteArrayOutputStream salida = new ByteArrayOutputStream();
         byte[] nombre = "x-grande".getBytes(StandardCharsets.ISO_8859_1);
         byte[] valor = "v".repeat(tamanoValor).getBytes(StandardCharsets.ISO_8859_1);
 
-        // 0x40: literal con indexación. Nombre nuevo, así que el índice va a cero.
         salida.write(0x40);
         salida.write(nombre.length);
         salida.write(nombre, 0, nombre.length);
-        // Longitud del valor: entero de siete bits con continuación.
         int resto = valor.length;
         salida.write(0x7F);
         resto -= 127;
@@ -191,14 +152,12 @@ final class Http2Cliente implements AutoCloseable {
         salida.write(resto);
         salida.write(valor, 0, valor.length);
 
-        // Y ahora la entrada recién añadida, que es el índice 62, repetida.
         for (int i = 0; i < veces; i++) {
             salida.write(0x80 | 62);
         }
         return salida.toByteArray();
     }
 
-    /** Abre un flujo con una petición sin cuerpo. Devuelve su identificador. */
     int pedir(String metodo, String ruta, String... cabecerasExtra) throws IOException {
         int flujo = siguienteFlujo;
         siguienteFlujo += 2;
@@ -211,13 +170,6 @@ final class Http2Cliente implements AutoCloseable {
         return flujo;
     }
 
-    /**
-     * Abre un flujo con cuerpo, partido en tramas de 16 KB.
-     *
-     * <p>El troceo no es un detalle: el máximo por trama son 16 384 octetos y el servidor rechaza
-     * con FRAME_SIZE_ERROR cualquier cosa mayor, como debe. Un cliente que mande el cuerpo entero
-     * de una vez está mandando una trama inválida, no un cuerpo grande.
-     */
     int pedirCon(String metodo, String ruta, byte[] cuerpo) throws IOException {
         int flujo = siguienteFlujo;
         siguienteFlujo += 2;
@@ -237,7 +189,6 @@ final class Http2Cliente implements AutoCloseable {
         return flujo;
     }
 
-    /** Abre un flujo y lo deja abierto, para mandar el cuerpo o los trailers a mano. */
     int pedirSinCerrar(String metodo, String ruta, String... cabecerasExtra) throws IOException {
         int flujo = siguienteFlujo;
         siguienteFlujo += 2;
@@ -261,7 +212,6 @@ final class Http2Cliente implements AutoCloseable {
                         | ((cabecera[7] & 0xFF) << 8) | (cabecera[8] & 0xFF), carga);
     }
 
-    /** La primera trama de uno de estos tipos, descartando lo que venga en medio. */
     Trama esperar(int... tipos) throws IOException {
         for (int intento = 0; intento < 64; intento++) {
             Trama t = leerTrama();
@@ -274,12 +224,6 @@ final class Http2Cliente implements AutoCloseable {
         throw new IOException("no llegó ninguna trama de los tipos pedidos");
     }
 
-    /**
-     * Junta las tramas de un flujo hasta su fin y devuelve la respuesta entera.
-     *
-     * <p>Se puede llamar en cualquier orden: lo que llega de otros flujos se archiva en vez de
-     * descartarse, así que pedir primero el flujo 1 no pierde lo del 3.
-     */
     Respuesta respuestaDe(int flujo) throws IOException {
         for (int intento = 0; intento < 100_000; intento++) {
             Parcial p = enCurso.get(flujo);
@@ -295,7 +239,6 @@ final class Http2Cliente implements AutoCloseable {
         throw new IOException("la respuesta del flujo " + flujo + " no terminó");
     }
 
-    /** Guarda una trama en el flujo al que pertenece. HPACK obliga a decodificar en orden. */
     private void archivar(Trama t) throws IOException {
         if (t.tipo() == GOAWAY) {
             for (Parcial p : enCurso.values()) {
@@ -315,7 +258,6 @@ final class Http2Cliente implements AutoCloseable {
             }
             case DATA -> {
                 p.cuerpo.write(t.carga());
-                // La ventana se repone para que el servidor pueda seguir mandando.
                 if (t.carga().length > 0) {
                     trama(WINDOW_UPDATE, 0, 0, entero(t.carga().length));
                     trama(WINDOW_UPDATE, 0, t.flujo(), entero(t.carga().length));
@@ -329,7 +271,6 @@ final class Http2Cliente implements AutoCloseable {
         }
     }
 
-    /** Le dice al servidor que puede mandar mucho más de los 64 KB iniciales. */
     void abrirVentanas(int cuanto) throws IOException {
         trama(WINDOW_UPDATE, 0, 0, entero(cuanto));
         trama(SETTINGS, 0, 0, new byte[] {

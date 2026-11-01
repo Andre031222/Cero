@@ -15,23 +15,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 
-/**
- * Cliente SMTP sobre {@link Socket}, sin dependencias.
- *
- * <pre>{@code
- * Mail correo = Mail.smtp("smtp.gmail.com", 587)
- *                   .credentials(usuario, clave)
- *                   .from("Portal FINESI <no-responder@unap.edu.pe>");
- *
- * correo.send(Mail.Mensaje.texto("alguien@unap.edu.pe", "Recibido", "Gracias por escribir."));
- * }</pre>
- *
- * <p>JavaMail no forma parte de Java SE, así que mandar un correo obligaba a traerse una
- * dependencia — justo lo que este proyecto evita. SMTP es un protocolo de texto y cabe aquí.
- *
- * <p>Habla STARTTLS por defecto: se conecta en claro al 587 y sube a TLS antes de autenticarse.
- * Para el 465, que es TLS desde el primer byte, {@link #ssl(boolean)}.
- */
 public final class Mail {
 
     private static final Log log = Log.of(Mail.class);
@@ -72,7 +55,6 @@ public final class Mail {
         return this;
     }
 
-    /** TLS desde el primer byte, para el puerto 465. */
     public Mail ssl(boolean value) {
         this.ssl = value;
         return this;
@@ -93,7 +75,6 @@ public final class Mail {
         }
     }
 
-    /** Comprueba que el servidor responde y que las credenciales valen, sin mandar nada. */
     public boolean check() {
         try (Sesion sesion = Sesion.abrir(this)) {
             sesion.saludar();
@@ -209,7 +190,6 @@ public final class Mail {
 
             for (String linea : mensaje.cuerpo().split("\n", -1)) {
                 String limpia = linea.endsWith("\r") ? linea.substring(0, linea.length() - 1) : linea;
-                // Una línea que empieza por punto marcaría el final del mensaje; se dobla.
                 if (limpia.startsWith(".")) {
                     trama.append('.');
                 }
@@ -219,7 +199,6 @@ public final class Mail {
             return trama.toString();
         }
 
-        /** RFC 2047: un asunto con tildes viaja codificado o llega roto. */
         private static String asuntoCodificado(String asunto) {
             if (asunto.chars().allMatch(c -> c >= 32 && c < 127)) {
                 return asunto;
@@ -289,7 +268,6 @@ public final class Mail {
                     socket.close();
                 }
             } catch (IOException yaCerrado) {
-                // nada que hacer
             }
         }
     }

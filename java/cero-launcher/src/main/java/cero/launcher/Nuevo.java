@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-/** {@code cero new} — arma un proyecto nuevo y lo escribe en disco. */
 public final class Nuevo {
 
     private static final java.util.Set<String> MOTORES =
@@ -39,7 +38,6 @@ public final class Nuevo {
         String grupo = libres.size() > 1 ? libres.get(1) : "com.ejemplo";
         String motor = libres.size() > 2 ? libres.get(2) : "ninguno";
 
-        // "cero new tienda h2" es lo que sale solo; sin esto, h2 acabaría siendo el groupId.
         if (libres.size() == 2 && MOTORES.contains(libres.get(1))) {
             grupo = "com.ejemplo";
             motor = libres.get(1);

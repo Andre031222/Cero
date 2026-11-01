@@ -128,11 +128,6 @@ final class OutgoingResponse implements Response {
         commit(NO_BODY);
     }
 
-    /**
-     * Un destino fuera de este sitio: con esquema ({@code https:}, {@code javascript:}) o
-     * relativo al protocolo ({@code //otro.host}). Si viene de la entrada del usuario, dejarlo
-     * pasar es una redirección abierta.
-     */
     static boolean esExterna(String location) {
         if (location == null) {
             return false;
@@ -269,9 +264,6 @@ final class OutgoingResponse implements Response {
             if (withBody && !headOnly && payload.length > 0) {
                 target.write(payload);
             }
-            // Sin vaciar: lo hace la conexión cuando el handler y su middleware han terminado.
-            // Así un registro o una métrica no se quedan a medias detrás de una respuesta que
-            // el cliente ya recibió, y se ahorra una llamada al sistema por petición.
         } catch (IOException cause) {
             throw new UncheckedHttpException(cause);
         }

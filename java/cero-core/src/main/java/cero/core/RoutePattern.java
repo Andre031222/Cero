@@ -12,7 +12,6 @@ final class RoutePattern implements Comparable<RoutePattern> {
     private final String[] segments;
     private final boolean trailingWildcard;
 
-    /** Nombre de la variable de cada segmento, o {@code null} si el segmento es literal. */
     private final String[] variableNames;
     private final boolean hasVariables;
 
@@ -49,7 +48,6 @@ final class RoutePattern implements Comparable<RoutePattern> {
         return new RoutePattern(normalized, parts, wildcard);
     }
 
-    /** Comodidad para quien tenga el camino sin partir. */
     Map<String, String> match(String path) {
         String[] parts = parts(path);
         return matches(parts) ? variables(parts) : null;
@@ -59,7 +57,6 @@ final class RoutePattern implements Comparable<RoutePattern> {
         return split(normalize(path));
     }
 
-    /** No asigna nada. */
     boolean matches(String[] parts) {
         if (trailingWildcard ? parts.length < segments.length : parts.length != segments.length) {
             return false;
@@ -72,7 +69,6 @@ final class RoutePattern implements Comparable<RoutePattern> {
         return true;
     }
 
-    /** Solo se llama sobre la ruta que ganó. Sin variables devuelve el mapa vacío compartido. */
     Map<String, String> variables(String[] parts) {
         if (!hasVariables && !trailingWildcard) {
             return Map.of();

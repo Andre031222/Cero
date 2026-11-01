@@ -8,19 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * La respuesta, con aserciones encadenables.
- *
- * <pre>{@code
- * client.post("/usuarios", Map.of("nombre", "Ada"))
- *       .status(201)
- *       .contentType("application/json")
- *       .json("usuario.nombre", "Ada");
- * }</pre>
- *
- * <p>Cuando una aserción falla, el {@link AssertionError} dice qué se esperaba, qué llegó y un
- * extracto del cuerpo: el cuerpo es casi siempre donde está el motivo del fallo.
- */
 public final class TestResponse {
 
     private static final int EXTRACTO = 500;
@@ -53,12 +40,10 @@ public final class TestResponse {
         return response;
     }
 
-    /** El cuerpo como árbol JSON: {@code Map}, {@code List} o valor suelto. */
     public Object json() {
         return Json.read(response.body());
     }
 
-    /** Navega el cuerpo JSON: {@code "usuario.nombre"}, {@code "items.0.id"}. */
     public Object json(String path) {
         Object node = json();
         for (String step : path.split("\\.")) {
@@ -86,7 +71,6 @@ public final class TestResponse {
         return this;
     }
 
-    /** Compara el tipo sin los parámetros: {@code application/json} casa con {@code ; charset=utf-8}. */
     public TestResponse contentType(String expected) {
         String actual = header("Content-Type");
         String limpio = actual == null ? null : actual.split(";")[0].trim();
@@ -133,7 +117,6 @@ public final class TestResponse {
         };
     }
 
-    /** El JSON no distingue enteros de decimales; comparar 1 con 1L no debería fallar. */
     private static boolean igual(Object actual, Object expected) {
         if (actual instanceof Number a && expected instanceof Number b) {
             return a.doubleValue() == b.doubleValue();

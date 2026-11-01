@@ -49,12 +49,6 @@ final class MensajesTests {
         porHttp();
     }
 
-    /**
-     * El camino que nadie cubría: `from(...)` a secas, sin encadenar `base(...)`. El archivo sin
-     * sufijo se guardaba bajo una clave vacía mientras el idioma base ya valía «es», así que la
-     * negociación elegía «es» y la búsqueda no encontraba nada — la página salía con los nombres
-     * de las claves y solo un aviso por consola lo decía.
-     */
     private static void sinLlamarABase() {
         Messages t = Messages.from("textos", "en", "qu");
 
@@ -66,7 +60,6 @@ final class MensajesTests {
                 t.get("qu", "saludo", "Richar"), "Rimaykullayki, Richar");
     }
 
-    /** Y si el archivo sin sufijo no está en castellano, `base(...)` lo mueve sin perder nada. */
     private static void baseEnOtroIdioma() {
         Messages t = Messages.from("textos", "en", "qu").base("qu");
 
@@ -85,7 +78,6 @@ final class MensajesTests {
         Check.equal("y cada idioma el suyo", t.get("en", "saludo", "Richar"), "Hello, Richar");
         Check.equal("incluido el quechua", t.get("qu", "saludo", "Richar"), "Rimaykullayki, Richar");
 
-        // Los archivos van en UTF-8 y llevan acentos: si se leyeran en ISO-8859-1 esto rompe.
         Check.equal("los acentos sobreviven al .properties",
                 t.get("es", "faltaEnIngles"), "Solo está en castellano");
 
@@ -94,8 +86,6 @@ final class MensajesTests {
         Check.equal("y una clave que no existe en ninguno se devuelve tal cual",
                 t.get("es", "no.hay"), "no.hay");
 
-        // MessageFormat trata la comilla simple como escape. Si se formateara un texto sin
-        // argumentos, «Vamos allá» sobreviviría pero un «d'accord» perdería la comilla.
         Check.equal("un texto sin argumentos no pasa por MessageFormat",
                 t.get("es", "apostrofe"), "Vamos allá");
 
@@ -134,7 +124,6 @@ final class MensajesTests {
             servidor.stop();
         }
 
-        // Sin messages() configurado, t() no puede tumbar la aplicación.
         Server pelado = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
                 .controllers(SaludosController.class)
                 .start();

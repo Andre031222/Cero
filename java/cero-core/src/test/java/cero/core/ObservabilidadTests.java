@@ -55,11 +55,6 @@ final class ObservabilidadTests {
         salud();
     }
 
-    /**
-     * Vivo y listo no son lo mismo, y la prueba existe para fijar esa diferencia: con una
-     * comprobación caída, vivo sigue dando 200 y listo pasa a 503. Si alguien los uniera por
-     * comodidad, esto se pone en rojo.
-     */
     private static void salud() throws Exception {
         java.util.concurrent.atomic.AtomicBoolean bdEnPie =
                 new java.util.concurrent.atomic.AtomicBoolean(true);
@@ -88,8 +83,6 @@ final class ObservabilidadTests {
             Check.equal("pero vivo sigue en 200: el proceso responde",
                     Cliente.get(base + "/cero/vivo").statusCode(), 200);
 
-            // Una comprobación que lanza es un fallo, no un 500: el supervisor tiene que poder
-            // leer qué se rompió.
             Server conFallo = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
                     .health(Health.checks().ready("remoto", () -> {
                         throw new IllegalStateException("no responde el host");
@@ -103,8 +96,6 @@ final class ObservabilidadTests {
                 conFallo.stop();
             }
 
-            // Expuesto a internet, el detalle es una filtración: el mensaje de un fallo de
-            // conexión lleva el host y el puerto de la base de datos.
             Server aInternet = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
                     .health(Health.checks().publico().ready("bd", () -> {
                         throw new IllegalStateException("jdbc:postgresql://10.0.0.7:5432/interna");
@@ -140,11 +131,6 @@ final class ObservabilidadTests {
         }
     }
 
-    /**
-     * La línea se escribe en el hilo que atendió, y el cliente puede volver antes de que ese
-     * hilo termine de desenrollar la cadena. Esperarla es lo correcto; leerla sin más era una
-     * carrera que fallaba de vez en cuando con la máquina cargada.
-     */
     private static String primeraLinea(List<String> registro) throws Exception {
         long limite = System.currentTimeMillis() + 3_000;
         while (registro.isEmpty() && System.currentTimeMillis() < limite) {

@@ -155,11 +155,6 @@ final class PoolTests {
         Check.that("clear vacía el registro", !DataSources.has("informes"));
     }
 
-    /**
-     * Un pool que reparte más conexiones de las que dice su tope es una bomba: la base de datos
-     * corta por su lado y la aplicación no sabe por qué. Se pide y se devuelve desde muchos hilos
-     * a la vez y se comprueba que el techo aguanta.
-     */
     private static void concurrencia() {
         FakeDb.reset();
         int tope = 4;
@@ -209,7 +204,6 @@ final class PoolTests {
         pool.close();
     }
 
-    /** Validar en cada préstamo es un viaje a la base de datos; con intervalo, se ahorra. */
     private static void validacionDiferida() {
         FakeDb.reset();
         Pool siempre = Pool.to(FakeDb.URL).maxSize(1).validate(true).build();

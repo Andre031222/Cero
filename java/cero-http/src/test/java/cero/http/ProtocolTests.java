@@ -50,11 +50,6 @@ final class ProtocolTests {
         apagadoEsperaLoQueEstaEnVuelo();
     }
 
-    /**
-     * Una conexión con keep-alive parada entre peticiones no tiene nada que terminar, así que el
-     * apagado no debe gastar en ella la ventana de gracia. Antes se la gastaba entera: diez
-     * segundos por cada `stop()`, con el socket abierto y sin una sola petición en vuelo.
-     */
     private static void apagadoConKeepAliveOcioso() throws Exception {
         ServerOptions options = ServerOptions.builder()
                 .port(0).shutdownGraceMillis(10_000).build();
@@ -73,10 +68,6 @@ final class ProtocolTests {
         Check.that("el apagado no espera por una conexión ociosa (" + millis + " ms)", millis < 1_000);
     }
 
-    /**
-     * Y el otro lado del trato: una petición a medias sí se termina. Cortarla para ahorrarse la
-     * espera convertiría el apagado ordenado en el desordenado que se quería evitar.
-     */
     private static void apagadoEsperaLoQueEstaEnVuelo() throws Exception {
         java.util.concurrent.CountDownLatch dentro = new java.util.concurrent.CountDownLatch(1);
         ServerOptions options = ServerOptions.builder()
@@ -100,9 +91,6 @@ final class ProtocolTests {
             }
         });
 
-        // Con tiempo límite, no `await()` a secas. Si la petición no llega —por lo que sea— un
-        // await sin plazo convierte un fallo intermitente en un build colgado, y el que lo vea
-        // mañana no sabrá si está probando o parado. Que falle rápido y diga por qué.
         if (!dentro.await(10, TimeUnit.SECONDS)) {
             server.stop();
             Check.that("el apagado sí espera a la petición en vuelo (no llegó a entrar: "
@@ -236,10 +224,6 @@ final class ProtocolTests {
                 Fixture.get(base + "/ruta%20con%20espacio").body(), "decodificado");
     }
 
-    /**
-     * Decodificar un separador cambia la ruta después de enrutarla: quien filtra por prefijo ve
-     * una cosa y el sistema de archivos otra. Se rechaza en vez de decidir cuál de las dos vale.
-     */
     private static void separadorCodificado(int port) throws Exception {
         String[] rechazables = {
                 "/a%2Fb", "/a%2fb", "/%2F", "/a%5Cb", "/a%5cb",
@@ -258,7 +242,6 @@ final class ProtocolTests {
             Check.that("sigue pasando " + ruta, !respuesta.startsWith("HTTP/1.1 400"));
         }
 
-        // En la consulta no hay separadores que confundir: ahí %2F es un valor más.
         Check.that("en la consulta el %2F sigue valiendo",
                 Fixture.raw(port, "GET /eco?a=x%2Fy HTTP/1.1\r\nHost: x\r\n\r\n")
                         .startsWith("HTTP/1.1 200"));
@@ -363,11 +346,6 @@ final class ProtocolTests {
                         .startsWith("HTTP/1.1 431"));
     }
 
-    /**
-     * Detrás de un proxy inverso el TLS lo termina él, así que la aplicación recibe texto plano.
-     * Si no se entera, la cookie de sesión sale sin {@code Secure} y viaja en claro. Pero creerse
-     * la cabecera sin más sería peor: cualquier cliente podría declararse seguro.
-     */
     static void trasProxy() throws Exception {
         Check.group("detrás de un proxy inverso");
 

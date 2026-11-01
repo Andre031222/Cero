@@ -20,19 +20,8 @@ public final class StaticFiles implements Handler {
     private final String indexFile;
     private volatile String cacheControl;
 
-    /**
-     * Los documentos HTML se revalidan siempre salvo que se diga otra cosa.
-     *
-     * <p>El valor por defecto no es {@code null} a propósito: sin él, el navegador aplica su
-     * heurística y un {@code index.html} servido sin cabecera puede quedarse cacheado horas.
-     */
     private volatile String cacheControlDocumento = "no-cache";
     private volatile String spaPagina;
-    /**
-     * Recursos del classpath ya leídos. Solo entran los que existen y caben: la clave la elige
-     * quien hace la petición, así que guardar las ausencias dejaba que cualquiera llenara el
-     * montón pidiendo rutas inventadas — dos entradas por cada 404, sin tope ni desalojo.
-     */
     private final Map<String, byte[]> classpathCache = new ConcurrentHashMap<>();
     private static final int MAX_CACHEADOS = 512;
 
@@ -55,50 +44,16 @@ public final class StaticFiles implements Handler {
         return new StaticFiles(root, null, mount, indexFile);
     }
 
-    /**
-     * Valor de {@code Cache-Control} para lo que sirva. Sin esto el navegador aplica su
-     * heurística, que suele ser revalidar de más: un 304 por recurso y por visita. Para recursos
-     * con huella en el nombre —{@code estilo.a1b2c3.css}— lo correcto es
-     * {@code "public, max-age=31536000, immutable"}.
-     */
     public StaticFiles cacheControl(String valor) {
         this.cacheControl = valor;
         return this;
     }
 
-    /**
-     * Valor de {@code Cache-Control} para los documentos HTML, que no es el mismo.
-     *
-     * <p>Por defecto {@code "no-cache"}: el navegador guarda el documento pero pregunta antes de
-     * usarlo, y el {@code ETag} hace que la respuesta sea un 304 vacío mientras no cambie. El
-     * coste es una ida y vuelta; lo que evita es que un despliegue sea invisible.
-     *
-     * <p><b>Por qué se separa del resto.</b> Un asset con huella en el nombre puede ser
-     * {@code immutable} un año porque, si cambia, cambia su nombre. Un {@code index.html} no
-     * tiene huella: su nombre es siempre el mismo y dentro van los nombres de los assets. Servir
-     * ese documento como inmutable congela la página entera — el navegador nunca vuelve a
-     * pedirlo, así que nunca se entera de que existen assets nuevos, y quien ya visitó el sitio
-     * sigue viendo la versión vieja hasta que caduque el plazo. Con un año, para siempre.
-     *
-     * <p>Pasa sobre todo con {@link #spa()}, donde el mismo documento responde a todas las rutas.
-     */
     public StaticFiles cacheControlDocumento(String valor) {
         this.cacheControlDocumento = valor;
         return this;
     }
 
-    /**
-     * Respaldo para una aplicación de una sola página — React, Svelte, Vue— que enruta en el
-     * cliente. Con ella, una ruta que no existe como archivo devuelve {@code index.html} y deja
-     * que el navegador decida qué pintar; sin ella daría 404 y la aplicación solo funcionaría
-     * entrando por la portada.
-     *
-     * <p>No se aplica a todo: solo cuando el cliente pide HTML o la ruta no tiene extensión. Un
-     * {@code .css} o un {@code .png} que falten siguen dando 404 — devolverles el HTML de la
-     * portada convierte un error evidente en uno que se tarda una hora en encontrar.
-     *
-     * <pre>{@code StaticFiles.fromClasspath("front").spa();}</pre>
-     */
     public StaticFiles spa() {
         return spa(indexFile);
     }
@@ -156,8 +111,6 @@ public final class StaticFiles implements Handler {
             return;
         }
 
-        // NOFOLLOW igual que en la línea de arriba: sin esto readAttributes sigue el enlace,
-        // y un symlink dentro de la raíz servida que apunte fuera se serviría sin más.
         BasicFileAttributes attributes =
                 Files.readAttributes(target, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (attributes.isDirectory()) {
@@ -195,9 +148,6 @@ public final class StaticFiles implements Handler {
         }
         if (pedido != null) {
             response.status(206).header("Content-Range", pedido.contentRange(tamano));
-            // Antes esto recortaba a 1 MB DESPUÉS de anunciar el rango entero, así que cabecera y
-            // cuerpo se contradecían y un vídeo o un PDF grande se cortaba a media descarga. Los
-            // rangos grandes se transmiten, igual que ya se hacía con el archivo completo.
             if (pedido.longitud() > STREAM_THRESHOLD) {
                 try (OutputStream out = response.stream()) {
                     transmitirTrozo(target, pedido, out);
@@ -217,12 +167,6 @@ public final class StaticFiles implements Handler {
         }
     }
 
-    /** El intervalo pedido, o {@code null} si hay que servir el recurso entero. */
-    /**
-     * El documento y el asset no se guardan igual, y confundirlos deja el sitio congelado.
-     *
-     * @param tipo el MIME ya resuelto, que es lo que distingue un documento de un recurso
-     */
     private void cabeceraDeCache(Response response, String tipo) {
         boolean documento = tipo != null && tipo.startsWith("text/html");
         String valor = documento ? cacheControlDocumento : cacheControl;
@@ -239,7 +183,6 @@ public final class StaticFiles implements Handler {
         return Ranges.parse(request.header("Range"), tamano);
     }
 
-    /** Vuelca el intervalo pedido, por trozos, sin traérselo entero a memoria. */
     private static void transmitirTrozo(Path archivo, Ranges rango, OutputStream destino)
             throws IOException {
         byte[] buffer = new byte[16 * 1024];
@@ -278,10 +221,6 @@ public final class StaticFiles implements Handler {
     private void serveFromClasspath(Request request, Response response, String relative) {
         String name = relative.isEmpty() ? indexFile : relative;
 
-        // Si existe ruta/index.html, gana: es la única forma de que "ruta" sea una carpeta, y
-        // una carpeta del classpath también "existe" —leerla devuelve su listado—, así que sin
-        // esto /nosotros respondía 200 con el nombre del archivo dentro en vez de la página.
-        // Es justo lo que pide una exportación estática, donde cada sección es una carpeta.
         String withIndex = name.endsWith("/") ? name + indexFile : name + "/" + indexFile;
         if (classpathExists(withIndex)) {
             name = withIndex;
@@ -330,10 +269,6 @@ public final class StaticFiles implements Handler {
         return true;
     }
 
-    /**
-     * Lee el recurso, y lo guarda solo si el mapa no está lleno y no es enorme. Pasado el tope se
-     * sirve igual, leyéndolo cada vez: mejor perder velocidad que crecer sin freno.
-     */
     private byte[] cachear(String name) {
         byte[] guardado = classpathCache.get(name);
         if (guardado != null) {
@@ -346,7 +281,6 @@ public final class StaticFiles implements Handler {
         return contenido;
     }
 
-    /** Cuántos recursos hay cacheados. Para las pruebas. */
     int cacheados() {
         return classpathCache.size();
     }
@@ -359,7 +293,6 @@ public final class StaticFiles implements Handler {
         }
     }
 
-    /** {@code true} si esta petición parece una página y no un recurso que falta. */
     private boolean respaldoSpa(Request request, String relative) {
         if (spaPagina == null) {
             return false;
@@ -370,7 +303,6 @@ public final class StaticFiles implements Handler {
             ultimo = ultimo.substring(barra + 1);
         }
         if (ultimo.indexOf('.') >= 0) {
-            // Tiene extensión: es un archivo que falta, no una ruta de la aplicación.
             String acepta = request.header("Accept");
             return acepta != null && acepta.contains("text/html");
         }

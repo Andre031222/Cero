@@ -23,21 +23,10 @@ final class Dispatcher implements Handler {
     private final List<Recovery> recoveries;
     private final Map<Class<?>, Object> controllers = new ConcurrentHashMap<>();
 
-    /** Armada una sola vez: la terminal lee la ruta del contexto en lugar de capturarla. */
     private final Middleware.Chain chain;
 
     private final Messages messages;
 
-    /**
-     * Lo que atiende una ruta que no existe: normalmente los estáticos de un SPA.
-     *
-     * <p>Va dentro del despachador, y no delante, para que la respuesta pase por la misma
-     * cadena de middlewares que las demás. Puesto delante, la petición del documento HTML se
-     * saltaba {@code SecurityHeaders} y {@code RateLimit} enteros: la página quedaba sin
-     * {@code X-Frame-Options} —justo la que la protege de ir dentro de un iframe ajeno— y sin
-     * freno de tasa, mientras la API sí las tenía. La cabecera acababa puesta donde no hacía
-     * falta y ausente donde sí.
-     */
     private final Handler fallback;
 
     Dispatcher(Router router, Registry registry, List<Middleware> middleware,
@@ -67,13 +56,10 @@ final class Dispatcher implements Handler {
                 context.principal(authenticator.authenticate(context));
             }
             Object outcome = chain.proceed(context);
-            // Un middleware puede cortocircuitar y devolver lo suyo sin llegar a la terminal;
-            // eso todavía hay que pintarlo. Si ya se pintó, render() sale solo.
             render(outcome, context);
         } catch (Throwable failure) {
             recover(failure, context);
         } finally {
-            // Sin esto, un hilo reutilizado se llevaría el contexto de la petición anterior.
             Current.exit();
         }
     }
@@ -88,13 +74,10 @@ final class Dispatcher implements Handler {
                 if (fallback == null) {
                     throw new HttpException(404, "no existe " + ctx.path());
                 }
-                // El fallback pinta y confirma la respuesta; render() lo detecta y sale solo.
                 fallback.handle(ctx.request(), ctx.response());
                 return null;
             }
             Object outcome = invoke(ctx.route(), ctx);
-            // Pintar dentro de la cadena, no después: si no, un middleware que mide o registra
-            // ve un 200 en una petición cuya vista revienta al renderizarse.
             render(outcome, ctx);
             return outcome;
         };
@@ -160,7 +143,6 @@ final class Dispatcher implements Handler {
             case REDIRECT -> response.redirect(result.payload());
             case REDIRECT_EXTERNAL -> response.redirectExternal(result.payload());
             case EMPTY -> response.send(new byte[0]);
-            // El Content-Type ya viaja en las cabeceras del Result, puestas más arriba.
             case BINARY -> response.send(result.bytes());
         }
     }

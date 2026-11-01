@@ -16,16 +16,6 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Cliente HTTP para pruebas: mantiene las cookies entre peticiones y no sigue redirecciones.
- *
- * <p>Las cookies se guardan porque el caso que más se rompe es «entro y la siguiente petición
- * debe seguir autenticada»; las redirecciones no se siguen porque un acceso correcto suele
- * responder 302 y esa respuesta es justo la que la prueba quiere mirar.
- *
- * <p>Por omisión el cliente negocia la versión del protocolo. {@link #http1()} y {@link #http2()}
- * la fijan, que es como se prueba que algo funciona igual por las dos.
- */
 public final class TestClient implements AutoCloseable {
 
     private final String base;
@@ -58,7 +48,6 @@ public final class TestClient implements AutoCloseable {
         return this;
     }
 
-    /** Cabecera para todas las peticiones siguientes; un token de acceso, por ejemplo. */
     public TestClient header(String name, String value) {
         headers.put(name, value);
         return this;
@@ -88,7 +77,6 @@ public final class TestClient implements AutoCloseable {
         return send("PATCH", path, "application/json", json(json));
     }
 
-    /** POST de formulario, {@code application/x-www-form-urlencoded}. */
     public TestResponse form(String path, Map<String, String> fields) {
         return send("POST", path, "application/x-www-form-urlencoded", urlencoded(fields));
     }
@@ -116,7 +104,6 @@ public final class TestClient implements AutoCloseable {
         }
     }
 
-    /** El valor de una cookie guardada, o {@code null} si el servidor no la mandó. */
     public String cookie(String name) {
         for (HttpCookie cookie : cookies.getCookieStore().getCookies()) {
             if (cookie.getName().equals(name)) {
@@ -131,7 +118,6 @@ public final class TestClient implements AutoCloseable {
         client.close();
     }
 
-    /** Una cadena ya es JSON; cualquier otra cosa se serializa. */
     private static String json(Object value) {
         return value instanceof String raw ? raw : Json.write(value);
     }

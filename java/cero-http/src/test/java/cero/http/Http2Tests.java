@@ -5,15 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * HTTP/2 contra un cliente que habla a nivel de trama.
- *
- * <p>Las pruebas se dividen en dos mitades que buscan cosas distintas. La primera comprueba que
- * un cliente correcto obtiene lo que espera —incluidos varios flujos a la vez, que es la razón de
- * ser del protocolo—. La segunda manda a propósito lo que un cliente correcto se negaría a
- * construir, y comprueba que el servidor lo rechaza con el código que manda el RFC en vez de
- * hacer algo peor: colgarse, aceptarlo o cerrar sin decir por qué.
- */
 final class Http2Tests {
 
     private Http2Tests() {
@@ -56,7 +47,6 @@ final class Http2Tests {
         apagado();
     }
 
-    /** Con `http2(false)` las dos puertas quedan cerradas: ni preámbulo en claro, ni h2 por ALPN. */
     private static void apagado() throws Exception {
         ServerOptions enClaro = ServerOptions.builder().port(0).http2(false).build();
         try (Server s = Server.start(enClaro, Http2Tests::rutas, ErrorReporter.silent())) {
@@ -83,10 +73,6 @@ final class Http2Tests {
         }
     }
 
-    /**
-     * `Upgrade: h2c` desde HTTP/1.1, que es la puerta de un cliente que no sabe de antemano si
-     * el servidor habla h2. La petición que pidió el cambio no se pierde: se atiende como flujo 1.
-     */
     private static void porUpgrade() throws Exception {
         ServerOptions opciones = ServerOptions.builder().port(0).build();
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
@@ -105,7 +91,6 @@ final class Http2Tests {
                         cabecera.startsWith("HTTP/1.1 101 Switching Protocols"));
                 Check.that("y lo dice en Upgrade", cabecera.contains("Upgrade: h2c"));
 
-                // A partir de aquí es HTTP/2: el cliente manda su preámbulo y lee el flujo 1.
                 socket.getOutputStream().write(Http2.PREAMBULO);
                 socket.getOutputStream().flush();
                 Check.that("la petición que pidió el cambio se responde como flujo 1",
@@ -114,7 +99,6 @@ final class Http2Tests {
         }
     }
 
-    /** Lee tramas hasta juntar el cuerpo del flujo 1. */
     private static String respuestaDelFlujoUno(java.net.Socket socket) throws IOException {
         java.io.InputStream in = socket.getInputStream();
         java.io.ByteArrayOutputStream cuerpo = new java.io.ByteArrayOutputStream();
@@ -144,10 +128,6 @@ final class Http2Tests {
         return cuerpo.toString(StandardCharsets.UTF_8);
     }
 
-    /**
-     * h2 sobre TLS, negociado por ALPN. Es el único camino por el que un navegador usa HTTP/2:
-     * ninguno habla h2c en claro.
-     */
     private static void porAlpn() throws Exception {
         java.nio.file.Path almacen = Fixture.keystore();
         ServerOptions opciones = ServerOptions.builder().port(0)
@@ -204,7 +184,6 @@ final class Http2Tests {
                 respuesta.text("con cabeceras");
             }
             case "/muchas" -> {
-                // Un bloque de cabeceras que no cabe en una trama: obliga a CONTINUATION.
                 for (int i = 0; i < 400; i++) {
                     respuesta.header("x-relleno-" + i, "valor bastante largo número " + i);
                 }
@@ -212,8 +191,6 @@ final class Http2Tests {
             }
             case "/vacio" -> respuesta.status(204).send(new byte[0]);
             case "/chorro" -> {
-                // Escribe en trozos y va soltándolos: si stream() acumulara, esto llegaría de
-                // golpe al final en vez de por partes.
                 try (java.io.OutputStream salida = respuesta.stream()) {
                     for (int i = 0; i < 40; i++) {
                         salida.write(("trozo " + i + "\n").getBytes(StandardCharsets.UTF_8));
@@ -236,8 +213,6 @@ final class Http2Tests {
             }
         }
     }
-
-    // ─── un cliente correcto ─────────────────────────────────────────────────────────────────
 
     private static void loBasico() throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
@@ -266,7 +241,6 @@ final class Http2Tests {
         }
     }
 
-    /** Varios flujos a la vez sobre una conexión. Es para lo que existe el protocolo. */
     private static void multiplexacion() throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
@@ -288,7 +262,6 @@ final class Http2Tests {
                 todas &= cuerpos.contains("tarde: " + i);
             }
             Check.that("y cada una devuelve lo suyo, sin mezclarse", todas);
-            // En serie serían 24 × 120 ms ≈ 2,9 s. Si van de verdad en paralelo, un orden menos.
             Check.that("van en paralelo, no en fila (" + millis + " ms para 24 × 120 ms)",
                     millis < 1_200);
         }
@@ -304,7 +277,6 @@ final class Http2Tests {
                             StandardCharsets.UTF_8),
                     "cuerpo con eñes y acentós");
 
-            // Un cuerpo que no cabe en una trama y obliga a partirlo.
             byte[] grande = new byte[100_000];
             new java.util.Random(7).nextBytes(grande);
             byte[] vuelta = c.respuestaDe(c.pedirCon("POST", "/eco", grande)).cuerpo();
@@ -313,7 +285,6 @@ final class Http2Tests {
         }
     }
 
-    /** Más de la ventana inicial: si el control de flujo está mal, esto se para en 65 535. */
     private static void ventanas() throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
@@ -340,7 +311,6 @@ final class Http2Tests {
                     (pong.banderas() & Http2Cliente.RECONOCE) != 0
                             && java.util.Arrays.equals(pong.carga(), marca));
 
-            // Un flujo anulado a mitad no puede tumbar la conexión.
             int flujo = c.pedir("GET", "/grande");
             c.trama(Http2Cliente.RST_STREAM, 0, flujo, Http2Cliente.entero(0x8));
             c.trama(Http2Cliente.PING, 0, 0, marca);
@@ -349,31 +319,13 @@ final class Http2Tests {
         }
     }
 
-    /**
-     * El cuerpo que llega **después** de la respuesta se sigue validando.
-     *
-     * <p>Responder cierra nuestra mitad del flujo, no el flujo: el cliente puede seguir mandando
-     * hasta que ponga END_STREAM, y ese cuerpo tiene que seguir cuadrando con `content-length`.
-     * Un desajuste ahí es la puerta del contrabando de peticiones cuando hay un proxy delante.
-     *
-     * <p>El servidor olvidaba el flujo en cuanto el handler terminaba, así que la comprobación
-     * dejaba de existir cada vez que la respuesta le ganaba la carrera a la petición. Se colaba
-     * por intermitente: h2spec 8.1.2.6.1 fallaba una de cada cinco veces y las 432 pruebas del
-     * módulo pasaban siempre, porque ninguna esperaba a la respuesta antes de mandar el cuerpo.
-     *
-     * <p>Esta sí espera, y por eso es determinista: cuando llega el DATA el handler ha terminado
-     * seguro. Con el fallo, el servidor contestaba STREAM_CLOSED —«ese flujo ya no existe»— en
-     * vez de PROTOCOL_ERROR, que es lo que pide el RFC 9113 §8.1.1 para un cuerpo que no cuadra.
-     */
     private static void cuerpoTrasResponder() throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
-            // `/` no lee el cuerpo: responde y se va, que es lo que abre la carrera.
             int flujo = c.pedirSinCerrar("GET", "/", "content-length", "1");
             Check.that("la respuesta llega antes de mandar el cuerpo",
                     c.respuestaDe(flujo).estado() == 200);
 
-            // Cuatro octetos donde se declaró uno.
             c.trama(Http2Cliente.DATA, Http2Cliente.FIN_FLUJO, flujo,
                     "test".getBytes(StandardCharsets.US_ASCII));
             Http2Cliente.Trama corte = c.esperar(Http2Cliente.RST_STREAM);
@@ -383,13 +335,6 @@ final class Http2Tests {
         }
     }
 
-    /**
-     * `stream()` tiene que salir en tramas según se escribe, no acumularse hasta el final.
-     *
-     * <p>Se comprueba de dos formas: que un chorro pequeño llega entero y en orden, y que uno de
-     * 384 KB —seis veces la ventana inicial— llega también. Si se acumulara, lo segundo tendría
-     * que caber en memoria antes de salir, y además el flujo se quedaría parado en 65 535.
-     */
     private static void streaming() throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
@@ -411,17 +356,11 @@ final class Http2Tests {
         }
     }
 
-    /**
-     * Los trailers se descartan —como en HTTP/1.1, que también los salta— pero hay que
-     * decodificarlos igual: la tabla dinámica de HPACK avanza con cada bloque, y saltarse uno
-     * descoloca todos los índices siguientes de esa conexión.
-     */
     private static void trailers() throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
             c.abrirVentanas(1 << 22);
 
-            // Una petición con cuerpo y trailers detrás.
             int flujo = c.pedirSinCerrar("POST", "/eco");
             c.trama(Http2Cliente.DATA, 0, flujo, "con trailers".getBytes(StandardCharsets.UTF_8));
             c.trama(Http2Cliente.HEADERS,
@@ -430,15 +369,10 @@ final class Http2Tests {
             Check.equal("una petición con trailers se atiende igual",
                     c.respuestaDe(flujo).texto(), "con trailers");
 
-            // Y lo que de verdad importa: la conexión sigue entendiéndose después. Si el bloque
-            // de los trailers no se hubiera decodificado, la tabla estaría descolocada y esto
-            // saldría con cabeceras equivocadas o rompería la conexión.
             Check.equal("y la conexión sigue leyendo bien HPACK después",
                     c.respuestaDe(c.pedir("GET", "/")).texto(), "hola por HTTP/2.0");
         }
     }
-
-    // ─── lo que un cliente correcto no mandaría ──────────────────────────────────────────────
 
     private static void hostiles() throws Exception {
         preambuloRoto();
@@ -512,22 +446,7 @@ final class Http2Tests {
                         "te", "gzip"));
     }
 
-    /**
-     * Las cuatro inundaciones conocidas de HTTP/2.
-     *
-     * <p>Todas son la misma idea: el protocolo deja que un cliente pida trabajo al servidor sin
-     * coste propio. No son entradas malformadas —cada trama es válida por separado— así que no
-     * las caza ningún control de sintaxis: hacen falta topes explícitos.
-     *
-     * <p>Se espera ENHANCE_YOUR_CALM (0xb) y no PROTOCOL_ERROR, que es lo que distingue «te estás
-     * pasando» de «esto está mal escrito».
-     */
     private static void inundaciones() {
-        // CVE-2024-27316: HEADERS y luego CONTINUATION sin fin. Cada trama es válida; el bloque
-        // crece en memoria hasta agotarla.
-        // Tramas diminutas: lo que agota no es la memoria de golpe sino la cuenta, y así el
-        // cliente termina de escribir antes de que el servidor cierre — si no, el fallo sería un
-        // «broken pipe» al escribir y no se llegaría a leer el GOAWAY que sí manda.
         rompeLaConexion("inundación de CONTINUATION · CVE-2024-27316", c -> {
             c.trama(Http2Cliente.HEADERS, 0, 1,
                     c.cabeceras(":method", "GET", ":scheme", "http", ":path", "/"));
@@ -536,8 +455,6 @@ final class Http2Tests {
             }
         }, 0xb);
 
-        // CVE-2023-44487, «Rapid Reset»: abrir y anular deja el flujo fuera del tope de
-        // concurrencia al instante, así que se puede pedir trabajo sin límite.
         rompeLaConexion("Rapid Reset · CVE-2023-44487", c -> {
             for (int i = 0; i < 200; i++) {
                 int flujo = c.pedirSinCerrar("GET", "/lento");
@@ -545,24 +462,18 @@ final class Http2Tests {
             }
         }, 0xb);
 
-        // Amplificación por tramas de control. Se usa WINDOW_UPDATE y no PING a propósito: el
-        // PING obliga al servidor a contestar, y con 1 500 sin leer las respuestas se llenan los
-        // dos buffers y lo que falla es el socket, no el tope que se quiere probar.
         rompeLaConexion("inundación de tramas de control", c -> {
             for (int i = 0; i < 1100; i++) {
                 c.trama(Http2Cliente.WINDOW_UPDATE, 0, 0, Http2Cliente.entero(1));
             }
         }, 0xb);
 
-        // Bomba de HPACK: 3 KB en el cable, 300 KB al descomprimirse. Limitar el bloque
-        // comprimido no la ve — hay que mirar lo que sale.
         rompeLaConexion("bomba de expansión en HPACK", c ->
                 c.trama(Http2Cliente.HEADERS,
                         Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 1,
                         c.bombaHpack(3000, 100)), 0xb);
     }
 
-    /** Un preámbulo que no es el preámbulo tiene que cerrar, no quedarse esperando. */
     private static void preambuloRoto() {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.bytes("PRI * HTTP/2.0\r\n\r\nXX\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
@@ -585,7 +496,6 @@ final class Http2Tests {
         byte[] armar(Http2Cliente cliente);
     }
 
-    /** Manda algo y espera un GOAWAY con el código exacto que pide el RFC. */
     private static void rompeLaConexion(String nombre, Gesto gesto, int codigoEsperado) {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
@@ -598,10 +508,6 @@ final class Http2Tests {
         }
     }
 
-    /**
-     * Una petición malformada corta su flujo y deja la conexión en pie: el resto de flujos de ese
-     * mismo cliente no tienen la culpa. Se comprueba pidiendo algo bueno después.
-     */
     private static void cortaElFlujoNoLaConexion(String nombre, Bloque bloque) {
         try (Http2Cliente c = new Http2Cliente(puerto)) {
             c.saludar();
@@ -615,7 +521,6 @@ final class Http2Tests {
             }
             Check.equal("corta el flujo y no la conexión · " + nombre, corte.flujo(), 1);
 
-            // Y la conexión sigue sirviendo: se pide algo bueno por otro flujo.
             c.trama(Http2Cliente.HEADERS,
                     Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 3,
                     c.cabeceras(":method", "GET", ":scheme", "http", ":path", "/",

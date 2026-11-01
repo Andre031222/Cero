@@ -67,9 +67,6 @@ final class JsonTests {
                 "\"2026-08-01T10:00:00Z\"");
         Check.equal("fecha", Json.write(LocalDate.of(2026, 8, 1)), "\"2026-08-01\"");
 
-        // Los tres de java.sql heredan de java.util.Date. Tratados como instantes, una hora
-        // de clase salía «1970-01-02T00:00:00Z» y una fecha se adelantaba un día al pasarla
-        // a UTC — que en otra zona horaria es el día anterior.
         Check.equal("hora sql es etiqueta de reloj, no instante",
                 Json.write(java.sql.Time.valueOf("19:00:00")), "\"19:00:00\"");
         Check.equal("fecha sql no se desplaza a UTC",
@@ -153,7 +150,6 @@ final class JsonTests {
         anidamiento();
     }
 
-    /** Un cuerpo hondo tiene que dar 400, no agotar la pila del hilo que lo lee. */
     private static void anidamiento() {
         Check.group("json · anidamiento");
 
@@ -171,7 +167,6 @@ final class JsonTests {
         Check.raises("alternando objeto y array igual", IllegalArgumentException.class,
                 () -> Json.read("[{\"a\":".repeat(50_000)));
 
-        // El contador baja al salir: mil hermanos poco hondos no agotan el presupuesto.
         StringBuilder hermanos = new StringBuilder("[");
         for (int i = 0; i < 1_000; i++) {
             hermanos.append(i > 0 ? "," : "").append("[[1]]");

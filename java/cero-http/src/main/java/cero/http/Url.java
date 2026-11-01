@@ -12,7 +12,6 @@ public final class Url {
     private Url() {
     }
 
-    /** La ruta decodificada. Un separador codificado se rechaza: {@code /a%2Fb} no es {@code /a/b}. */
     public static String decodePath(String path) {
         if (path.indexOf('%') < 0) {
             return path;
@@ -66,8 +65,6 @@ public final class Url {
                 int low = hex(text.charAt(i + 2));
                 if (high >= 0 && low >= 0) {
                     int byteDecodificado = (high << 4) | low;
-                    // Decodificarlo cambiaría la ruta después de enrutarla: un filtro por prefijo
-                    // vería una cosa y el sistema de archivos otra.
                     if (rechazarSeparadores && (byteDecodificado == '/' || byteDecodificado == '\\')) {
                         throw new HttpException(400, "separador codificado en la ruta");
                     }

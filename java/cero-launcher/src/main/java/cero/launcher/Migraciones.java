@@ -5,14 +5,6 @@ import cero.data.Migrations;
 import cero.data.Pool;
 import java.nio.file.Path;
 
-/**
- * Detrás de {@code cero migraciones --verificar}: aplica el lote entero sobre una base vacía y
- * desechable y cuenta qué pasó, sin tocar la base de verdad.
- *
- * <pre>{@code
- * cero migraciones --verificar [directorio] [url-jdbc]
- * }</pre>
- */
 public final class Migraciones {
 
     private static final String DESECHABLE = "desechable";

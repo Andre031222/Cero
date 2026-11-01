@@ -124,3 +124,16 @@ código distinto de cero si alguna falla, y el `exec-maven-plugin` la lanza en l
 Se copia del `pom.xml` de este módulo cambiando el nombre de la clase. Si tu proyecto sí usa
 JUnit, `TestServer` y `TestDatabase` son `AutoCloseable` y encajan en un `@BeforeAll`/`@AfterAll`
 o en un `try`-con-recursos sin nada más.
+
+## Decisiones que no se ven en el código
+
+- **`TestServer.close()` cierra también los clientes que entregó.** Sus conexiones en keep-alive
+  alargarían el apagado del servidor, y el final de la prueba dejaría de ser predecible.
+- **Cada `client()` trae su propio tarro de cookies**: una sesión por cliente.
+- **`TestResponse.json(path, esperado)` no distingue enteros de decimales**, igual que JSON: `1`
+  contra `1L` no falla.
+- **`TestDatabase.of(...)` registra la base como origen por omisión**, así que la aplicación bajo
+  prueba la usa sin tocar nada.
+- **En el `pom.xml`, `cero-data` es opcional**: solo lo necesita `TestDatabase`, y una aplicación
+  sin base de datos no tiene por qué arrastrarlo. H2 va en *scope* `test`, como base desechable
+  para probar `TestDatabase`; `cero-test` no depende de ningún driver.

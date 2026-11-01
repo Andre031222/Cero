@@ -13,20 +13,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Trabajo fuera de la petición: lanzar y olvidar, esperar un resultado, repetir cada tanto o
- * seguir una expresión cron. Una sola puerta para las cuatro cosas.
- *
- * <pre>{@code
- * Tasks tareas = Tasks.start();
- * tareas.run(() -> correo.enviar(aviso));               // y olvidarse
- * tareas.every(Duration.ofMinutes(5), () -> sondear()); // cada tanto
- * tareas.cron("0 3 * * *", () -> respaldo());           // a las 3 de la mañana
- * }</pre>
- *
- * <p>Cada tarea corre en su propio hilo virtual, así que bloquearse dentro no cuesta un hilo del
- * sistema. {@link Cron} es solo el tipo que interpreta la expresión; no hace falta tocarlo.
- */
 public final class Tasks implements AutoCloseable {
 
     private static final Log log = Log.of(Tasks.class);
@@ -51,14 +37,12 @@ public final class Tasks implements AutoCloseable {
         return new Tasks();
     }
 
-    /** Lanza y olvida, sobre un hilo virtual. Los fallos se registran, no se propagan. */
     public void run(Runnable tarea) {
         requerirAbierto();
         lanzadas.incrementAndGet();
         trabajadores.execute(() -> ejecutar("tarea", tarea));
     }
 
-    /** Lanza y devuelve el resultado futuro, para cuando sí importa qué pasó. */
     public <T> CompletableFuture<T> submit(Callable<T> tarea) {
         requerirAbierto();
         lanzadas.incrementAndGet();
@@ -91,7 +75,6 @@ public final class Tasks implements AutoCloseable {
         return () -> futuro.cancel(false);
     }
 
-    /** Programa por expresión cron de cinco campos, con resolución de un minuto. */
     public Cancelacion cron(String expresion, Runnable tarea) {
         requerirAbierto();
         Programada programada = new Programada(Cron.of(expresion), tarea);

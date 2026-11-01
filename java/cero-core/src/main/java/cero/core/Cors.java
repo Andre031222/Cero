@@ -47,7 +47,6 @@ public final class Cors implements Middleware {
         return this;
     }
 
-    /** Cookies y autorización entre orígenes. Incompatible con {@link #anyOrigin()}, y falla aquí. */
     public Cors credentials(boolean value) {
         if (value && origins.contains(ANY)) {
             throw new IllegalStateException(

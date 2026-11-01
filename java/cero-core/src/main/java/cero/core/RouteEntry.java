@@ -4,10 +4,6 @@ import cero.http.HttpMethod;
 
 import java.lang.reflect.Method;
 
-/**
- * Una ruta registrada. Lo que la reflexión puede decir de ella —accesibilidad, anotaciones de
- * autorización, de dónde sale cada argumento— se resuelve al registrarla, no en cada petición.
- */
 public final class RouteEntry {
 
     private final HttpMethod verb;
@@ -71,12 +67,10 @@ public final class RouteEntry {
         return endpoint != null;
     }
 
-    /** ¿Exige un usuario autenticado, por {@code @RequireAuth} o por exigir un rol? */
     boolean requiresAuth() {
         return requiresAuth || allowedRoles != null;
     }
 
-    /** Roles admitidos, o {@code null} si la ruta no exige ninguno en concreto. */
     String[] allowedRoles() {
         return allowedRoles;
     }

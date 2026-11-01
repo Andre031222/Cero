@@ -6,13 +6,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Limpieza de HTML de fuera: se reconoce la entrada y se reescribe la salida solo con lo
- * permitido. Nada pasa tal cual. Guía: https://cero.ginit.dev/guia#entradas
- */
 public final class Sanitize {
 
-    /** Lo que se puede emitir. */
     private static final Set<String> ETIQUETAS = Set.of(
             "p", "br", "hr", "span", "div", "b", "strong", "i", "em", "u", "s", "sub", "sup",
             "small", "mark", "abbr", "blockquote", "q", "cite", "code", "pre", "kbd", "samp",
@@ -20,7 +15,6 @@ public final class Sanitize {
             "h1", "h2", "h3", "h4", "h5", "h6",
             "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col");
 
-    /** Atributos admitidos por etiqueta. Lo que no esté aquí no se emite. */
     private static final Map<String, Set<String>> ATRIBUTOS = Map.of(
             "a", Set.of("href", "title"),
             "img", Set.of("src", "alt", "title", "width", "height"),
@@ -32,16 +26,12 @@ public final class Sanitize {
             "q", Set.of("cite"),
             "blockquote", Set.of("cite"));
 
-    /** Atributos cuyo valor es una dirección. */
     private static final Set<String> DIRECCIONES = Set.of("href", "src", "cite");
 
-    /** Esquemas admitidos en una dirección absoluta. */
     private static final Set<String> ESQUEMAS = Set.of("http", "https", "mailto", "tel");
 
-    /** No llevan cierre. */
     private static final Set<String> VACIAS = Set.of("br", "hr", "img", "col");
 
-    /** Se van con su contenido dentro, no solo la etiqueta. */
     private static final Set<String> CON_CONTENIDO = Set.of(
             "script", "style", "iframe", "frame", "frameset", "object", "embed", "applet",
             "noscript", "template", "svg", "math", "title", "textarea", "xmp");
@@ -51,12 +41,10 @@ public final class Sanitize {
     private Sanitize() {
     }
 
-    /** HTML limpio, conservando el formato admitido. */
     public static String html(String input) {
         return recorrer(input, true);
     }
 
-    /** El mismo texto sin ninguna etiqueta, con los espacios recogidos. */
     public static String text(String input) {
         if (input == null || input.isEmpty()) {
             return input;
@@ -64,7 +52,6 @@ public final class Sanitize {
         return recorrer(input, false).replaceAll("\\s{2,}", " ").trim();
     }
 
-    /** Un nombre de archivo que no puede salirse de su carpeta ni esconderse. */
     public static String filename(String input) {
         if (input == null) {
             return null;
@@ -81,14 +68,11 @@ public final class Sanitize {
         return name.isEmpty() ? "archivo" : name;
     }
 
-    // ─── el recorrido ────────────────────────────────────────────────────────────────────────
-
     private static String recorrer(String entrada, boolean conEtiquetas) {
         if (entrada == null || entrada.isEmpty()) {
             return entrada;
         }
         StringBuilder salida = new StringBuilder(entrada.length());
-        // Cierres pendientes, del más reciente al más antiguo.
         ArrayDeque<String> abiertas = new ArrayDeque<>();
         int i = 0;
 
@@ -99,7 +83,6 @@ public final class Sanitize {
                 i++;
                 continue;
             }
-            // Un '<' que no abre nada reconocible es texto: `3 < 5`.
             if (i + 1 >= entrada.length()) {
                 escapar('<', salida, conEtiquetas);
                 break;
@@ -139,12 +122,10 @@ public final class Sanitize {
             i = etiqueta.fin;
 
             if (CON_CONTENIDO.contains(etiqueta.nombre)) {
-                // Sin cierre, se descarta lo que queda.
                 i = etiqueta.autocerrada ? i : saltarContenido(entrada, i, etiqueta.nombre);
                 continue;
             }
             if (!conEtiquetas || !ETIQUETAS.contains(etiqueta.nombre)) {
-                // Etiqueta desconocida: se cae ella, su texto se queda.
                 continue;
             }
             boolean cierra = !VACIAS.contains(etiqueta.nombre) && !etiqueta.autocerrada;
@@ -202,14 +183,12 @@ public final class Sanitize {
             }
             salida.append('"');
         }
-        // Un enlace de fuera no presta reputación ni entrega el `window.opener`.
         if (etiqueta.nombre.equals("a") && enlace) {
             salida.append(" rel=\"nofollow noopener noreferrer\"");
         }
         salida.append('>');
     }
 
-    /** La dirección tal cual si es admisible, o {@code null}. Se juzga como la leerá el navegador. */
     private static String direccionSegura(String valor) {
         String limpia = sinControles(entidades(valor)).trim();
         if (limpia.isEmpty()) {
@@ -220,7 +199,6 @@ public final class Sanitize {
         int almohadilla = limpia.indexOf('#');
         int interrogante = limpia.indexOf('?');
 
-        // El ':' solo es esquema si va antes de todo separador: en `foo/bar:baz` no lo es.
         boolean tieneEsquema = colon >= 0
                 && (barra < 0 || colon < barra)
                 && (almohadilla < 0 || colon < almohadilla)
@@ -232,7 +210,6 @@ public final class Sanitize {
         return ESQUEMAS.contains(esquema) ? valor : null;
     }
 
-    /** Quita todo lo que el navegador ignoraría al leer una dirección. */
     private static String sinControles(String texto) {
         StringBuilder limpia = new StringBuilder(texto.length());
         for (int i = 0; i < texto.length(); i++) {
@@ -244,7 +221,6 @@ public final class Sanitize {
         return limpia.toString();
     }
 
-    /** Deshace las entidades que el navegador entendería dentro del valor de un atributo. */
     private static String entidades(String texto) {
         if (texto.indexOf('&') < 0) {
             return texto;
@@ -258,7 +234,6 @@ public final class Sanitize {
                 i++;
                 continue;
             }
-            // El navegador acepta la entidad sin el ';' final; aquí también.
             int fin = i + 1;
             while (fin < texto.length() && fin - i <= 10 && texto.charAt(fin) != ';'
                     && texto.charAt(fin) != '&' && !Character.isWhitespace(texto.charAt(fin))) {
@@ -311,7 +286,6 @@ public final class Sanitize {
 
     private static void cerrarHasta(String nombre, ArrayDeque<String> abiertas, StringBuilder salida) {
         if (!abiertas.contains(nombre)) {
-            // Cierre huérfano: emitirlo desequilibraría la salida.
             return;
         }
         String cima;
@@ -344,7 +318,6 @@ public final class Sanitize {
         return i == inicio ? null : texto.substring(inicio, i).toLowerCase(Locale.ROOT);
     }
 
-    /** Salta hasta el cierre de una etiqueta que se lleva su contenido. */
     private static int saltarContenido(String texto, int desde, String nombre) {
         String minusculas = texto.toLowerCase(Locale.ROOT);
         String cierre = "</" + nombre;
@@ -364,8 +337,6 @@ public final class Sanitize {
         return texto.length();
     }
 
-    // ─── una etiqueta de apertura, ya leída ──────────────────────────────────────────────────
-
     private static final class Etiqueta {
 
         final String nombre;
@@ -380,7 +351,6 @@ public final class Sanitize {
             this.fin = fin;
         }
 
-        /** Lee {@code <nombre a="1" b>} desde {@code desde}, o {@code null} si no lo es. */
         static Etiqueta leer(String texto, int desde) {
             int i = desde + 1;
             int inicio = i;
@@ -453,7 +423,6 @@ public final class Sanitize {
             return new Etiqueta(nombre, atributos, autocerrada, i);
         }
 
-        /** La barra separa, como en el navegador: `<svg/onload=…>` es svg con atributo onload. */
         private static boolean esSeparador(char c) {
             return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == 0x0B;
         }

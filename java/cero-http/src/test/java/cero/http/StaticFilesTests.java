@@ -80,11 +80,6 @@ final class StaticFilesTests {
         Files.deleteIfExists(fuera);
     }
 
-    /**
-     * El caché de recursos del classpath se llenaba con las rutas que NO existen —dos entradas
-     * por cada 404, con la ruta pedida como clave—, así que cualquiera podía agotar el montón
-     * pidiendo direcciones inventadas. Aquí se piden 400 y se exige que el caché siga vacío.
-     */
     private static void cacheDelClasspath() throws Exception {
         StaticFiles estaticos = StaticFiles.fromClasspath("estaticos-prueba");
         try (Server server = Server.start(ServerOptions.builder().port(0).build(),
@@ -94,9 +89,6 @@ final class StaticFilesTests {
             Check.equal("una ruta inexistente da 404",
                     Fixture.get(base + "/no-existe.css").statusCode(), 404);
 
-            // Una exportación estática pone cada página en su carpeta: /seccion es
-            // seccion/index.html. Un directorio del classpath "existe" y leerlo da cero bytes,
-            // así que sin cuidado se respondía 200 con el cuerpo vacío.
             var seccion = Fixture.get(base + "/seccion");
             Check.equal("un directorio sirve su index.html", seccion.statusCode(), 200);
             Check.equal("y con su contenido, no vacío", seccion.body(), "<h1>seccion</h1>");
@@ -112,12 +104,6 @@ final class StaticFilesTests {
         }
     }
 
-    /**
-     * Una aplicación que enruta en el cliente —React, Svelte— no tiene un archivo por ruta. Sin
-     * respaldo, /nosotros da 404 y la aplicación solo funciona entrando por la portada. Con él,
-     * devuelve index.html… pero solo para rutas de página: un .css que falte tiene que seguir
-     * dando 404, o un error evidente se convierte en uno de una hora.
-     */
     private static void spa() throws Exception {
         Path raiz = Files.createTempDirectory("cero-spa");
         Files.writeString(raiz.resolve("index.html"), "<div id=app></div>");
@@ -228,14 +214,6 @@ final class StaticFilesTests {
         Check.equal("extensión desconocida", MimeTypes.of("a.xyz"), "application/octet-stream");
     }
 
-    /**
-     * El documento y el asset no se cachean igual, y confundirlos congela el sitio.
-     *
-     * <p>Esto salió de un fallo en producción: el sitio servía su `index.html` con
-     * `max-age=31536000, immutable`, así que quien ya había entrado no volvía a pedirlo nunca.
-     * Como los nombres de los assets van dentro de ese HTML, tampoco se enteraba de que existían
-     * versiones nuevas. Cada despliegue era invisible para todo visitante que repitiera.
-     */
     private static void cacheDelDocumentoYDelAsset() throws Exception {
         Path raiz = Files.createTempDirectory("cero-cache");
         Files.writeString(raiz.resolve("index.html"), "<h1>portada</h1>");

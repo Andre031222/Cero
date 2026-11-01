@@ -9,21 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
-/**
- * Bus de eventos dentro del proceso.
- *
- * <pre>
- *   record UsuarioCreado(long id, String email) {}
- *
- *   Events bus = Events.bus();
- *   bus.on(UsuarioCreado.class, evento -&gt; correo.bienvenida(evento.email()));
- *   bus.publish(new UsuarioCreado(id, email));
- * </pre>
- *
- * <p>Los oyentes corren en el hilo de quien publica, en el orden en que se registraron. Uno que
- * falle no tumba al publicador ni impide los demás. Para publicar sin bloquear:
- * {@code jobs.run(() -> bus.publish(evento))}.
- */
 public final class Events {
 
     private static final Log log = Log.of(Events.class);
@@ -37,14 +22,12 @@ public final class Events {
         return new Events();
     }
 
-    /** Registra un oyente para un tipo de evento. */
     public <T> Events on(Class<T> tipo, Consumer<T> oyente) {
         oyentes.computeIfAbsent(tipo, clave -> new CopyOnWriteArrayList<>())
                 .add(new Oyente(null, null, evento -> oyente.accept(tipo.cast(evento))));
         return this;
     }
 
-    /** Registra los métodos {@link Listens} del objeto. Llamarlo dos veces no duplica oyentes. */
     public Events listeners(Object servicio) {
         for (Method metodo : servicio.getClass().getMethods()) {
             if (!metodo.isAnnotationPresent(Listens.class)) {
@@ -65,7 +48,6 @@ public final class Events {
         return this;
     }
 
-    /** Registra los oyentes de todos los servicios de un registro. */
     public Events listenersFrom(Registry registro) {
         for (Object servicio : registro.all()) {
             listeners(servicio);
@@ -73,7 +55,6 @@ public final class Events {
         return this;
     }
 
-    /** Entrega el evento a quien escuche su tipo o cualquiera de sus supertipos. */
     public void publish(Object evento) {
         if (evento == null) {
             throw new IllegalArgumentException("no se publica un evento nulo");
@@ -93,19 +74,16 @@ public final class Events {
         }
     }
 
-    /** Quita todos los oyentes de un tipo. */
     public Events off(Class<?> tipo) {
         oyentes.remove(tipo);
         return this;
     }
 
-    /** Cuántos oyentes hay registrados para un tipo exacto. */
     public int listenerCount(Class<?> tipo) {
         List<Oyente> registrados = oyentes.get(tipo);
         return registrados == null ? 0 : registrados.size();
     }
 
-    /** Los tipos de evento con al menos un oyente. */
     public List<Class<?>> types() {
         return new ArrayList<>(oyentes.keySet());
     }

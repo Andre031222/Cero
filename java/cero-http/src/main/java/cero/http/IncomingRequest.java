@@ -111,9 +111,6 @@ final class IncomingRequest implements Request {
 
     @Override
     public String remoteAddress() {
-        // Detrás de un proxy, remoteAddress es siempre el del proxy: sin esto el limitador cuenta
-        // a todo el mundo junto y el primero que llegue al tope bloquea el sitio entero. Solo se
-        // hace caso a la cabecera si quien nos habla está en la lista de confianza.
         if (!context.options().trustedProxies().contains(remoteAddress)) {
             return remoteAddress;
         }
@@ -121,7 +118,6 @@ final class IncomingRequest implements Request {
         if (reenviado == null || reenviado.isBlank()) {
             return remoteAddress;
         }
-        // El primero de la lista es el cliente original; los siguientes, los saltos intermedios.
         int coma = reenviado.indexOf(',');
         String cliente = (coma < 0 ? reenviado : reenviado.substring(0, coma)).trim();
         return cliente.isEmpty() ? remoteAddress : cliente;
@@ -132,9 +128,6 @@ final class IncomingRequest implements Request {
         if (context.options().secure()) {
             return true;
         }
-        // Detrás de un proxy inverso el TLS lo termina él y a nosotros nos llega en claro. Solo
-        // se cree la cabecera si se ha declarado que hay un proxy: fiarse de ella sin más
-        // permitiría a cualquier cliente decir que su petición es segura.
         if (!context.options().behindProxy()) {
             return false;
         }
@@ -236,8 +229,6 @@ final class IncomingRequest implements Request {
         if (session == null || !session.valid()) {
             return null;
         }
-        // Nueva o recién rotada: en los dos casos hay que mandarle al navegador el identificador
-        // que toca. Antes solo se emitía al nacer, y por eso rotar no servía de nada.
         if (!sessionIsNew && !session.idRotado()) {
             return null;
         }

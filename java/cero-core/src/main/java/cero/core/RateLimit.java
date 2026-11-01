@@ -68,16 +68,10 @@ public final class RateLimit implements Middleware {
         }
         sweepOccasionally();
 
-        // La ruta NO entra en la clave. Cuando entraba pasaban dos cosas malas: el mapa crecía
-        // con cada ruta distinta que alguien inventara, y el límite era por ruta, así que
-        // repartiendo la carga entre URLs se multiplicaba la cuota. Quien quiera granularidad
-        // por ruta la pide con keyBy, que para eso está.
         String identity = key.apply(context);
         long now = System.currentTimeMillis();
         Bucket bucket = buckets.get(identity);
         if (bucket == null) {
-            // Tope duro: por encima se deja pasar en vez de crecer sin freno. Con la ruta fuera
-            // de la clave hacen falta MAX_CLAVES orígenes distintos para llegar aquí.
             if (buckets.size() >= MAX_CLAVES) {
                 log.warn("rate limit: {} claves en seguimiento, no se admiten nuevas", buckets.size());
                 return chain.proceed(context);

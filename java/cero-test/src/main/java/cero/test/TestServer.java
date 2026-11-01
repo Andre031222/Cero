@@ -6,19 +6,6 @@ import cero.http.Server;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Levanta una aplicación Cero en un puerto libre y la para al cerrarse.
- *
- * <pre>{@code
- * try (TestServer app = TestServer.start(Cero.app().controllers(Saludos.class))) {
- *     app.client().get("/hola").ok().contains("hola");
- * }
- * }</pre>
- *
- * <p>El puerto lo elige el sistema operativo, así que dos pruebas en paralelo no chocan. Al
- * cerrar se cierran también los clientes que entregó {@link #client()}: sin eso, sus conexiones
- * en keep-alive alargan el apagado del servidor y el final de la prueba deja de ser predecible.
- */
 public final class TestServer implements AutoCloseable {
 
     private final Server server;
@@ -48,7 +35,6 @@ public final class TestServer implements AutoCloseable {
         return url() + (path.startsWith("/") ? path : "/" + path);
     }
 
-    /** Un cliente nuevo, con su propio tarro de cookies: una sesión por cliente. */
     public TestClient client() {
         TestClient client = TestClient.of(url());
         clients.add(client);

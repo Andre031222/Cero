@@ -10,7 +10,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/** La base opcional de controladores, y la carrera que no debe ocurrir. */
 final class ControladorBaseTests {
 
     private ControladorBaseTests() {
@@ -64,11 +63,6 @@ final class ControladorBaseTests {
                 IllegalStateException.class, Current::context);
     }
 
-    /**
-     * La prueba que justifica que esto no sea un campo del controlador. Del controlador hay una
-     * sola instancia; si guardara la petición dentro, con 200 peticiones a la vez alguna
-     * respondería con el identificador de otra.
-     */
     private static void aislamiento(String base) throws Exception {
         int peticiones = 200;
         var respuestas = new java.util.concurrent.ConcurrentLinkedQueue<String>();
@@ -103,8 +97,6 @@ final class ControladorBaseTests {
         Check.equal("llegan las 200 respuestas", respuestas.size(), peticiones);
         Check.that("y cada una trae su propio identificador, sin pisarse", todasDistintas);
     }
-
-    // ── controladores de prueba ──────────────────────────────────────────────
 
     @Route("/base")
     public static class ConBase extends Controller {

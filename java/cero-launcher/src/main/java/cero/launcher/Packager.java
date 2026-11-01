@@ -19,21 +19,6 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 
-/**
- * Junta la aplicación y sus jar en uno solo, ejecutable con {@code java -jar app.jar}.
- *
- * <pre>
- *   java -cp cero-launcher.jar cero.launcher.Packager \
- *        --main ejemplo.App --out app.jar target/classes lib/*.jar
- * </pre>
- *
- * <p>Usa {@code java.util.jar} del JDK: empaquetar sin un plugin de terceros es coherente con un
- * framework que presume de no tener dependencias.
- *
- * <p>Las firmas de los jar de entrada se descartan — al mezclar contenidos dejan de ser válidas y
- * la JVM rechazaría el resultado. Si alguna de tus dependencias necesita conservar su firma, este
- * empaquetado no te sirve.
- */
 public final class Packager {
 
     private final String mainClass;
@@ -50,7 +35,6 @@ public final class Packager {
         return new Packager(mainClass);
     }
 
-    /** Añade un directorio de clases o un jar. */
     public Packager anadir(Path entrada) {
         entradas.add(entrada);
         return this;
@@ -61,7 +45,6 @@ public final class Packager {
         return this;
     }
 
-    /** @return cuántas entradas se escribieron */
     public int escribir(Path destino) throws IOException {
         if (entradas.isEmpty()) {
             throw new IllegalStateException("no hay nada que empaquetar");

@@ -10,19 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Genera la especificación OpenAPI 3.0 de la aplicación a partir de sus rutas.
- *
- * <pre>
- *   Cero.app()
- *      .controllers(ArticuloController.class)
- *      .routes(r -&gt; r.get("/openapi.json", OpenApi.describing(router).title("Catálogo").endpoint()))
- *      .start();
- * </pre>
- *
- * <p>Se construye desde el {@link Router}, no escaneando el disco, así que describe exactamente
- * lo que la aplicación sirve — incluidas las rutas declaradas con lambda.
- */
 public final class OpenApi {
 
     private final Router router;
@@ -159,7 +146,6 @@ public final class OpenApi {
             }
         }
 
-        // Las del patrón sin @Path también son parte del contrato.
         for (String variable : variablesDe(ruta.pattern().raw())) {
             if (!yaPuestos.contains(variable)) {
                 salida.add(parametro("path", variable, true, String.class));
@@ -220,12 +206,10 @@ public final class OpenApi {
         return respuestas;
     }
 
-    /** Registra los records en {@code components/schemas} y devuelve una referencia. */
     private Map<String, Object> esquema(Class<?> tipo, Map<String, Object> esquemas) {
         if (tipo.isRecord()) {
             String nombre = tipo.getSimpleName();
             if (!esquemas.containsKey(nombre)) {
-                // Hueco reservado antes de recorrer: un record que se contenga no entra en bucle.
                 esquemas.put(nombre, Map.of());
                 Map<String, Object> propiedades = new LinkedHashMap<>();
                 for (RecordComponent componente : tipo.getRecordComponents()) {

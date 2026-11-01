@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/** El cliente SMTP, contra un servidor de mentira que habla el protocolo de verdad. */
 final class MailTests {
 
     private MailTests() {
@@ -53,7 +52,6 @@ final class MailTests {
         }
     }
 
-    /** Una línea que empieza por punto marcaría el final del mensaje: hay que doblarla. */
     private static void elPuntoSeDobla() throws Exception {
         try (Servidor servidor = Servidor.arrancar()) {
             Mail.smtp("127.0.0.1", servidor.puerto()).startTls(false)
@@ -168,7 +166,6 @@ final class MailTests {
                     }
                 }
             } catch (IOException cortado) {
-                // el cliente se fue; la prueba lo verá por lo que falte
             } finally {
                 terminado.countDown();
             }

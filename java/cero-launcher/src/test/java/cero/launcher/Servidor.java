@@ -3,7 +3,6 @@ package cero.launcher;
 import cero.http.Server;
 import cero.http.ServerOptions;
 
-/** La aplicación que se empaqueta en la prueba: el jar tiene que poder arrancarla solo. */
 public final class Servidor {
 
     private Servidor() {

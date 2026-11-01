@@ -43,8 +43,6 @@ final class Sessions {
             return null;
         }
         long ahora = System.currentTimeMillis();
-        // Dos topes: inactividad y vida total. Sin el segundo, una sesión que se toque de vez en
-        // cuando vive para siempre — y una robada dura lo mismo que la use quien la robó.
         if (ahora - datos.ultimoAcceso() > timeoutMillis
                 || (vidaMaximaMillis > 0 && ahora - datos.creada() > vidaMaximaMillis)) {
             store.remove(id);
@@ -83,7 +81,7 @@ final class Sessions {
     static final class Entry implements Session {
 
         private final Sessions owner;
-        private volatile String id;          // deja de ser final: regenerateId() lo cambia
+        private volatile String id;
         private final Map<String, Object> values;
         private final long createdAt;
 
@@ -104,7 +102,6 @@ final class Sessions {
             created = true;
         }
 
-        /** {@code true} si hay que volver a emitir la cookie porque el identificador cambió. */
         boolean idRotado() {
             return idRotado;
         }
@@ -117,9 +114,6 @@ final class Sessions {
             long ahora = System.currentTimeMillis();
             long anterior = lastAccessAt;
             lastAccessAt = ahora;
-            // No se escribe en cada petición. Contra un almacén en memoria daba igual, pero
-            // contra una tabla eso es un UPDATE por petición solo para mover una marca de tiempo.
-            // Con refrescar cuando ha pasado una décima del tiempo de expiración basta.
             if (ahora - anterior < owner.timeoutMillis / 10) {
                 return;
             }
@@ -127,7 +121,6 @@ final class Sessions {
                     : new SessionStore.Datos(previo.valores(), previo.creada(), ahora));
         }
 
-        /** Escribe UN valor sobre lo último guardado, en vez de volcar la copia local entera. */
         private void aplicar(String clave, Object valor) {
             owner.store.update(id, previo -> {
                 Map<String, Object> fusion = previo == null
@@ -204,8 +197,6 @@ final class Sessions {
                 owner.store.save(nuevo,
                         new SessionStore.Datos(new HashMap<>(values), createdAt, lastAccessAt));
             }
-            // Se borra el viejo DESPUÉS de guardar el nuevo: si algo falla en medio, se queda la
-            // sesión duplicada un rato, que es mucho mejor que perderla.
             owner.store.remove(anterior);
             idRotado = true;
         }

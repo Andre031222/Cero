@@ -92,7 +92,6 @@ public final class TestSuite {
                         && pom.split("<dependency>", -1).length == 2);
     }
 
-    /** La prueba de verdad: {@code java -jar}, sin classpath y sin nada instalado. */
     private static void arrancaSolo(Path jar) throws Exception {
         Process proceso = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),
@@ -118,10 +117,6 @@ public final class TestSuite {
         }
     }
 
-    /**
-     * Todo lo que Maven puso en el classpath: jar del repositorio y directorios de clases de los
-     * módulos del propio reactor. Empaquetar solo los jar dejaría fuera medio framework.
-     */
     private static List<Path> delClasspath() {
         List<Path> entradas = new ArrayList<>();
         for (String parte : System.getProperty("java.class.path")

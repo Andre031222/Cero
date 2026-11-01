@@ -120,7 +120,6 @@ final class ResponseOverServlet implements Response {
 
     @Override
     public cero.http.Duplex switchProtocols() {
-        // El socket lo tiene el contenedor: sobre el servidor propio de Cero esto funciona sin nada extra.
         throw new UnsupportedOperationException(
                 "cambiar de protocolo no se puede desde el adaptador de servlet");
     }

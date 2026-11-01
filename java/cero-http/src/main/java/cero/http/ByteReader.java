@@ -21,7 +21,6 @@ final class ByteReader {
         return position < limit;
     }
 
-    /** Vista como {@link InputStream}, conservando lo que ya esté en el buffer. */
     InputStream asInputStream() {
         return new InputStream() {
 

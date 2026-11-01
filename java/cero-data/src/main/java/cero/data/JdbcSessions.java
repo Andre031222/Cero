@@ -7,34 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
-/**
- * Sesiones en una tabla, para que sobrevivan al despliegue y las compartan varias instancias.
- *
- * <p>El almacén por defecto vive en el montón del proceso, y eso tiene dos consecuencias que solo
- * se notan en producción: <b>cada despliegue echa a todo el mundo</b>, y no se puede correr más de
- * una instancia — con lo que no hay reinicio sin corte ni escalado horizontal.
- *
- * <pre>{@code
- * ServerOptions.builder()
- *     .sessionStore(JdbcSessions.of("cero_sesiones").createTable())
- *     .build();
- * }</pre>
- *
- * <p>Los valores se guardan como JSON, así que tienen que ser cosas que el {@link Json} de
- * Cero sepa escribir y volver a leer: texto, números, booleanos, listas y mapas. Al releerlos
- * vuelven como esos tipos, no como la clase original — guardar un objeto propio y esperar
- * recuperarlo tal cual no funciona. Es la misma regla de cualquier sesión distribuida.
- *
- * <p>Escribe con {@code UPDATE} condicional, así que dos peticiones simultáneas sobre la misma
- * sesión no se pisan: la que pierde reintenta sobre lo último guardado.
- */
 public final class JdbcSessions implements SessionStore {
 
-    /**
-     * Reintentos del UPDATE condicional. Con cinco no bastaba: veinte escritores sobre la misma
-     * fila agotaban los intentos y se perdían escrituras. Con espera creciente entre intentos,
-     * los que pierden se reparten en el tiempo en vez de volver todos a la vez.
-     */
     private static final int REINTENTOS = 24;
 
     private final String fuente;
@@ -53,10 +27,6 @@ public final class JdbcSessions implements SessionStore {
         return new JdbcSessions(fuente, tabla);
     }
 
-    /**
-     * Crea la tabla si no está. Cómodo para arrancar; en un proyecto con migraciones, mejor que
-     * la tabla salga de ahí y esto no se llame.
-     */
     public JdbcSessions createTable() {
         db().exec("create table if not exists " + tabla + " ("
                 + "id varchar(64) primary key, "
@@ -86,10 +56,6 @@ public final class JdbcSessions implements SessionStore {
         }
     }
 
-    /**
-     * Lee, aplica el cambio y escribe solo si nadie tocó la fila mientras tanto. Si la tocaron,
-     * se vuelve a leer y se reintenta: así la escritura de una petición no borra la de otra.
-     */
     @Override
     public void update(String id, UnaryOperator<Datos> cambio) {
         for (int intento = 0; intento < REINTENTOS; intento++) {
@@ -143,7 +109,6 @@ public final class JdbcSessions implements SessionStore {
         return fila == null ? 0 : ((Number) fila.get("total")).intValue();
     }
 
-    /** Espera creciente con un poco de azar, para que los que reintentan no vuelvan a la vez. */
     private static void esperarUnPoco(int intento) {
         long millis = Math.min(1L << Math.min(intento, 5), 40)
                 + java.util.concurrent.ThreadLocalRandom.current().nextLong(4);

@@ -8,7 +8,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/** El almacén de sesiones sobre una tabla, contra H2 de verdad. */
 final class JdbcSessionsTests {
 
     private JdbcSessionsTests() {
@@ -56,7 +55,6 @@ final class JdbcSessionsTests {
         long ahora = System.currentTimeMillis();
         almacen.save("s2", new SessionStore.Datos(new HashMap<>(), ahora, ahora));
 
-        // Dos cambios sucesivos, cada uno sobre lo último guardado.
         almacen.update("s2", previo -> conClave(previo, "csrf", "token"));
         almacen.update("s2", previo -> conClave(previo, "carrito", "3 artículos"));
 
@@ -77,7 +75,6 @@ final class JdbcSessionsTests {
         Check.that("y respeta la viva", almacen.load("viva") != null);
     }
 
-    /** Lo que justifica el UPDATE condicional: veinte escrituras a la vez, ninguna perdida. */
     private static void concurrencia(JdbcSessions almacen) {
         long ahora = System.currentTimeMillis();
         almacen.save("s3", new SessionStore.Datos(new HashMap<>(), ahora, ahora));
@@ -94,7 +91,6 @@ final class JdbcSessionsTests {
                         salida.await();
                         almacen.update("s3", previo -> conClave(previo, "k" + mio, "v" + mio));
                     } catch (Exception ignorado) {
-                        // lo cuenta la comprobación de abajo
                     } finally {
                         fin.countDown();
                     }

@@ -8,23 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * La respuesta de un flujo HTTP/2.
- *
- * <p>Implementa la misma interfaz {@link Response} que la de HTTP/1.1, así que un controlador no
- * distingue por cuál está respondiendo. Lo que cambia es la salida: en vez de una línea de estado
- * y cabeceras en texto, una trama HEADERS con el bloque HPACK y luego tramas DATA.
- *
- * <p>Tres cosas que en HTTP/2 no existen y aquí se traducen:
- *
- * <ul>
- *   <li><b>No hay línea de estado.</b> El código va como el pseudo-campo {@code :status}, y va
- *       primero: el RFC exige que los pseudo-campos precedan a los normales.
- *   <li><b>No hay cabeceras de conexión.</b> {@code Connection}, {@code Keep-Alive} y
- *       {@code Transfer-Encoding} se filtran al salir; mandarlas es malformar la respuesta.
- *   <li><b>Los nombres van en minúscula.</b> No es estilo: en mayúscula la respuesta es inválida.
- * </ul>
- */
 final class Http2Respuesta implements Response {
 
     private final Http2 conexion;
@@ -41,8 +24,6 @@ final class Http2Respuesta implements Response {
         this.flujo = flujo;
         this.peticion = peticion;
     }
-
-    // ─── la interfaz ─────────────────────────────────────────────────────────────────────────
 
     @Override
     public Response status(int code) {
@@ -130,13 +111,6 @@ final class Http2Respuesta implements Response {
         return salidaEnCurso;
     }
 
-    /**
-     * En HTTP/2 no se cambia de protocolo con un 101.
-     *
-     * <p>WebSocket sobre h2 es otra cosa —el CONNECT extendido del RFC 8441— y no está. Decirlo
-     * con un fallo claro es mejor que devolver un 101 que el cliente no puede interpretar: en h2
-     * ese código no significa nada.
-     */
     @Override
     public Duplex switchProtocols() {
         throw new HttpException(501,
@@ -147,8 +121,6 @@ final class Http2Respuesta implements Response {
     public boolean committed() {
         return comprometida;
     }
-
-    // ─── salida ──────────────────────────────────────────────────────────────────────────────
 
     private void siNoHay(String nombre, String valor) {
         if (cabeceras.get(nombre) == null) {
@@ -174,12 +146,9 @@ final class Http2Respuesta implements Response {
         }
     }
 
-    /** Los pseudo-campos primero y en minúscula, sin las cabeceras que h2 prohíbe. */
     private List<Hpack.Campo> campos() {
         List<Hpack.Campo> campos = new ArrayList<>();
         campos.add(new Hpack.Campo(":status", String.valueOf(estado)));
-        // No es una lectura pura: marca la cookie como emitida. `campos()` corre una sola vez por
-        // respuesta —los dos caminos de salida lo protegen con `comprometida`—, así que va aquí.
         Cookie pendiente = peticion.pendingSessionCookie();
         if (pendiente != null) {
             campos.add(new Hpack.Campo("set-cookie", pendiente.encode()));
@@ -196,7 +165,6 @@ final class Http2Respuesta implements Response {
         return campos;
     }
 
-    /** Lo que el manejador termine sin haber respondido acaba en un 204 vacío, no colgado. */
     void terminar() {
         if (salidaEnCurso != null) {
             salidaEnCurso.cerrarDeVerdad();
@@ -218,22 +186,6 @@ final class Http2Respuesta implements Response {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * La salida por {@code stream()}: sale en tramas según se escribe, no al final.
-     *
-     * <p>Antes se acumulaba entera en memoria, lo que convertía una respuesta de streaming en una
-     * respuesta normal con un rodeo — y hacía imposible mandar algo más grande que el montón, que
-     * es justo para lo que existe {@code stream()}.
-     *
-     * <p>Va con un buffer intermedio de 8 KB por una razón concreta: cada trama DATA cuesta nueve
-     * octetos de cabecera y una espera de ventana, así que un manejador que escriba de byte en
-     * byte generaría una trama por byte. El buffer las junta; {@code flush()} las suelta cuando
-     * el manejador quiere que salgan de verdad —eventos del servidor, progreso— y ahí sí sale
-     * inmediatamente.
-     *
-     * <p>Las cabeceras se mandan en la primera escritura, no al cerrar: un cliente que está
-     * esperando el primer byte necesita el {@code :status} antes que el cuerpo.
-     */
     private final class Flujo extends OutputStream {
 
         private static final int BUFFER = 8 * 1024;
@@ -264,12 +216,9 @@ final class Http2Respuesta implements Response {
             soltar(false);
         }
 
-        /** Manda lo acumulado. Con `fin`, cierra el flujo en la misma trama. */
         private void soltar(boolean fin) throws IOException {
             if (!comprometida) {
                 comprometida = true;
-                // Sin `content-length`: en streaming no se sabe cuánto va a salir, y declararlo
-                // mal es peor que no declararlo. El fin del flujo lo marca la bandera.
                 cabeceras.remove("content-length");
                 conexion.mandarCabeceras(flujo.id, campos(), false);
             }

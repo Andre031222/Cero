@@ -4,11 +4,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.BitSet;
 
-/**
- * Expresión cron de cinco campos: minuto hora díaDelMes mes díaDeSemana.
- * Admite {@code *}, listas {@code 1,2}, rangos {@code 1-5} y pasos {@code  /15}.
- * El domingo es 0 y también 7.
- */
 public final class Cron {
 
     private final BitSet minutos = new BitSet(60);
@@ -49,7 +44,6 @@ public final class Cron {
                 && semana.get(momento.getDayOfWeek().getValue() % 7);
     }
 
-    /** Siguiente instante que cumple la expresión, buscando hasta cuatro años por delante. */
     public LocalDateTime siguiente(LocalDateTime desde) {
         LocalDateTime candidato = desde.truncatedTo(ChronoUnit.MINUTES).plusMinutes(1);
         long limite = 4L * 366 * 24 * 60;

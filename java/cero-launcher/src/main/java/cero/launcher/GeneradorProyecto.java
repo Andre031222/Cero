@@ -5,20 +5,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/**
- * Arma un proyecto Cero listo para arrancar y lo devuelve como ZIP en memoria.
- *
- * <p>Emite un jar que arranca solo, no un WAR con {@code web.xml} y JSP: el proyecto generado no
- * necesita contenedor de servlets para correr.
- */
 public final class GeneradorProyecto {
 
-    /** La versión que se escribe en el pom de cada proyecto nuevo. Sale del pom, no de aquí. */
     static final String VERSION = Version.ACTUAL;
 
     public record Peticion(String grupo, String artefacto, String paquete, String nombre, String motor) {
 
-        /** Limpia lo que venga de la línea de órdenes y rellena lo que falte. */
         public static Peticion de(String grupo, String artefacto, String nombre, String motor) {
             String grupoLimpio = coordenada(grupo, "com.ejemplo");
             String artefactoLimpio = coordenada(artefacto, "mi-app");
@@ -251,7 +243,6 @@ public final class GeneradorProyecto {
         return limpio.isBlank() ? porDefecto : limpio;
     }
 
-    /** Nombre visible: letras, números, espacio y {@code . _ -}, con tope de 60. */
     private static String visible(String valor, String porDefecto) {
         if (valor == null) {
             return porDefecto;
@@ -270,7 +261,6 @@ public final class GeneradorProyecto {
         };
     }
 
-    /** Un nombre de paquete Java válido: segmentos alfanuméricos que empiezan por letra. */
     private static String paqueteValido(String candidato) {
         StringBuilder paquete = new StringBuilder();
         for (String parte : candidato.split("\\.")) {

@@ -78,8 +78,6 @@ public final class Log {
                 .append("  ").append(etiqueta(candidato))
                 .append("  ").append(nombre);
 
-        // La traza va aquí y no la pone quien llama: un identificador que hay que acordarse de
-        // pasar en cada log es un identificador que falta justo en la línea que hacía falta.
         String traza = Trace.idActual();
         if (traza != null) {
             linea.append("  ").append(traza);

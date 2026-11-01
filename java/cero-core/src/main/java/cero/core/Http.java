@@ -57,7 +57,6 @@ public final class Http {
         return this;
     }
 
-    /** Reintenta ante fallo de red o respuesta 5xx, con espera creciente. */
     public Http retry(int veces) {
         reintentos = Math.max(0, veces);
         return this;
@@ -104,10 +103,6 @@ public final class Http {
                 "application/x-www-form-urlencoded");
     }
 
-    /**
-     * Consume una respuesta de eventos servidos (SSE), que es como transmiten las APIs de IA.
-     * Entrega cada bloque {@code data:} tal cual; el centinela [DONE] cierra el flujo.
-     */
     public void sse(Object cuerpo, Consumer<String> porEvento) {
         HttpRequest peticion = construir(cuerpo == null ? "GET" : "POST",
                 cuerpo == null
@@ -191,8 +186,6 @@ public final class Http {
         if (acepta != null) {
             constructor.header("Accept", acepta);
         }
-        // La traza sigue a la llamada saliente. Va antes de las cabeceras de quien llama para
-        // que una `traceparent` puesta a mano gane: propagar es la ayuda, no la norma.
         Trace traza = Trace.actual();
         if (traza != null && !cabeceras.containsKey("traceparent")) {
             constructor.header("traceparent", traza.traceparent());
@@ -253,7 +246,6 @@ public final class Http {
             return Json.read(cuerpo, tipo);
         }
 
-        /** Devuelve el cuerpo si la respuesta fue correcta; si no, lanza con el detalle. */
         public String requerido() {
             if (!ok()) {
                 throw new HttpClientException(estado, cuerpo);

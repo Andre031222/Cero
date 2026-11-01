@@ -69,8 +69,6 @@ final class SessionOverServlet implements Session {
     @Override
     public void regenerateId() {
         requerirValida();
-        // El contenedor ya sabe hacerlo: cambia el identificador, conserva los atributos y emite
-        // la cookie nueva. Es lo mismo que hace Sessions cuando el servidor es el de Cero.
         peticion.changeSessionId();
     }
 

@@ -35,8 +35,6 @@ public final class Tx {
         try {
             connection.setAutoCommit(false);
             T outcome = work.call();
-            // Si una transacción anidada falló y quien la llamó se comió la excepción, la de
-            // fuera NO puede confirmar: llevaría dentro el trabajo a medias de la interna.
             if (active.condenada()) {
                 rollback(connection);
                 throw new DataException(
@@ -69,8 +67,6 @@ public final class Tx {
         try {
             return work.call();
         } catch (Exception failure) {
-            // La anidada se une a la de fuera, así que no puede deshacer solo lo suyo. Lo que sí
-            // puede es condenar a la de fuera, y así el fallo no se pierde aunque se capture.
             Active active = CURRENT.get();
             if (active != null) {
                 active.condenar();
@@ -81,7 +77,6 @@ public final class Tx {
         }
     }
 
-    /** Marca la transacción en curso para que no pueda confirmarse. */
     public static void setRollbackOnly() {
         Active active = CURRENT.get();
         if (active == null) {

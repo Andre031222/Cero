@@ -17,22 +17,12 @@ final class Connection implements Runnable, Watchdog.Vigilada {
     private final ServerContext context;
     private final Consumer<Connection> release;
 
-    /** Instante en que vence la petición en vuelo, o 0 si no hay ninguna. Lo lee el watchdog. */
     private volatile long limiteNanos;
 
-    /**
-     * Cierto mientras la conexión solo espera la siguiente petición.
-     *
-     * <p>Lo lee el apagado, y por eso no vale reutilizar {@link #limiteNanos}: ese solo se marca
-     * cuando hay límite de manejador puesto, y con {@code handlerTimeoutMillis} a cero una
-     * petición en vuelo pasaría por ociosa y se le cortaría el socket a media respuesta.
-     */
     private volatile boolean ociosa = true;
 
-    /** Buffer de cabeceras compartido por todas las peticiones de esta conexión. */
     private AsciiBuffer head;
 
-    /** El flujo crudo, que hace falta si la conexión cambia a HTTP/2 a mitad. */
     private java.io.PushbackInputStream entrada;
 
     Connection(Socket socket, ServerContext context, Consumer<Connection> release) {
@@ -55,9 +45,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
             OutputStream out = new BufferedOutputStream(open.getOutputStream(), 16_384);
 
-            // Sobre TLS no hay que adivinar nada: el protocolo se acordó en el apretón de manos
-            // por ALPN, y preguntarlo es más fiable que mirar los primeros bytes. Es también el
-            // único camino por el que un navegador llega a HTTP/2.
             if (options.http2() && open instanceof javax.net.ssl.SSLSocket cifrado
                     && "h2".equals(cifrado.getApplicationProtocol())) {
                 ociosa = false;
@@ -65,9 +52,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
                 return;
             }
 
-            // En claro sí hay que mirar: el preámbulo se ojea y se devuelve al flujo. Es la única
-            // forma de distinguir h2c de HTTP/1.1, porque los dos empiezan por texto ASCII y
-            // «PRI * HTTP/2.0» es una petición sintácticamente válida en HTTP/1.1.
             java.io.PushbackInputStream entrada =
                     new java.io.PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
             if (options.http2() && Http2.pareceHttp2(entrada)) {
@@ -81,7 +65,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             RequestReader requests = new RequestReader(reader, context);
             head = new AsciiBuffer(512);
 
-            // Alta y baja una vez por conexión, no por petición.
             context.watchdog().vigilar(this);
             try {
                 serve(requests, reader, out, remoteAddress(open));
@@ -112,12 +95,8 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             if (request == null) {
                 return;
             }
-            // Desde aquí hay algo que terminar: el apagado ya no puede cortar esta conexión.
             ociosa = false;
 
-            // `Upgrade: h2c` es la otra puerta a HTTP/2, y la que usa un cliente que no sabe de
-            // antemano si el servidor lo habla. Solo vale en la primera petición de la conexión:
-            // después ya se ha hablado HTTP/1.1 y cambiar a mitad no está definido.
             if (served == 0 && options.http2() && Http2.pidenUpgrade(request)) {
                 Http2.aceptarUpgrade(socket, entrada, out, context, remote, request);
                 return;
@@ -145,16 +124,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
         }
     }
 
-    /**
-     * Cierra el socket si la conexión solo estaba esperando. Lo llama {@link Server#stop()}.
-     *
-     * <p>Una conexión con keep-alive que espera la siguiente petición está bloqueada leyendo, y
-     * {@code shutdown()} no la interrumpe. Sin esto, el apagado gasta la ventana de gracia entera
-     * en no esperar a nadie: diez segundos por despliegue, y otros diez por cada servidor que
-     * arranca y para la batería de pruebas.
-     *
-     * @return si se cerró, es decir, si no había nada en vuelo
-     */
     boolean cerrarSiOciosa() {
         if (!ociosa) {
             return false;
@@ -162,7 +131,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
         try {
             socket.close();
         } catch (IOException ignorado) {
-            // Cerrando un socket que ya estaba roto: es justo lo que se quería.
         }
         return true;
     }
@@ -172,8 +140,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
         if (timeout <= 0) {
             return dispatch(request, response, out);
         }
-        // Todo el coste del vigilante en el camino caliente: dos escrituras de un volatile.
-        // Un límite de 0 no vale como marca de «en vuelo», así que se evita ese valor.
         long limite = System.nanoTime() + timeout * 1_000_000L;
         limiteNanos = limite == 0 ? 1 : limite;
         try {
@@ -219,7 +185,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     @Override
     public void abortar() {
-        // Se limpia primero para que el barrendero no vuelva a cortar la misma conexión.
         limiteNanos = 0;
         context.reporter().transport(new HttpException(504, "handler excedió el tiempo límite"));
         try {

@@ -57,11 +57,6 @@ final class TlsTests {
         recargaDeCertificado();
     }
 
-    /**
-     * Renovar un certificado no debería obligar a reiniciar. Se arranca con uno, se sustituye el
-     * archivo por otro con un sujeto distinto, se recarga y se comprueba que las conexiones
-     * nuevas presentan ya el nuevo.
-     */
     private static void recargaDeCertificado() throws Exception {
         java.nio.file.Path directorio = java.nio.file.Files.createTempDirectory("cero-recarga");
         java.nio.file.Path keystore = directorio.resolve("recarga.p12");

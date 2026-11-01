@@ -32,7 +32,6 @@ public final class Context {
         this.methodNotAllowed = methodNotAllowed;
     }
 
-    /** El camino existe pero no para este verbo. */
     boolean methodNotAllowed() {
         return methodNotAllowed;
     }
@@ -151,31 +150,10 @@ public final class Context {
         return principal != null;
     }
 
-    /**
-     * El texto de una clave en el idioma de esta petición.
-     *
-     * <p>Sin {@code Cero.app().messages(...)} configurado devuelve la clave tal cual, en vez de
-     * lanzar: una plantilla que se traduce a medias sigue sirviendo la página, y un
-     * {@code NullPointerException} en producción por un texto que falta no lo arregla nadie a
-     * las tres de la mañana.
-     */
     public String t(String clave, Object... argumentos) {
         return messages == null ? clave : messages.get(idioma(), clave, argumentos);
     }
 
-    /**
-     * El idioma negociado para esta petición.
-     *
-     * <p>Se resuelve una vez y se guarda: {@code Accept-Language} no cambia a mitad de petición,
-     * y una plantilla puede llamar a {@code t()} decenas de veces.
-     */
-    /**
-     * La traza de esta petición, o {@code null} si no hay trazado puesto.
-     *
-     * <p>Casi nunca hace falta: el log y las llamadas salientes ya la llevan solas. Sirve para
-     * enseñarle el número a quien está mirando la pantalla — «error, referencia 4bf92f35…»— para
-     * que lo pueda pegar en un ticket.
-     */
     public Trace trace() {
         return Trace.actual();
     }
@@ -187,7 +165,6 @@ public final class Context {
         return idioma;
     }
 
-    /** Fija el idioma a mano, por encima de lo que diga la cabecera. */
     public Context idioma(String value) {
         idioma = value;
         return this;

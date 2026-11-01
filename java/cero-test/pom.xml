@@ -20,7 +20,6 @@
             <version>0.8.0</version>
         </dependency>
 
-        <!-- solo lo necesita TestDatabase: una aplicación sin base de datos no arrastra cero-data -->
         <dependency>
             <groupId>dev.ginit.cero</groupId>
             <artifactId>cero-data</artifactId>
@@ -28,7 +27,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- base desechable para probar TestDatabase; cero-test no depende de ningún driver -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>

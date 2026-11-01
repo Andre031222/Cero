@@ -8,7 +8,6 @@ import cero.http.Session;
 import java.util.List;
 import java.util.Map;
 
-/** La aplicación mínima contra la que se prueba el módulo. */
 final class Demo {
 
     private Demo() {

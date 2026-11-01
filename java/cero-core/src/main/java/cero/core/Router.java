@@ -67,7 +67,6 @@ public final class Router {
 
     public Match resolve(HttpMethod verb, String path) {
         ensureSorted();
-        // Se parte una vez y se prueba ya partido contra cada ruta candidata.
         String[] parts = RoutePattern.parts(path);
         boolean pathExists = false;
         for (RouteEntry route : routes) {

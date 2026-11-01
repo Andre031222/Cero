@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** La carpeta {@code frontend/} de un proyecto generado con {@code --front}. */
 final class Frontend {
 
     private Frontend() {
@@ -21,10 +20,6 @@ final class Frontend {
         return 3;
     }
 
-    /**
-     * Deja el backend listo para hablar con un frontend aparte: CORS para los puertos de
-     * desarrollo habituales, y la carpeta desde la que se servirá lo compilado.
-     */
     static void cablearBackend(Path backend, GeneradorProyecto.Peticion peticion) throws IOException {
         Path recursos = backend.resolve("src/main/resources");
         Files.createDirectories(recursos.resolve("front"));

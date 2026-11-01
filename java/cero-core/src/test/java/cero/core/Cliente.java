@@ -30,7 +30,6 @@ final class Cliente {
                 .method(verb, HttpRequest.BodyPublishers.noBody()));
     }
 
-    /** Para respuestas que no son texto: un jar, un zip, una imagen. */
     static HttpResponse<byte[]> bytes(String url) throws Exception {
         return HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)

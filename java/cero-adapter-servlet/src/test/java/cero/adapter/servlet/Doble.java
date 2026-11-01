@@ -16,10 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Dobles de HttpServletRequest, HttpServletResponse y HttpSession construidos con proxies.
- * Solo implementan lo que el adaptador usa, que es exactamente lo que hay que probar.
- */
 final class Doble {
 
     private Doble() {

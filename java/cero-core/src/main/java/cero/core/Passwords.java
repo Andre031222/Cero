@@ -8,11 +8,6 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 
-/**
- * Hash de contraseñas con PBKDF2-HMAC-SHA256, del JDK y sin dependencias.
- * El formato guardado es {@code pbkdf2$sha256$iteraciones$sal$hash}, que lleva
- * dentro su propio coste para poder subirlo sin invalidar lo ya almacenado.
- */
 public final class Passwords {
 
     private static final String ALGORITMO = "PBKDF2WithHmacSHA256";
@@ -43,7 +38,6 @@ public final class Passwords {
                 + "$" + CODIFICADOR.encodeToString(derivada);
     }
 
-    /** Comparación en tiempo constante. Devuelve false ante cualquier hash ilegible. */
     public static boolean verify(String clara, String guardado) {
         if (clara == null || guardado == null || !guardado.startsWith(PREFIJO)) {
             return false;
@@ -62,7 +56,6 @@ public final class Passwords {
         }
     }
 
-    /** Indica si conviene rehacer el hash porque se guardó con menos coste del actual. */
     public static boolean needsRehash(String guardado) {
         if (guardado == null || !guardado.startsWith(PREFIJO)) {
             return true;

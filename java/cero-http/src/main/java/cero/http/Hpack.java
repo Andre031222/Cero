@@ -5,35 +5,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * HPACK (RFC 7541): la compresión de cabeceras de HTTP/2.
- *
- * <p>Existe porque en HTTP/2 las cabeceras no viajan como texto. Son un formato binario con una
- * tabla estática de 61 entradas frecuentes, una tabla dinámica que crece con lo que ya se ha
- * mandado por esa conexión, y codificación de Huffman opcional para las cadenas.
- *
- * <p>Las dos tablas fijas están en {@link HpackTablas}, generadas del RFC. Aquí va la lógica.
- *
- * <p><b>La tabla dinámica es estado compartido de la conexión y va en un solo sentido.</b> Si el
- * decodificador se desincroniza del codificador del cliente, no falla la cabecera: fallan todas
- * las siguientes, porque los índices dejan de significar lo mismo. Por eso cualquier error aquí
- * es un error de conexión y no de flujo — no se puede seguir.
- */
 final class Hpack {
 
-    /** Tope por defecto de la tabla dinámica, en «bytes» según la cuenta del RFC. */
     static final int TAMANO_TABLA = 4096;
 
-    /** Un par nombre/valor. El tamaño que ocupa lo define el RFC, no la memoria real. */
     record Campo(String nombre, String valor) {
 
-        /** RFC 7541 §4.1: nombre + valor + 32 de sobrecarga fija. */
         int coste() {
             return nombre.length() + valor.length() + 32;
         }
     }
 
-    /** Un fallo de compresión. Obliga a cerrar la conexión entera, no solo el flujo. */
     static final class Rota extends RuntimeException {
 
         Rota(String mensaje) {
@@ -41,9 +23,6 @@ final class Hpack {
         }
     }
 
-    // ─── enteros de longitud variable (§5.1) ─────────────────────────────────────────────────
-
-    /** Lee un entero con {@code prefijo} bits útiles en el primer octeto. */
     static int leerEntero(Lector in, int prefijo) {
         int tope = (1 << prefijo) - 1;
         int valor = in.byteActual() & tope;
@@ -53,8 +32,6 @@ final class Hpack {
         int desplazamiento = 0;
         while (true) {
             int b = in.leer();
-            // Siete bits por octeto: a partir de 28 el siguiente ya no cabe en un int, y un
-            // entero desmedido es la forma clásica de agotar memoria por una cabecera.
             if (desplazamiento > 28) {
                 throw new Rota("entero HPACK desmedido");
             }
@@ -84,15 +61,6 @@ final class Hpack {
         salida.add((byte) resto);
     }
 
-    // ─── Huffman (§5.2) ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * El árbol de decodificación, montado una vez a partir de la tabla del RFC.
-     *
-     * <p>Se recorre bit a bit. Podría hacerse por tablas de varios bits a la vez, que es más
-     * rápido, pero esto son cabeceras —decenas de bytes— y un árbol se lee y se comprueba;
-     * una tabla de saltos precalculada, no.
-     */
     private static final int[] IZQUIERDA;
     private static final int[] DERECHA;
     private static final int[] SIMBOLO;
@@ -145,8 +113,6 @@ final class Hpack {
                 bitsDeRelleno = uno ? bitsDeRelleno + 1 : 0;
                 if (SIMBOLO[nodo] >= 0) {
                     if (SIMBOLO[nodo] == HpackTablas.EOS) {
-                        // §5.2: EOS decodificado es un error, no un final. Aceptarlo deja que
-                        // dos cadenas distintas produzcan el mismo texto.
                         throw new Rota("EOS dentro de una cadena Huffman");
                     }
                     salida.append((char) SIMBOLO[nodo]);
@@ -155,8 +121,6 @@ final class Hpack {
                 }
             }
         }
-        // El relleno es el prefijo de EOS, o sea unos, y como mucho siete bits. Cualquier otra
-        // cosa —quedarse a medias de un símbolo, o rellenar con más de siete— está prohibida.
         if (nodo != 0 && (bitsDeRelleno > 7 || bitsDeRelleno == 0)) {
             throw new Rota("relleno de Huffman inválido");
         }
@@ -177,7 +141,6 @@ final class Hpack {
             }
         }
         if (bits > 0) {
-            // Se rellena con unos, que es el prefijo de EOS.
             salida.write((int) ((acumulador << (8 - bits)) | ((1 << (8 - bits)) - 1)) & 0xFF);
         }
         return salida.toByteArray();
@@ -190,8 +153,6 @@ final class Hpack {
         }
         return bits;
     }
-
-    // ─── lector sobre el bloque de cabeceras ─────────────────────────────────────────────────
 
     static final class Lector {
 
@@ -230,9 +191,6 @@ final class Hpack {
         }
     }
 
-    // ─── decodificador ───────────────────────────────────────────────────────────────────────
-
-    /** Un decodificador por conexión: la tabla dinámica es suya y dura lo que la conexión. */
     static final class Decodificador {
 
         private final ArrayDeque<Campo> dinamica = new ArrayDeque<>();
@@ -247,25 +205,22 @@ final class Hpack {
         List<Campo> decodificar(byte[] bloque) {
             List<Campo> campos = new ArrayList<>();
             Lector in = new Lector(bloque);
-            // §4.2: los cambios de tamaño de la tabla van al principio del bloque y en ningún
-            // otro sitio. Uno al final significaría que la tabla cambió a mitad de decodificar,
-            // y entonces los índices de este mismo bloque ya no querrían decir lo mismo.
             boolean todaviaAlPrincipio = true;
             while (in.hay()) {
                 int b = in.leer();
-                if ((b & 0x80) != 0) {                       // §6.1 indexado
+                if ((b & 0x80) != 0) {
                     int i = leerEntero(in, 7);
                     if (i == 0) {
                         throw new Rota("índice 0 no existe");
                     }
                     todaviaAlPrincipio = false;
                     campos.add(enIndice(i));
-                } else if ((b & 0x40) != 0) {                // §6.2.1 literal, se indexa
+                } else if ((b & 0x40) != 0) {
                     todaviaAlPrincipio = false;
                     Campo c = literal(in, 6);
                     indexar(c);
                     campos.add(c);
-                } else if ((b & 0x20) != 0) {                // §6.3 cambio de tamaño
+                } else if ((b & 0x20) != 0) {
                     if (!todaviaAlPrincipio) {
                         throw new Rota("cambio de tamaño de tabla fuera del principio del bloque");
                     }
@@ -275,7 +230,7 @@ final class Hpack {
                     }
                     tope = nuevo;
                     podar();
-                } else {                                      // §6.2.2 y §6.2.3 literal sin indexar
+                } else {
                     todaviaAlPrincipio = false;
                     campos.add(literal(in, 4));
                 }
@@ -319,7 +274,6 @@ final class Hpack {
         }
 
         private void indexar(Campo c) {
-            // §4.4: una entrada más grande que la tabla entera no es un error — la vacía.
             if (c.coste() > tope) {
                 dinamica.clear();
                 coste = 0;
@@ -341,17 +295,6 @@ final class Hpack {
         }
     }
 
-    // ─── codificador ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Codificador sin tabla dinámica propia.
-     *
-     * <p>Manda todo como literal sin indexar, usando la tabla estática cuando el nombre está en
-     * ella y Huffman cuando ahorra. Es una decisión, no una carencia: mantener tabla dinámica de
-     * salida obliga a llevar su estado en paralelo al del cliente, y un desajuste ahí rompe la
-     * conexión entera de forma difícil de ver. Lo que se pierde es unos bytes por respuesta; lo
-     * que se gana es que no exista esa clase de fallo.
-     */
     static final class Codificador {
 
         byte[] codificar(List<Campo> campos) {
@@ -359,7 +302,6 @@ final class Hpack {
             for (Campo c : campos) {
                 String nombre = c.nombre().toLowerCase(Locale.ROOT);
                 int indice = indiceEstaticoDeNombre(nombre);
-                // 0x10: literal que nunca se indexa (§6.2.3), coherente con no llevar tabla.
                 escribirEntero(salida, indice, 4, 0x10);
                 if (indice == 0) {
                     cadena(salida, nombre);

@@ -57,10 +57,6 @@ public final class Pool implements AutoCloseable {
             discard(reused);
             reused = idle.poll();
         }
-        // Reservar el hueco con un CAS. Comprobar y después incrementar deja dos carreras: dos
-        // hilos pueden pasar la comprobación a la vez, y si el pool está lleno se descontaba un
-        // hueco que nunca se había reservado — con lo que el contador se hundía y el pool acababa
-        // abriendo más conexiones de las que dice su tope.
         while (true) {
             int actuales = created.get();
             if (actuales >= maxSize) {
@@ -143,12 +139,6 @@ public final class Pool implements AutoCloseable {
         }
     }
 
-    /**
-     * Devuelve la conexión al estado en que se presta. Sin esto, quien pida una conexión al pool
-     * directamente y la devuelva con una transacción abierta o con {@code autoCommit} en
-     * {@code false} se la pasa así al siguiente, que acaba escribiendo dentro de la transacción
-     * de otro. {@link Tx} ya lo hacía bien; esto es la red para quien no use {@code Tx}.
-     */
     private boolean sanear(Connection connection) {
         try {
             if (!connection.getAutoCommit()) {
@@ -158,7 +148,7 @@ public final class Pool implements AutoCloseable {
             connection.clearWarnings();
             return true;
         } catch (SQLException fallo) {
-            return false;   // no vuelve al pool
+            return false;
         }
     }
 
@@ -170,9 +160,6 @@ public final class Pool implements AutoCloseable {
             if (!validate) {
                 return true;
             }
-            // isValid() es un viaje a la base de datos. Con un intervalo, una conexión que se
-            // validó hace poco se da por buena: en un pool caliente eso es un viaje por préstamo
-            // que se ahorra.
             long ahora = System.currentTimeMillis();
             if (validacionCadaMillis > 0) {
                 Long ultima = ultimaValidacion.get(connection);
@@ -220,11 +207,6 @@ public final class Pool implements AutoCloseable {
             return this;
         }
 
-        /**
-         * Cuánto vale una validación antes de repetirla. 0 —el valor por defecto— valida en cada
-         * préstamo, que es lo seguro; en un pool con mucho tráfico, unos segundos ahorran un
-         * viaje a la base de datos por petición.
-         */
         public Builder validateEvery(java.time.Duration intervalo) {
             validacionCadaMillis = intervalo == null ? 0 : Math.max(0, intervalo.toMillis());
             return this;

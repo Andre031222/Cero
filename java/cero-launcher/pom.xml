@@ -31,8 +31,6 @@
             <resource>
                 <directory>src/main/resources</directory>
             </resource>
-            <!-- Solo esto se filtra: la versión que escribe `cero new` en cada pom generado
-                 sale del pom y no hay un número más que acordarse de subir a mano. -->
             <resource>
                 <directory>src/main/filtrado</directory>
                 <filtering>true</filtering>

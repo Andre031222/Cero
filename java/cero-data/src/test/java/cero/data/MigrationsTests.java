@@ -57,7 +57,6 @@ final class MigrationsTests {
         Check.equal("la segunda no hace nada", Migrations.from(dir).table("mig2").run(), 0);
     }
 
-    /** Editar una migración ya corrida deja dos entornos creyéndose iguales. Tiene que doler. */
     private static void editarUnaAplicadaFalla() throws Exception {
         Path dir = Files.createTempDirectory("cero-mig3");
         Path archivo = dir.resolve("001_algo.sql");
@@ -76,10 +75,6 @@ final class MigrationsTests {
         Check.that("y dice qué hacer", mensaje.contains("migración nueva"));
     }
 
-    /**
-     * Lo que sí se garantiza siempre: una migración que falla no queda anotada, así que se
-     * reintenta. Deshacer sus efectos depende del motor — H2, como MySQL, confirma en cada DDL.
-     */
     private static void unaQueFallaNoDejaMediasTintas() throws Exception {
         Path dir = Files.createTempDirectory("cero-mig4");
         Files.writeString(dir.resolve("001_rota.sql"),
@@ -95,9 +90,6 @@ final class MigrationsTests {
         Check.equal("y no queda anotada, así que se reintentará",
                 Migrations.from(dir).table("mig4").applied(), List.of());
 
-        // En H2 el create table ya se confirmó por su cuenta: la tabla está aunque la migración
-        // fallara. Es la limitación del motor, no del runner, y por eso se documenta en vez de
-        // prometer lo contrario. La regla práctica es una migración, un cambio.
         Check.equal("en un motor sin DDL transaccional, lo hecho antes del fallo se queda",
                 Db.open().one("select count(*) as n from information_schema.tables"
                         + " where table_name = 'BUENA'").get("n").toString(), "1");
@@ -111,7 +103,6 @@ final class MigrationsTests {
                 List.of("001_inventario.sql"));
     }
 
-    /** Un split(";") a secas parte por la mitad todo lo que lleve un punto y coma dentro. */
     private static void troceaRespetandoLiteralesYComentarios() {
         Check.equal("un literal con punto y coma no se parte",
                 Migrations.sentencias("insert into t values ('a;b');"),
@@ -139,7 +130,6 @@ final class MigrationsTests {
                 Migrations.sentencias("select 1"), List.of("select 1"));
     }
 
-    /** Corregir una migración ya aplicada sin tocar el esquema no puede exigir SQL a mano. */
     private static void repararReescribeLaHuella() throws Exception {
         Path dir = Files.createTempDirectory("cero-mig6");
         Path archivo = dir.resolve("001_notas.sql");
@@ -176,7 +166,6 @@ final class MigrationsTests {
         Check.equal("con las que sí pasaron", mala.aplicadas(), 1);
     }
 
-    /** El motor dice qué restricción se violó; solo el runner sabe en qué archivo iba. */
     private static void elFalloDiceQueMigracionYQueSentencia() {
         SQLException clave = new SQLException("ERROR: insert or update on table \"copias\" violates"
                 + " foreign key constraint \"copias_medio_fk\"\n  Detail: Key (id)=(106) is not"

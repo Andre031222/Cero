@@ -21,11 +21,6 @@ final class SessionTests {
         sinPisarse();
     }
 
-    /**
-     * A1 · Fijación de sesión. El identificador de antes de identificarse no puede seguir siendo
-     * válido después: quien lo hubiera fijado en el navegador de la víctima se quedaría con una
-     * sesión autenticada.
-     */
     private static void rotacion() throws Exception {
         Sessions store = new Sessions(60_000);
         Sessions.Entry entry = store.create();
@@ -56,14 +51,12 @@ final class SessionTests {
         Check.that("una sesión invalidada no se puede rotar", protesto);
     }
 
-    /** B3 · Sin tope de vida, una sesión que se toque de vez en cuando no caduca nunca. */
     private static void vidaMaxima() throws Exception {
         Sessions conTope = new Sessions(60_000, SessionStore.inMemory(), 200);
         Sessions.Entry entry = conTope.create();
 
         Check.equal("dentro del tope se encuentra", conTope.find(entry.id()).id(), entry.id());
 
-        // Se toca a mitad: con solo caducidad por inactividad, esto la mantendría viva siempre.
         Thread.sleep(120);
         conTope.find(entry.id());
         Thread.sleep(120);
@@ -72,16 +65,11 @@ final class SessionTests {
                 conTope.find(entry.id()), null);
     }
 
-    /**
-     * B2 · Dos peticiones sobre la misma sesión. Cada una trabajaba con su copia y volcaba el
-     * mapa entero, así que la última en guardar borraba lo que escribió la otra — en silencio.
-     */
     private static void sinPisarse() throws Exception {
         Sessions store = new Sessions(60_000);
         Sessions.Entry base = store.create();
         String id = base.id();
 
-        // Dos peticiones distintas sobre la misma sesión: cada una carga su propia vista.
         Sessions.Entry peticionA = store.find(id);
         Sessions.Entry peticionB = store.find(id);
 
@@ -159,11 +147,6 @@ final class SessionTests {
         }
     }
 
-    /**
-     * El mismo camino por h2c. La respuesta HTTP/2 se construye aparte de la de HTTP/1.1, así que
-     * su cookie de sesión se perdía sin que ninguna prueba lo viera: sin cookie no hay sesión, y
-     * sin sesión no hay token CSRF.
-     */
     private static void sobreHttp2() throws Exception {
         try (Server servidor = Server.start(ServerOptions.builder().port(0).build(),
                 sessionHandler(), ErrorReporter.silent());
@@ -218,11 +201,6 @@ final class SessionTests {
         }
     }
 
-    /**
-     * Lo que hace falta para escalar: dos servidores distintos, un almacén compartido, y la
-     * sesión abierta en uno vale en el otro. Con el almacén por proceso, la segunda instancia
-     * no sabría nada de esa cookie.
-     */
     static void almacenCompartido() throws Exception {
         Check.group("sesiones compartidas entre instancias");
 

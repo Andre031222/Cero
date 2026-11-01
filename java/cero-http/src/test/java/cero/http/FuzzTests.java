@@ -5,21 +5,6 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Random;
 
-/**
- * Ruido dirigido contra los dos parsers, HTTP/1.1 y HTTP/2.
- *
- * <p>No busca comprobar una respuesta concreta: busca que <b>no haya ninguna en la que el
- * servidor se caiga, se cuelgue o se lleve por delante la conexión de otro</b>. Los vectores
- * escritos a mano comprueban lo que alguien pensó; esto comprueba lo que nadie pensó.
- *
- * <p>La semilla es fija a propósito. Un fuzzer con semilla del reloj falla un día de cada
- * cincuenta en integración continua y nadie puede reproducirlo; con semilla fija, si falla, falla
- * siempre igual y se arregla. Para buscar de verdad se sube el número de casos y se cambia la
- * semilla a mano — ahí sí interesa que cada corrida sea distinta.
- *
- * <p>El criterio de éxito es el mismo para los dos: después de todo el ruido, el servidor sigue
- * atendiendo una petición normal. Si un caso lo hubiera tumbado, esa última comprobación falla.
- */
 final class FuzzTests {
 
     private FuzzTests() {
@@ -47,7 +32,6 @@ final class FuzzTests {
         }
     }
 
-    /** Peticiones HTTP/1.1 parecidas a las de verdad, pero rotas por un sitio al azar. */
     private static void ruidoHttp1(int puerto) {
         Random azar = new Random(SEMILLA);
         String[] plantillas = {
@@ -70,7 +54,6 @@ final class FuzzTests {
                 caidas, 0);
     }
 
-    /** Tramas de HTTP/2 con tipos, banderas, flujos y longitudes al azar. */
     private static void ruidoDeTramas(int puerto) {
         Random azar = new Random(SEMILLA + 1);
         int caidas = 0;
@@ -84,9 +67,9 @@ final class FuzzTests {
                 fuera.write((largo >>> 16) & 0xFF);
                 fuera.write((largo >>> 8) & 0xFF);
                 fuera.write(largo & 0xFF);
-                fuera.write(azar.nextInt(16));          // tipo, incluidos los que no existen
-                fuera.write(azar.nextInt(256));         // banderas al azar
-                fuera.write(azar.nextInt(2));           // el bit reservado, también
+                fuera.write(azar.nextInt(16));
+                fuera.write(azar.nextInt(256));
+                fuera.write(azar.nextInt(2));
                 fuera.write(azar.nextInt(256));
                 fuera.write(azar.nextInt(256));
                 fuera.write(azar.nextInt(256));
@@ -100,7 +83,6 @@ final class FuzzTests {
                 caidas, 0);
     }
 
-    /** Bytes puros detrás de un preámbulo válido: lo peor que puede leer la capa de tramas. */
     private static void ruidoTrasElPreambulo(int puerto) {
         Random azar = new Random(SEMILLA + 2);
         int caidas = 0;
@@ -118,7 +100,6 @@ final class FuzzTests {
                 caidas, 0);
     }
 
-    /** Cambia, quita o duplica un trozo al azar. */
     private static byte[] estropear(byte[] original, Random azar) {
         byte[] copia = original.clone();
         switch (azar.nextInt(4)) {
@@ -142,12 +123,6 @@ final class FuzzTests {
         return copia;
     }
 
-    /**
-     * Manda los bytes y mira si el servidor sobrevive.
-     *
-     * <p>Que el servidor cierre la conexión o no conteste es correcto —eso es rechazar—; lo que
-     * no puede pasar es que deje de aceptar conexiones nuevas.
-     */
     private static boolean aguanta(int puerto, byte[] crudo) {
         try (Socket socket = new Socket("127.0.0.1", puerto)) {
             socket.setSoTimeout(1_500);
@@ -157,7 +132,6 @@ final class FuzzTests {
             try {
                 socket.getInputStream().read(new byte[512]);
             } catch (IOException cerroOTardo) {
-                // Rechazar es una respuesta válida.
             }
             return true;
         } catch (IOException noSePudoConectar) {

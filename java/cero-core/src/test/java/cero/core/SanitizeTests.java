@@ -8,7 +8,6 @@ final class SanitizeTests {
     private SanitizeTests() {
     }
 
-    /** Vectores que tienen que salir sin nada ejecutable. Uno por línea, con su nombre. */
     private static final List<String[]> VECTORES = List.of(
             new String[] {"script simple", "<script>alert(1)</script>"},
             new String[] {"script con atributos", "<script type=\"text/javascript\">alert(1)</script>"},
@@ -86,7 +85,6 @@ final class SanitizeTests {
         bordes();
     }
 
-    /** Lo que sí tiene que conservarse: si borrara todo, también «pasaría» las de arriba. */
     private static void estructura() {
         Check.group("sanear · lo permitido se conserva");
 
@@ -138,8 +136,6 @@ final class SanitizeTests {
                         .contains("rel=\"nofollow noopener noreferrer\""));
         Check.that("uno sin href no lleva rel", !Sanitize.html("<a>t</a>").contains("rel="));
 
-        // El valor lleva `&quot;` con la intención de cerrar la comilla y colar un manejador.
-        // Al reescribirlo, el `&` se escapa, así que sale como texto y no cierra nada.
         String colado = Sanitize.html("<a href=\"/a&quot;onmouseover=alert(1)\">x</a>");
         Check.that("una comilla codificada no cierra el atributo", colado.contains("&amp;quot;"));
         Check.that("y el manejador queda dentro del valor", !colado.contains("\" onmouseover"));
@@ -194,7 +190,6 @@ final class SanitizeTests {
         Check.equal("null sigue siendo null", Sanitize.filename(null), null);
     }
 
-    /** Ni etiqueta ejecutable, ni manejador, ni esquema de guion en la salida. */
     private static boolean inofensivo(String salida) {
         String s = salida.toLowerCase(Locale.ROOT);
         if (s.contains("<script") || s.contains("<iframe") || s.contains("<object")
@@ -209,10 +204,6 @@ final class SanitizeTests {
         return !manejadorEnEtiqueta(s);
     }
 
-    /**
-     * Busca un atributo cuyo nombre empiece por {@code on}. Mira solo fuera de los valores
-     * entrecomillados: dentro de uno, `onerror=` es texto y el navegador tampoco lo ejecuta.
-     */
     private static boolean manejadorEnEtiqueta(String salida) {
         int i = 0;
         while ((i = salida.indexOf('<', i)) >= 0) {
@@ -235,7 +226,6 @@ final class SanitizeTests {
         return false;
     }
 
-    /** {@code true} si en {@code p} empieza `on…=` y antes hay un separador de atributos. */
     private static boolean nombreDeManejador(String salida, int p, int fin) {
         if (p == 0 || !Character.isWhitespace(salida.charAt(p - 1))) {
             return false;
@@ -250,7 +240,6 @@ final class SanitizeTests {
         return q > p + 2 && q < fin && salida.charAt(q) == '=';
     }
 
-    /** {@code true} si no queda ninguna etiqueta: ni {@code <a…} ni {@code </a…}. */
     private static boolean sinEtiquetas(String salida) {
         for (int i = 0; i + 1 < salida.length(); i++) {
             if (salida.charAt(i) != '<') {

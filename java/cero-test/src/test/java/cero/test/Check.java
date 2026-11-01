@@ -28,7 +28,6 @@ final class Check {
                 expected == null ? actual == null : expected.equals(actual));
     }
 
-    /** La aserción debe fallar, y el mensaje del fallo debe explicar por qué. */
     static void fails(String name, Runnable action, String... fragments) {
         try {
             action.run();

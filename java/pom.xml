@@ -71,16 +71,6 @@
         </pluginManagement>
     </build>
 
-    <!-- Publicar en Maven Central pide cuatro cosas que el build normal no hace: jar de fuentes,
-         jar de javadoc, firma GPG y el plugin de publicación. Van en un perfil y no en el build
-         de siempre porque firmar exige una clave privada: fuera de una publicación, cada `mvn
-         install` pediría la contraseña, y en integración continua fallaría directamente.
-
-             mvn -Ppublicar deploy
-
-         Lo que no puede estar aquí y hay que tener puesto una vez: la cuenta en Central, la clave
-         GPG publicada en un servidor de claves, y las credenciales en ~/.m2/settings.xml bajo el
-         id `central`. -->
     <profiles>
         <profile>
             <id>publicar</id>
@@ -108,16 +98,9 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <!-- El javadoc está en castellano y con acentos: sin esto, en una
-                                 máquina con otra configuración regional sale con caracteres rotos. -->
                             <encoding>UTF-8</encoding>
                             <docencoding>UTF-8</docencoding>
                             <charset>UTF-8</charset>
-                            <!-- Sin `locale`: la prosa del javadoc está en castellano y ahí no
-                                 hay nada que hacer, pero forzando es_ES también salían en
-                                 castellano la navegación y los títulos que genera la
-                                 herramienta. Quien llega desde Maven Central sin saber
-                                 castellano al menos puede recorrer la estructura. -->
                             <doclint>none</doclint>
                         </configuration>
                     </plugin>
@@ -140,17 +123,7 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
-                            <!-- Sin autoPublish: sube al portal y espera. La primera vez conviene
-                                 mirar lo que se subió antes de que sea irreversible — una versión
-                                 publicada en Central no se puede borrar ni rehacer. -->
                             <autoPublish>false</autoPublish>
-                            <!-- `ejemplo` es la aplicación de demostración y no debe acabar en
-                                 Central. Se excluye aquí y no con `maven.deploy.skip`: esa
-                                 propiedad la mira el plugin de deploy de Maven, no este, y
-                                 además tenerla puesta en el último módulo del reactor hacía que
-                                 este se saltara la subida ENTERA con un «Skipping Central
-                                 Release Publishing at user's request» que parecía intencionado
-                                 y no lo era. -->
                             <excludeArtifacts>
                                 <excludeArtifact>ejemplo</excludeArtifact>
                             </excludeArtifacts>

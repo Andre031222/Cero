@@ -186,6 +186,17 @@ Y la prueba de verdad, en una carpeta vacía y sin nada en `~/.m2`:
 
 ---
 
+## El perfil `publicar` del pom
+
+Las fuentes, el javadoc, la firma GPG y el plugin de Central van en un perfil y no en el build de
+siempre porque firmar exige la clave privada: fuera de una publicación cada `mvn install` pediría
+la contraseña, y en integración continua fallaría.
+
+El javadoc se genera en UTF-8, porque está en castellano y con acentos y en una máquina con otra
+configuración regional saldría con caracteres rotos. **No se fuerza `locale`**: con `es_ES` también
+salían en castellano la navegación y los títulos que pone la herramienta, y quien llega desde
+Central sin saber castellano al menos puede recorrer la estructura.
+
 ## Qué se publica y qué no
 
 Se publican los **cinco módulos que son bibliotecas**: `cero-http`, `cero-core`, `cero-data`,

@@ -6,12 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Una conexión WebSocket abierta, tal como la ve la aplicación.
- *
- * <p>Enviar es seguro desde cualquier hilo; los envíos se serializan sobre el flujo de salida.
- * Leer lo hace el hilo que atiende la conexión, que llama al {@link WebSocketHandler}.
- */
 public final class WebSocket {
 
     static final int TEXTO = 1;
@@ -46,7 +40,6 @@ public final class WebSocket {
         return abierto;
     }
 
-    /** Espacio por conexión para que la aplicación cuelgue lo suyo (usuario, sala, lo que sea). */
     public Map<String, Object> attributes() {
         return atributos;
     }
@@ -80,7 +73,6 @@ public final class WebSocket {
         try {
             escribirMarco(CIERRE, carga);
         } catch (IOException ignorado) {
-            // El otro extremo ya se fue; el cierre local pasa igual.
         }
         abierto = false;
     }
@@ -126,7 +118,6 @@ public final class WebSocket {
         }
     }
 
-    /** Un fallo de red al enviar, sin obligar a la aplicación a declarar {@code IOException}. */
     public static final class UncheckedIoException extends RuntimeException {
         UncheckedIoException(IOException causa) {
             super(causa);

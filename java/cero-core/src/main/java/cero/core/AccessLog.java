@@ -77,8 +77,6 @@ public final class AccessLog implements Middleware {
                     traza());
         }
 
-        // La traza al final y no en medio: así una línea de un servicio sin trazado sigue
-        // pareciéndose a la de siempre, y las herramientas que ya leen «combined» no se rompen.
         return String.format("%s - %s [%s] \"%s %s %s\" %d %d %d \"%s\" \"%s\"%s",
                 cliente(context),
                 context.principal() == null ? "-" : context.principal().id(),
@@ -91,7 +89,6 @@ public final class AccessLog implements Middleware {
                 traza());
     }
 
-    /** {@code "  <traza>"} si hay trazado puesto, y cadena vacía si no. */
     private static String traza() {
         String actual = Trace.idActual();
         return actual == null ? "" : "  " + actual;

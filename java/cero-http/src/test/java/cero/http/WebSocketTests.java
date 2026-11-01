@@ -34,7 +34,6 @@ final class WebSocketTests {
         longitudNoMinima();
     }
 
-    /** Otra web no puede abrir el canal con las cookies del visitante. */
     private static void origen() throws Exception {
         Check.group("WebSocket · origen");
 
@@ -43,7 +42,6 @@ final class WebSocketTests {
             Check.that("un origen ajeno se rechaza con 403",
                     conOrigen(server.port(), "https://mala.pe").startsWith("HTTP/1.1 403"));
 
-            // El cuerpo nombra Origin y Host: sin eso, un proxy que reescribe Host se depura a ciegas.
             String rechazo = Fixture.raw(server.port(), "GET /ws HTTP/1.1\r\nHost: x\r\n"
                     + "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                     + "Origin: https://mala.pe\r\nSec-WebSocket-Version: 13\r\n"
@@ -78,7 +76,6 @@ final class WebSocketTests {
         }
     }
 
-    /** 6455 §8.1: un marco de texto que no es UTF-8 válido se cierra con 1007. */
     private static void textoMalFormado() throws Exception {
         Check.group("WebSocket · texto mal formado");
 
@@ -90,7 +87,6 @@ final class WebSocketTests {
             }
         };
 
-        // 0xC3 abre una secuencia de dos bytes y 0x28 no la continúa.
         byte[][] rotos = {
                 {(byte) 0xC3, 0x28},
                 {(byte) 0xA0, (byte) 0xA1},
@@ -122,7 +118,6 @@ final class WebSocketTests {
         }
     }
 
-    /** 6455 §5.2: la longitud va en su forma más corta, o hay dos marcos para un mismo mensaje. */
     private static void longitudNoMinima() throws Exception {
         Check.group("WebSocket · longitud no mínima");
 
@@ -169,7 +164,6 @@ final class WebSocketTests {
                 ErrorReporter.silent());
     }
 
-    /** Pide el cambio declarando ese Origin y devuelve la cabecera de respuesta. */
     private static String conOrigen(int puerto, String origen) throws IOException {
         try (Socket socket = Fixture.connect(puerto)) {
             byte[] claveCruda = new byte[16];
@@ -186,8 +180,6 @@ final class WebSocketTests {
             return Fixture.readHead(socket.getInputStream());
         }
     }
-
-    // ── servidor de prueba ───────────────────────────────────────────────────
 
     private static Server servidor(WebSocketHandler handler) {
         return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(0).build(),
@@ -352,8 +344,6 @@ final class WebSocketTests {
         }
     }
 
-    // ── cliente mínimo de WebSocket ──────────────────────────────────────────
-
     private static Socket abrir(int puerto) throws IOException {
         Socket socket = Fixture.connect(puerto);
         byte[] claveCruda = new byte[16];
@@ -382,7 +372,6 @@ final class WebSocketTests {
         socket.getOutputStream().flush();
     }
 
-    /** Escribe un marco de cliente, que va siempre enmascarado. */
     private static void escribirMarco(OutputStream salida, int codigo, boolean fin, byte[] carga)
             throws IOException {
 

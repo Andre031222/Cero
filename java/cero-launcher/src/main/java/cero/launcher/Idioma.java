@@ -3,15 +3,6 @@ package cero.launcher;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Los textos que la orden {@code cero} imprime, en castellano y en inglés.
- *
- * <p>El guion {@code cero} y los dos instaladores ya eligen idioma igual: {@code CERO_LANG}
- * manda, y si no está se mira el entorno. Aquí se repite esa regla para que las tres piezas
- * digan lo mismo en la misma terminal.
- *
- * <p>Sin traducción se cae al castellano: un hueco tiene que verse raro, no quedarse en blanco.
- */
 final class Idioma {
 
     private static final boolean INGLES = !esCastellano();
@@ -36,7 +27,6 @@ final class Idioma {
         return elegido.toLowerCase(Locale.ROOT).startsWith("es");
     }
 
-    /** El texto de {@code clave}, ya con los {@code %s} sustituidos. */
     static String t(String clave, Object... partes) {
         String plantilla = INGLES ? EN.get(clave) : null;
         if (plantilla == null) {

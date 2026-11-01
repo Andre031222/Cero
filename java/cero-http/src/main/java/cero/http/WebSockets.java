@@ -12,27 +12,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Set;
 
-/**
- * Apretón de manos y bucle de marcos de WebSocket (RFC 6455) sobre una conexión de cero-http.
- *
- * <pre>
- *   Cero.app().routes(r -&gt; r.get("/chat", contexto -&gt;
- *       WebSockets.accept(contexto.request(), contexto.response(), new WebSocketHandler() {
- *           public void onMessage(WebSocket socket, String texto) {
- *               socket.send("recibido: " + texto);
- *           }
- *       })));
- * </pre>
- *
- * <p>El hilo que atiende la petición se queda dentro del bucle hasta que la conexión se cierra.
- * Con un hilo virtual por conexión eso no cuesta un hilo del sistema, que es justo lo que hacía
- * caro este modelo en un contenedor clásico.
- */
 public final class WebSockets {
 
     private static final String GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    /** Techo por mensaje, contando fragmentos. Evita que un cliente reserve memoria a voluntad. */
     private static final long MAXIMO_MENSAJE = 1L << 20;
 
     private WebSockets() {
@@ -43,18 +26,10 @@ public final class WebSockets {
                 && "websocket".equalsIgnoreCase(valor(request.header("Upgrade")));
     }
 
-    /**
-     * Completa el apretón de manos y atiende la conexión hasta que se cierre. Si la petición no
-     * es una petición de cambio válida responde 400 y devuelve sin abrir nada.
-     *
-     * <p>Solo admite el mismo origen: un WebSocket lleva las cookies del sitio y la política del
-     * mismo origen no lo protege. Guía: https://cero.ginit.dev/guia#tiempo-real
-     */
     public static void accept(Request request, Response response, WebSocketHandler handler) {
         accept(request, response, handler, Set.of());
     }
 
-    /** Igual, admitiendo además estos orígenes exactos: {@code "https://otra.ginit.dev"}. */
     public static void accept(Request request, Response response, WebSocketHandler handler,
                               Set<String> origenesAdmitidos) {
         if (!isUpgrade(request)) {
@@ -62,7 +37,6 @@ public final class WebSockets {
         }
         String origen = request.header("Origin");
         if (!origenAdmitido(request, origen, origenesAdmitidos)) {
-            // Se nombran los dos valores: sin ellos, un proxy que reescribe Host se depura a ciegas.
             throw new HttpException(403, "origen no admitido para WebSocket: " + origen
                     + " (Host: " + request.header("Host") + ")");
         }
@@ -107,7 +81,6 @@ public final class WebSockets {
         }
     }
 
-    /** Lee marcos hasta el cierre. Devuelve el motivo que mandó el cliente, si mandó alguno. */
     private static String bucle(InputStream entrada, WebSocket socket, WebSocketHandler handler)
             throws IOException {
 
@@ -134,7 +107,6 @@ public final class WebSockets {
             }
             if (longitud == 126) {
                 longitud = (leer(entrada) << 8) | leer(entrada);
-                // 6455 §5.2: la longitud va en su forma más corta, o hay dos marcos para un mensaje.
                 if (longitud < 126) {
                     throw new CierreProtocolo(WebSocket.CIERRE_PROTOCOLO,
                             "longitud de 16 bits para un valor que cabe en 7");
@@ -218,11 +190,9 @@ public final class WebSockets {
             handler.onBinary(socket, carga);
             return;
         }
-        // 6455 §8.1: texto mal formado se cierra con 1007. `new String` lo sustituiría en silencio.
         handler.onMessage(socket, texto(carga));
     }
 
-    /** El texto del marco, o cierre 1007 si los bytes no son UTF-8 válido. */
     private static String texto(byte[] carga) throws CierreProtocolo {
         try {
             return StandardCharsets.UTF_8.newDecoder()
@@ -236,7 +206,6 @@ public final class WebSockets {
         }
     }
 
-    /** Mismo origen, o uno declarado. Sin {@code Origin} pasa: no hay navegador de por medio. */
     static boolean origenAdmitido(Request request, String origen, Set<String> admitidos) {
         if (origen == null || origen.isBlank()) {
             return true;
@@ -251,7 +220,6 @@ public final class WebSockets {
         }
         int barras = limpio.indexOf("//");
         if (barras < 0) {
-            // "null" —iframe con sandbox, documento local— no es un origen.
             return false;
         }
         return limpio.substring(barras + 2).equalsIgnoreCase(host.trim());

@@ -20,7 +20,6 @@
             <version>0.8.0</version>
         </dependency>
 
-        <!-- solo para las pruebas contra motores reales; cero-data no depende de ningún driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

@@ -4,11 +4,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-/**
- * Buffer reutilizable para armar la cabecera de la respuesta sin asignar nada. Vive en la
- * conexión, así que se reaprovecha entre peticiones. No es seguro entre hilos, ni falta: una
- * conexión la atiende un solo hilo virtual.
- */
 final class AsciiBuffer {
 
     private byte[] bytes;
@@ -28,7 +23,6 @@ final class AsciiBuffer {
         return this;
     }
 
-    /** ISO-8859-1, que es lo que admite una cabecera; lo que no quepa en un byte pasa a {@code ?}. */
     AsciiBuffer put(String text) {
         int length = text.length();
         asegurar(length);
@@ -39,7 +33,6 @@ final class AsciiBuffer {
         return this;
     }
 
-    /** Decimal sin pasar por {@code Long.toString}. Solo no negativos. */
     AsciiBuffer put(long value) {
         if (value < 0) {
             throw new IllegalArgumentException("se esperaba un número no negativo: " + value);

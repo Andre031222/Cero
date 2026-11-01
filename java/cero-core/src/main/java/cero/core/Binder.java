@@ -9,14 +9,8 @@ import cero.http.Session;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
-/**
- * Decide de dónde sale cada argumento de una acción. La decisión se toma una vez, al registrar la
- * ruta; en cada petición solo se recorre el plan ya hecho. Es además el paso previo a resolverlo
- * en tiempo de compilación, que es lo que la fase 3 necesitará en Rust y C++.
- */
 final class Binder {
 
-    /** De dónde sale un argumento. Ya sabe su nombre y su tipo; solo necesita el contexto. */
     interface Fuente {
         Object valor(Context contexto);
     }
