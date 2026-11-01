@@ -1,4 +1,5 @@
 import hmac
+import ipaddress
 import math
 import secrets
 import threading
@@ -54,24 +55,30 @@ class Cors:
         if credenciales and self.todos:
             raise ValueError("CORS con credenciales necesita una lista de orígenes, no el comodín")
         self.credenciales = credenciales
-        self.metodos = ", ".join(metodos)
-        self.cabeceras = ", ".join(cabeceras)
+        self.metodos = list(metodos)
+        self.cabeceras = list(cabeceras)
         self.max_age = max_age
 
-    def decidir(self, verbo, origen, metodo_pedido):
+    def admite(self, metodo, cabeceras):
+        pedidas = {c.strip().lower() for c in (cabeceras or "").split(",") if c.strip()}
+        return metodo in self.metodos and pedidas <= {c.lower() for c in self.cabeceras}
+
+    def decidir(self, verbo, origen, metodo_pedido, cabeceras_pedidas=None):
         extra = [("Vary", "Origin")]
         preflight = verbo == "OPTIONS" and origen is not None and metodo_pedido is not None
         if origen is None:
             return None, extra
         if not (self.todos or origen in self.origenes):
             return (403 if preflight else None), extra
+        if preflight and not self.admite(metodo_pedido, cabeceras_pedidas):
+            return 403, extra
         extra.append(("Access-Control-Allow-Origin", "*" if self.todos else origen))
         if self.credenciales:
             extra.append(("Access-Control-Allow-Credentials", "true"))
         if not preflight:
             return None, extra
-        extra += [("Access-Control-Allow-Methods", self.metodos),
-                  ("Access-Control-Allow-Headers", self.cabeceras),
+        extra += [("Access-Control-Allow-Methods", ", ".join(self.metodos)),
+                  ("Access-Control-Allow-Headers", ", ".join(self.cabeceras)),
                   ("Access-Control-Max-Age", str(self.max_age))]
         return 204, extra
 
@@ -80,6 +87,8 @@ class Csrf:
 
     def __init__(self, exentas=()):
         self.exentas = [trozos(e) for e in exentas]
+        if not all(self.exentas):
+            raise ValueError("eximir la raíz eximiría todos los caminos")
 
     def exenta(self, camino):
         partes = trozos(camino)
@@ -115,14 +124,16 @@ def token_csrf(sesion):
 
 class Limitador:
 
-    def __init__(self, cupo, ventana):
+    def __init__(self, cupo, ventana, maximo=100_000):
         self.cupo = cupo
         self.ventana = ventana
+        self.maximo = maximo
         self.cuentas = {}
         self.candado = threading.Lock()
         self.barrido = time.monotonic()
 
     def pedir(self, cliente):
+        cliente = clave_de_cliente(cliente)
         ahora = time.monotonic()
         with self.candado:
             if ahora - self.barrido > self.ventana:
@@ -131,6 +142,9 @@ class Limitador:
                 self.barrido = ahora
             cuenta = self.cuentas.get(cliente)
             if cuenta is None or ahora - cuenta[1] > self.ventana:
+                self.cuentas.pop(cliente, None)
+                while len(self.cuentas) >= self.maximo:
+                    del self.cuentas[next(iter(self.cuentas))]
                 cuenta = self.cuentas[cliente] = [0, ahora]
             cuenta[0] += 1
             usadas, desde = cuenta
@@ -140,3 +154,15 @@ class Limitador:
             return True, cabeceras
         espera = max(math.ceil(desde + self.ventana - ahora), 1)
         return False, [*cabeceras, ("Retry-After", str(espera))]
+
+
+def clave_de_cliente(cliente):
+    try:
+        direccion = ipaddress.ip_address(cliente)
+    except ValueError:
+        return cliente
+    if direccion.version == 6 and direccion.ipv4_mapped is not None:
+        return str(direccion.ipv4_mapped)
+    if direccion.version == 6:
+        return str(ipaddress.ip_network(f"{direccion}/64", strict=False))
+    return str(direccion)

@@ -2,16 +2,17 @@ import re
 from html import escape
 from html.parser import HTMLParser
 
-FUERA = {"script", "style", "iframe", "frame", "frameset", "object", "embed", "applet",
-         "noscript", "noembed", "noframes", "xmp", "plaintext", "template", "base", "link",
-         "meta", "set", "animate", "animatemotion", "animatetransform", "use", "foreignobject",
-         "handler", "listener"}
+PERMITIDAS = {"p", "b", "i", "em", "strong", "a", "ul", "ol", "li", "br", "code", "pre",
+              "blockquote", "div", "span"}
+ATRIBUTOS = {"a": {"href", "title"}}
+ESQUEMAS = {"http", "https", "mailto"}
+CON_CONTENIDO = {"script", "style", "template", "iframe", "frame", "frameset", "object", "embed",
+                 "applet", "svg", "math", "noscript", "noembed", "noframes", "xmp", "plaintext",
+                 "textarea", "select", "title"}
 VACIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source",
           "track", "wbr", "frame"}
-NOMBRE = re.compile(r"[a-z][a-z0-9]*")
-ATRIBUTO = re.compile(r"[a-z][a-z0-9_-]*")
 INVISIBLE = re.compile(r"[\x00-\x20\x7f]+")
-PROTOCOLOS = ("javascript:", "vbscript:")
+ESQUEMA = re.compile(r"([a-z][a-z0-9+.-]*):")
 RESERVADOS = {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)),
               *(f"lpt{i}" for i in range(1, 10))}
 SEGURO = re.compile(r"[^A-Za-z0-9._-]")
@@ -26,12 +27,12 @@ class _Saneador(HTMLParser):
         self.salida = []
 
     def _abrir(self, etiqueta, atributos, cierre):
-        if etiqueta in FUERA or self.dentro:
-            if etiqueta in FUERA and etiqueta not in VACIAS and not cierre:
+        if etiqueta in CON_CONTENIDO or self.dentro:
+            if etiqueta in CON_CONTENIDO and etiqueta not in VACIAS and not cierre:
                 self.dentro += 1
             return
-        if self.con_marcado and NOMBRE.fullmatch(etiqueta):
-            partes = [etiqueta, *_atributos(atributos)]
+        if self.con_marcado and etiqueta in PERMITIDAS:
+            partes = [etiqueta, *_atributos(etiqueta, atributos)]
             self.salida.append("<" + " ".join(partes) + ("/>" if cierre else ">"))
 
     def handle_starttag(self, etiqueta, atributos):
@@ -42,25 +43,30 @@ class _Saneador(HTMLParser):
 
     def handle_endtag(self, etiqueta):
         if self.dentro:
-            if etiqueta in FUERA:
+            if etiqueta in CON_CONTENIDO:
                 self.dentro -= 1
             return
-        if self.con_marcado and NOMBRE.fullmatch(etiqueta) and etiqueta not in FUERA:
+        if self.con_marcado and etiqueta in PERMITIDAS and etiqueta not in VACIAS:
             self.salida.append(f"</{etiqueta}>")
 
     def handle_data(self, datos):
         if not self.dentro:
-            self.salida.append(escape(datos, quote=False) if self.con_marcado else datos)
+            self.salida.append(escape(datos, quote=False))
 
 
-def _atributos(atributos):
+def _enlace_seguro(valor):
+    esquema = ESQUEMA.match(INVISIBLE.sub("", valor).lower())
+    return esquema is None or esquema.group(1) in ESQUEMAS
+
+
+def _atributos(etiqueta, atributos):
+    admitidos = ATRIBUTOS.get(etiqueta, set())
     for nombre, valor in atributos:
-        if not ATRIBUTO.fullmatch(nombre) or nombre.startswith("on"):
+        if nombre not in admitidos or valor is None:
             continue
-        if valor is None:
-            yield nombre
-        elif not any(p in INVISIBLE.sub("", valor).lower() for p in PROTOCOLOS):
-            yield f'{nombre}="{escape(valor)}"'
+        if nombre == "href" and not _enlace_seguro(valor):
+            continue
+        yield f'{nombre}="{escape(valor)}"'
 
 
 def _sanear(entrada, con_marcado):

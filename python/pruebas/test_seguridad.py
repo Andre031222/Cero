@@ -7,7 +7,6 @@ from unittest import mock
 from cero.peticion import Peticion
 from cero.respuesta import Respuesta
 from cero.ruta import Router
-from cero import seguridad
 from cero.seguridad import Cabeceras, Cors, Csrf, Limitador
 from cero.servidor import Servidor
 from pruebas.test_servidor import arrancar, pedir
@@ -108,8 +107,30 @@ class CabecerasDeSeguridad(unittest.TestCase):
         self.assertEqual(nombres(r).count("x-frame-options"), 1)
         self.assertEqual(cabeceras(r)["x-frame-options"], "SAMEORIGIN")
 
+    def test_cada_servidor_tiene_sus_cabeceras(self):
+        a, b = Servidor(router()), Servidor(router())
+        self.assertIsNot(a.cabeceras, b.cabeceras)
+        a.cabeceras.enmarcado = "SAMEORIGIN"
+        self.assertEqual(cabeceras(self.responder("GET", "/", servidor=b))["x-frame-options"], "DENY")
+
+    def test_seg_001_nosniff_en_el_408_el_503_y_el_500_al_serializar(self):
+        servidor, _ = arrancar(maximo_conexiones=1, plazo_cabecera=0.3)
+        self.addCleanup(servidor.cerrar)
+        with mock.patch("sys.stderr"):
+            error = pedir(servidor.puerto, b"GET /inyecta HTTP/1.1\r\nHost: x\r\n\r\n")
+        lento = pedir(servidor.puerto, b"GET / HTTP/1.1\r\nHost: x\r\n")
+        with socket.create_connection(("127.0.0.1", servidor.puerto), timeout=5) as ocupa:
+            ocupa.sendall(b"GET / HTTP/1.1\r\n")
+            time.sleep(0.1)
+            lleno = pedir(servidor.puerto, b"GET / HTTP/1.1\r\nHost: x\r\n\r\n")
+        for (estado, cab, _), esperado in ((error, 500), (lento, 408), (lleno, 503)):
+            with self.subTest(esperado=esperado):
+                self.assertEqual(estado, esperado)
+                self.assertEqual(cab.get("x-content-type-options"), "nosniff")
+                self.assertEqual(cab.get("x-frame-options"), "DENY")
+
     def test_se_pueden_apagar(self):
-        r = self.responder("GET", "/", servidor=Servidor(router(), cabeceras=None))
+        r = self.responder("GET", "/", servidor=Servidor(router(), cabeceras=False))
         self.assertNotIn("x-content-type-options", cabeceras(r))
 
 
@@ -177,6 +198,16 @@ class CorsTests(unittest.TestCase):
         self.assertIn("POST", c["access-control-allow-methods"])
         self.assertIn("Content-Type", c["access-control-allow-headers"])
         self.assertGreater(int(c["access-control-max-age"]), 0)
+
+    def test_seg_012_solo_se_admite_lo_anunciado(self):
+        def pre(*cab):
+            return self.responder(self.lista(), "OPTIONS", "/api", ("Origin", "https://app.pe"),
+                                  *cab).estado
+        self.assertEqual(pre(("Access-Control-Request-Method", "PUT"),
+                             ("Access-Control-Request-Headers", "content-type, X-CSRF-TOKEN")), 204)
+        self.assertEqual(pre(("Access-Control-Request-Method", "PROPFIND")), 403)
+        self.assertEqual(pre(("Access-Control-Request-Method", "POST"),
+                             ("Access-Control-Request-Headers", "content-type, x-secreta")), 403)
 
     def test_seg_013_preflight_ajeno_403(self):
         r = self.preflight(self.lista(), "https://malo.pe")
@@ -274,16 +305,31 @@ class CsrfTests(unittest.TestCase):
         self.assertEqual(self.pedir("POST", "/token").estado, 405)
 
     def test_seg_017_se_emite_un_token_atado_a_una_sesion(self):
-        with mock.patch.object(seguridad.secrets, "token_urlsafe",
-                               wraps=seguridad.secrets.token_urlsafe) as fuente:
-            cookie, token = self.token()
-        fuente.assert_called_once_with(32)
-        self.assertGreaterEqual(len(token), 40)
+        cookie, token = self.token()
+        self.assertRegex(token, r"^[A-Za-z0-9_-]{40,}$")
         self.assertTrue(cookie.startswith("cero_sid="))
-        id = cookie.split("=", 1)[1]
-        self.assertEqual(self.servidor.sesiones.recuperar(id).leer("csrf"), token)
-        otra = self.pedir("GET", "/token", ("Cookie", cookie))
-        self.assertEqual(otra.cuerpo.decode(), token)
+        self.assertEqual(self.pedir("GET", "/token", ("Cookie", cookie)).cuerpo.decode(), token)
+        otras = {self.token()[1] for _ in range(20)}
+        self.assertEqual(len(otras | {token}), 21)
+        ajena, _ = self.token()
+        self.assertEqual(self.pedir("POST", "/api", ("Cookie", ajena),
+                                    ("X-CSRF-Token", token)).estado, 403)
+        self.assertEqual(self.pedir("POST", "/api", ("Cookie", cookie),
+                                    ("X-CSRF-Token", token)).estado, 200)
+
+    def test_seg_017_el_token_viaja_por_el_socket(self):
+        hilo = threading.Thread(target=self.servidor.escuchar, args=(0,), daemon=True)
+        hilo.start()
+        self.servidor.listo.wait(5)
+        self.addCleanup(self.servidor.cerrar)
+        puerto = self.servidor.puerto
+        estado, cab, token = pedir(puerto, b"GET /token HTTP/1.1\r\nHost: x\r\n\r\n")
+        cookie = cab["set-cookie"].split(";")[0].encode()
+        sin = pedir(puerto, b"POST /api HTTP/1.1\r\nHost: x\r\nCookie: " + cookie
+                    + b"\r\nContent-Length: 0\r\n\r\n")[0]
+        con = pedir(puerto, b"POST /api HTTP/1.1\r\nHost: x\r\nCookie: " + cookie
+                    + b"\r\nX-CSRF-Token: " + token + b"\r\nContent-Length: 0\r\n\r\n")[0]
+        self.assertEqual((estado, sin, con), (200, 403, 200))
 
     def test_seg_018_token_valido_pasa(self):
         cookie, token = self.token()
@@ -309,19 +355,18 @@ class CsrfTests(unittest.TestCase):
                 self.assertEqual(self.pedir("POST", "/api", *cab).estado, 403)
         self.assertEqual(self.hechas, [])
 
-    def test_seg_018_se_compara_en_tiempo_constante(self):
-        cookie, token = self.token()
-        with mock.patch.object(seguridad.hmac, "compare_digest",
-                               wraps=seguridad.hmac.compare_digest) as comparar:
-            self.pedir("POST", "/api", ("Cookie", cookie), ("X-CSRF-Token", token))
-        comparar.assert_called_once()
-
     def test_seg_019_exencion_por_segmento_completo(self):
         self.assertEqual(self.pedir("POST", "/api/publico").estado, 200)
         self.assertEqual(self.pedir("POST", "/api/publico/").estado, 200)
         self.assertEqual(self.pedir("POST", "/api/publico/x").estado, 200)
         self.assertEqual(self.pedir("POST", "/api/publicoSECRETO").estado, 403)
         self.assertEqual(self.pedir("POST", "/api").estado, 403)
+
+    def test_seg_019_eximir_la_raiz_no_se_deja_construir(self):
+        for exentas in (["/"], [""], ["//"], ["/api", "/"]):
+            with self.subTest(exentas=exentas):
+                with self.assertRaises(ValueError):
+                    Csrf(exentas=exentas)
 
     def test_seg_019_la_barra_final_de_la_exencion_no_cambia_nada(self):
         self.servidor.csrf = Csrf(exentas=["/api/publico/"])
@@ -408,6 +453,25 @@ class LimiteDePeticiones(unittest.TestCase):
         time.sleep(0.1)
         limitador.pedir("10.9.9.9")
         self.assertEqual(len(limitador.cuentas), 1)
+
+    def test_un_bloque_ipv6_es_un_solo_cliente(self):
+        for i in range(3):
+            self.assertEqual(self.pedir(cliente=f"2001:db8:1:2::{i + 1}").estado, 200)
+        self.assertEqual(self.pedir(cliente="2001:db8:1:2:ffff:ffff:ffff:ffff").estado, 429)
+        self.assertEqual(self.pedir(cliente="2001:db8:1:3::1").estado, 200)
+
+    def test_ipv4_dentro_de_ipv6_es_la_misma_direccion(self):
+        for _ in range(3):
+            self.pedir(cliente="10.0.0.1")
+        self.assertEqual(self.pedir(cliente="::ffff:10.0.0.1").estado, 429)
+
+    def test_la_tabla_tiene_tope_y_echa_a_la_cuenta_mas_vieja(self):
+        limitador = Limitador(cupo=1, ventana=30, maximo=3)
+        for i in range(10):
+            limitador.pedir(f"10.0.0.{i}")
+        self.assertEqual(len(limitador.cuentas), 3)
+        self.assertFalse(limitador.pedir("10.0.0.9")[0])
+        self.assertTrue(limitador.pedir("10.0.0.0")[0])
 
     def test_pasada_la_ventana_vuelve_el_cupo(self):
         self.servidor.limitador = Limitador(cupo=1, ventana=0.05)

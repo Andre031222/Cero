@@ -6,14 +6,14 @@ los mismos vectores de conformidad, que son bytes sobre un socket y no saben en 
 escrito quien responde.
 
 **Estado: hito 3.** HTTP/1.1, ruteo, sesiones y seguridad transversal. **23 de 23 vectores del
-banco** y 167 pruebas propias.
+banco** y 177 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
 | 1 bis | Un solo archivo | `python3 -m cero.empaquetar` · 3 pruebas |
 | 2 | Sesiones | 12 de 13, más `SES-010` a medias hasta que haya HTTP/2 · 50 pruebas |
-| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 67 pruebas |
+| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 77 pruebas |
 
 ## Usarlo
 
@@ -235,7 +235,7 @@ Servidor(router,
 
 | Pieza | Por defecto | Requisitos |
 |---|---|---|
-| `Cabeceras` | encendida; `cabeceras=None` la apaga | `SEG-001`–`SEG-007` |
+| `Cabeceras` | encendida, una por servidor; `cabeceras=False` la apaga | `SEG-001`–`SEG-007` |
 | `Cors` | apagada: ninguna cabecera CORS | `SEG-008`–`SEG-014` |
 | `Csrf` | apagada | `SEG-015`–`SEG-019` |
 | `Limitador` | apagado | `SEG-020`–`SEG-022` |
@@ -255,7 +255,9 @@ gana la suya y no salen dos.
 **CORS.** Un origen ajeno no recibe permiso, pero la petición simple sigue y la acción corre
 (`SEG-010`); un preflight ajeno es 403 y la acción no corre (`SEG-013`). Es preflight un `OPTIONS`
 con `Origin` **y** `Access-Control-Request-Method`; sin la segunda es un `OPTIONS` normal y va al
-router. El comodín con credenciales no se deja construir (`ValueError`), ni como `"*"` ni dentro de
+router. Un preflight de un origen admitido que pide un método o una cabecera que no están en
+`metodos` o `cabeceras` también es 403: el navegador lo haría cumplir igual, pero el servidor no
+anuncia permisos que no da. El comodín con credenciales no se deja construir (`ValueError`), ni como `"*"` ni dentro de
 una lista: devolver el origen que llegue con credenciales es abrir la API a cualquier sitio. Con
 CORS configurado, **toda** respuesta lleva `Vary: Origin`, también la que llega sin `Origin`: la
 respuesta depende de que la cabecera esté, y una caché que guarde la versión sin permiso se la
@@ -268,8 +270,12 @@ token lo pide la acción con `peticion.token_csrf()`, que abre sesión si no hay
 bytes de `secrets.token_urlsafe` (`SEG-017`). Llega en la cabecera `X-CSRF-Token` o en el campo
 `_csrf` de un formulario `application/x-www-form-urlencoded`, nunca en la consulta: en la URL
 acabaría en los logs y en el `Referer`. Se compara con `hmac.compare_digest` (`SEG-018`); la
-cabecera repetida o el campo repetido no valen. La exención casa por segmento completo, con la
-misma función que parte los caminos del router (`SEG-019`).
+cabecera repetida o el campo repetido no valen. Que la comparación sea en tiempo constante se
+asegura leyendo el código, no con una prueba: medir tiempos en una prueba unitaria no distingue
+nada, y una prueba que espía `compare_digest` comprueba cómo está escrito, no qué hace. Las de
+`SEG-017` y `SEG-018` pasan por `responder` y por el socket. La exención casa por segmento
+completo, con la misma función que parte los caminos del router (`SEG-019`), y eximir la raíz
+(`"/"`, `""`) no se deja construir: con cero segmentos sería prefijo de todo camino.
 
 **`rotar()` descarta el token CSRF.** La rotación existe porque quien plantó la cookie antes del
 login la conoce; si el token sobreviviera, también conocería el token, y con la cookie nueva de
@@ -278,22 +284,46 @@ siguiente `token_csrf()` da uno nuevo.
 
 **Límite de peticiones.** Ventana fija por cliente, con `X-RateLimit-Limit`, `X-RateLimit-Remaining`
 y, al pasarse, 429 con `Retry-After` (`SEG-020`, `SEG-021`). El cliente es la **dirección IP** del
-otro extremo, sin el puerto: con el puerto, cada conexión nueva daría cupo nuevo. Las cuentas cuya
-ventana pasó se barren como mucho una vez por ventana, así que el mapa crece con los clientes
-distintos de una ventana y no con las peticiones ni con las rutas. El límite: **detrás de un proxy
+otro extremo, sin el puerto: con el puerto, cada conexión nueva daría cupo nuevo. En IPv6 la clave
+es el **/64**, no la dirección: a un solo equipo le suelen dar un /64 entero, 2^64 direcciones, y
+con la dirección completa tendría cupo y memoria sin fin. Una IPv4 dentro de IPv6
+(`::ffff:10.0.0.1`) cuenta como la IPv4. Las cuentas cuya ventana pasó se barren como mucho una vez
+por ventana, y además la tabla tiene tope (`maximo`, 100 000 por defecto): llena, se echa la cuenta
+cuya ventana empezó antes. El precio del tope es que, bajo una inundación de clientes distintos, a
+un cliente echado se le olvida lo que llevaba gastado; la alternativa era memoria sin límite. El
+límite: **detrás de un proxy
 todos los clientes son el proxy**, porque Cero no se fía de `X-Forwarded-For` (no hay manera de
 declarar un proxy de confianza, igual que con `Secure`).
 
-**Saneado.** `sanear_html` no busca etiquetas a mano: usa `html.parser` de la biblioteca estándar,
-que tokeniza, decodifica las entidades de los atributos (`&#106;avascript:` llega como
-`javascript:`) y trata `script` y `style` como texto crudo. Sobre esos sucesos se reconstruye el
-HTML: los elementos peligrosos se quitan con su contenido, de una etiqueta inocua se quitan solo los
-atributos `on*` y los que lleven `javascript:` o `vbscript:` (ignorando espacios y controles), los
-nombres raros (`xlink:href`, `scr<script`) se descartan, y todo texto y todo atributo sale
-escapado. Una etiqueta sin cerrar al final se pierde. Es una lista de lo prohibido y no de lo
-permitido: deja pasar `style="..."` (inyección de CSS, no de script) y `data:` en un enlace.
-`sanear_texto` devuelve **texto**, con las entidades decodificadas: para meterlo en HTML hay que
-escaparlo, como cualquier texto. `sanear_nombre` se queda con lo que sigue a la última `/` o `\`,
+**Saneado: una lista de lo permitido, más estricta que el contrato.** `sanear_html` usa
+`html.parser` de la biblioteca estándar, que tokeniza, decodifica las entidades de los atributos
+(`&#106;avascript:` llega como `javascript:`) y trata `script` y `style` como texto crudo, y sobre
+esos sucesos reconstruye el HTML dejando pasar **solo** lo que está en la lista: `p`, `b`, `i`,
+`em`, `strong`, `a`, `ul`, `ol`, `li`, `br`, `code`, `pre`, `blockquote`, `div` y `span`, y como
+atributos solo `href` y `title` en `a`. Un `href` vale si es relativo o su esquema es `http`,
+`https` o `mailto`, mirado después de quitar espacios y controles. Cualquier otra etiqueta se
+quita y su texto se queda; `script`, `style`, `template`, `iframe`, `object`, `embed`, `svg`,
+`math` y parecidos se quitan **con** su contenido. Todo texto y todo atributo sale escapado.
+
+La primera versión era una lista de lo prohibido, y cumplía `SEG-023` y `SEG-024` al pie de la
+letra: quitaba `script`, `style`, `iframe`, manejadores y `javascript:`, y conservaba lo inocuo. La
+revisión encontró que aun así dejaba pasar `<form action="https://otro">` con un `<input
+type=password>` (robo de contraseñas desde el origen de la aplicación), `<button formaction>`
+(secuestro de un formulario existente), `id` y `name` (*DOM clobbering*), `style` con
+`position:fixed` (una capa encima de la página), `href="data:..."` y `srcdoc`. Ninguna prueba del
+contrato lo veía, porque el contrato enumera lo que hay que quitar, y una lista de lo prohibido
+siempre se queda corta frente a lo que no se enumeró. **Esto es un hallazgo sobre el contrato, no
+solo sobre esta implementación:** tal como están escritos, `SEG-023` y `SEG-024` aceptan una lista
+de lo prohibido que pasa todas las pruebas y produce HTML peligroso. Deberían decir que solo
+sobreviven los elementos, atributos y esquemas de una lista. Python ya es así de estricto; Java,
+Rust y C++ todavía no, y el contrato no se lo exige.
+
+`sanear_texto` devuelve texto **escapado**, sin una sola etiqueta. La primera versión devolvía el
+texto con las entidades decodificadas, y eso rompía `SEG-025` de dos maneras: dos trozos inocuos
+alrededor de una etiqueta quitada se juntaban en una nueva (`<<b></b>script>` daba `<script>`), y
+`&lt;script&gt;` salía como `<script>`. Ahora el resultado se puede meter en HTML tal cual; quien
+lo quiera como texto plano para otra cosa lo decodifica con `html.unescape`.
+`sanear_nombre` se queda con lo que sigue a la última `/` o `\`,
 cambia por `_` todo lo que no sea letra ASCII, dígito, `.`, `_` o `-`, quita puntos de los
 extremos, antepone `_` a los nombres reservados de Windows (`CON`, `NUL.txt`), corta a 255 y nunca
 devuelve vacío: devuelve `archivo`.
@@ -339,7 +369,8 @@ Python es disciplina más una prueba que la vigila.
 ### Cómo se comprobó que las pruebas pueden fallar
 
 Para cada `SEG-0xx` se escribió un mutante del código que incumple ese requisito y se corrieron las
-pruebas que lo citan: las 28 caen. En la primera pasada sobrevivió el de `SEG-005`, y no por la
+pruebas que lo citan: las 28 caen, y con los arreglos de la revisión son 35 mutantes, todos
+caídos. En la primera pasada sobrevivió el de `SEG-005`, y no por la
 prueba: dos mutantes seguidos tenían el mismo tamaño y la misma marca de tiempo al segundo, y
 Python reutilizó el `.pyc` del anterior. Con `python -B` cayó. Quien repita el ejercicio, que lo
 corra sin caché de bytecode.

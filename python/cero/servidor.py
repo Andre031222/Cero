@@ -38,10 +38,10 @@ class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
                  plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
-                 cabeceras=Cabeceras(), cors=None, csrf=None, limitador=None):
+                 cabeceras=None, cors=None, csrf=None, limitador=None):
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
-        self.cabeceras = cabeceras
+        self.cabeceras = Cabeceras() if cabeceras is None else cabeceras
         self.cors = cors
         self.csrf = csrf
         self.limitador = limitador
@@ -67,15 +67,17 @@ class Servidor:
             if not admitida:
                 corte = texto(429, "demasiadas peticiones")
         if self.cors is not None:
-            pedido = peticion.cabecera("access-control-request-method")
-            estado, cabeceras = self.cors.decidir(peticion.verbo, peticion.cabecera("origin"), pedido)
+            estado, cabeceras = self.cors.decidir(
+                peticion.verbo, peticion.cabecera("origin"),
+                peticion.cabecera("access-control-request-method"),
+                peticion.cabecera("access-control-request-headers"))
             extra += cabeceras
             if corte is None and estado is not None:
                 corte = Respuesta(estado)
         return corte, extra
 
     def _blindar(self, respuesta, segura=False):
-        if self.cabeceras is None:
+        if not self.cabeceras:
             return respuesta
         return anadir(respuesta, self.cabeceras.para(segura))
 
