@@ -1,6 +1,8 @@
 #!/bin/sh
 cd "$(dirname "$0")/.." || exit 1
 fallo=0
+py=python3
+command -v python3 >/dev/null 2>&1 || py=python
 
 salida=$([ -f .superpowers/autores-ajenos ] && git grep -nI -f .superpowers/autores-ajenos -- ':!herramientas/verificar-orden.sh')
 if [ -n "$salida" ]; then
@@ -28,7 +30,7 @@ if ! ./cero --version 2>/dev/null | grep -q 'Cero · por Andre Solorzano'; then
   fallo=1
 fi
 
-if ! git ls-files -z -- java rust c++ herramientas | xargs -0 python3 herramientas/comentarios.py --verificar; then
+if ! git ls-files -z -- java rust c++ herramientas | xargs -0 "$py" herramientas/comentarios.py --verificar; then
   echo "código con comentarios"
   fallo=1
 fi

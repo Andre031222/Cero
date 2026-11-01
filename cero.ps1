@@ -63,7 +63,7 @@ function Classpath([string] $modulo) {
 $Implementaciones = @(
     'java|java|mvn java|mvn -B install||java::-cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme||'
     'rust|rust|cargo|cargo test --all ;; cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe::|cero-http\tests cero-data\tests|159'
-    'c++|c++|cmake ctest|cmake -S . -B "$env:OBJ" -DCMAKE_BUILD_TYPE=Release ;; cmake --build "$env:OBJ" --config Release -j ;; ctest --test-dir "$env:OBJ" -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|157'
+    'c++|c++|cmake ctest|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release ;; cmake --build %OBJ% --config Release -j ;; ctest --test-dir %OBJ% -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|157'
 )
 
 $Codigo = if ($env:CERO_LANG) { $env:CERO_LANG } elseif ($env:LC_ALL) { $env:LC_ALL } elseif ($env:LANG) { $env:LANG } else { (Get-Culture).Name }
@@ -147,6 +147,7 @@ function Anotar([string] $nombre, [string] $cifra, [object] $ok, [string] $regis
 }
 
 function BuscarPython {
+    $ErrorActionPreference = 'Continue'
     foreach ($nombre in 'python3.14', 'python3.13', 'python3.12', 'python3', 'python', 'py') {
         $orden = Get-Command $nombre -ErrorAction SilentlyContinue | Select-Object -First 1
         if (-not $orden) { continue }
@@ -157,6 +158,7 @@ function BuscarPython {
 }
 
 function BuscarSh {
+    $ErrorActionPreference = 'Continue'
     $orden = Get-Command sh -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($orden) { return $orden.Source }
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return '' }
@@ -179,14 +181,29 @@ function Faltan([string[]] $herramientas) {
     return ($faltan -join ' ')
 }
 
-function Ejecutar([string] $dir, [string] $pasos, [string] $registro) {
+function Palabras([string] $texto) {
+    return , @(($texto -split ' ') | Where-Object { $_ })
+}
+
+function Pasos([string] $texto) {
+    $lista = @()
+    foreach ($paso in ($texto -split ' ;; ')) {
+        $lista += , @(@(Palabras $paso)[0])
+    }
+    return , $lista
+}
+
+function Ejecutar([string] $dir, [object[]] $pasos, [string] $registro) {
     $ErrorActionPreference = 'Continue'
     $codigo = 0
     Push-Location $dir
     try {
-        foreach ($paso in ($pasos -split ' ;; ')) {
+        foreach ($paso in $pasos) {
+            $exe = [Environment]::ExpandEnvironmentVariables([string]$paso[0])
+            $argumentos = @()
+            for ($i = 1; $i -lt $paso.Count; $i++) { $argumentos += [Environment]::ExpandEnvironmentVariables([string]$paso[$i]) }
             $global:LASTEXITCODE = 0
-            Invoke-Expression "$paso *>> `"$registro`""
+            & $exe @argumentos *>> $registro
             $codigo = [int]$global:LASTEXITCODE
             if ($codigo -ne 0) { break }
         }
@@ -213,15 +230,18 @@ function ResolverExe([string] $dir, [string] $exe) {
     return $exe
 }
 
-function PartirServidor([string] $dir, [string] $servidor) {
-    $partes = $servidor -split '::', 2
-    return @((ResolverExe $dir $partes[0]), ([Environment]::ExpandEnvironmentVariables($partes[1])))
+function ExeServidor([string] $dir, [string] $servidor) {
+    return (ResolverExe $dir ($servidor -split '::', 2)[0])
+}
+
+function ArgumentosServidor([string] $servidor) {
+    $texto = [Environment]::ExpandEnvironmentVariables(($servidor -split '::', 2)[1])
+    return , @(@(Palabras $texto)[0])
 }
 
 function ArrancarServidor([string] $dir, [string] $servidor, [string] $registro) {
-    $p = PartirServidor $dir $servidor
-    $argumentos = ("$($p[1]) $($V.Puerto)").Trim()
-    $V.Proceso = Start-Process -FilePath $p[0] -ArgumentList $argumentos -WorkingDirectory $dir -PassThru -WindowStyle Hidden `
+    $argumentos = @(ArgumentosServidor $servidor)[0] + @([string]$V.Puerto)
+    $V.Proceso = Start-Process -FilePath (ExeServidor $dir $servidor) -ArgumentList $argumentos -WorkingDirectory $dir -PassThru -WindowStyle Hidden `
         -RedirectStandardOutput $registro -RedirectStandardError "$registro.err"
     for ($i = 0; $i -lt 30; $i++) {
         if (Escucha) { return $true }
@@ -232,6 +252,7 @@ function ArrancarServidor([string] $dir, [string] $servidor, [string] $registro)
 }
 
 function PararServidor {
+    $ErrorActionPreference = 'Continue'
     if ($V.Proceso -and -not $V.Proceso.HasExited) { & taskkill /PID $V.Proceso.Id /T /F *> $null }
     $V.Proceso = $null
 }
@@ -280,7 +301,7 @@ function PasoOrden {
         $registro = Join-Path $V.Tmp 'orden.log'
         New-Item -ItemType File -Path $registro -Force | Out-Null
         $env:PATH = "$(Split-Path $V.Sh);$env:PATH"
-        if ((Ejecutar $Aqui "& `"$($V.Sh)`" herramientas/verificar-orden.sh" $registro) -eq 0) {
+        if ((Ejecutar $Aqui @(, @($V.Sh, 'herramientas/verificar-orden.sh')) $registro) -eq 0) {
             Anotar $nombreOrden (T 'ver-sin-hallazgos') $true
         } else {
             Anotar $nombreOrden (T 'ver-hallazgos' @((Get-Content $registro | Measure-Object).Count)) $false $registro
@@ -292,7 +313,11 @@ function PasoOrden {
     if ($f) { Anotar $nombreComent (T 'ver-falta' @($f)) $false; return }
     $registro = Join-Path $V.Tmp 'comentarios.log'
     New-Item -ItemType File -Path $registro -Force | Out-Null
-    $pasos = "& `"$($V.Py)`" herramientas/comentarios.py --verificar $(CarpetasCodigo) ;; & `"$($V.Py)`" -I herramientas/pruebas_comentarios.py"
+    $carpetas = @(@(Palabras (CarpetasCodigo))[0])
+    $pasos = @(
+        (@($V.Py, 'herramientas/comentarios.py', '--verificar') + $carpetas),
+        @($V.Py, '-I', 'herramientas/pruebas_comentarios.py')
+    )
     if ((Ejecutar $Aqui $pasos $registro) -eq 0) {
         Anotar $nombreComent (T 'ver-ninguno') $true
     } else {
@@ -312,8 +337,8 @@ function PasoPruebas {
         $registro = Join-Path $V.Tmp "$nombre-pruebas.log"
         New-Item -ItemType File -Path $registro -Force | Out-Null
         $env:OBJ = Join-Path $V.Tmp "obj-$nombre"
-        $ok = ((Ejecutar (Join-Path $Aqui $p[1]) $p[3] $registro) -eq 0)
-        if ($p[4] -and ((Ejecutar (Join-Path $Aqui $p[1]) $p[4] $registro) -ne 0)) { $ok = $false }
+        $ok = ((Ejecutar (Join-Path $Aqui $p[1]) (Pasos $p[3]) $registro) -eq 0)
+        if ($p[4] -and ((Ejecutar (Join-Path $Aqui $p[1]) (Pasos $p[4]) $registro) -ne 0)) { $ok = $false }
         $cifra = T 'ver-n-pruebas' @(ContarPruebas $registro)
         if ($ok -and (Select-String -Path $registro -Pattern 'no está accesible' -Quiet)) {
             if ($V.SinMotores) { Anotar $etiqueta "$cifra · $(T 'ver-omitido')" 'omitido' }
@@ -339,7 +364,7 @@ function PasoBanco {
             if (ConServidor $etiqueta $dir $servidor (Join-Path $V.Tmp "$nombre-servidor.log")) {
                 $correr = Join-Path $Aqui 'spec\banco\correr.py'
                 New-Item -ItemType File -Path $registro -Force | Out-Null
-                $ok = ((Ejecutar $dir "& `"$($V.Py)`" `"$correr`" 127.0.0.1 $($V.Puerto)" $registro) -eq 0)
+                $ok = ((Ejecutar $dir @(, @($V.Py, $correr, '127.0.0.1', [string]$V.Puerto)) $registro) -eq 0)
                 Anotar $etiqueta (CifraVectores $registro) $ok $(if ($ok) { '' } else { $registro })
                 PararServidor
             }
@@ -351,8 +376,8 @@ function PasoBanco {
         $registro = Join-Path $V.Tmp "$nombre-ataques.log"
         New-Item -ItemType File -Path $registro -Force | Out-Null
         $ataques = Join-Path $Aqui 'spec\banco\ataques.py'
-        $s = PartirServidor $dir $servidor
-        $ok = ((Ejecutar $dir "& `"$($V.Py)`" `"$ataques`" `"$($s[0])`" $($s[1])" $registro) -eq 0)
+        $orden = @($V.Py, $ataques, (ExeServidor $dir $servidor)) + @(ArgumentosServidor $servidor)[0]
+        $ok = ((Ejecutar $dir @(, $orden) $registro) -eq 0)
         Anotar $etiqueta (CifraVectores $registro) $ok $(if ($ok) { '' } else { $registro })
     }
 }
@@ -369,7 +394,7 @@ function PasoH2spec {
         $registro = Join-Path $V.Tmp "$nombre-h2spec.log"
         if (ConServidor $etiqueta (Join-Path $Aqui $p[1]) $p[5] (Join-Path $V.Tmp "$nombre-servidor-h2.log")) {
             New-Item -ItemType File -Path $registro -Force | Out-Null
-            [void](Ejecutar $Aqui "h2spec -h 127.0.0.1 -p $($V.Puerto) --timeout 5" $registro)
+            [void](Ejecutar $Aqui @(, @('h2spec', '-h', '127.0.0.1', '-p', [string]$V.Puerto, '--timeout', '5')) $registro)
             PararServidor
             $resumen = Get-Content $registro | Where-Object { $_ -match '^\d+ tests,' } | Select-Object -Last 1
             $fallos = 99
@@ -418,6 +443,7 @@ function Tabla {
 }
 
 function Verificar([bool] $sinMotores) {
+    $ErrorActionPreference = 'Continue'
     $V.SinMotores = $sinMotores
     $V.Tmp = Join-Path ([IO.Path]::GetTempPath()) ("cero-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $V.Tmp | Out-Null
