@@ -49,9 +49,9 @@ class Cors:
     def __init__(self, origenes, *, credenciales=False,
                  metodos=("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"),
                  cabeceras=("Content-Type", "X-CSRF-Token"), max_age=600):
-        self.todos = origenes == "*"
-        self.origenes = set() if self.todos else set(origenes)
-        if credenciales and (self.todos or "*" in self.origenes):
+        self.origenes = {origenes} if isinstance(origenes, str) else set(origenes)
+        self.todos = "*" in self.origenes
+        if credenciales and self.todos:
             raise ValueError("CORS con credenciales necesita una lista de orígenes, no el comodín")
         self.credenciales = credenciales
         self.metodos = ", ".join(metodos)

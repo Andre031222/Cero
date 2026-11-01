@@ -204,6 +204,19 @@ class CorsTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     Cors(origenes, credenciales=True)
 
+    def test_un_origen_suelto_o_el_comodin_en_lista_valen_lo_mismo(self):
+        r = self.responder(Cors("https://app.pe"), "GET", "/api", ("Origin", "https://app.pe"))
+        self.assertEqual(cabeceras(r)["access-control-allow-origin"], "https://app.pe")
+        r = self.responder(Cors(["*"]), "GET", "/api", ("Origin", "https://otro.pe"))
+        self.assertEqual(cabeceras(r)["access-control-allow-origin"], "*")
+
+    def test_el_429_lleva_cors_para_que_el_navegador_lo_pueda_leer(self):
+        servidor = Servidor(self.router, cors=self.lista(), limitador=Limitador(1, 30))
+        servidor.responder(peticion("GET", "/api", ("Origin", "https://app.pe")))
+        r = servidor.responder(peticion("GET", "/api", ("Origin", "https://app.pe")))
+        self.assertEqual(r.estado, 429)
+        self.assertEqual(cabeceras(r)["access-control-allow-origin"], "https://app.pe")
+
     def test_options_sin_access_control_request_method_no_es_preflight(self):
         r = self.responder(self.lista(), "OPTIONS", "/api", ("Origin", "https://app.pe"))
         self.assertEqual(r.estado, 405)

@@ -60,19 +60,19 @@ class Servidor:
         return self._blindar(anadir(respuesta, extra), peticion.segura)
 
     def _antes(self, peticion):
-        extra = []
+        corte, extra = None, []
         if self.limitador is not None:
             admitida, cabeceras = self.limitador.pedir(peticion.cliente)
             extra += cabeceras
             if not admitida:
-                return texto(429, "demasiadas peticiones"), extra
+                corte = texto(429, "demasiadas peticiones")
         if self.cors is not None:
-            estado, cabeceras = self.cors.decidir(peticion.verbo, peticion.cabecera("origin"),
-                                                  peticion.cabecera("access-control-request-method"))
+            pedido = peticion.cabecera("access-control-request-method")
+            estado, cabeceras = self.cors.decidir(peticion.verbo, peticion.cabecera("origin"), pedido)
             extra += cabeceras
-            if estado is not None:
-                return Respuesta(estado), extra
-        return None, extra
+            if corte is None and estado is not None:
+                corte = Respuesta(estado)
+        return corte, extra
 
     def _blindar(self, respuesta, segura=False):
         if self.cabeceras is None:
