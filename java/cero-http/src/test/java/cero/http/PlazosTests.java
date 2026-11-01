@@ -33,6 +33,7 @@ final class PlazosTests {
                 .http2MaxEnVuelo(1 << 20).maxBodyBytes(100).build();
         try (Server estrecho = Server.start(estrechas, PlazosTests::rutas, ErrorReporter.silent())) {
             unaSolaPasaDelPresupuesto(estrecho.port());
+            anularYVolverAPedir(estrecho.port());
             cuerpoDeMas(estrecho.port());
         }
         try (Server cortes = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).maxBodyBytes(100).build(),
@@ -46,6 +47,18 @@ final class PlazosTests {
         try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
             Http2Cliente.Respuesta r = c.respuestaDe(c.pedir("GET", "/grande"));
             Check.equal("H2-054: con nada más en vuelo, 4 MiB salen enteros con un presupuesto de 1 MiB",
+                    r.cuerpo().length, 4 << 20);
+        }
+    }
+
+    private static void anularYVolverAPedir(int puerto) throws Exception {
+        try (Http2Cliente c = sinVentana(puerto)) {
+            int primero = c.pedir("GET", "/grande");
+            Thread.sleep(200);
+            c.trama(Http2Cliente.RST_STREAM, 0, primero, Http2Cliente.entero(ANULADO));
+            c.abrirVentanas(8 << 20);
+            Http2Cliente.Respuesta r = c.respuestaDe(c.pedir("GET", "/grande"));
+            Check.equal("H2-054: anular una descarga y pedir otra por la misma conexión no es pasarse del presupuesto",
                     r.cuerpo().length, 4 << 20);
         }
     }

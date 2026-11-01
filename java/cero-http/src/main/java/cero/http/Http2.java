@@ -342,7 +342,14 @@ final class Http2 implements Watchdog.Vigilada {
                 }
                 Flujo f = flujos.remove(flujo);
                 if (f != null) {
+                    f.cortado = true;
                     f.cerrarEntrada();
+                    synchronized (f.ventana) {
+                        f.ventana.notifyAll();
+                    }
+                    synchronized (ventanaSalida) {
+                        ventanaSalida.notifyAll();
+                    }
                     if (++anulados > maxAnulados) {
                         throw new ErrorConexion(ERROR_CALMA,
                                 "demasiados flujos anulados sin responder");
