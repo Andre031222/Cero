@@ -1,13 +1,7 @@
-//! Observabilidad, según `spec/observabilidad.md` requisitos `OBS-001`–`OBS-023`.
-//!
-//! Lo que el proceso cuenta de sí mismo: salud, log, métricas y log de acceso.
-
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
 use std::time::{Duration, Instant};
-
-// ── Salud · OBS-001 a OBS-007 ───────────────────────────────────────────────────────────────
 
 pub enum Veredicto {
     Bien,
@@ -19,8 +13,6 @@ type Comprobacion = Box<dyn Fn() -> Veredicto + Send + Sync>;
 pub struct Salud {
     arranque: Instant,
     comprobaciones: Vec<(String, Comprobacion)>,
-    /// OBS-006: un endpoint de salud es alcanzable desde fuera y enumera la infraestructura
-    /// interna a quien pregunte. En modo público el código no cambia, el detalle sí.
     pub publico: bool,
 }
 
@@ -43,9 +35,6 @@ impl Salud {
         self
     }
 
-    /// OBS-001: responde 200 mientras el proceso responda. No admite comprobaciones: si las
-    /// aceptara dejaría de medir lo que dice medir, y un supervisor reiniciaría por una base de
-    /// datos lenta, cambiando un problema pasajero por una caída.
     pub fn vivo(&self) -> Informe {
         Informe {
             estado: 200,
@@ -53,13 +42,10 @@ impl Salud {
         }
     }
 
-    /// OBS-002 a OBS-007.
     pub fn listo(&self) -> Informe {
         let mut fallos: Vec<(String, String)> = Vec::new();
         let mut buenas: Vec<String> = Vec::new();
         for (nombre, f) in &self.comprobaciones {
-            // OBS-005: una comprobación que lanza da 503, no 500. Lanzar es una forma de fallar,
-            // no un fallo del endpoint. En Rust «lanzar» es `panic!`, y se atrapa aquí.
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
             match r {
                 Ok(Veredicto::Bien) => buenas.push(nombre.clone()),
@@ -69,15 +55,14 @@ impl Salud {
         }
         if fallos.is_empty() {
             let cuerpo = if self.publico {
-                "{\"listo\":true}".to_string() // OBS-007
+                "{\"listo\":true}".to_string()
             } else {
                 format!("{{\"listo\":true,\"comprobaciones\":[{}]}}", comillas(&buenas))
             };
             return Informe { estado: 200, cuerpo };
         }
-        // OBS-003 y OBS-004: 503 diciendo cuál falló, sin ocultar las que sí van.
         let cuerpo = if self.publico {
-            "{\"listo\":false}".to_string() // OBS-006
+            "{\"listo\":false}".to_string()
         } else {
             let detalle: Vec<String> =
                 fallos.iter().map(|(n, m)| format!("{{\"nombre\":\"{n}\",\"motivo\":\"{m}\"}}")).collect();
@@ -95,8 +80,6 @@ fn comillas(v: &[String]) -> String {
     v.iter().map(|s| format!("\"{s}\"")).collect::<Vec<_>>().join(",")
 }
 
-// ── Registro · OBS-008 a OBS-012 ────────────────────────────────────────────────────────────
-
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub enum Nivel {
     Traza,
@@ -104,7 +87,6 @@ pub enum Nivel {
     Info,
     Aviso,
     Error,
-    /// OBS-009: un nivel que calla todo.
     Nada,
 }
 
@@ -121,17 +103,12 @@ impl Log {
 
     pub fn escribir(&self, nivel: Nivel, plantilla: &str, valores: &[&str]) {
         if nivel < self.nivel || self.nivel == Nivel::Nada {
-            return; // OBS-009
+            return;
         }
         let linea = format!("{:?} {} {}", nivel, self.origen, interpolar(plantilla, valores));
         self.lineas.lock().expect("log envenenado").push(linea);
     }
 
-    /// `OBS-010`: un error se registra con **su tipo** y su mensaje.
-    ///
-    /// El tipo importa tanto como el mensaje y se olvida más: dos errores distintos pueden decir
-    /// «no such file» y el que hay que arreglar es otro según de dónde venga. Rust no tiene
-    /// excepciones, así que el tipo se toma del tipo estático, que es el equivalente honesto.
     pub fn con_error<E: std::fmt::Display>(&self, plantilla: &str, valores: &[&str], error: &E) {
         let tipo = std::any::type_name::<E>().rsplit("::").next().unwrap_or("Error");
         self.escribir(Nivel::Error, &format!("{plantilla}: {tipo}: {error}"), valores);
@@ -142,8 +119,6 @@ impl Log {
     }
 }
 
-/// OBS-011: con valores de menos se conserva el marcador; con valores de más se ignoran.
-/// Interpolar NO puede lanzar nunca: un log que revienta se lleva por delante lo que iba a contar.
 pub fn interpolar(plantilla: &str, valores: &[&str]) -> String {
     let mut salida = String::with_capacity(plantilla.len());
     let mut resto = plantilla;
@@ -161,8 +136,6 @@ pub fn interpolar(plantilla: &str, valores: &[&str]) -> String {
     salida
 }
 
-// ── Métricas · OBS-013 a OBS-018 ────────────────────────────────────────────────────────────
-
 #[derive(Default)]
 struct Cuenta {
     peticiones: u64,
@@ -172,9 +145,6 @@ struct Cuenta {
 
 pub struct Metricas {
     arranque: Instant,
-    /// OBS-014: la clave es el **patrón** de ruta, no la URL. Con la URL, `/usuarios/{id}` genera
-    /// tantas series como identificadores existan: cardinalidad sin acotar desde entrada externa,
-    /// la misma familia que el hallazgo del limitador pero contra el sistema de métricas.
     por_patron: RwLock<HashMap<String, Cuenta>>,
     total: AtomicU64,
     ignoradas: RwLock<Vec<String>>,
@@ -195,7 +165,6 @@ impl Metricas {
     }
 
     pub fn anotar(&self, patron: &str, estado: u16, tardo: Duration) {
-        // OBS-017: las ignoradas no se cuentan.
         if self.ignoradas.read().expect("envenenado").iter().any(|p| p == patron) {
             return;
         }
@@ -203,7 +172,6 @@ impl Metricas {
         let mut mapa = self.por_patron.write().expect("envenenado");
         let c = mapa.entry(patron.into()).or_default();
         c.peticiones += 1;
-        // OBS-016: un 404 cuenta como error.
         if estado >= 400 {
             c.errores += 1;
         }
@@ -222,8 +190,6 @@ impl Metricas {
         self.por_patron.read().map(|m| m.get(patron).map_or(0, |c| c.errores)).unwrap_or(0)
     }
 
-    /// OBS-015: percentiles, no solo la media. La media esconde la cola, que es donde vive el
-    /// usuario que se queja.
     pub fn percentil(&self, patron: &str, p: f64) -> Option<u64> {
         let mapa = self.por_patron.read().ok()?;
         let mut v = mapa.get(patron)?.micros.clone();
@@ -239,7 +205,6 @@ impl Metricas {
         self.por_patron.read().map(|m| m.len()).unwrap_or(0)
     }
 
-    /// OBS-018: una exposición legible por máquina, con el total y el detalle por ruta.
     pub fn json(&self) -> String {
         let mapa = self.por_patron.read().expect("envenenado");
         let rutas: Vec<String> = mapa
@@ -257,10 +222,6 @@ impl Metricas {
     }
 }
 
-// ── Log de acceso · OBS-019 a OBS-023 ───────────────────────────────────────────────────────
-
-/// OBS-019 a OBS-021. El usuario sin identificar va con una marca explícita y no con un hueco:
-/// un campo vacío en una línea separada por espacios corre las columnas siguientes.
 pub fn linea_acceso(
     metodo: &str,
     destino: &str,

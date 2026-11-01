@@ -1,11 +1,3 @@
-//! Una aplicación pequeña de punta a punta, que es la prueba de que el framework sirve para algo
-//! y no solo de que sus módulos pasan pruebas.
-//!
-//!     cargo run --bin ejemplo 8080
-//!
-//! Usa todo el pipeline: cabeceras de seguridad, CORS, límite de peticiones, CSRF, sesiones,
-//! salud, métricas y log de acceso.
-
 use cero_http::observabilidad::{Salud, Veredicto};
 use cero_http::seguridad::{Cors, Origenes};
 use cero_http::{Json, Respuesta, Router, Servidor};
@@ -42,12 +34,9 @@ fn main() -> std::io::Result<()> {
             Respuesta::html("<h1>Cero</h1><p>El mismo framework, en Rust.</p>")
         })
         .accion("saludo", |c| {
-            // RUT-002: la variable de ruta por su nombre.
             Respuesta::texto(&format!("hola, {}", c.variable("nombre").unwrap_or("mundo")))
         })
         .accion("nota", |c| {
-            // RUT-014 y RUT-015: convertida, y si no convierte es 400 y no 500. El `?` lo dice
-            // todo: una acción que puede fallar lo declara devolviendo un `Result`.
             let id = c.variable_como::<u32>("id")?;
             Ok(Respuesta::json(Json::objeto(vec![
                 ("id", (id as i64).into()),
@@ -55,7 +44,6 @@ fn main() -> std::io::Result<()> {
             ])))
         })
         .accion("entrar", |c| {
-            // Solo esto crea una sesión: leer nunca la crea (SES-001).
             let Some(s) = c.abrir_sesion() else {
                 return Respuesta::estado(500, "no se pudo abrir la sesión");
             };
@@ -80,7 +68,6 @@ fn main() -> std::io::Result<()> {
         .accion("crear", |c| {
             let cuerpo = c.cuerpo_texto();
             if cuerpo.trim().is_empty() {
-                // 422 y no 400: el cuerpo se entendió, lo que falla es su contenido (SEG-028).
                 return Respuesta {
                     estado: 422,
                     ..Respuesta::json(Json::objeto(vec![(
@@ -89,7 +76,6 @@ fn main() -> std::io::Result<()> {
                     )]))
                 };
             }
-            // El cuerpo puede venir como JSON o como formulario: las dos formas funcionan.
             let titulo = c
                 .cuerpo_json()
                 .ok()

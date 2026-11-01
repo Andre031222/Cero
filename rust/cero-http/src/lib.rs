@@ -1,9 +1,3 @@
-//! Cero en Rust.
-//!
-//! Implementa el contrato de `spec/`. No mira el código Java: mira los requisitos numerados, y lo
-//! juzgan los mismos vectores de conformidad, que son bytes sobre un socket y no saben en qué
-//! lenguaje está escrito quien responde.
-
 pub mod contexto;
 pub mod estaticos;
 pub mod fallo;

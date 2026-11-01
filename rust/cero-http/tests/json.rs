@@ -1,5 +1,3 @@
-//! JSON: lo normal, los bordes y lo hostil.
-
 use cero_http::json::{leer, Json};
 
 #[test]
@@ -21,8 +19,6 @@ fn las_claves_salen_en_orden_estable() {
 
 #[test]
 fn escapa_lo_que_rompe_una_pagina() {
-    // Un JSON incrustado en HTML que contenga `</script` cierra la etiqueta: es XSS a través de
-    // una respuesta perfectamente válida.
     let s = Json::from("</script><img onerror=x>").escribir();
     assert!(!s.contains("</script"), "SEG: {s}");
     assert!(!s.contains('<') && !s.contains('>'), "ni < ni > sin escapar · {s}");
@@ -93,8 +89,6 @@ fn rechaza_un_control_sin_escapar_dentro_de_una_cadena() {
 
 #[test]
 fn un_documento_muy_anidado_no_desborda_la_pila() {
-    // 5 000 corchetes: con recursión sin tope, esto revienta el proceso. Es denegación de
-    // servicio con un cuerpo de 10 KB.
     let hondo = format!("{}{}", "[".repeat(5_000), "]".repeat(5_000));
     assert!(leer(&hondo).is_err(), "tiene que rechazarse, no colgarse");
 }

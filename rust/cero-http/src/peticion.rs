@@ -1,22 +1,11 @@
-//! Lectura de una petición HTTP/1.1 desde el socket.
-//!
-//! Cada rechazo cita el requisito de `spec/conformidad.md` que lo exige. Eso es lo que hace que
-//! esta implementación no sea una traducción del código Java: el juez es el contrato.
-
 use std::collections::HashMap;
 use std::io::BufRead;
 
-/// Por qué se rechaza una petición. El estado que corresponde a cada motivo lo fija el RFC, no
-/// nosotros, así que viaja con el motivo en vez de decidirse en el sitio de la llamada.
 #[derive(Debug, PartialEq)]
 pub enum Rechazo {
-    /// 400 — la petición está mal formada.
     MalFormada(&'static str),
-    /// 501 — se entiende la petición pero el método no se implementa.
     NoImplementado,
-    /// 505 — la versión no es una que sepamos hablar.
     VersionNoSoportada,
-    /// 431 — las cabeceras no caben.
     Demasiado,
 }
 
@@ -52,10 +41,8 @@ impl Peticion {
         self.cabeceras.get(&nombre.to_ascii_lowercase()).map(String::as_str)
     }
 
-    /// El camino sin la cadena de consulta, y con la forma absoluta reducida a su camino.
     pub fn camino(&self) -> &str {
         let sin_consulta = self.destino.split('?').next().unwrap_or("/");
-        // HTTP-002: origin-form, absolute-form y asterisk-form son las tres formas válidas.
         if let Some(resto) = sin_consulta.strip_prefix("http://").or_else(|| sin_consulta.strip_prefix("https://")) {
             match resto.find('/') {
                 Some(i) => &resto[i..],
@@ -67,11 +54,6 @@ impl Peticion {
     }
 }
 
-/// Lee una petición del lector, que **se conserva entre peticiones**.
-///
-/// Toma el lector y no el socket a propósito: un `BufReader` nuevo por petición tira lo que ya tenga
-/// en el búfer, y lo que tenga en el búfer puede ser la petición siguiente de un cliente que las
-/// encadena. Es un fallo que no se nota con un navegador y sí con `curl` mandando dos de una vez.
 pub fn leer<R: BufRead>(lector: &mut R) -> Result<Peticion, Rechazo> {
     let inicial = linea(lector)?;
     let (metodo, destino, version) = partir_linea_inicial(&inicial)?;
@@ -92,9 +74,6 @@ fn linea<R: BufRead>(lector: &mut R) -> Result<String, Rechazo> {
             Ok(0) => return Err(Rechazo::MalFormada("la conexión se cerró a media línea")),
             Ok(_) => {
                 if byte[0] == b'\n' {
-                    // El RFC 9112 §2.2 pide CRLF; aceptar LF suelto es la tolerancia habitual,
-                    // pero un CR suelto dentro de la línea no se tolera: es la vía del
-                    // contrabando cuando hay un intermediario que sí lo parte.
                     if crudo.last() == Some(&b'\r') {
                         crudo.pop();
                     }
@@ -117,12 +96,8 @@ fn partir_linea_inicial(linea: &str) -> Result<(String, String, String), Rechazo
     let destino = partes.next().unwrap_or("");
     let version = partes.next().unwrap_or("");
     if metodo.is_empty() || destino.is_empty() || version.is_empty() || partes.next().is_some() {
-        // HTTP-004: una línea sin versión —o con partes de más— es 400, no 505.
         return Err(Rechazo::MalFormada("la línea inicial no tiene tres partes"));
     }
-    // HTTP-007: los métodos son sensibles a mayúsculas. `get` no es `GET`, y responder 501 en vez
-    // de tratarlo como GET es lo que impide que un intermediario y nosotros leamos cosas
-    // distintas de los mismos octetos.
     if !METODOS.contains(&metodo) {
         return Err(Rechazo::NoImplementado);
     }
@@ -145,30 +120,23 @@ fn leer_cabeceras<R: BufRead>(lector: &mut R) -> Result<HashMap<String, String>,
         if vistas.len() >= MAX_CABECERAS {
             return Err(Rechazo::Demasiado);
         }
-        // HTTP-009: una cabecera plegada —que empieza por espacio— se rechaza. El RFC 9112 §5.2
-        // la retiró justamente porque los intermediarios la despliegan de formas distintas.
         if l.starts_with(' ') || l.starts_with('\t') {
             return Err(Rechazo::MalFormada("cabecera plegada"));
         }
         let corte = l.find(':').ok_or(Rechazo::MalFormada("cabecera sin dos puntos"))?;
         let nombre = &l[..corte];
         let valor = &l[corte + 1..];
-        // HTTP-008: no se admite espacio entre el nombre y los dos puntos.
         if nombre.is_empty() || nombre.ends_with(' ') || nombre.ends_with('\t') {
             return Err(Rechazo::MalFormada("espacio antes de los dos puntos"));
         }
-        // HTTP-010: el nombre solo puede llevar caracteres de token.
         if !nombre.bytes().all(es_token) {
             return Err(Rechazo::MalFormada("el nombre lleva caracteres fuera del token"));
         }
-        // HTTP-011: un byte nulo en el valor se rechaza.
         if valor.bytes().any(|b| b == 0 || (b < 0x20 && b != b'\t') || b == 0x7f) {
             return Err(Rechazo::MalFormada("byte de control en el valor"));
         }
         let clave = nombre.to_ascii_lowercase();
         let valor = valor.trim_matches(|c| c == ' ' || c == '\t').to_string();
-        // HTTP-014 y HTTP-016: Host y Content-Length duplicados se rechazan; otras cabeceras
-        // repetibles se unen con coma, como manda el RFC 9110 §5.3.
         if let Some(previo) = cabeceras.get(&clave) {
             if clave == "host" || clave == "content-length" {
                 if clave == "host" || previo != &valor {
@@ -189,7 +157,6 @@ fn es_token(b: u8) -> bool {
 }
 
 fn comprobar_host(version: &str, cabeceras: &HashMap<String, String>) -> Result<(), Rechazo> {
-    // HTTP-013: HTTP/1.1 exige Host. HTTP/1.0 puede no traerlo.
     if version == "HTTP/1.1" && !cabeceras.contains_key("host") {
         return Err(Rechazo::MalFormada("HTTP/1.1 sin Host"));
     }
@@ -201,14 +168,9 @@ fn leer_cuerpo<R: BufRead>(
     cabeceras: &HashMap<String, String>,
 ) -> Result<Vec<u8>, Rechazo> {
     if let Some(te) = cabeceras.get("transfer-encoding") {
-        // Las dos cabeceras juntas dicen dos longitudes distintas del mismo cuerpo. Si nosotros
-        // creemos a una y el intermediario a la otra, leemos dos peticiones distintas de los
-        // mismos octetos: es el contrabando de peticiones. El RFC 9112 §6.3 manda rechazar.
         if cabeceras.contains_key("content-length") {
             return Err(Rechazo::MalFormada("content-length y transfer-encoding juntos"));
         }
-        // HTTP-019: `chunked` tiene que ser la última codificación. Aceptarlo en otra posición
-        // es la puerta del contrabando cuando un intermediario lee otra cosa.
         let ultima = te.rsplit(',').next().unwrap_or("").trim().to_ascii_lowercase();
         if ultima != "chunked" {
             return Err(Rechazo::MalFormada("chunked no es la última codificación"));
@@ -218,7 +180,6 @@ fn leer_cuerpo<R: BufRead>(
     let Some(cl) = cabeceras.get("content-length") else {
         return Ok(Vec::new());
     };
-    // HTTP-017 y HTTP-018: negativo o no numérico se rechaza. `parse::<u64>` cubre los dos.
     let largo: u64 = cl.parse().map_err(|_| Rechazo::MalFormada("content-length inválido"))?;
     let mut cuerpo = vec![0u8; largo as usize];
     lector
@@ -232,11 +193,10 @@ fn leer_por_trozos<R: BufRead>(lector: &mut R) -> Result<Vec<u8>, Rechazo> {
     loop {
         let cabecera = linea(lector)?;
         let tamano_txt = cabecera.split(';').next().unwrap_or("").trim();
-        // HTTP-020: un tamaño que no es hexadecimal se rechaza.
         let tamano = usize::from_str_radix(tamano_txt, 16)
             .map_err(|_| Rechazo::MalFormada("tamaño de trozo no hexadecimal"))?;
         if tamano == 0 {
-            while !linea(lector)?.is_empty() {} // trailers, que se descartan
+            while !linea(lector)?.is_empty() {}
             return Ok(cuerpo);
         }
         let mut trozo = vec![0u8; tamano];

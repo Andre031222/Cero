@@ -28,8 +28,14 @@ dedicado a h2c y no aplica aquí.
 una prueba que los cita. Se cuentan así:
 
 ```bash
-grep -rhoE '(HTTP|OBS|RUT|SEG|SES|H2)-[0-9]{3}' cero-http/tests cero-data/tests | sort -u | wc -l
+grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' cero-http/tests cero-data/tests \
+  | tr a-z_ A-Z- | sort -u | wc -l
 ```
+
+Sin distinguir mayúsculas y con guion o guion bajo, porque desde que el código no lleva
+comentarios el requisito va en el nombre de la prueba —`fn rut_014_comodin_no_cruza_barra()`— o en
+el mensaje de su aserción. El `tr` junta `rut_014` y `RUT-014` en uno; sin él, cada requisito
+contaría dos veces.
 
 **En las pruebas, no en el código.** La cuenta de antes miraba también los comentarios de `src/`, y
 eso hacía que los 35 requisitos de ruteo figuraran como cubiertos **sin una sola prueba que los
@@ -133,6 +139,91 @@ podía verlo: todas leen la respuesta antes de cerrar. Se arregla con media cone
 marcha, esperando respuesta. Encima el conductor lo daba por respondido al *despacharlo*, no al
 responderlo. Ahora el hilo que responde se lo dice al que lee, que es toda la conversación que
 necesitan tener.
+
+## Pieza por pieza: lo que el código no dice solo
+
+El código no lleva comentarios. Lo que explicaban, y no está ya contado arriba, va aquí.
+
+**`servidor.rs`.** El bucle de aceptación y el pipeline. El middleware se compone con un índice y
+no con una pila de clausuras: componer `Box<dyn Fn>` obliga a nombrar un tipo que se anida consigo
+mismo, y con el índice «el siguiente» es `i + 1`. El primero declarado es el más exterior
+(`RUT-028`), y corre también sin ruta (`RUT-029`): un 404 sin cabeceras de seguridad deja sin
+proteger justo lo que más se provoca desde fuera. El manejador de fallos de la aplicación corre
+antes que la regla por defecto, incluso sobre un 500 (`RUT-027`). Un verbo no admitido sigue siendo
+405 aunque haya respaldo de SPA (`RUT-031`). Todo sale por `rematar`, un solo sitio para cabeceras,
+cookie, métricas y log; el log anota el estado que **sale**, no el que la acción pretendía
+(`OBS-012`). `sin_registrar` calla caminos por nombre —la sonda de salud—, nunca por adivinación.
+
+**`contexto.rs` y `fallo.rs`.** El contrato no nombra nada de esto: solo dice qué está disponible.
+`abrir_sesion()` es idempotente dentro de una petición, y la sesión abierta se recuerda para que el
+punto que emite la cookie la vea. `token_csrf()` lo pide la aplicación porque emitirlo siempre
+obligaría a abrir sesión a todo el que pase, y abre sesión porque un token sin sesión no protege.
+Un `Fallo` con estado declarado conserva su mensaje (`RUT-026`); un 5xx no (`RUT-024`). `EnRespuesta`
+tiene dos implementaciones y no tres: una para `Result<Respuesta, Respuesta>` haría ambiguo el
+error de cualquier acción con `?`.
+
+**`peticion.rs`.** Cada rechazo cita el requisito que lo exige. Se lee de un lector que **se
+conserva entre peticiones**: uno nuevo por petición tira la siguiente de un cliente que las
+encadena. Se acepta LF suelto pero no CR suelto, que es la vía del contrabando; los métodos
+distinguen mayúsculas (`HTTP-007`); `Content-Length` con `Transfer-Encoding` se rechaza.
+
+**`ruta.rs`.** Un patrón inválido se rechaza al construirlo (`RUT-006`, `RUT-007`): al arrancar es un
+error, al resolver sería un 500.
+
+**`registro.rs`.** Sin reflexión, cada servicio se registra con la función que lo construye, y un
+tipo sin registrar no compila donde se usa. La fábrica corre **fuera** del candado: vuelve a entrar
+por cada dependencia, y dentro sería un candado no reentrante bloqueándose solo. Un ciclo se cuenta
+con la cadena entera, porque el tipo repetido solo dice dónde se cerró.
+
+**`seguridad.rs`.** El contrato fija el comportamiento por defecto, no la política. El preflight
+ajeno se rechaza (`SEG-013`) y la petición simple no (`SEG-010`): ya llegó, y quien decide es el
+navegador. El limitador usa solo el cliente como clave (`SEG-022`).
+
+**`observabilidad.rs`.** `vivo` no admite comprobaciones (`OBS-001`). Un error se registra con su tipo
+(`OBS-010`), que en Rust es el tipo estático. Las métricas van por patrón de ruta y no por URL
+(`OBS-014`): con la URL, `/usuarios/{id}` daría una serie por identificador.
+
+**`sesion.rs`.** El identificador sale de la fuente del sistema operativo, que es lo que hace
+`SecureRandom` por debajo (`SES-002`). Una sesión rescatada de un almacén no nace sucia ni con
+cookie pendiente. `Sesiones::guardar` se llama una vez por respuesta, en el sitio que emite la
+cookie; el almacén en memoria no tiene nada que hacer ahí.
+
+**`validacion.rs`.** 422 y no 400, con detalle por campo. Las reglas se comprueban en orden y se
+para en la primera que falla, y el cuerpo se devuelve **tal cual**: validar no es normalizar.
+
+**`json.rs`.** Sin derivación automática, que pediría macros procedurales externas: la aplicación
+construye el valor, y a cambio no hay reflexión en el camino caliente.
+
+**`estaticos.rs`.** El camino se comprueba dentro de la raíz después de resolverlo.
+
+**`http2/`.** Por capas, en el orden en que el contrato se puede comprobar: tramas, HPACK, flujos.
+Casi todo en `trama.rs` son rechazos, porque un servidor permisivo desacuerda con el proxy de
+delante. Los ajustes de una misma trama se acumulan en orden (§6.5.3). En `flujo.rs`, `Sesion` vive
+lo que el socket; terminar de responder cierra solo nuestra mitad; entre HEADERS y su última
+CONTINUATION no cabe nada; PRIORITY se descarta pero un flujo que depende de sí mismo se rechaza
+(`H2-044`, `H2-049`); una mayúscula en un nombre no se corrige, se rechaza (`H2-019`); la forma de la
+petición se valida aquí y no en el ruteo, porque una malformada no llega a existir; los topes de
+inundación son política del servidor, holgados para un cliente normal y finitos para uno anormal.
+`conexion.rs` lleva un hilo del sistema **por flujo** (`H2-029`), una salida con candado y no con
+canal —una trama sale entera o no sale—, el cuerpo partido por el tamaño máximo de trama y por el
+crédito, y el candado cogido por trama para no parar a los demás flujos mientras se espera
+crédito. `:authority` pasa a `host`. El preámbulo se ojea sin consumirlo. `credito.rs` está aparte
+porque lo gastan varios hilos y lo repone el que lee. En `hpack.rs`, el índice 1 es la entrada más
+reciente; una entrada que no cabe vacía la tabla (§4.4); el entero de longitud variable tiene tope
+de cinco septetos; el codificador no indexa. `hpack_tablas.rs` se extrajo de `HpackTablas.java`.
+
+**`cero-data`.** `Valor` no admite cualquier cosa: lo que el framework no sabe nombrar, el driver
+tendría que adivinarlo. `memoria.rs` entiende exactamente lo que `Repositorio` emite y nada más, y
+conserva los identificadores como se escribieron. `migraciones.rs` parte el guion sin romper
+cadenas, comentarios ni bloques. En `sesiones.rs` el nombre de la tabla no tiene valor por omisión
+(`SES-013`) y se valida, porque un identificador no puede ir parametrizado. El `Cargo.toml` declara
+`cero-http` y nada más, y en ese sentido: `cero-data` implementa el contrato de sesiones que define
+la capa HTTP, y al revés sería un ciclo.
+
+**`bin/conforme.rs` y `bin/ejemplo.rs`.** El servidor del banco lee el cuerpo en `/eco`, porque sin
+eso los vectores de encuadre no comprueban nada, y su raíz responde algo más largo que «ok» porque
+h2spec necesita un cuerpo que no quepa en una ventana apretada: con dos octetos se salta la prueba
+en vez de fallarla. El ejemplo usa todo el pipeline.
 
 ## Usarlo
 

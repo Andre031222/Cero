@@ -1,9 +1,5 @@
-//! Una prueba por requisito de `spec/observabilidad.md`, citándolo.
-
 use cero_http::observabilidad::*;
 use std::time::Duration;
-
-// ── Salud ───────────────────────────────────────────────────────────────────
 
 #[test]
 fn obs_001_vivo_responde_mientras_el_proceso_responda() {
@@ -62,8 +58,6 @@ fn obs_007_en_modo_publico_y_en_verde_solo_dice_que_esta_listo() {
     assert!(!l.cuerpo.contains("bd-interna"), "OBS-007: sin la lista");
 }
 
-// ── Registro ────────────────────────────────────────────────────────────────
-
 #[test]
 fn obs_008_la_linea_lleva_nivel_origen_y_valores() {
     let log = Log::nuevo("app", Nivel::Info);
@@ -94,8 +88,6 @@ fn obs_011_interpolar_nunca_lanza() {
     assert_eq!(interpolar("", &[]), "", "OBS-011: vacío");
 }
 
-// ── Métricas ────────────────────────────────────────────────────────────────
-
 #[test]
 fn obs_013_y_016_cuenta_peticiones_y_errores() {
     let m = Metricas::nuevas();
@@ -109,8 +101,6 @@ fn obs_013_y_016_cuenta_peticiones_y_errores() {
 #[test]
 fn obs_014_agrupa_por_patron_y_no_por_url() {
     let m = Metricas::nuevas();
-    // Dos identificadores distintos, un solo patrón. Con la URL como clave serían dos series, y
-    // con mil identificadores, mil.
     m.anotar("/usuarios/{id}", 200, Duration::from_millis(1));
     m.anotar("/usuarios/{id}", 200, Duration::from_millis(1));
     assert_eq!(m.patrones(), 1, "OBS-014: una sola serie");
@@ -148,8 +138,6 @@ fn obs_018_hay_exposicion_legible_por_maquina() {
     assert!(j.contains("\"ruta\":\"/a\""), "OBS-018: y el detalle por ruta");
 }
 
-// ── Log de acceso ───────────────────────────────────────────────────────────
-
 #[test]
 fn obs_019_a_021_la_linea_de_acceso() {
     let l = linea_acceso("GET", "/a?q=1", 200, Some("andre"), Duration::from_millis(7));
@@ -169,9 +157,6 @@ fn obs_022_se_registran_tambien_los_errores() {
     }
 }
 
-/// `OBS-010`: un error se registra con su **tipo** y su mensaje. El tipo importa tanto como el
-/// mensaje y se olvida más: dos errores distintos pueden decir «no such file» y el que hay que
-/// arreglar es otro según de dónde venga.
 #[test]
 fn obs_010_un_error_se_registra_con_su_tipo() {
     use cero_http::Fallo;

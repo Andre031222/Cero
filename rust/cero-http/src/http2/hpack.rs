@@ -1,22 +1,6 @@
-//! HPACK (RFC 7541): la compresión de cabeceras de HTTP/2.
-//!
-//! Tres piezas encadenadas: los enteros de longitud variable (§5.1), las cadenas —literales o en
-//! Huffman— (§5.2) y la tabla de índices, estática más dinámica (§2.3).
-//!
-//! Lo que hace a HPACK distinto de un descompresor cualquiera es que **el estado es compartido y
-//! ordenado**: la tabla dinámica del decodificador tiene que quedar exactamente igual que la del
-//! codificador del otro lado después de cada bloque. Por eso un bloque que no se pueda decodificar
-//! rompe la conexión entera y no solo el flujo —`H2-015`, `H2-016`—: seguir sería interpretar las
-//! cabeceras siguientes contra una tabla desalineada, y eso no da un error, da cabeceras
-//! equivocadas.
-//!
-//! Y por eso también los trailers se decodifican aunque se tiren: saltárselos descoloca la tabla.
-
 use super::hpack_tablas::{CODIGO, EOS, ESTATICA, LARGO};
 use super::trama::{Error, FalloConexion};
 
-/// El coste de una entrada en la tabla dinámica, RFC 7541 §4.1: los dos textos más 32 octetos de
-/// estructura. Es una convención del RFC, no una medida: los dos extremos tienen que contar igual.
 const COSTE_FIJO: usize = 32;
 
 fn mal(porque: &'static str) -> FalloConexion {
@@ -25,16 +9,10 @@ fn mal(porque: &'static str) -> FalloConexion {
 
 type Resultado<T> = Result<T, FalloConexion>;
 
-/// La tabla dinámica: las últimas cabeceras vistas, en orden de llegada, con un tope en octetos.
-///
-/// El índice 1 del protocolo es la entrada más **reciente**, no la más antigua, así que se guarda
-/// del revés de como se lee y se cuenta desde el final.
 pub struct TablaDinamica {
     entradas: Vec<(String, String)>,
     ocupado: usize,
     tope: usize,
-    /// Lo que la otra punta puede pedir con una actualización de tamaño. `SETTINGS_HEADER_TABLE_SIZE`
-    /// lo fija; una actualización que lo supere es un error de compresión, §6.3.
     tope_maximo: usize,
 }
 
@@ -59,10 +37,6 @@ impl TablaDinamica {
         nombre.len() + valor.len() + COSTE_FIJO
     }
 
-    /// Mete una entrada y desaloja por el otro extremo hasta que quepa.
-    ///
-    /// Una entrada que no cabe ni en la tabla vacía **vacía la tabla y no se guarda** (§4.4). No es
-    /// un error: es lo que deja las dos tablas iguales.
     pub fn meter(&mut self, nombre: String, valor: String) {
         let coste = TablaDinamica::coste(&nombre, &valor);
         while self.ocupado + coste > self.tope {
@@ -75,7 +49,6 @@ impl TablaDinamica {
         self.entradas.insert(0, (nombre, valor));
     }
 
-    /// Una actualización de tamaño dinámico (§6.3). Reducir obliga a desalojar en el acto.
     pub fn redimensionar(&mut self, nuevo: usize) -> Resultado<()> {
         if nuevo > self.tope_maximo {
             return Err(mal("actualización de tabla mayor que la negociada"));
@@ -95,11 +68,8 @@ impl TablaDinamica {
     }
 }
 
-/// Un decodificador vive tanto como la conexión: su tabla es el estado compartido con el cliente.
 pub struct Decodificador {
     pub tabla: TablaDinamica,
-    /// `H2-039`: el tope de lo que sale, no de lo que entra. Tres kilobytes comprimidos pueden ser
-    /// trescientos al expandirse, y limitar solo el bloque no lo ve venir.
     pub max_lista: usize,
 }
 
@@ -108,19 +78,15 @@ impl Decodificador {
         Decodificador { tabla: TablaDinamica::nueva(tope_tabla), max_lista }
     }
 
-    /// Decodifica un bloque entero. Devuelve las cabeceras en el orden en que venían: el orden de
-    /// los valores repetidos de un mismo campo es significativo, §3.2.2 del 9113.
     pub fn decodificar(&mut self, bloque: &[u8]) -> Resultado<Vec<(String, String)>> {
         let mut salida = Vec::new();
         let mut tamano = 0usize;
         let mut i = 0usize;
-        // Una actualización de tamaño solo vale al principio del bloque (§4.2).
         let mut admite_actualizacion = true;
 
         while i < bloque.len() {
             let primero = bloque[i];
             if primero & 0x80 != 0 {
-                // Indexado entero: nombre y valor salen de la tabla.
                 admite_actualizacion = false;
                 let indice = leer_entero(bloque, &mut i, 7)?;
                 if indice == 0 {
@@ -143,8 +109,6 @@ impl Decodificador {
                 self.tabla.redimensionar(nuevo)?;
                 continue;
             } else {
-                // 0x10 es «nunca indexar»; para decodificar se trata igual que «sin indexar». La
-                // diferencia solo obliga a quien reenvía, y aquí no se reenvía nada.
                 admite_actualizacion = false;
                 let (n, v) = self.literal(bloque, &mut i, 4)?;
                 tamano += n.len() + v.len() + COSTE_FIJO;
@@ -157,7 +121,6 @@ impl Decodificador {
         Ok(salida)
     }
 
-    /// `H2-015`: un índice fuera de las dos tablas rompe la conexión.
     fn buscar(&self, indice: usize) -> Resultado<(String, String)> {
         if indice <= ESTATICA.len() {
             let (n, v) = ESTATICA[indice - 1];
@@ -181,11 +144,6 @@ impl Decodificador {
     }
 }
 
-/// Entero de longitud variable, §5.1. El prefijo lleva `bits` útiles; si están todos a uno, siguen
-/// septetos con el bit alto como continuación.
-///
-/// El tope de 5 septetos no es decorativo: sin él, una tira de octetos `0xff` describe un entero
-/// arbitrariamente grande y el bucle no termina.
 fn leer_entero(bloque: &[u8], i: &mut usize, bits: u8) -> Resultado<usize> {
     let mascara = (1usize << bits) - 1;
     if *i >= bloque.len() {
@@ -214,7 +172,6 @@ fn leer_entero(bloque: &[u8], i: &mut usize, bits: u8) -> Resultado<usize> {
     }
 }
 
-/// Cadena, §5.2: un bit de «viene en Huffman», la longitud en el mismo octeto y los datos.
 fn leer_cadena(bloque: &[u8], i: &mut usize) -> Resultado<String> {
     if *i >= bloque.len() {
         return Err(mal("cadena HPACK cortada"));
@@ -227,13 +184,9 @@ fn leer_cadena(bloque: &[u8], i: &mut usize) -> Resultado<String> {
     let datos = &bloque[*i..*i + largo];
     *i += largo;
     let octetos = if huffman { descomprimir(datos)? } else { datos.to_vec() };
-    // Un valor de cabecera es una tira de octetos, no texto: la conversión perdida convertiría
-    // bytes inválidos en '\u{fffd}' calladamente, y dos cabeceras distintas pasarían a ser iguales.
     String::from_utf8(octetos).map_err(|_| mal("cadena HPACK que no es UTF-8"))
 }
 
-/// Huffman, §5.2. Se recorre bit a bit contra la tabla: 257 símbolos de hasta 30 bits no justifican
-/// un árbol, y el bucle plano es el que se puede leer al lado del RFC.
 fn descomprimir(datos: &[u8]) -> Resultado<Vec<u8>> {
     let mut salida = Vec::with_capacity(datos.len() * 8 / 5);
     let mut acumulado: u64 = 0;
@@ -246,7 +199,6 @@ fn descomprimir(datos: &[u8]) -> Resultado<Vec<u8>> {
             match casar(acumulado, bits) {
                 Some((simbolo, largo)) => {
                     if simbolo == EOS {
-                        // H2-016: EOS dentro de la cadena, no como relleno.
                         return Err(mal("EOS dentro de una cadena Huffman"));
                     }
                     salida.push(simbolo as u8);
@@ -258,8 +210,6 @@ fn descomprimir(datos: &[u8]) -> Resultado<Vec<u8>> {
         }
     }
 
-    // Lo que queda tiene que ser relleno: menos de ocho bits y todos a uno, §5.2. Un relleno más
-    // largo o con un cero es un símbolo que se quedó a medias, y eso ya no es la misma cadena.
     if bits >= 8 {
         return Err(mal("relleno Huffman de ocho bits o más"));
     }
@@ -272,7 +222,6 @@ fn descomprimir(datos: &[u8]) -> Resultado<Vec<u8>> {
     Ok(salida)
 }
 
-/// El símbolo más corto que casa con los bits de la cabeza, o `None` si aún no hay bastantes.
 fn casar(acumulado: u64, bits: u32) -> Option<(usize, u32)> {
     for simbolo in 0..=EOS {
         let largo = LARGO[simbolo] as u32;
@@ -286,17 +235,9 @@ fn casar(acumulado: u64, bits: u32) -> Option<(usize, u32)> {
     None
 }
 
-// ── Codificar ───────────────────────────────────────────────────────────────────────────────
-//
-// El servidor solo codifica sus propias respuestas, y ahí la tabla dinámica aporta poco: las
-// cabeceras que se repiten entre respuestas —`content-type`, `server`— ya están en la estática.
-// Se codifica sin indexar, que deja la tabla del cliente quieta y hace la salida reproducible.
-
 pub struct Codificador;
 
 impl Codificador {
-    /// Un bloque con las cabeceras dadas. Los nombres se pasan a minúsculas: en HTTP/2 una
-    /// mayúscula en un nombre de campo es un mensaje malformado, §8.2.1.
     pub fn codificar(cabeceras: &[(String, String)]) -> Vec<u8> {
         let mut salida = Vec::new();
         for (nombre, valor) in cabeceras {
@@ -348,8 +289,6 @@ fn escribir_entero(salida: &mut Vec<u8>, valor: usize, bits: u8, bandera: u8) {
     salida.push(resto as u8);
 }
 
-/// Se escribe en Huffman solo si sale más corto. Comprimir cuando no comprime es gastar CPU por
-/// octetos de más, y el RFC lo deja a elección de quien codifica (§5.2).
 fn escribir_cadena(salida: &mut Vec<u8>, texto: &str) {
     let comprimido = comprimir(texto.as_bytes());
     if comprimido.len() < texto.len() {
@@ -377,7 +316,6 @@ fn comprimir(datos: &[u8]) -> Vec<u8> {
         }
     }
     if bits > 0 {
-        // El relleno son los bits altos de EOS, que son todos unos.
         salida.push(((acumulado << (8 - bits)) | ((1u64 << (8 - bits)) - 1)) as u8);
     }
     salida

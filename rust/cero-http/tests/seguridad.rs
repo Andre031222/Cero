@@ -1,13 +1,9 @@
-//! Una prueba por requisito de `spec/seguridad.md`, citándolo.
-
 use cero_http::seguridad::*;
 use std::time::Duration;
 
 fn tiene<'a>(h: &'a [(String, String)], n: &str) -> Option<&'a str> {
     h.iter().find(|(k, _)| k == n).map(|(_, v)| v.as_str())
 }
-
-// ── Cabeceras ───────────────────────────────────────────────────────────────
 
 #[test]
 fn seg_001_a_004_las_cabeceras_por_defecto() {
@@ -45,8 +41,6 @@ fn seg_007_el_enmarcado_se_puede_aflojar_sin_tocar_el_resto() {
     assert_eq!(tiene(&h, "X-Frame-Options"), Some("SAMEORIGIN"), "SEG-007");
     assert_eq!(tiene(&h, "X-Content-Type-Options"), Some("nosniff"), "SEG-007: el resto sigue");
 }
-
-// ── CORS ────────────────────────────────────────────────────────────────────
 
 fn cors(origenes: Origenes, credenciales: bool) -> Cors {
     Cors { origenes, credenciales,
@@ -112,8 +106,6 @@ fn seg_014_comodin_solo_sin_credenciales() {
     assert_eq!(tiene(&h, "Access-Control-Allow-Credentials"), Some("true"), "SEG-014");
 }
 
-// ── CSRF ────────────────────────────────────────────────────────────────────
-
 #[test]
 fn seg_015_a_018_el_token_manda_en_lo_que_escribe() {
     let sin = Vec::new();
@@ -128,11 +120,8 @@ fn seg_019_la_exencion_casa_por_segmento_completo() {
     let ex = vec!["/api/publico".to_string()];
     assert!(exento("/api/publico", &ex), "SEG-019");
     assert!(exento("/api/publico/algo", &ex), "SEG-019: y lo que cuelga de él");
-    // El hallazgo de auditoría: por prefijo pelado, esto quedaba exento sin quererlo.
     assert!(!exento("/api/publicoSECRETO", &ex), "SEG-019: NO por prefijo pelado");
 }
-
-// ── Límite ──────────────────────────────────────────────────────────────────
 
 #[test]
 fn seg_020_y_021_el_429_anuncia_lo_que_debe() {
@@ -148,18 +137,6 @@ fn seg_020_y_021_el_429_anuncia_lo_que_debe() {
     assert_eq!(tiene(&h, "X-RateLimit-Limit"), Some("3"), "SEG-021");
 }
 
-/// SEG-022 no se verifica aquí, y conviene decir por qué en vez de fingir que sí.
-///
-/// El requisito dice que la cuota no puede depender de la ruta. En Java eso es comprobable:
-/// `pedir` recibía la ruta y había que verificar que no la usara. Aquí `pedir` **no la recibe**,
-/// así que el incumplimiento no se puede escribir: no hay prueba que pueda fallar.
-///
-/// Es la misma clase de hallazgo que `SES-011` en el hito 2. Parte del contrato se cumple por
-/// disciplina y parte se puede delegar a la forma del tipo; cuál es cuál depende del lenguaje, y
-/// donde se delega, la prueba deja de tener sentido y sobra.
-///
-/// Lo que sí se comprueba es la consecuencia que el hallazgo de auditoría tenía: que el mapa de
-/// cuentas no crece con el tráfico de un mismo cliente.
 #[test]
 fn seg_022_el_mapa_de_cuotas_no_crece_con_las_peticiones() {
     let l = Limitador::nuevo(2, Duration::from_secs(60));
@@ -169,8 +146,6 @@ fn seg_022_el_mapa_de_cuotas_no_crece_con_las_peticiones() {
     assert_eq!(l.claves(), 1, "SEG-022: una clave por cliente, no por petición");
     assert!(!l.pedir("1.2.3.4").permitida, "y el cupo se agota igual");
 }
-
-// ── Saneado ─────────────────────────────────────────────────────────────────
 
 #[test]
 fn seg_023_quita_lo_ejecutable() {
@@ -206,19 +181,9 @@ fn seg_026_los_nombres_de_archivo() {
     assert_eq!(sanear_nombre("C:\\Windows\\x.txt"), "x.txt", "SEG-026: y la de Windows");
     assert_eq!(sanear_nombre("informe final.pdf"), "informe final.pdf", "SEG-026: lo normal pasa");
     assert!(!sanear_nombre("...").is_empty(), "SEG-026: nunca queda vacío");
-    // El intento real: colar una cookie por el nombre de archivo.
     assert!(!sanear_nombre("a\"; Set-Cookie: x=y").contains(';'), "SEG-026");
 }
 
-// ── El token CSRF, de punta a punta ─────────────────────────────────────────
-
-/// `SEG-017`: la respuesta que exige token tiene que poder emitir uno, y ese token tiene que estar
-/// atado a una sesión. Sin lo primero una ruta protegida es inusable —el cliente no tiene de dónde
-/// sacar el token—; sin lo segundo no protege de nada, porque el sitio atacante pediría el suyo.
-///
-/// Emitirlo lo pide la acción y no lo pone el framework en toda respuesta: hacerlo siempre
-/// obligaría a abrir sesión a todo el que pase, incluido el rastreador que nunca va a mandar un
-/// POST. Es `SES-001` otra vez.
 #[test]
 fn seg_017_el_token_se_emite_y_lo_ata_una_sesion() {
     use cero_http::{Contexto, Peticion, Respuesta, Router, Servidor};
@@ -255,19 +220,12 @@ fn seg_017_el_token_se_emite_y_lo_ata_una_sesion() {
         .map(|(_, v)| v.clone()).expect("SEG-017: y una sesión que lo ate");
     let id = cookie.split(';').next().unwrap().to_string();
 
-    // SEG-016: el mismo token sin la sesión no vale, que es lo que hace que atarlo sirva.
     assert_eq!(pedir("POST", "/guardar", vec![("x-csrf-token", &token)]).estado, 403, "SEG-016");
     assert_eq!(pedir("POST", "/guardar", vec![("cookie", &id)]).estado, 403, "SEG-016");
-    // SEG-018: los dos juntos pasan.
     let bien = pedir("POST", "/guardar", vec![("cookie", &id), ("x-csrf-token", &token)]);
     assert_eq!(bien.estado, 200, "SEG-018");
 }
 
-// ── Validación · SEG-027 y SEG-028 ──────────────────────────────────────────
-
-/// `SEG-027`: validar no es normalizar. Si la validación devolviera algo retocado —un texto
-/// recortado, un número redondeado—, lo que llega a la acción ya no sería lo que mandó el cliente,
-/// y eso es una transformación que nadie pidió escondida detrás de una comprobación.
 #[test]
 fn seg_027_un_cuerpo_valido_llega_sin_alterar() {
     use cero_http::{json, validar, Regla};
@@ -284,9 +242,6 @@ fn seg_027_un_cuerpo_valido_llega_sin_alterar() {
     assert!(pasado.get("extra").is_some(), "SEG-027: y lo que no se validó sigue ahí");
 }
 
-/// `SEG-028`: 422 y no 400 —el cuerpo se entendió, lo que falla es su contenido—, y con el campo y
-/// el motivo. Un 422 que solo dice «inválido» obliga a quien llama a adivinar, y lo que hace en la
-/// práctica es reintentar con lo mismo.
 #[test]
 fn seg_028_un_cuerpo_invalido_es_422_y_dice_cual() {
     use cero_http::{json, validar, Regla};

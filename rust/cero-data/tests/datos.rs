@@ -1,8 +1,3 @@
-//! El contrato de datos, probado entero **sin base de datos**.
-//!
-//! Que esto sea posible es la prueba de que el módulo define el contrato y no depende de ningún
-//! motor, igual que `cero-data` en Java no declara driver de ejecución.
-
 use cero_data::memoria::EnMemoria;
 use cero_data::migraciones::{self, Migracion};
 use cero_data::{transaccion, Fallo, Fila, Fuente, Repositorio, Valor};
@@ -47,8 +42,6 @@ fn el_repositorio_busca_por_clave() {
 #[test]
 fn el_repositorio_rechaza_identificadores_que_no_puede_parametrizar() {
     let m = EnMemoria::nueva();
-    // Un nombre de tabla no puede ir como parámetro en SQL. Si viene de fuera y no se comprueba,
-    // es inyección — y por eso se comprueba al construir y no al consultar.
     for malo in ["nota; DROP TABLE x", "nota'", "", "no tabla"] {
         assert!(Repositorio::nuevo(&m, malo, "id").is_err(), "debería rechazar: {malo:?}");
     }
@@ -78,7 +71,6 @@ fn la_transaccion_deshace_cuando_el_cuerpo_falla() {
 
 #[test]
 fn partir_por_punto_y_coma_es_lo_que_falla() {
-    // El caso exacto que rompía la implementación ingenua: un punto y coma dentro de una cadena.
     let guion = "INSERT INTO t VALUES ('a;b');\nDELETE FROM t WHERE x = 1;";
     let s = migraciones::sentencias(guion);
     assert_eq!(s.len(), 2, "dos sentencias, no tres · {s:?}");

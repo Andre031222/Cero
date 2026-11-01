@@ -1,8 +1,3 @@
-//! Lo que una acción recibe y lo que devuelve.
-//!
-//! El contrato no dice cómo se llama nada de esto —`spec/ruteo.md` lo deja explícitamente fuera—,
-//! solo qué tiene que estar disponible y qué forma toma la respuesta.
-
 use crate::fallo::Fallo;
 use crate::json::{self, Json};
 use crate::peticion::Peticion;
@@ -25,17 +20,14 @@ impl Respuesta {
         Respuesta { estado, tipo: tipo.into(), cuerpo, extra: Vec::new() }
     }
 
-    /// RUT-019: una cadena se sirve como texto plano.
     pub fn texto(cuerpo: &str) -> Respuesta {
         Respuesta::con(200, "text/plain; charset=utf-8", cuerpo.as_bytes().to_vec())
     }
 
-    /// RUT-019: un valor se serializa a JSON.
     pub fn json(v: Json) -> Respuesta {
         Respuesta::con(200, "application/json; charset=utf-8", v.escribir().into_bytes())
     }
 
-    /// JSON ya formado, para cuando la aplicación lo tiene en texto.
     pub fn json_crudo(cuerpo: &str) -> Respuesta {
         Respuesta::con(200, "application/json; charset=utf-8", cuerpo.as_bytes().to_vec())
     }
@@ -44,20 +36,16 @@ impl Respuesta {
         Respuesta::con(200, "text/html; charset=utf-8", cuerpo.as_bytes().to_vec())
     }
 
-    /// RUT-020: devolver nada responde 204.
     pub fn nada() -> Respuesta {
         Respuesta::con(204, "text/plain; charset=utf-8", Vec::new())
     }
 
-    /// RUT-021: una redirección es 302 con Location.
     pub fn redirigir(a: &str) -> Respuesta {
         let mut r = Respuesta::con(302, "text/plain; charset=utf-8", Vec::new());
         r.extra.push(("Location".into(), a.into()));
         r
     }
 
-    /// RUT-022: la descarga sanea el nombre antes de ponerlo en la cabecera. No es opcional: por
-    /// ahí se intentó colar una cookie.
     pub fn descarga(cuerpo: Vec<u8>, nombre: &str, tipo: &str) -> Respuesta {
         let limpio = crate::seguridad::sanear_nombre(nombre);
         let mut r = Respuesta::con(200, tipo, cuerpo);
@@ -78,15 +66,10 @@ impl Respuesta {
     }
 }
 
-/// RUT-037: el contexto está disponible para la acción sin declararlo como dependencia.
 pub struct Contexto<'p> {
     pub peticion: &'p Peticion,
     pub variables: HashMap<String, String>,
-    /// La sesión que llegó con la petición, si llegó alguna.
     sesion: Option<Arc<Mutex<Sesion>>>,
-    /// La que abrió la acción durante esta petición. Sin esto, una sesión creada dentro de la
-    /// acción no llega al punto que emite la cookie y el cliente nunca la recibe: es la familia
-    /// de `SES-010` otra vez, con otra cara.
     abierta: RefCell<Option<Arc<Mutex<Sesion>>>>,
     abrir: Box<dyn Fn() -> Option<Arc<Mutex<Sesion>>> + 'p>,
     registro: &'p Registro,
@@ -103,24 +86,18 @@ impl<'p> Contexto<'p> {
         Contexto { peticion, variables, sesion, abierta: RefCell::new(None), abrir, registro }
     }
 
-    /// `RUT-032` a `RUT-036` desde la acción: las dependencias que montó el servidor.
     pub fn registro(&self) -> &Registro {
         self.registro
     }
 
-    /// `RUT-018`: una cabecera ausente queda sin valor, no falla. Un `User-Agent` que no viene no
-    /// es una petición mal formada, y tratarlo como tal convierte en 400 lo que era un 200.
     pub fn cabecera(&self, nombre: &str) -> Option<&str> {
         self.peticion.cabecera(nombre)
     }
 
-    /// RUT-002: la variable de ruta, por su nombre.
     pub fn variable(&self, nombre: &str) -> Option<&str> {
         self.variables.get(nombre).map(String::as_str)
     }
 
-    /// RUT-014 y RUT-015: convertida al tipo que la acción pida. `Err` es 400 y no 500: el
-    /// cliente mandó mal la petición.
     pub fn variable_como<T: std::str::FromStr>(&self, nombre: &str) -> Result<T, Fallo> {
         self.variable(nombre)
             .ok_or_else(|| Fallo::nuevo(400, "falta la variable"))?
@@ -136,8 +113,6 @@ impl<'p> Contexto<'p> {
         })
     }
 
-    /// RUT-016: un defecto declarado se distingue de «sin defecto». `None` significa ausente y
-    /// `Some("")` significa presente y vacío, que no es lo mismo para una búsqueda.
     pub fn consulta_o(&self, nombre: &str, defecto: &str) -> String {
         self.consulta(nombre).unwrap_or_else(|| defecto.to_string())
     }
@@ -146,14 +121,11 @@ impl<'p> Contexto<'p> {
         String::from_utf8_lossy(&self.peticion.cuerpo).into_owned()
     }
 
-    /// RUT-017: el cuerpo interpretado como JSON. `Err` es 400: el cliente mandó mal la petición,
-    /// no falló el servidor.
     pub fn cuerpo_json(&self) -> Result<Json, Fallo> {
         json::leer(&self.cuerpo_texto())
             .map_err(|e| Fallo::nuevo(400, &format!("el cuerpo no es JSON válido: {}", e.0)))
     }
 
-    /// Un campo de un formulario `application/x-www-form-urlencoded`.
     pub fn campo(&self, nombre: &str) -> Option<String> {
         pares(&self.cuerpo_texto()).into_iter().find_map(|(k, v)| (k == nombre).then_some(v))
     }
@@ -162,16 +134,10 @@ impl<'p> Contexto<'p> {
         pares(&self.cuerpo_texto())
     }
 
-    /// La sesión de esta petición, si ya existe. No la crea: `SES-001` dice que leer no puede
-    /// crear, porque eso convierte a cualquier rastreador en un generador de sesiones huérfanas.
     pub fn sesion(&self) -> Option<&Arc<Mutex<Sesion>>> {
         self.sesion.as_ref()
     }
 
-    /// Abre una sesión. Solo esto la crea, y solo cuando la aplicación lo pide.
-    ///
-    /// Llamarlo dos veces devuelve la misma: abrir sesión es idempotente dentro de una petición,
-    /// porque si no lo fuera la segunda llamada dejaría huérfana a la primera.
     pub fn abrir_sesion(&self) -> Option<Arc<Mutex<Sesion>>> {
         if let Some(ya) = self.abierta.borrow().as_ref() {
             return Some(Arc::clone(ya));
@@ -184,15 +150,6 @@ impl<'p> Contexto<'p> {
         Some(nueva)
     }
 
-    /// `SEG-017`: el token CSRF de esta petición, creándolo si aún no lo hay.
-    ///
-    /// Que lo pida la aplicación y no lo ponga el framework en toda respuesta es deliberado: el
-    /// token va donde la aplicación lo necesite —un campo oculto del formulario, una cabecera para
-    /// el JavaScript— y emitirlo siempre obligaría a abrir sesión a todo el que pase, incluido el
-    /// rastreador que nunca va a mandar un POST. Es `SES-001` otra vez: leer no puede crear.
-    ///
-    /// **Abre sesión**, porque un token que no esté atado a una sesión no protege de nada: lo
-    /// podría pedir el propio sitio atacante.
     pub fn token_csrf(&self) -> Option<String> {
         let sesion = self.abrir_sesion()?;
         let mut g = sesion.lock().ok()?;
@@ -204,15 +161,12 @@ impl<'p> Contexto<'p> {
         Some(token)
     }
 
-    /// La que haya que usar al emitir la cookie: la abierta si la hubo, si no la que llegó.
     pub(crate) fn sesion_final(&self) -> Option<Arc<Mutex<Sesion>>> {
         self.abierta.borrow().clone().or_else(|| self.sesion.clone())
     }
 }
 
 
-/// Parte `a=1&b=hola+mundo` y deshace el porcentaje. Un valor mal codificado no aborta la lectura
-/// entera: se conserva tal cual, porque tirar todo el formulario por un campo roto es peor.
 fn pares(cadena: &str) -> Vec<(String, String)> {
     cadena
         .split('&')

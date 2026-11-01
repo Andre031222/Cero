@@ -1,13 +1,3 @@
-//! JSON: leer y escribir, sin dependencias.
-//!
-//! Java tiene el suyo en `cero-core` y por el mismo motivo: un framework que obliga a traer una
-//! biblioteca de JSON para devolver un objeto no tiene cero dependencias, tiene una escondida.
-//!
-//! No hay derivación automática —eso pide macros procedurales, que en Rust son una caja externa—,
-//! así que la aplicación construye el valor. A cambio, el árbol es explícito y no hay reflexión
-//! en el camino caliente, que es lo mismo que Java persigue resolviendo la vinculación al
-//! registrar la ruta.
-
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
@@ -18,8 +8,6 @@ pub enum Json {
     Numero(f64),
     Texto(String),
     Lista(Vec<Json>),
-    /// `BTreeMap` y no `HashMap`: el orden de las claves es estable entre ejecuciones, así que
-    /// dos respuestas iguales producen bytes iguales y se pueden comparar y cachear.
     Objeto(BTreeMap<String, Json>),
 }
 
@@ -39,7 +27,6 @@ impl Json {
         }
     }
 
-    /// Un punto del árbol: `"usuario.direccion.calle"`, o `"items.0.id"` para entrar en listas.
     pub fn ruta(&self, camino: &str) -> Option<&Json> {
         let mut actual = self;
         for paso in camino.split('.') {
@@ -98,8 +85,6 @@ impl Json {
             Json::Nulo => s.push_str("null"),
             Json::Bool(b) => s.push_str(if *b { "true" } else { "false" }),
             Json::Numero(n) => {
-                // NaN e infinito no existen en JSON. Escribirlos produce un documento que nadie
-                // puede leer, así que se emite null, que sí es válido.
                 if n.is_finite() {
                     if n.fract() == 0.0 && n.abs() < 1e15 {
                         let _ = write!(s, "{}", *n as i64);
@@ -149,10 +134,6 @@ impl<T: Into<Json>> From<Option<T>> for Json {
     }
 }
 
-/// Escapa lo que el RFC 8259 exige, incluidos los controles por debajo de 0x20.
-///
-/// `</script` también se escapa: un JSON incrustado en una página que contenga esa secuencia
-/// cierra la etiqueta y lo que siga se ejecuta. Es XSS a través de una respuesta válida.
 fn escapar(t: &str, s: &mut String) {
     s.push('"');
     for c in t.chars() {
@@ -173,8 +154,6 @@ fn escapar(t: &str, s: &mut String) {
     }
     s.push('"');
 }
-
-// ── Lectura ─────────────────────────────────────────────────────────────────────────────────
 
 const PROFUNDIDAD_MAXIMA: usize = 64;
 
@@ -211,8 +190,6 @@ impl Lector<'_> {
     }
 
     fn valor(&mut self) -> Result<Json, ErrorJson> {
-        // Un documento muy anidado desborda la pila antes de terminar de leerse: es una denegación
-        // de servicio con un cuerpo pequeño, y por eso hay tope.
         if self.hondo > PROFUNDIDAD_MAXIMA {
             return Err(ErrorJson("demasiado anidamiento".into()));
         }
@@ -335,7 +312,6 @@ impl Lector<'_> {
                         otro => return Err(ErrorJson(format!("escape desconocido: \\{otro}"))),
                     }
                 }
-                // Los controles sin escapar no son JSON válido (RFC 8259 §7).
                 c if (c as u32) < 0x20 => {
                     return Err(ErrorJson("control sin escapar dentro de una cadena".into()))
                 }

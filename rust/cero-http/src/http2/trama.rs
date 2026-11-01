@@ -1,9 +1,3 @@
-//! Tramas HTTP/2, según `spec/http2.md`.
-//!
-//! Casi todos los requisitos de este bloque son rechazos: qué **no** se admite y con qué código.
-//! Esa asimetría no es casual — un servidor HTTP/2 permisivo es un servidor que desacuerda con
-//! el proxy que tiene delante, y ahí empieza el contrabando.
-
 use std::io::{Read, Write};
 
 pub const PREAMBULO: &[u8] = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
@@ -25,7 +19,6 @@ pub const RECONOCE: u8 = 0x1;
 pub const RELLENO: u8 = 0x8;
 pub const PRIORIDAD: u8 = 0x20;
 
-/// Códigos de error del RFC 9113 §7.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Error {
     Ninguno = 0x0,
@@ -40,15 +33,12 @@ pub enum Error {
     Calma = 0xb,
 }
 
-/// Un fallo que se lleva la conexión entera por delante.
 #[derive(Debug)]
 pub struct FalloConexion {
     pub codigo: Error,
     pub porque: &'static str,
 }
 
-/// Un fallo que solo anula un flujo. La distinción importa: tumbar la conexión por un flujo
-/// malo deja sin servicio a los demás, que es justo lo que HTTP/2 vino a evitar.
 #[derive(Debug)]
 pub struct FalloFlujo {
     pub flujo: u32,
@@ -78,8 +68,6 @@ impl Trama {
         self.banderas & FIN_CABECERAS != 0
     }
 
-    /// H2-014: una trama mayor que lo negociado no se admite. Se comprueba **antes** de leer la
-    /// carga: si se leyera primero, anunciar 16 MB bastaría para que el servidor los reservara.
     pub fn leer(origen: &mut impl Read, max: u32) -> Resultado<Trama> {
         let mut cabecera = [0u8; 9];
         origen
@@ -91,7 +79,6 @@ impl Trama {
         }
         let tipo = cabecera[3];
         let banderas = cabecera[4];
-        // El bit más alto del identificador está reservado y se ignora, no se rechaza.
         let flujo = u32::from_be_bytes([cabecera[5] & 0x7f, cabecera[6], cabecera[7], cabecera[8]]);
         let mut carga = vec![0u8; largo as usize];
         origen
@@ -112,18 +99,13 @@ impl Trama {
         destino.write_all(&self.carga)
     }
 
-    /// Los rechazos que dependen solo de la trama, sin mirar el estado de la conexión.
-    /// `H2-002` a `H2-013`.
     pub fn comprobar(&self) -> Resultado<()> {
         match self.tipo {
-            // H2-004: DATA sobre el flujo 0.
             DATA if self.flujo == 0 => Err(mal(Error::Protocolo, "DATA sobre el flujo 0")),
-            // H2-005 y H2-006: HEADERS sobre el flujo 0 o sobre un flujo par.
             HEADERS if self.flujo == 0 => Err(mal(Error::Protocolo, "HEADERS sobre el flujo 0")),
             HEADERS if self.flujo % 2 == 0 => {
                 Err(mal(Error::Protocolo, "HEADERS sobre un flujo par: los pares son del servidor"))
             }
-            // H2-002 y H2-003.
             SETTINGS if self.flujo != 0 => Err(mal(Error::Protocolo, "SETTINGS sobre un flujo")),
             SETTINGS if self.banderas & RECONOCE != 0 && !self.carga.is_empty() => {
                 Err(mal(Error::TamanoDeTrama, "SETTINGS con ACK y carga"))
@@ -131,12 +113,9 @@ impl Trama {
             SETTINGS if self.carga.len() % 6 != 0 => {
                 Err(mal(Error::TamanoDeTrama, "SETTINGS no múltiplo de seis"))
             }
-            // H2-009: un cliente no promete nada.
             PUSH_PROMISE => Err(mal(Error::Protocolo, "PUSH_PROMISE de un cliente")),
-            // H2-010 y H2-011.
             PING if self.flujo != 0 => Err(mal(Error::Protocolo, "PING sobre un flujo")),
             PING if self.carga.len() != 8 => Err(mal(Error::TamanoDeTrama, "PING que no mide ocho")),
-            // H2-012 y H2-013.
             WINDOW_UPDATE if self.carga.len() != 4 => {
                 Err(mal(Error::TamanoDeTrama, "WINDOW_UPDATE que no mide cuatro"))
             }
@@ -186,11 +165,6 @@ impl Trama {
     }
 }
 
-/// Los ajustes que el RFC 9113 §6.5.2 define.
-///
-/// Hay dos juegos por conexión y confundirlos es un agujero, no un descuido: los nuestros dicen lo
-/// que admitimos recibir y los del cliente lo que él admite recibir. Dejar que los suyos pisen los
-/// nuestros deja al cliente subiendo nuestros propios topes por SETTINGS.
 #[derive(Debug, Clone, Copy)]
 pub struct Ajustes {
     pub max_flujos: u32,
@@ -206,17 +180,14 @@ impl Default for Ajustes {
 }
 
 impl Ajustes {
-    /// Los que hay que suponerle al cliente hasta que mande los suyos (§6.5.2). No son los
-    /// nuestros: suponer aquí lo que nosotros anunciamos sería mandarle tramas que no aceptó.
     pub fn del_rfc() -> Ajustes {
         Ajustes { max_flujos: u32::MAX, ventana_inicial: 65_535, max_trama: 16_384, max_cabeceras: u32::MAX }
     }
 
-    /// H2-027: el servidor manda los suyos como primera trama.
     pub fn trama(&self) -> Trama {
         let mut c = Vec::with_capacity(24);
         for (id, v) in [
-            (0x2u16, 0u32),                    // push deshabilitado
+            (0x2u16, 0u32),
             (0x3, self.max_flujos),
             (0x4, self.ventana_inicial),
             (0x5, self.max_trama),
@@ -228,8 +199,6 @@ impl Ajustes {
         Trama { tipo: SETTINGS, banderas: 0, flujo: 0, carga: c }
     }
 
-    /// Aplica los del cliente. Devuelve el delta de ventana inicial, que hay que sumar a los
-    /// flujos ya abiertos (RFC 9113 §6.9.2).
     pub fn aplicar(&mut self, carga: &[u8]) -> Resultado<i64> {
         let mut delta = 0i64;
         for par in carga.chunks_exact(6) {
@@ -241,9 +210,6 @@ impl Ajustes {
                     if v > 0x7fff_ffff {
                         return Err(mal(Error::ControlDeFlujo, "ventana inicial imposible"));
                     }
-                    // Se acumula: una misma trama puede traer el ajuste dos veces, y hay que
-                    // aplicarlos en orden (§6.5.3). Quedarse con el último delta en vez de la suma
-                    // da un total que no es ni el primero ni el segundo.
                     delta += v as i64 - self.ventana_inicial as i64;
                     self.ventana_inicial = v;
                 }
@@ -255,8 +221,6 @@ impl Ajustes {
                 }
                 0x3 => self.max_flujos = v,
                 0x6 => self.max_cabeceras = v,
-                // Un ajuste desconocido se ignora, no se rechaza: es lo que permite extender el
-                // protocolo sin romper a quien no lo conoce.
                 _ => {}
             }
         }

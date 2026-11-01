@@ -1,13 +1,3 @@
-//! Sesiones en una tabla: `spec/sesiones.md`, `SES-012` y `SES-013`.
-//!
-//! El almacén en memoria de `cero-http` sirve para un proceso. En cuanto hay dos instancias detrás
-//! de un balanceador, la sesión que abrió una no existe para la otra y el usuario se encuentra
-//! fuera cada dos peticiones. Esto lo arregla, y también que un despliegue no eche a nadie.
-//!
-//! Vive aquí y no en `cero-http` por la misma razón que `JdbcSessions` vive en el `cero-data` de
-//! Java: la capa HTTP define el contrato —el rasgo `Sesiones`— y quien sabe de bases de datos lo
-//! implementa. Al revés metería SQL dentro del servidor.
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -20,18 +10,10 @@ use crate::{Fila, Fuente, Repositorio, Valor};
 pub struct AlmacenSql {
     fuente: Arc<dyn Fuente>,
     tabla: String,
-    /// La caducidad y el identificador se delegan: son reglas del contrato de sesiones, no de la
-    /// base de datos, y reescribirlas aquí sería tener dos sitios donde pueden discrepar.
     reglas: Almacen,
 }
 
 impl AlmacenSql {
-    /// `SES-013`: el nombre de la tabla se da al construir y **no hay valor por omisión**.
-    ///
-    /// Exigir una tabla llamada `sesiones` obliga a quien ya tiene un esquema a renombrar lo suyo
-    /// para encajar en el framework, que es la relación al revés. El nombre se valida porque un
-    /// identificador no puede ir parametrizado en SQL: si viene de fuera y no se comprueba, es
-    /// inyección — y eso lo hace `Repositorio` al construirse.
     pub fn nuevo(
         fuente: Arc<dyn Fuente>,
         tabla: &str,
@@ -50,7 +32,6 @@ impl AlmacenSql {
         &self.tabla
     }
 
-    /// El DDL de la tabla, para que la migración no haya que adivinarla.
     pub fn esquema(tabla: &str) -> String {
         format!(
             "CREATE TABLE IF NOT EXISTS {tabla} (\n  \
@@ -81,15 +62,12 @@ const COLUMNA_CREADA: &str = "creada";
 const COLUMNA_TOCADA: &str = "tocada";
 
 impl Sesiones for AlmacenSql {
-    /// `SES-001` sigue valiendo: sin cookie no se busca nada, y lo que no está no se crea.
     fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>> {
         let id = id?;
         let fila = self.repositorio().ok()?.por_clave(Valor::Texto(id.into())).ok()??;
         let creada = desde_segundos(fila.entero(COLUMNA_CREADA)?);
         let tocada = desde_segundos(fila.entero(COLUMNA_TOCADA)?);
         if self.reglas.caducada(creada, tocada) {
-            // Caducada se borra al tocarla y no por un barrido: así no hace falta un hilo que
-            // limpie, y la fila muerta no puede volver a autenticar a nadie por mucho que quede.
             let _ = self.repositorio().ok()?.borrar(Valor::Texto(id.into()));
             return None;
         }
@@ -103,10 +81,6 @@ impl Sesiones for AlmacenSql {
         Ok(sesion)
     }
 
-    /// `SES-005`: el identificador cambia y los atributos se conservan. En una tabla eso son dos
-    /// pasos, y el orden importa: primero se escribe la fila nueva y **después** se borra la
-    /// vieja. Al revés, un fallo entre los dos pasos pierde la sesión; así, lo peor que deja es
-    /// una fila de sobra que caduca sola.
     fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str> {
         let viejo = sesion.lock().map_err(|_| "sesión envenenada")?.id().to_string();
         let nuevo = self.reglas.rotar(sesion)?;
@@ -125,8 +99,6 @@ impl Sesiones for AlmacenSql {
             .unwrap_or(0)
     }
 
-    /// Solo si cambió. Guardar en cada respuesta serían dos viajes a la base por cada `GET` que no
-    /// tocó nada, y eso convierte el almacén compartido en el cuello de botella del servidor.
     fn guardar(&self, sesion: &Arc<Mutex<Sesion>>) {
         let Ok(mut g) = sesion.lock() else { return };
         if !g.sucia() {
@@ -148,15 +120,11 @@ impl Sesiones for AlmacenSql {
     }
 }
 
-/// Los atributos van como JSON y no en columnas: una sesión guarda lo que la aplicación quiera, y
-/// una columna por clave obligaría a migrar el esquema cada vez que alguien guarda algo nuevo.
 fn a_json(atributos: &HashMap<String, String>) -> String {
     let pares = atributos.iter().map(|(k, v)| (k.as_str(), Json::Texto(v.clone())));
     Json::objeto(pares.collect()).escribir()
 }
 
-/// Lo que no se entiende se devuelve vacío y no revienta: una fila corrupta deja a alguien sin
-/// sesión, pero tirar el servidor por ella deja a todos sin servicio.
 fn de_json(texto: &str) -> HashMap<String, String> {
     let Ok(Json::Objeto(mapa)) = cero_http::json::leer(texto) else {
         return HashMap::new();
@@ -166,8 +134,6 @@ fn de_json(texto: &str) -> HashMap<String, String> {
         .collect()
 }
 
-/// Segundos desde la época. La fecha se guarda como entero y no como el tipo temporal del motor
-/// porque ahí cada uno tiene el suyo, y el contrato no puede depender de cuál.
 fn en_segundos(t: SystemTime) -> i64 {
     t.duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
 }

@@ -1,13 +1,3 @@
-//! Acceso a datos: el contrato, no el driver.
-//!
-//! En Java este módulo se apoya en `java.sql`, que viene en la plataforma, y la aplicación aporta
-//! el driver. La biblioteca estándar de Rust no trae ninguna interfaz de base de datos, así que
-//! aquí se define — y el reparto queda idéntico: **el framework pone el contrato y la aplicación
-//! pone el driver**, que es la única excepción a «cero dependencias» que el proyecto ya declaraba.
-//!
-//! La consecuencia práctica es que `cero-data` no depende de ningún motor y se puede probar
-//! entero sin base de datos, con la implementación en memoria de [`memoria`].
-
 pub mod memoria;
 pub mod migraciones;
 pub mod sesiones;
@@ -15,10 +5,6 @@ pub mod sesiones;
 use std::collections::HashMap;
 use std::fmt;
 
-/// Un valor tal como viaja entre la aplicación y el motor.
-///
-/// No se admite «cualquier cosa»: un valor que el framework no sepa nombrar es un valor que el
-/// driver tendrá que adivinar, y adivinar es como se escapan las inyecciones.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Valor {
     Nulo,
@@ -48,7 +34,6 @@ impl From<String> for Valor { fn from(v: String) -> Valor { Valor::Texto(v) } }
 impl From<bool> for Valor { fn from(v: bool) -> Valor { Valor::Booleano(v) } }
 impl From<f64> for Valor { fn from(v: f64) -> Valor { Valor::Real(v) } }
 
-/// Una fila, accesible por nombre de columna.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Fila {
     columnas: HashMap<String, Valor>,
@@ -102,11 +87,6 @@ impl std::error::Error for Fallo {}
 
 pub type Resultado<T> = Result<T, Fallo>;
 
-/// Lo que la aplicación implementa para su motor.
-///
-/// Las consultas llevan **siempre** parámetros separados. No hay ningún método que acepte SQL ya
-/// interpolado: en Java eso es una convención que hay que respetar, aquí no existe la forma de
-/// saltársela sin escribirla a mano.
 pub trait Conexion: Send {
     fn consultar(&mut self, sql: &str, parametros: &[Valor]) -> Resultado<Vec<Fila>>;
     fn ejecutar(&mut self, sql: &str, parametros: &[Valor]) -> Resultado<u64>;
@@ -115,15 +95,10 @@ pub trait Conexion: Send {
     fn deshacer(&mut self) -> Resultado<()>;
 }
 
-/// De dónde salen las conexiones. Un pool, un fichero, lo que la aplicación decida.
 pub trait Fuente: Send + Sync {
     fn conexion(&self) -> Resultado<Box<dyn Conexion>>;
 }
 
-/// Una transacción que **no puede quedarse a medias por olvido**.
-///
-/// Si el cuerpo devuelve error o lanza, se deshace. En Java esto es un `try`/`catch` que hay que
-/// escribir bien cada vez; aquí la única forma de tener una transacción es pasar por aquí.
 pub fn transaccion<T>(
     fuente: &dyn Fuente,
     cuerpo: impl FnOnce(&mut dyn Conexion) -> Resultado<T>,
@@ -136,14 +111,12 @@ pub fn transaccion<T>(
             Ok(v)
         }
         Err(e) => {
-            // Si deshacer también falla, manda el fallo original: es el que explica qué pasó.
             let _ = c.deshacer();
             Err(e)
         }
     }
 }
 
-/// Acceso por clave primaria y listado, que es lo que casi toda aplicación necesita.
 pub struct Repositorio<'f> {
     fuente: &'f dyn Fuente,
     tabla: String,
@@ -151,8 +124,6 @@ pub struct Repositorio<'f> {
 }
 
 impl<'f> Repositorio<'f> {
-    /// El nombre de tabla se valida al construir: un identificador no puede ir parametrizado en
-    /// SQL, así que si viene de fuera y no se comprueba, es inyección.
     pub fn nuevo(fuente: &'f dyn Fuente, tabla: &str, clave: &str) -> Resultado<Repositorio<'f>> {
         for nombre in [tabla, clave] {
             if nombre.is_empty()
@@ -174,12 +145,6 @@ impl<'f> Repositorio<'f> {
         self.fuente.conexion()?.consultar(&sql, &[Valor::Entero(limite as i64)])
     }
 
-    /// Guarda la fila: la actualiza si estaba y la inserta si no.
-    ///
-    /// Dos órdenes y no un `UPSERT`, que cada motor escribe distinto —`ON CONFLICT` en PostgreSQL,
-    /// `ON DUPLICATE KEY` en MySQL, `INSERT OR REPLACE` en SQLite—. Pedirle una de esas al driver
-    /// sería meter el dialecto de un motor dentro del contrato, que es justo lo que este módulo
-    /// evita. `UPDATE` y, si no tocó nada, `INSERT`: eso lo entiende cualquiera.
     pub fn guardar(&self, fila: &Fila) -> Resultado<()> {
         let clave = fila
             .valor(&self.clave)

@@ -1,10 +1,3 @@
-//! HPACK contra el apéndice C del RFC 7541, más los requisitos de `spec/http2.md` que le tocan.
-//!
-//! Los vectores del apéndice son la única comprobación que no se puede escribir «de acuerdo con lo
-//! que hace el código»: los octetos y el estado de la tabla vienen dados, y la tabla dinámica
-//! después de cada paso está en el RFC. Un decodificador que acierte el resultado pero deje la
-//! tabla distinta pasaría cualquier prueba propia y fallaría en la petición siguiente.
-
 use cero_http::http2::hpack::{Codificador, Decodificador};
 use cero_http::http2::hpack_tablas::{CODIGO, ESTATICA, LARGO};
 
@@ -24,10 +17,6 @@ fn pares(v: &[(&str, &str)]) -> Vec<(String, String)> {
     v.iter().map(|(n, x)| (n.to_string(), x.to_string())).collect()
 }
 
-// ── Las tablas ──────────────────────────────────────────────────────────────────────────────
-
-/// La suma de Kraft de un código prefijo completo vale exactamente 1. Es lo que demuestra que no
-/// falta ni sobra un símbolo en las 257 filas; una tabla mal copiada no revienta, decodifica mal.
 #[test]
 fn el_codigo_de_huffman_es_un_codigo_prefijo_completo() {
     let suma: f64 = LARGO.iter().map(|&l| 2f64.powi(-(l as i32))).sum();
@@ -37,8 +26,6 @@ fn el_codigo_de_huffman_es_un_codigo_prefijo_completo() {
     assert_eq!(ESTATICA[0].0, ":authority");
     assert_eq!(ESTATICA[60], ("www-authenticate", ""));
 }
-
-// ── Apéndice C.2: las cuatro formas de representar una cabecera ─────────────────────────────
 
 #[test]
 fn c21_literal_con_nombre_literal_e_indexado() {
@@ -72,11 +59,6 @@ fn c24_indexado() {
     let mut dec = d();
     assert_eq!(dec.decodificar(&hex("82")).unwrap(), pares(&[(":method", "GET")]));
 }
-
-// ── Apéndice C.3: tres peticiones seguidas, sin Huffman ─────────────────────────────────────
-//
-// Es el caso que de verdad ejercita la tabla: la segunda petición se apoya en lo que dejó la
-// primera, y la tercera en las dos. Decodificarlas por separado no prueba nada.
 
 #[test]
 fn c3_tres_peticiones_encadenadas_sin_huffman() {
@@ -119,8 +101,6 @@ fn c3_tres_peticiones_encadenadas_sin_huffman() {
     assert_eq!(dec.tabla.len(), 3);
 }
 
-// ── Apéndice C.4: las mismas tres, con Huffman ──────────────────────────────────────────────
-
 #[test]
 fn c4_tres_peticiones_encadenadas_con_huffman() {
     let mut dec = d();
@@ -139,8 +119,6 @@ fn c4_tres_peticiones_encadenadas_con_huffman() {
     assert_eq!(tres[4], ("custom-key".to_string(), "custom-value".to_string()));
     assert_eq!(dec.tabla.ocupado(), 164);
 }
-
-// ── Apéndice C.5: respuestas con una tabla de 256 octetos, que obliga a desalojar ───────────
 
 #[test]
 fn c5_respuestas_con_tabla_pequena_desalojan() {
@@ -168,8 +146,6 @@ fn c5_respuestas_con_tabla_pequena_desalojan() {
     assert_eq!(dec.tabla.len(), 3, "la tabla de 256 no da para más");
 }
 
-// ── Apéndice C.6: las mismas respuestas, con Huffman ────────────────────────────────────────
-
 #[test]
 fn c6_respuestas_con_huffman_y_desalojo() {
     let mut dec = Decodificador::nuevo(256, 64 * 1024);
@@ -192,45 +168,34 @@ fn c6_respuestas_con_huffman_y_desalojo() {
     assert_eq!(dec.tabla.ocupado(), 215);
 }
 
-// ── Los requisitos del contrato ─────────────────────────────────────────────────────────────
-
-/// `H2-015`: un índice fuera de las dos tablas. Con la dinámica vacía, 62 ya no existe.
 #[test]
 fn h2_015_indice_fuera_de_la_tabla() {
     assert!(d().decodificar(&[0xbe]).is_err(), "H2-015");
     assert!(d().decodificar(&[0x80]).is_err(), "el índice 0 tampoco vale");
 }
 
-/// `H2-016`: EOS es relleno, nunca un símbolo. Treinta bits de unos son EOS entero.
 #[test]
 fn h2_016_eos_dentro_de_una_cadena() {
-    // Cadena Huffman de cuatro octetos con EOS completo (30 unos) más relleno.
     let bloque = [0x00, 0x00, 0x84, 0xff, 0xff, 0xff, 0xff];
     assert!(d().decodificar(&bloque).is_err(), "H2-016");
 }
 
-/// `H2-039`: el tope se mide en lo que sale, no en lo que entra. Una entrada grande en la tabla
-/// dinámica y cien referencias de un octeto caben en 3 kB de cable y no en el tope de salida.
 #[test]
 fn h2_039_la_lista_que_se_expande_al_descomprimirse() {
     let mut dec = Decodificador::nuevo(4096, 2048);
     let mut bloque = Vec::new();
-    // Literal indexado con nombre nuevo y un valor de 1000 octetos.
     bloque.push(0x40);
     bloque.push(0x03);
     bloque.extend_from_slice(b"big");
-    bloque.push(0x7f); // 1000, con prefijo de siete bits: 1000 - 127 = 873
+    bloque.push(0x7f);
     bloque.push(0xe9);
     bloque.push(0x06);
     bloque.extend(std::iter::repeat_n(b'a', 1000));
-    // Y cien referencias a esa entrada, a un octeto cada una.
     bloque.extend(std::iter::repeat_n(0x80 | 62, 100));
     let fallo = dec.decodificar(&bloque).unwrap_err();
     assert_eq!(fallo.codigo, cero_http::http2::Error::Compresion, "H2-039");
 }
 
-/// Una actualización de tamaño que se pasa de lo negociado es error de compresión (§6.3), y una
-/// que llega a mitad del bloque también (§4.2).
 #[test]
 fn las_actualizaciones_de_tabla_tienen_su_sitio_y_su_tope() {
     let mut dec = Decodificador::nuevo(4096, 64 * 1024);
@@ -243,8 +208,6 @@ fn las_actualizaciones_de_tabla_tienen_su_sitio_y_su_tope() {
     assert!(tarde.decodificar(&[0x82, 0x20]).is_err(), "la actualización va al principio");
 }
 
-/// Reducir la tabla desaloja en el acto, no cuando toque meter algo. Si no, la otra punta y esta
-/// dejan de contar lo mismo y los índices se corren.
 #[test]
 fn reducir_la_tabla_desaloja_en_el_acto() {
     let mut dec = Decodificador::nuevo(4096, 64 * 1024);
@@ -255,7 +218,6 @@ fn reducir_la_tabla_desaloja_en_el_acto() {
     assert_eq!(dec.tabla.ocupado(), 0);
 }
 
-/// Un entero que no termina nunca es una tira de `0xff`. Sin tope, el bucle tampoco termina.
 #[test]
 fn un_entero_sin_fin_no_cuelga() {
     let mut bloque = vec![0x7f];
@@ -263,16 +225,11 @@ fn un_entero_sin_fin_no_cuelga() {
     assert!(d().decodificar(&bloque).is_err());
 }
 
-/// Una cadena que dice medir más de lo que queda se corta, no se lee de más.
 #[test]
 fn una_cadena_cortada_no_lee_de_mas() {
     assert!(d().decodificar(&[0x00, 0x0a, b'h', b'i']).is_err());
 }
 
-// ── Codificar ───────────────────────────────────────────────────────────────────────────────
-
-/// Lo que se codifica se vuelve a leer igual: es la comprobación que cubre los dos caminos a la
-/// vez, incluido el relleno de Huffman, que es donde se equivoca uno.
 #[test]
 fn lo_codificado_se_decodifica_igual() {
     let cabeceras = pares(&[
@@ -285,15 +242,11 @@ fn lo_codificado_se_decodifica_igual() {
     assert_eq!(d().decodificar(&bloque).unwrap(), cabeceras);
 }
 
-/// Una cabecera que está entera en la estática ocupa un octeto. Si deja de ser así, la respuesta
-/// más común del servidor engorda en cada petición.
 #[test]
 fn una_entrada_de_la_estatica_ocupa_un_octeto() {
     assert_eq!(Codificador::codificar(&pares(&[(":status", "200")])), vec![0x88]);
 }
 
-/// Las mayúsculas en un nombre de campo son un mensaje malformado en HTTP/2 (§8.2.1), así que no
-/// pueden salir de aquí aunque quien llame las escriba.
 #[test]
 fn los_nombres_salen_en_minusculas() {
     let bloque = Codificador::codificar(&pares(&[("Content-Type", "text/plain")]));
@@ -301,8 +254,6 @@ fn los_nombres_salen_en_minusculas() {
     assert_eq!(leidas[0].0, "content-type");
 }
 
-/// Codificar no toca la tabla del cliente: se emite sin indexar a propósito, y eso tiene que
-/// seguir siendo verdad porque es lo que hace la salida reproducible.
 #[test]
 fn codificar_no_mueve_la_tabla_de_quien_lee() {
     let bloque = Codificador::codificar(&pares(&[("x-una", "cosa")]));

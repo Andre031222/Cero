@@ -1,16 +1,5 @@
-//! Migraciones de esquema: los `.sql` de un directorio, en orden y una sola vez.
-//!
-//! Java aprendió aquí dos cosas por las malas, y las dos están en el contrato de este módulo:
-//! partir el fichero por `;` es incorrecto —un punto y coma dentro de una cadena o de un cuerpo
-//! `BEGIN … END` parte la sentencia por la mitad— y hace falta poder **reparar** cuando una
-//! migración se aplicó a medias.
-
 use crate::{Conexion, Fallo, Resultado};
 
-/// Parte un guion en sentencias sin romper cadenas, comentarios ni bloques.
-///
-/// `split(';')` es la forma ingenua y es la que falla: `INSERT INTO t VALUES ('a;b')` se parte
-/// en dos trozos inválidos.
 pub fn sentencias(guion: &str) -> Vec<String> {
     let mut salida = Vec::new();
     let mut actual = String::new();
@@ -64,7 +53,6 @@ pub struct Migracion {
     pub guion: String,
 }
 
-/// Aplica en orden las que falten. Devuelve cuántas aplicó.
 pub fn aplicar(c: &mut dyn Conexion, mut pendientes: Vec<Migracion>, ya: &[u32]) -> Resultado<u32> {
     pendientes.sort_by_key(|m| m.version);
     let mut hechas = 0;

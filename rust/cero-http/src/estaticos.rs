@@ -1,15 +1,8 @@
-//! Archivos estáticos.
-//!
-//! Servir un directorio es la primera forma de abrir un agujero: `GET /../../etc/passwd`. El
-//! camino se resuelve y se comprueba que sigue dentro de la raíz **después** de resolverlo, que
-//! es lo único que ataja los enlaces simbólicos además del `..`.
-
 use crate::contexto::Respuesta;
 use std::path::{Component, Path, PathBuf};
 
 pub struct Estaticos {
     raiz: PathBuf,
-    /// Si el camino no existe, se sirve esto. Para aplicaciones de una sola página, `index.html`.
     pub respaldo: Option<String>,
 }
 
@@ -25,8 +18,6 @@ impl Estaticos {
 
     pub fn servir(&self, camino: &str) -> Respuesta {
         let relativo = camino.trim_start_matches('/');
-        // Se descartan `..` y las raíces antes de tocar el disco: así un camino hostil no llega
-        // siquiera a resolverse.
         let limpio: PathBuf = Path::new(relativo)
             .components()
             .filter(|c| matches!(c, Component::Normal(_)))
@@ -36,7 +27,6 @@ impl Estaticos {
         let Ok(real) = destino.canonicalize() else {
             return self.respaldar();
         };
-        // La comprobación que de verdad importa: tras resolver enlaces, ¿sigue dentro?
         if !real.starts_with(&self.raiz) {
             return Respuesta::estado(403, "fuera de la raíz");
         }
@@ -75,8 +65,6 @@ fn tipo_de(ruta: &Path) -> &'static str {
         "webp" => "image/webp",
         "woff2" => "font/woff2",
         "txt" | "md" => "text/plain; charset=utf-8",
-        // Lo que no se reconoce va como octetos, nunca adivinando: adivinar el tipo es lo que
-        // `X-Content-Type-Options: nosniff` existe para impedir del lado del navegador.
         _ => "application/octet-stream",
     }
 }

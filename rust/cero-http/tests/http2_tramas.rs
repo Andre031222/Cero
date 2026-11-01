@@ -1,5 +1,3 @@
-//! Una prueba por requisito de `spec/http2.md` que la capa de tramas puede verificar sola.
-
 use cero_http::http2::trama::*;
 use cero_http::http2::{Ajustes, Error, Trama};
 use std::io::Cursor;
@@ -36,7 +34,6 @@ fn h2_002_y_003_settings() {
     let cinco = leer(SETTINGS, 0, 0, b"12345").comprobar().unwrap_err();
     assert_eq!(cinco.codigo, Error::TamanoDeTrama, "H2-003");
     assert!(leer(SETTINGS, 0, 0, &[0; 12]).comprobar().is_ok(), "doce sí es múltiplo de seis");
-    // Un ACK con carga es un error de tamaño, no de protocolo.
     assert_eq!(leer(SETTINGS, RECONOCE, 0, &[0; 6]).comprobar().unwrap_err().codigo,
                Error::TamanoDeTrama);
 }
@@ -66,8 +63,6 @@ fn h2_012_y_013_window_update() {
 
 #[test]
 fn h2_014_una_trama_mayor_que_el_maximo() {
-    // La cabecera anuncia 20 000 pero el máximo es 16 384: se rechaza **antes** de leer la
-    // carga, porque si no, anunciar 16 MB bastaría para que el servidor los reservara.
     let mut v = vec![0x00, 0x4e, 0x20, DATA, 0, 0, 0, 0, 1];
     v.extend_from_slice(&[0u8; 100]);
     let e = Trama::leer(&mut Cursor::new(v), 16_384).unwrap_err();
@@ -77,7 +72,7 @@ fn h2_014_una_trama_mayor_que_el_maximo() {
 #[test]
 fn el_bit_reservado_del_identificador_se_ignora_no_se_rechaza() {
     let mut v = bytes(PING, 0, 0, &[0; 8]);
-    v[5] |= 0x80;   // bit R
+    v[5] |= 0x80;
     let t = Trama::leer(&mut Cursor::new(v), 16_384).expect("se lee");
     assert_eq!(t.flujo, 0, "el bit reservado no forma parte del identificador");
 }
@@ -109,8 +104,6 @@ fn h2_027_los_ajustes_del_servidor_anuncian_push_deshabilitado() {
 fn h2_031_la_ventana_inicial_negociada_da_el_delta() {
     let mut a = Ajustes::default();
     assert_eq!(a.ventana_inicial, 65_535);
-    // El cliente pide un mega: los flujos ya abiertos tienen que sumar la diferencia, no
-    // quedarse con la del RFC.
     let carga = [0x00, 0x04, 0x00, 0x10, 0x00, 0x00];
     let delta = a.aplicar(&carga).unwrap();
     assert_eq!(a.ventana_inicial, 1_048_576);
@@ -120,18 +113,13 @@ fn h2_031_la_ventana_inicial_negociada_da_el_delta() {
 #[test]
 fn los_ajustes_fuera_de_rango_se_rechazan() {
     let mut a = Ajustes::default();
-    // MAX_FRAME_SIZE por debajo del mínimo del RFC.
     assert!(a.aplicar(&[0x00, 0x05, 0x00, 0x00, 0x10, 0x00]).is_err());
-    // ENABLE_PUSH que no es 0 ni 1.
     assert!(a.aplicar(&[0x00, 0x02, 0x00, 0x00, 0x00, 0x07]).is_err());
-    // Ventana inicial por encima de 2^31-1.
     assert!(a.aplicar(&[0x00, 0x04, 0xff, 0xff, 0xff, 0xff]).is_err());
 }
 
 #[test]
 fn un_ajuste_desconocido_se_ignora() {
     let mut a = Ajustes::default();
-    // Ignorar lo desconocido es lo que permite extender el protocolo sin romper a quien no lo
-    // conoce. Rechazarlo rompería a los clientes nuevos contra servidores viejos.
     assert!(a.aplicar(&[0xff, 0xff, 0x00, 0x00, 0x00, 0x01]).is_ok());
 }

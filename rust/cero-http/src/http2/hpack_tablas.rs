@@ -1,12 +1,3 @@
-//! Las dos tablas fijas de HPACK (RFC 7541): la estática y el código de Huffman.
-//!
-//! **Generadas, no escritas.** Salen de los apéndices A y B del RFC, y son las mismas que usa la
-//! implementación de Java: se extraen de `HpackTablas.java` con un guion, no se copian a mano.
-//! La comprobación que las respalda es la suma de Kraft —la de dos elevado a menos cada
-//! longitud—, que en un código prefijo completo vale exactamente 1. Una tabla de 257 filas
-//! copiada a mano no revienta cuando se equivoca: decodifica mal, en silencio.
-
-/// Apéndice A. El índice 1 del protocolo es la posición 0 de aquí.
 pub const ESTATICA: [(&str, &str); 61] = [
     (":authority", ""),
     (":method", "GET"),
@@ -71,7 +62,6 @@ pub const ESTATICA: [(&str, &str); 61] = [
     ("www-authenticate", ""),
 ];
 
-/// Apéndice B: el código de cada octeto, alineado a la derecha.
 pub const CODIGO: [u32; 257] = [
     0x1ff8, 0x7fffd8, 0xfffffe2, 0xfffffe3, 0xfffffe4, 0xfffffe5, 0xfffffe6, 0xfffffe7, 0xfffffe8, 0xffffea,
     0x3ffffffc, 0xfffffe9, 0xfffffea, 0x3ffffffd, 0xfffffeb, 0xfffffec, 0xfffffed, 0xfffffee, 0xfffffef, 0xffffff0,
@@ -101,7 +91,6 @@ pub const CODIGO: [u32; 257] = [
     0x7ffffec, 0x7ffffed, 0x7ffffee, 0x7ffffef, 0x7fffff0, 0x3ffffee, 0x3fffffff,
 ];
 
-/// Y su longitud en bits. El símbolo 256 es EOS y no puede aparecer decodificado.
 pub const LARGO: [u8; 257] = [
     13, 23, 28, 28, 28, 28, 28, 28, 28, 24, 30, 28, 28, 30, 28, 28, 28, 28, 28, 28, 28, 28, 30, 28,
     28, 28, 28, 28, 28, 28, 28, 28, 6, 10, 10, 12, 13, 6, 8, 11, 10, 10, 8, 11, 8, 6, 6, 6,
@@ -116,5 +105,4 @@ pub const LARGO: [u8; 257] = [
     26, 27, 26, 26, 27, 27, 27, 27, 27, 28, 27, 27, 27, 27, 27, 26, 30,
 ];
 
-/// El símbolo que marca el relleno y que nunca puede salir decodificado.
 pub const EOS: usize = 256;

@@ -1,9 +1,3 @@
-//! Una implementación en memoria del contrato.
-//!
-//! No es un motor de verdad ni pretende serlo: existe para que `cero-data` se pueda probar entero
-//! sin base de datos, y para que quien vaya a escribir un driver tenga contra qué comparar. Java
-//! usa H2 para lo mismo, que es una dependencia de prueba; aquí no hace falta ninguna.
-
 use crate::{Conexion, Fallo, Fila, Fuente, Resultado, Valor};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -40,15 +34,9 @@ impl Fuente for EnMemoria {
 
 struct ConexionMemoria {
     datos: Arc<Mutex<Datos>>,
-    /// La copia que se restaura al deshacer. Que exista es lo que hace que la transacción sea
-    /// comprobable sin motor: `transaccion()` se puede verificar de verdad.
     copia: Option<HashMap<String, Vec<Fila>>>,
 }
 
-/// Las cuatro órdenes que esta implementación entiende, ya troceadas.
-///
-/// Deliberadamente limitado: esto no es un motor, y aceptar SQL arbitrario daría la falsa
-/// sensación de que lo es. Lo que entiende es exactamente lo que `Repositorio` emite.
 enum Orden {
     Select { tabla: String, columna: Option<String> },
     Delete { tabla: String, columna: String },
@@ -56,10 +44,6 @@ enum Orden {
     Update { tabla: String, asigna: Vec<String>, columna: String },
 }
 
-/// La palabra que sigue a `aguja`. Las palabras clave se buscan en `bajo` y el nombre se saca del
-/// `sql` original: un identificador tiene que volver **como se escribió**, porque es la clave con
-/// la que se guardó la tabla. Bajarlo a minúsculas hacía que `AppSessions` se escribiera en
-/// `appsessions` y que quien la pidiera por su nombre no encontrara nada.
 fn tras(bajo: &str, sql: &str, aguja: &str) -> Option<String> {
     let desde = bajo.find(aguja)? + aguja.len();
     let palabra: String = sql[desde..]
@@ -70,7 +54,6 @@ fn tras(bajo: &str, sql: &str, aguja: &str) -> Option<String> {
     (!palabra.is_empty()).then_some(palabra)
 }
 
-/// Los nombres de una lista como `(a, b, c)` o `a = ?, b = ?`.
 fn nombres(trozo: &str) -> Vec<String> {
     trozo
         .split(',')
@@ -144,7 +127,6 @@ impl Conexion for ConexionMemoria {
                 Ok(1)
             }
             Orden::Update { tabla, asigna, columna } => {
-                // El valor del `WHERE` es el **último** parámetro: los de antes son el `SET`.
                 let (nuevos, clave) = parametros
                     .split_at(parametros.len().checked_sub(1).ok_or_else(|| Fallo("UPDATE sin parámetros".into()))?);
                 if asigna.len() != nuevos.len() {
@@ -161,8 +143,6 @@ impl Conexion for ConexionMemoria {
                 Ok(tocadas)
             }
             Orden::Delete { tabla, columna } => {
-                // Una migración escribe el valor en el propio SQL, y eso es correcto: la escribe
-                // el programador, no el usuario. Sin parámetro, se lee el literal tras el `=`.
                 let propio;
                 let buscado = match parametros.first() {
                     Some(v) => v,
@@ -200,8 +180,6 @@ impl Conexion for ConexionMemoria {
 }
 
 
-/// El valor escrito en el propio SQL, para las migraciones. No se usa nunca con entrada del
-/// usuario: esa llega siempre como parámetro, y por eso `consultar` no lo admite.
 fn literal(sql: &str) -> Option<Valor> {
     let tras_igual = sql.rsplit('=').next()?.trim().trim_end_matches(';').trim();
     if tras_igual == "?" || tras_igual.is_empty() {

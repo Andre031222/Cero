@@ -1,14 +1,3 @@
-//! Servidor mínimo contra el que correr el banco de conformidad de `spec/banco/`.
-//!
-//! `/eco` **lee el cuerpo**: sin eso los vectores de encuadre no comprueban nada, porque un
-//! servidor que responde sin leerlo pasa por válido sin haber parseado.
-//!
-//! La raíz responde algo más largo que «ok» porque h2spec necesita un cuerpo que no quepa en una
-//! ventana apretada para poder medir el control de flujo. Con dos octetos se salta la prueba en
-//! vez de fallarla, que es peor: parece que pasa.
-//!
-//!     cargo run --bin conforme 8777
-
 use cero_http::{Respuesta, Router, Servidor};
 
 fn main() -> std::io::Result<()> {

@@ -1,10 +1,3 @@
-//! Una prueba por requisito de `spec/ruteo.md`, citándolo.
-//!
-//! El servidor se maneja sin socket: `responder` es el pipeline entero, se le da una petición y
-//! devuelve la respuesta. Un puerto por medio convertiría cada prueba en una carrera y no
-//! comprobaría nada más, porque lo que hay entre el socket y esto ya lo juzgan los 23 vectores del
-//! banco de conformidad.
-
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -29,7 +22,6 @@ fn cabecera<'a>(r: &'a Respuesta, n: &str) -> Option<&'a str> {
     r.extra.iter().find(|(k, _)| k == n).map(|(_, v)| v.as_str())
 }
 
-/// Qué acción atiende un GET, para no repetir el `match` en cada prueba de prioridad.
 fn atiende(r: &Router, camino: &str) -> String {
     match r.resolver("GET", camino) {
         Resolucion::Encontrada(nombre, _) => nombre,
@@ -37,10 +29,6 @@ fn atiende(r: &Router, camino: &str) -> String {
     }
 }
 
-// ── Patrones ────────────────────────────────────────────────────────────────────────────────
-
-/// `RUT-001`: ni un segmento de más ni uno de menos. Un patrón que casara prefijos haría que
-/// `/admin` atendiera `/admin/borrar-todo`.
 #[test]
 fn rut_001_el_numero_de_segmentos_es_exacto() {
     let p = Patron::nuevo("/a/{id}").unwrap();
@@ -49,8 +37,6 @@ fn rut_001_el_numero_de_segmentos_es_exacto() {
     assert!(p.casa("/a/7/b").is_none(), "RUT-001: uno más tampoco");
 }
 
-/// `RUT-002` y `RUT-003`: cada variable se recupera por su nombre, y en un mismo camino caben
-/// varias. Con una sola no se distingue capturar de acertar por posición.
 #[test]
 fn rut_002_y_003_las_variables_se_recuperan_por_nombre() {
     let c = Patron::nuevo("/{seccion}/{id}/{hoja}").unwrap().casa("/foros/7/respuestas").unwrap();
@@ -59,15 +45,12 @@ fn rut_002_y_003_las_variables_se_recuperan_por_nombre() {
     assert_eq!(c.get("hoja").map(String::as_str), Some("respuestas"), "RUT-003");
 }
 
-/// `RUT-004`: la barra final no cambia la ruta. Si la cambiara, la misma página tendría dos URL y
-/// las métricas contarían dos series por lo mismo.
 #[test]
 fn rut_004_la_barra_final_se_normaliza() {
     let p = Patron::nuevo("/a/{id}").unwrap();
     assert_eq!(p.casa("/a/7"), p.casa("/a/7/"), "RUT-004");
 }
 
-/// `RUT-005`: el comodín se lleva el resto, sea un segmento o cinco.
 #[test]
 fn rut_005_el_comodin_captura_el_resto() {
     let p = Patron::nuevo("/estaticos/*").unwrap();
@@ -76,8 +59,6 @@ fn rut_005_el_comodin_captura_el_resto() {
                Some("css/tema/a.css"), "RUT-005");
 }
 
-/// `RUT-006` y `RUT-007`: un patrón mal escrito se rechaza **al construirlo**. Detectado al
-/// arrancar es un error del programador; detectado al resolver es un 500 en producción.
 #[test]
 fn rut_006_y_007_un_patron_malo_no_llega_a_existir() {
     assert!(Patron::nuevo("/a/*/b").is_err(), "RUT-006");
@@ -86,8 +67,6 @@ fn rut_006_y_007_un_patron_malo_no_llega_a_existir() {
     assert!(Patron::nuevo("/a/{}").is_err(), "RUT-007: y sin nombre");
 }
 
-/// `RUT-008`: entre dos que casan gana el literal. Si ganara el variable, `/usuarios/nuevo` lo
-/// atendería `/usuarios/{id}` y el formulario de alta acabaría buscando al usuario «nuevo».
 #[test]
 fn rut_008_el_literal_gana_al_variable() {
     let r = Router::nuevo()
@@ -97,9 +76,6 @@ fn rut_008_el_literal_gana_al_variable() {
     assert_eq!(atiende(&r, "/usuarios/7"), "ver", "y la variable sigue atendiendo lo suyo");
 }
 
-/// `RUT-009`, `RUT-010` y `RUT-011`: un camino sin ruta no es lo mismo que un verbo no admitido, y
-/// el segundo tiene que poder enumerar los verbos que sí valen. `HEAD` se resuelve contra el `GET`
-/// del mismo camino, así que aparece en esa lista aunque nadie lo declarara.
 #[test]
 fn rut_009_a_011_no_hay_ruta_no_es_verbo_equivocado() {
     let r = Router::nuevo().ruta("GET", "/a", "ver").unwrap();
@@ -111,8 +87,6 @@ fn rut_009_a_011_no_hay_ruta_no_es_verbo_equivocado() {
     };
     assert_eq!(nombre, "ver", "RUT-011");
 }
-
-// ── El pipeline ─────────────────────────────────────────────────────────────────────────────
 
 fn servidor() -> Servidor {
     let router = Router::nuevo()
@@ -151,8 +125,6 @@ fn servidor() -> Servidor {
         .accion("eco_cuerpo", |c| Respuesta { cuerpo: c.peticion.cuerpo.clone(), ..Respuesta::estado(200, "") })
 }
 
-/// `RUT-012` y `RUT-013`: 404 y 405 son respuestas distintas, y el 405 lleva `Allow`. Sin `Allow`,
-/// quien llama mal sabe que se equivocó pero no en qué.
 #[test]
 fn rut_012_y_013_el_404_y_el_405() {
     let s = servidor();
@@ -162,8 +134,6 @@ fn rut_012_y_013_el_404_y_el_405() {
     assert_eq!(cabecera(&r, "Allow"), Some("GET, HEAD, POST"), "RUT-013");
 }
 
-/// `RUT-014` y `RUT-015`: la variable se convierte al tipo que la acción pide, y la que no
-/// convierte es 400 y no 500. El cliente mandó mal la petición; el servidor no falló.
 #[test]
 fn rut_014_y_015_la_variable_se_convierte_o_es_400() {
     let s = servidor();
@@ -171,8 +141,6 @@ fn rut_014_y_015_la_variable_se_convierte_o_es_400() {
     assert_eq!(s.responder(&peticion("GET", "/numero/ocho"), "x").estado, 400, "RUT-015");
 }
 
-/// `RUT-016`: un defecto de cadena vacía no es lo mismo que «sin defecto». Para una búsqueda,
-/// ausente puede querer decir «todo» y vacío «nada», y confundirlos cambia el resultado.
 #[test]
 fn rut_016_el_defecto_vacio_se_distingue_del_ausente() {
     let s = servidor();
@@ -180,7 +148,6 @@ fn rut_016_el_defecto_vacio_se_distingue_del_ausente() {
     assert_eq!(cuerpo(&s.responder(&peticion("GET", "/busca"), "x")), "", "RUT-016");
 }
 
-/// `RUT-017`: el cuerpo JSON llega estructurado, y uno mal formado es 400.
 #[test]
 fn rut_017_el_cuerpo_json_se_vincula() {
     let s = servidor();
@@ -193,8 +160,6 @@ fn rut_017_el_cuerpo_json_se_vincula() {
     assert_eq!(s.responder(&roto, "x").estado, 400, "y uno mal formado es 400, no 500");
 }
 
-/// `RUT-018`: una cabecera ausente queda sin valor, no falla. Tratar la falta de `User-Agent` como
-/// una petición mal formada convierte en 400 lo que era un 200.
 #[test]
 fn rut_018_una_cabecera_ausente_no_es_un_fallo() {
     let s = servidor();
@@ -204,7 +169,6 @@ fn rut_018_una_cabecera_ausente_no_es_un_fallo() {
     assert_eq!(cuerpo(&s.responder(&con, "x")), "curl");
 }
 
-/// `RUT-019`, `RUT-020` y `RUT-021`: texto, JSON, 204 y la redirección.
 #[test]
 fn rut_019_a_021_las_formas_de_responder() {
     let s = servidor();
@@ -218,8 +182,6 @@ fn rut_019_a_021_las_formas_de_responder() {
     assert_eq!(cabecera(&fuera, "Location"), Some("/a"), "RUT-021");
 }
 
-/// `RUT-022`: el nombre de archivo se sanea **antes** de ponerlo en la cabecera. Por aquí se
-/// intentó colar una cookie: un salto de línea cierra la cabecera y lo que sigue es otra.
 #[test]
 fn rut_022_el_nombre_de_la_descarga_se_sanea() {
     let r = servidor().responder(&peticion("GET", "/descarga"), "x");
@@ -228,10 +190,6 @@ fn rut_022_el_nombre_de_la_descarga_se_sanea() {
     assert!(cabecera(&r, "Set-Cookie").is_none(), "RUT-022: y no se coló ninguna cookie");
 }
 
-/// `RUT-023`: el binario llega octeto a octeto. Se prueban los 256 valores porque el modo de
-/// fallar es sutil: si el cuerpo pasa por una cadena, lo que está por encima de 0x7F se convierte
-/// en el carácter de sustitución y el archivo llega con un tamaño parecido y corrupto. Un «hola»
-/// en ASCII pasaría esta prueba sin enterarse de nada.
 #[test]
 fn rut_023_el_binario_llega_entero() {
     let esperado: Vec<u8> = (0u16..=255).map(|b| b as u8).collect();
@@ -243,9 +201,6 @@ fn rut_023_el_binario_llega_entero() {
     assert_eq!(s.responder(&sube, "x").cuerpo, esperado, "RUT-023: y de subida también");
 }
 
-/// `RUT-024` y `RUT-025`: el 500 no cuenta lo que pasó dentro, pero sí dice qué ruta falló. Lo
-/// primero es que el mensaje interno habla de las tripas del servidor; lo segundo, que sin saber
-/// qué ruta fue, quien lo recibe no puede informarlo.
 #[test]
 fn rut_024_y_025_el_500_no_cuenta_de_mas_pero_dice_donde() {
     let r = servidor().responder(&peticion("GET", "/estalla"), "x");
@@ -254,8 +209,6 @@ fn rut_024_y_025_el_500_no_cuenta_de_mas_pero_dice_donde() {
     assert!(cuerpo(&r).contains("/estalla"), "RUT-025: {}", cuerpo(&r));
 }
 
-/// `RUT-026`: un estado declarado se conserva con su mensaje. «El artículo no existe» es un 404
-/// que el cliente tiene que poder leer, y tratarlo como interno lo convertiría en un 500 mudo.
 #[test]
 fn rut_026_un_estado_declarado_se_conserva() {
     let r = servidor().responder(&peticion("GET", "/no-esta"), "x");
@@ -263,8 +216,6 @@ fn rut_026_un_estado_declarado_se_conserva() {
     assert!(cuerpo(&r).contains("el artículo no existe"), "RUT-026");
 }
 
-/// `RUT-027`: el manejador declarado fija el estado y construye el cuerpo, y manda incluso sobre
-/// un 500: solo la aplicación sabe si su error interno es contable.
 #[test]
 fn rut_027_el_manejador_de_error_decide() {
     let s = servidor().al_fallar(|_, f| {
@@ -276,9 +227,6 @@ fn rut_027_el_manejador_de_error_decide() {
     assert_eq!(cuerpo(&r), r#"{"motivo":"el artículo no existe"}"#, "RUT-027");
 }
 
-/// `RUT-028`: el middleware envuelve la acción en el orden en que se declaró, y el primero
-/// declarado es el más exterior. El orden se comprueba con una traza de entrada y salida, no
-/// contando llamadas: dos middlewares que corren en cualquier orden pasarían eso último.
 #[test]
 fn rut_028_el_middleware_envuelve_en_orden() {
     let traza = Arc::new(Mutex::new(Vec::new()));
@@ -300,9 +248,6 @@ fn rut_028_el_middleware_envuelve_en_orden() {
     assert_eq!(*traza.lock().unwrap(), ["entra 1", "entra 2", "sale 2", "sale 1"], "RUT-028");
 }
 
-/// `RUT-029`: el middleware corre también cuando no hay ruta. Es la que más se incumple en la
-/// práctica, y el precio es que las respuestas más fáciles de provocar desde fuera —los 404— sean
-/// las únicas que salen sin lo que el middleware pone.
 #[test]
 fn rut_029_el_middleware_ve_tambien_los_404() {
     let vistos = Arc::new(AtomicU32::new(0));
@@ -317,9 +262,6 @@ fn rut_029_el_middleware_ve_tambien_los_404() {
     assert_eq!(cabecera(&r, "X-Paso-Por-Aqui"), Some("si"), "RUT-029");
 }
 
-/// `RUT-030` y `RUT-031`: el manejador por defecto atiende lo no enrutado y su respuesta lleva
-/// igualmente lo que puso el middleware. Lo que **no** toca es el 405: devolverle la página del
-/// SPA a quien llama mal a la API le esconde su propio error detrás de un 200.
 #[test]
 fn rut_030_y_031_el_manejador_por_defecto_no_se_come_el_405() {
     let s = servidor()
@@ -336,9 +278,6 @@ fn rut_030_y_031_el_manejador_por_defecto_no_se_come_el_405() {
     assert_eq!(cabecera(&mal, "Allow"), Some("GET, HEAD, POST"), "RUT-031");
 }
 
-/// `RUT-037`: el contexto está disponible sin declararlo como dependencia, y desde él se llega al
-/// contenedor. Son las dos mitades de lo mismo: lo de la petición viene dado y lo de la
-/// aplicación se pide.
 #[test]
 fn rut_037_el_contexto_viene_dado_y_el_contenedor_se_pide() {
     struct Saludo(&'static str);
@@ -354,10 +293,6 @@ fn rut_037_el_contexto_viene_dado_y_el_contenedor_se_pide() {
     assert_eq!(cuerpo(&s.responder(&peticion("GET", "/ana"), "x")), "hola ana", "RUT-037");
 }
 
-/// `OBS-012`: el log de acceso lleva el estado **finalmente enviado**, no el que la respuesta
-/// tenía antes de fallar. Sale de un caso real: la vista reventaba después de fijar el 200, el
-/// cliente recibía un 500 y el log seguía diciendo 200. Un log que dice lo contrario de lo que
-/// pasó es peor que no tener log, porque se le hace caso.
 #[test]
 fn obs_012_el_log_lleva_el_estado_que_de_verdad_salio() {
     let s = servidor();
@@ -367,8 +302,6 @@ fn obs_012_el_log_lleva_el_estado_que_de_verdad_salio() {
     assert!(acceso.expect("hay línea de acceso").contains("500"), "OBS-012");
 }
 
-/// `OBS-023`: lo declarado como ignorado no se registra. El caso que lo pide es la sonda de salud,
-/// que en un orquestador entra cada pocos segundos y ahoga todo lo demás.
 #[test]
 fn obs_023_lo_ignorado_no_se_registra() {
     let s = servidor().sin_registrar(&["/a"]);

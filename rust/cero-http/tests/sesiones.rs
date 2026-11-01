@@ -1,8 +1,3 @@
-//! Cada prueba cita el requisito de `spec/sesiones.md` que verifica.
-//!
-//! No están copiadas de la batería de Java: están escritas leyendo el contrato. Si el contrato
-//! fuera una descripción de Java con otras palabras, aquí se notaría.
-
 use cero_http::sesion::{self, Almacen, Sesiones};
 use std::sync::Arc;
 use std::time::Duration;
@@ -52,7 +47,7 @@ fn ses_005_rotar_cambia_el_id_y_conserva_los_atributos() {
     let s = a.crear().unwrap();
     let viejo = s.lock().unwrap().id().to_string();
     s.lock().unwrap().poner("quien", "andre").unwrap();
-    s.lock().unwrap().cookie_pendiente(); // la de creación, ya emitida
+    s.lock().unwrap().cookie_pendiente();
 
     let nuevo = a.rotar(&s).unwrap();
     assert_ne!(viejo, nuevo, "SES-005: el identificador cambia");
@@ -110,11 +105,6 @@ fn ses_009_la_cookie_declara_sus_banderas() {
 
 #[test]
 fn ses_010_la_cookie_no_depende_del_protocolo() {
-    // El requisito nació de un fallo en Java: dos salidas, una por versión del protocolo, y solo
-    // una preguntaba por la cookie. Aquí no puede repetirse, y no por disciplina: `cookie_pendiente`
-    // toma `&mut self`, así que dos caminos de salida no pueden consultarla los dos sin que el
-    // compilador lo señale. El contrato exige el comportamiento; el lenguaje decide si se puede
-    // incumplir por descuido.
     let a = almacen();
     let s = a.crear().unwrap();
     let emitida = s.lock().unwrap().cookie_pendiente();
@@ -135,8 +125,6 @@ fn caducidad_por_inactividad() {
 
 #[test]
 fn caducidad_absoluta_aunque_se_toque() {
-    // Solo con inactividad, una sesión tocada de vez en cuando vive para siempre. Es el hallazgo
-    // de auditoría que en Java dio `sessionMaxLifetime`.
     let a = Almacen::nuevo(Duration::from_secs(600), Some(Duration::from_millis(50)));
     let s = a.crear().unwrap();
     let id = s.lock().unwrap().id().to_string();
@@ -154,9 +142,6 @@ fn lee_el_identificador_de_la_cabecera_cookie() {
     assert_eq!(sesion::id_de_cookie(None), None);
 }
 
-/// `SES-012`: dos servidores con el **mismo** almacén reconocen las mismas sesiones. Es lo que
-/// separa poder poner una segunda instancia detrás del balanceador de no poder: sin esto, cada
-/// petición que cae en la otra instancia parece de alguien que nunca entró.
 #[test]
 fn ses_012_un_almacen_compartido_reconoce_la_sesion_en_otra_instancia() {
     use std::sync::Arc;
