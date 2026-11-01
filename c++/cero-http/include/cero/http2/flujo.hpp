@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -49,13 +50,12 @@ struct Topes {
     std::size_t bloque_cabeceras = 64 * 1024;
     std::uint32_t anulados = 200;
     std::uint32_t control_sin_flujo = 1'000;
+    std::uint32_t cortes = 1'000;
 };
 
 class Sesion {
 public:
     explicit Sesion(Ajustes mios);
-
-    static bool es_preambulo(std::string_view octetos);
 
     Resultado<Digerido> recibir(const Trama& t);
 
@@ -65,7 +65,7 @@ public:
 
     std::uint32_t ultimo() const { return ultimo_; }
 
-    std::size_t activos() const { return flujos_.size(); }
+    std::size_t activos() const;
     std::optional<std::int64_t> ventana_de(std::uint32_t flujo) const;
 
     const Ajustes& mios() const { return mios_; }
@@ -96,12 +96,14 @@ private:
     Resultado<Digerido> data(const Trama& t);
     Resultado<Digerido> terminar_bloque(std::uint32_t flujo, std::string bloque, bool fin,
                                         bool trailers);
-    Digerido cortar(std::uint32_t flujo, std::string_view porque, Error por = Error::Protocolo);
+    Resultado<Digerido> cortar(std::uint32_t flujo, std::string_view porque,
+                               Error por = Error::Protocolo);
 
     Ajustes mios_;
     Ajustes par_ = Ajustes::del_rfc();
     Decodificador decodificador_;
     std::map<std::uint32_t, Flujo> flujos_;
+    std::set<std::uint32_t> atendidos_;
     std::uint32_t ultimo_ = 0;
     std::int64_t ventana_ = 0;
     struct Pendiente {
@@ -112,6 +114,7 @@ private:
     std::optional<Pendiente> pendiente_;
     std::uint32_t anulados_ = 0;
     std::uint32_t control_sin_flujo_ = 0;
+    std::uint32_t cortes_ = 0;
 };
 
 std::string cabeceras_de_respuesta(unsigned estado, const std::vector<Cabecera>& cabeceras);

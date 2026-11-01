@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -71,10 +72,22 @@ bool escribe(const Digerido& d, const Trama& esperada) {
     });
 }
 
-PRUEBA(h2_001_el_preambulo_se_reconoce_entero) {
-    COMPRUEBA(Sesion::es_preambulo("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\nresto"), "H2-001");
-    COMPRUEBA(!Sesion::es_preambulo("GET / HTTP/1.1\r\n"), "H2-001");
-    COMPRUEBA(!Sesion::es_preambulo("PRI *"), "H2-001: cortado tampoco");
+PRUEBA(h2_001_el_socket_ojea_el_preambulo_sin_consumirlo) {
+    const auto ojear = [](std::string_view llega) {
+        int fd[2];
+        ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+        (void)::write(fd[1], llega.data(), llega.size());
+        ::shutdown(fd[1], SHUT_WR);
+        DesdeSocket entrada{fd[0]};
+        const bool es = entrada.asomar(kPreambulo);
+        const int primero = entrada.octeto();
+        ::close(fd[0]);
+        ::close(fd[1]);
+        return std::pair{es, primero};
+    };
+    COMPRUEBA(ojear("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\nresto") == std::pair{true, int{'P'}}, "H2-001");
+    COMPRUEBA(ojear("GET / HTTP/1.1\r\n\r\n") == std::pair{false, int{'G'}}, "H2-001");
+    COMPRUEBA(ojear("PRI *") == std::pair{false, int{'P'}}, "H2-001: cortado tampoco");
 }
 
 PRUEBA(h2_028_el_ping_vuelve_igual_con_ack) {
@@ -588,12 +601,12 @@ struct Par {
     std::thread servidor;
 };
 
-Par conductor(Atender atender) {
+Par conductor(Atender atender, Ajustes ajustes = {}) {
     int fd[2];
     ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
-    std::thread hilo{[d = fd[0], atender = std::move(atender)] {
+    std::thread hilo{[d = fd[0], atender = std::move(atender), ajustes] {
         DesdeSocket entrada{d};
-        servir(entrada, Ajustes{}, atender);
+        servir(entrada, ajustes, atender);
         ::close(d);
     }};
     return {fd[1], std::move(hilo)};
@@ -684,6 +697,147 @@ PRUEBA(el_conductor_entrega_el_cuerpo_y_la_autoridad) {
     }
     hilo.join();
     COMPRUEBA(visto == "POST / a hola", ":authority pasa a host");
+}
+
+PRUEBA(h2_046_y_037_repetir_headers_y_data_no_salta_el_tope) {
+    Ajustes a;
+    a.max_flujos = 2;
+    for (const bool con_data : {true, false}) {
+        Sesion s{a};
+        int lanzadas = 0;
+        bool rechazo = false;
+        bool calma = false;
+        for (std::uint32_t id = 1; id < 2'000 && !calma; id += 2) {
+            auto r = s.recibir(t(kHeaders, kFinCabeceras | kFinFlujo, id, codificar(get())));
+            if (!r) {
+                calma = r.error().codigo == Error::Calma;
+                break;
+            }
+            if (primera<Peticion>(*r) != nullptr) ++lanzadas;
+            if (r->cortado && r->cortado->codigo == Error::Rechazado) rechazo = true;
+            r = con_data ? s.recibir(t(kData, 0, id, ""))
+                         : s.recibir(t(kHeaders, kFinCabeceras | kFinFlujo, id, codificar(get())));
+            if (!r) calma = r.error().codigo == Error::Calma;
+        }
+        COMPRUEBA(lanzadas <= 2, "H2-046: el que espera respuesta sigue contando aunque se corte");
+        COMPRUEBA(rechazo || calma, "H2-046 y H2-037: o se rechaza o se corta la conexión");
+    }
+}
+
+PRUEBA(h2_046_el_conductor_no_lanza_mas_hilos_que_el_tope) {
+    std::atomic<int> a_la_vez{0};
+    std::atomic<int> maximo{0};
+    std::atomic<int> llamadas{0};
+    Ajustes a;
+    a.max_flujos = 2;
+    auto [d, hilo] = conductor(
+        [&](const cero::Peticion&) {
+            ++llamadas;
+            const int ahora = ++a_la_vez;
+            for (int m = maximo; ahora > m && !maximo.compare_exchange_weak(m, ahora);) {
+            }
+            std::this_thread::sleep_for(200ms);
+            --a_la_vez;
+            return cero::Respuesta::texto("lento");
+        },
+        a);
+    {
+        Cliente c{d};
+        c.abrir_h2();
+        std::string rafaga;
+        for (std::uint32_t id = 1; id < 400; id += 2) {
+            rafaga += Trama{kHeaders, kFinCabeceras | kFinFlujo, id, codificar(get())}.octetos();
+            rafaga += Trama{kData, 0, id, ""}.octetos();
+        }
+        c.mandar(rafaga);
+        c.mandar(Trama{kPing, 0, 0, "12345678"});
+        std::optional<Trama> x;
+        bool rechazado = false;
+        bool adios = false;
+        while ((x = c.trama())) {
+            if (x->tipo == kRstStream &&
+                entero32(x->carga, 0) == static_cast<std::uint32_t>(Error::Rechazado)) {
+                rechazado = true;
+            }
+            if (x->tipo == kGoaway) adios = true;
+            if ((x->tipo == kPing && (x->banderas & kReconoce) != 0) || adios) break;
+        }
+        COMPRUEBA(rechazado || adios, "H2-046: el tope se nota en el cable");
+    }
+    hilo.join();
+    COMPRUEBA(maximo <= 2, "H2-046: nunca más hilos a la vez que el tope");
+    COMPRUEBA(llamadas <= 4, "H2-037: no se puede pedir trabajo sin límite");
+}
+
+PRUEBA(h2_046_un_window_update_cero_libera_el_hueco) {
+    Ajustes a;
+    a.max_flujos = 1;
+    Sesion s{a};
+    pedir(s, 1, get(), false);
+    const auto r = s.recibir(Trama{kWindowUpdate, 0, 1, std::string(4, '\0')});
+    COMPRUEBA(r && r->cortado, "§6.9: incremento cero corta el flujo");
+    COMPRUEBA(s.activos() == 0, "H2-046: y el hueco queda libre");
+    COMPRUEBA(primera<Peticion>(pedir(s, 3, get(), true)) != nullptr, "H2-046: cabe otro");
+    const auto tarde = s.recibir(t(kData, 0, 1, "x"));
+    COMPRUEBA(tarde && tarde->cortado && tarde->cortado->codigo == Error::FlujoCerrado,
+              "§5.1: lo que llega después es de un flujo cerrado");
+}
+
+PRUEBA(h2_044_y_046_la_prioridad_sobre_si_mismo_libera_el_hueco) {
+    Ajustes a;
+    a.max_flujos = 1;
+    Sesion s{a};
+    pedir(s, 1, get(), false);
+    const auto r = s.recibir(t(kPriority, 0, 1, std::string{"\x00\x00\x00\x01\x10", 5}));
+    COMPRUEBA(r && r->cortado, "H2-044");
+    COMPRUEBA(s.activos() == 0, "H2-046: y el hueco queda libre");
+}
+
+PRUEBA(h2_038_los_rst_que_mandamos_tienen_tope) {
+    auto s = sesion();
+    s.topes.cortes = 50;
+    pedir(s, 1, get(), true);
+    s.respondido(1);
+    std::optional<Error> fallo;
+    for (int i = 0; i < 1'000 && !fallo; ++i) {
+        const auto r = s.recibir(t(kData, 0, 1, ""));
+        if (!r) fallo = r.error().codigo;
+    }
+    COMPRUEBA(fallo == Error::Calma, "H2-038: un RST por trama no sale gratis sin fin");
+}
+
+PRUEBA(h2c_la_peticion_ascendida_llega_como_http2) {
+    std::string version;
+    std::string resto;
+    int fd[2];
+    ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+    cero::Peticion p;
+    p.metodo = "GET";
+    p.destino = "/";
+    p.version = "HTTP/1.1";
+    p.cabeceras.emplace("connection", "Upgrade, HTTP2-Settings");
+    p.cabeceras.emplace("upgrade", "h2c");
+    p.cabeceras.emplace("http2-settings", "AAMAAABk");
+    std::thread hilo{[&, d = fd[0]] {
+        DesdeSocket entrada{d};
+        servir(entrada, Ajustes{}, [&](const cero::Peticion& q) {
+            version = q.version;
+            resto = std::string{q.cabecera("upgrade").value_or("")} +
+                    std::string{q.cabecera("http2-settings").value_or("")};
+            return cero::Respuesta::texto("hola");
+        }, p);
+        ::close(d);
+    }};
+    {
+        Cliente c{fd[1]};
+        while (c.linea().size() > 1) {
+        }
+        c.abrir_h2();
+        const auto r = c.hasta(kHeaders);
+        COMPRUEBA(r && r->flujo == 1, "h2c: el flujo 1 responde");
+    }
+    hilo.join();
+    COMPRUEBA(version == "HTTP/2" && resto.empty(), "h2c: sin rastro del ascenso");
 }
 
 unsigned short puerto() {

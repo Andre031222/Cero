@@ -6,7 +6,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 
 **Estado: hito 9.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
 `Upgrade: h2c` en el mismo puerto. **23 de 23 vectores del banco**, **los 32 del apéndice C del RFC
-7541**, **138 de 146 en h2spec** y 167 pruebas propias.
+7541**, **138 de 146 en h2spec** y 173 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -18,7 +18,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo · 12 pruebas |
 | 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
-| 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 44 pruebas |
+| 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
 
 ## Cuántos requisitos citan las pruebas
 
@@ -171,7 +171,12 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   flujo vaya a cortarse —rechazado por el tope, cerrado o dependiente de sí mismo—: saltárselo
   descoloca HPACK para todo lo que venga después (`H2-035`). PRIORITY se descarta, pero un flujo que
   depende de sí mismo se corta (`H2-044`). El tope de flujos cuenta todos los vivos, incluido el que
-  ya dijo `END_STREAM` y espera respuesta (`H2-046`). La ventana de la conexión empieza en 65 535 sea
+  ya dijo `END_STREAM` y espera respuesta (`H2-046`), y el hueco de un flujo con trabajo en marcha no
+  se libera al cortarlo sino cuando su hilo termina: si no, repetir HEADERS con `END_STREAM` y un DATA
+  sobre el mismo flujo lanzaba hilos sin tope hasta tumbar el proceso. Cortar un flujo con trabajo
+  en marcha cuenta como anulado (`H2-037`), y todo RST que mandamos cuenta contra un tope propio,
+  porque un DATA sobre un flujo cerrado es un RST gratis. Todo corte pasa por `cortar`, que es lo
+  único que saca un flujo de la tabla. La ventana de la conexión empieza en 65 535 sea
   cual sea la inicial anunciada, se descuenta con el relleno incluido y se devuelve también por lo
   que llega a un flujo cerrado; si no, la conexión se queda sin crédito poco a poco. El
   `content-length` se compara con los datos sin relleno, y también al llegar los trailers. Los
@@ -181,7 +186,9 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   (`H2-029`), igual que en Rust; atenderlos en fila sobre el que lee sería HTTP/1.1 con más ceremonia.
   La salida va con candado y una trama sale entera o no sale; un bloque de cabeceras que no cabe en
   una trama sigue en CONTINUATION y sale de una vez, para que nada se meta por medio. El hilo que
-  responde avisa al que lee, que es quien da el flujo por cerrado. `DesdeSocket` es a la vez el
+  responde avisa al que lee, que es quien da el flujo por cerrado. Si el sistema no puede crear el
+  hilo, el flujo se rechaza con REFUSED_STREAM en vez de dejar escapar la excepción. La petición
+  ascendida por h2c llega como `HTTP/2` y sin las cabeceras del ascenso. `DesdeSocket` es a la vez el
   `Lector` de HTTP/1.1 y la `Fuente` de h2, así que el preámbulo se ojea sin consumirlo y lo que ya
   estuviera en el búfer tras un `101` no se pierde. Un preámbulo falso es una petición HTTP/1.1 con
   un método que no existe y recibe 501 (`H2-001`). Un método que no se implementa recibe 501 en su

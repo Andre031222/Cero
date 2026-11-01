@@ -142,8 +142,9 @@ Sesion::Sesion(Ajustes mios)
       decodificador_(4096, mios.max_cabeceras),
       ventana_(kVentanaDeConexion) {}
 
-bool Sesion::es_preambulo(std::string_view octetos) {
-    return octetos.size() >= kPreambulo.size() && octetos.substr(0, kPreambulo.size()) == kPreambulo;
+std::size_t Sesion::activos() const {
+    return flujos_.size() + static_cast<std::size_t>(std::ranges::count_if(
+                                atendidos_, [&](std::uint32_t f) { return !flujos_.contains(f); }));
 }
 
 std::optional<std::int64_t> Sesion::ventana_de(std::uint32_t flujo) const {
@@ -153,6 +154,7 @@ std::optional<std::int64_t> Sesion::ventana_de(std::uint32_t flujo) const {
 }
 
 void Sesion::respondido(std::uint32_t flujo) {
+    atendidos_.erase(flujo);
     const auto i = flujos_.find(flujo);
     if (i != flujos_.end() && i->second.estado == Estado::MitadCerradoRemoto) flujos_.erase(i);
 }
@@ -167,6 +169,7 @@ Resultado<void> Sesion::ascender(std::string_view ajustes_del_cliente) {
     uno.cabeceras_vistas = true;
     uno.ventana = mios_.ventana_inicial;
     flujos_.emplace(1, uno);
+    atendidos_.insert(1);
     ultimo_ = 1;
     return {};
 }
@@ -226,20 +229,14 @@ Resultado<Digerido> Sesion::window_update(const Trama& t) {
         return Digerido{{Credito{0, cuanto}}, std::nullopt};
     }
     if (t.flujo > ultimo_) return conexion(Error::Protocolo, "WINDOW_UPDATE sobre un flujo ocioso");
-    if (cuanto == 0) {
-        return Digerido{{Escribir{Trama::rst(t.flujo, Error::Protocolo)}},
-                        Cortado{t.flujo, Error::Protocolo, "incremento cero"}};
-    }
+    if (cuanto == 0) return cortar(t.flujo, "incremento cero");
     return Digerido{{Credito{t.flujo, cuanto}}, std::nullopt};
 }
 
 Resultado<Digerido> Sesion::priority(const Trama& t) {
     if (t.flujo == 0) return conexion(Error::Protocolo, "PRIORITY sobre la conexión");
     if (auto r = control(); !r) return Fallo{r.error()};
-    if (depende_de_si_mismo(t.carga, t.flujo)) {
-        return Digerido{{Escribir{Trama::rst(t.flujo, Error::Protocolo)}},
-                        Cortado{t.flujo, Error::Protocolo, "depende de sí mismo"}};
-    }
+    if (depende_de_si_mismo(t.carga, t.flujo)) return cortar(t.flujo, "depende de sí mismo");
     return Digerido{};
 }
 
@@ -313,9 +310,13 @@ Resultado<Digerido> Sesion::continuation(const Trama& t) {
     return Digerido{};
 }
 
-Digerido Sesion::cortar(std::uint32_t flujo, std::string_view porque, Error por) {
+Resultado<Digerido> Sesion::cortar(std::uint32_t flujo, std::string_view porque, Error por) {
     flujos_.erase(flujo);
-    return {{Escribir{Trama::rst(flujo, por)}}, Cortado{flujo, por, porque}};
+    if (++cortes_ > topes.cortes) return conexion(Error::Calma, "demasiados flujos cortados");
+    if (atendidos_.contains(flujo) && ++anulados_ > topes.anulados) {
+        return conexion(Error::Calma, "demasiados flujos cortados con trabajo en marcha");
+    }
+    return Digerido{{Escribir{Trama::rst(flujo, por)}}, Cortado{flujo, por, porque}};
 }
 
 Resultado<Digerido> Sesion::terminar_bloque(std::uint32_t flujo, std::string bloque, bool fin,
@@ -334,6 +335,7 @@ Resultado<Digerido> Sesion::terminar_bloque(std::uint32_t flujo, std::string blo
         if (f.declarado && f.recibido != *f.declarado) {
             return cortar(flujo, "el cuerpo no mide lo que dijo content-length");
         }
+        atendidos_.insert(flujo);
         return Digerido{{Cuerpo{flujo, {}, true}}, std::nullopt};
     }
 
@@ -345,6 +347,7 @@ Resultado<Digerido> Sesion::terminar_bloque(std::uint32_t flujo, std::string blo
         return cortar(flujo, "content-length sin cuerpo que lo respalde");
     }
     f.declarado = *cuanto;
+    if (fin) atendidos_.insert(flujo);
 
     return Digerido{{Peticion{flujo, std::move(*cabeceras), fin}}, std::nullopt};
 }
@@ -364,17 +367,18 @@ Resultado<Digerido> Sesion::data(const Trama& t) {
         return conexion(Error::Protocolo, "DATA sobre un flujo que nunca se abrió");
     }
 
-    Digerido d;
+    std::vector<Accion> credito;
     if (tamano > 0) {
         ventana_ += tamano;
-        d.acciones.emplace_back(Escribir{Trama::ventana(0, static_cast<std::uint32_t>(tamano))});
+        credito.emplace_back(Escribir{Trama::ventana(0, static_cast<std::uint32_t>(tamano))});
     }
-    const auto cerrado = [&](std::string_view porque) {
-        d.acciones.emplace_back(Escribir{Trama::rst(t.flujo, Error::FlujoCerrado)});
-        d.cortado = Cortado{t.flujo, Error::FlujoCerrado, porque};
-        return d;
+    const auto con_credito = [&](Resultado<Digerido> corte) -> Resultado<Digerido> {
+        if (corte) corte->acciones.insert(corte->acciones.begin(), credito.begin(), credito.end());
+        return corte;
     };
-    if (i == flujos_.end()) return cerrado("DATA sobre un flujo cerrado");
+    if (i == flujos_.end()) {
+        return con_credito(cortar(t.flujo, "DATA sobre un flujo cerrado", Error::FlujoCerrado));
+    }
 
     auto& f = i->second;
     f.ventana -= tamano;
@@ -382,20 +386,20 @@ Resultado<Digerido> Sesion::data(const Trama& t) {
         return conexion(Error::ControlDeFlujo, "el cliente se pasó de la ventana del flujo");
     }
     if (f.estado == Estado::MitadCerradoRemoto) {
-        flujos_.erase(i);
-        return cerrado("DATA tras fin de flujo");
+        return con_credito(cortar(t.flujo, "DATA tras fin de flujo", Error::FlujoCerrado));
     }
     if (t.fin_flujo()) f.estado = Estado::MitadCerradoRemoto;
 
     f.recibido += datos->size();
     if (f.declarado &&
         (f.recibido > *f.declarado || (t.fin_flujo() && f.recibido != *f.declarado))) {
-        auto corte = cortar(t.flujo, "el cuerpo no mide lo que dijo content-length");
-        corte.acciones.insert(corte.acciones.begin(), d.acciones.begin(), d.acciones.end());
-        return corte;
+        return con_credito(cortar(t.flujo, "el cuerpo no mide lo que dijo content-length"));
     }
 
-    d.acciones.insert(d.acciones.begin(), Cuerpo{t.flujo, std::move(*datos), t.fin_flujo()});
+    Digerido d;
+    d.acciones.emplace_back(Cuerpo{t.flujo, std::move(*datos), t.fin_flujo()});
+    d.acciones.insert(d.acciones.end(), credito.begin(), credito.end());
+    if (t.fin_flujo()) atendidos_.insert(t.flujo);
     if (tamano > 0 && !t.fin_flujo()) {
         f.ventana += tamano;
         d.acciones.emplace_back(Escribir{Trama::ventana(t.flujo, static_cast<std::uint32_t>(tamano))});

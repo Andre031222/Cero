@@ -16,6 +16,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -91,9 +92,20 @@ public:
         return true;
     }
 
+    void empezar(std::uint32_t flujo) {
+        const std::lock_guard tomado{candado_};
+        en_marcha_.insert(flujo);
+    }
+
+    void terminar(std::uint32_t flujo) {
+        const std::lock_guard tomado{candado_};
+        en_marcha_.erase(flujo);
+        anulados_.erase(flujo);
+    }
+
     void anular(std::uint32_t flujo) {
         const std::lock_guard tomado{candado_};
-        anulados_.insert(flujo);
+        if (en_marcha_.contains(flujo)) anulados_.insert(flujo);
     }
 
     std::size_t max_trama() {
@@ -110,6 +122,7 @@ private:
     int descriptor_;
     std::mutex candado_;
     std::size_t max_trama_ = 16'384;
+    std::set<std::uint32_t> en_marcha_;
     std::set<std::uint32_t> anulados_;
     bool rota_ = false;
 };
@@ -149,20 +162,30 @@ void responder(Salida& salida, std::uint32_t flujo, const cero::Respuesta& r, bo
 
 void lanzar(const std::shared_ptr<Comun>& comun, const Atender& atender, std::uint32_t flujo,
             cero::Peticion p) {
-    {
-        const std::lock_guard tomado{comun->candado};
-        ++comun->en_vuelo;
-    }
-    std::thread{[comun, &atender, flujo, p = std::move(p)] {
-        const auto r = cero::metodo_conocido(p.metodo)
-                           ? atender(p)
-                           : cero::Respuesta::codigo(501, "método no implementado");
-        responder(comun->salida, flujo, r, p.metodo == "HEAD");
+    const auto acabar = [comun, flujo] {
+        comun->salida.terminar(flujo);
         const std::lock_guard tomado{comun->candado};
         comun->terminados.push_back(flujo);
         --comun->en_vuelo;
         comun->avisa.notify_all();
-    }}.detach();
+    };
+    {
+        const std::lock_guard tomado{comun->candado};
+        ++comun->en_vuelo;
+    }
+    comun->salida.empezar(flujo);
+    try {
+        std::thread{[comun, &atender, flujo, acabar, p = std::move(p)] {
+            const auto r = cero::metodo_conocido(p.metodo)
+                               ? atender(p)
+                               : cero::Respuesta::codigo(501, "método no implementado");
+            responder(comun->salida, flujo, r, p.metodo == "HEAD");
+            acabar();
+        }}.detach();
+    } catch (const std::system_error&) {
+        comun->salida.mandar({Trama::rst(flujo, Error::Rechazado)});
+        acabar();
+    }
 }
 
 void despedirse(int descriptor) {
@@ -331,6 +354,10 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
             return;
         }
         salida.max_trama(sesion.par().max_trama);
+        primera->version = "HTTP/2";
+        for (const auto* de_http11 : {"connection", "upgrade", "http2-settings", "keep-alive"}) {
+            primera->cabeceras.erase(de_http11);
+        }
         lanzar(comun, atender, 1, std::move(*primera));
     }
 
