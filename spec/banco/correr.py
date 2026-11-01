@@ -7,6 +7,8 @@ mismo juez valga para la implementación en Java, la de Rust y las que vengan.
     python3 spec/banco/correr.py 127.0.0.1 8777
 """
 
+from __future__ import annotations
+
 import json
 import pathlib
 import socket

@@ -75,7 +75,7 @@ con abrir conexiones y no hablar.
 |---|---|---|
 | `HTTP-024` | Una conexión que espera la siguiente petición más del plazo de inactividad configurado DEBE cerrarse. | 9112 §9.5 |
 | `HTTP-025` | Un plazo, el presupuesto de respuestas en vuelo o el tope del cuerpo configurados a 0 o negativos DEBEN rechazarse al arrancar: el servidor no llega a escuchar. | — |
-| `HTTP-026` | Un cuerpo de petición mayor que el tope configurado, 10 MiB por defecto, DEBE responderse con 413 sin leerlo entero. | 9110 §15.5.14 |
+| `HTTP-026` | Una petición que declara un `Content-Length` mayor que el tope configurado, 10 MiB por defecto, DEBE recibir 413 antes de que corra la acción. Un cuerpo por trozos que pasa del tope DEBE dejar de leerse, y DEBE recibir 413 si la respuesta no ha empezado o cerrar la conexión si ya empezó. | 9110 §15.5.14 |
 
 `HTTP-025` existe porque los dos errores son silenciosos. En un socket, un plazo de 0 suele querer
 decir «sin plazo», y en una cuenta atrás quiere decir «ya pasó». Cualquiera de las dos lecturas

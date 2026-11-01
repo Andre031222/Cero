@@ -12,6 +12,8 @@ A la orden se le añaden dos argumentos, `<puerto> <plazo en ms>`, y el servidor
 tiene que usar ese plazo para esperar crédito y para escribir, y el doble para la inactividad.
 """
 
+from __future__ import annotations
+
 import socket
 import struct
 import subprocess
@@ -251,30 +253,85 @@ def h2_054(puerto: int):
     return ok, f"una respuesta de 1 MiB sí; 40 con la ventana a 0, {c.visto()}"
 
 
-def h2_055(puerto: int):
-    c = H2(puerto)
-    c.mandar(trama(HEADERS, FIN_CABECERAS, 1, bytes([0x83, 0x86, 0x04]) + cadena("/eco")))
-    ventana = {0: 65535, 1: c.ajustes.get(VENTANA_INICIAL, 65535)}
-    mandados, respuesta = 0, None
-    hasta = time.monotonic() + 30
-    while respuesta is None and not c.cerrada and time.monotonic() < hasta:
-        trozo = min(16384, CUERPO_DE_MAS - mandados, ventana[0], ventana[1])
+def post(camino: str, largo: int | None = None) -> bytes:
+    bloque = bytes([0x83, 0x86, 0x04]) + cadena(camino)
+    if largo is not None:
+        bloque += bytes([0x0F, 0x0D]) + cadena(str(largo))
+    return bloque
+
+
+def subir(c: H2, flujo: int, total: int, hasta_que) -> tuple[int, Trama | None]:
+    """Manda `total` octetos respetando el control de flujo, hasta que llegue una trama que cumpla."""
+    ventana = {0: 65535, flujo: c.ajustes.get(VENTANA_INICIAL, 65535)}
+    mandados = 0
+    limite = time.monotonic() + 30
+    while not c.cerrada and time.monotonic() < limite:
+        trozo = min(16384, total - mandados, ventana[0], ventana[flujo])
         if trozo > 0:
             mandados += trozo
             ventana[0] -= trozo
-            ventana[1] -= trozo
-            c.mandar(trama(DATA, FIN_FLUJO if mandados == CUERPO_DE_MAS else 0, 1, b"x" * trozo))
+            ventana[flujo] -= trozo
+            c.mandar(trama(DATA, FIN_FLUJO if mandados == total else 0, flujo, b"x" * trozo))
         t = c.siguiente(time.monotonic() + (0.001 if trozo > 0 else 3))
         if t is None:
+            if trozo == 0 and mandados == total:
+                return mandados, None
             continue
         if t.tipo == WINDOW_UPDATE and t.flujo in ventana:
             ventana[t.flujo] += struct.unpack(">I", t.carga)[0] & 0x7FFFFFFF
-        elif (t.tipo == HEADERS and t.flujo == 1) or t.tipo in (RST_STREAM, GOAWAY):
-            respuesta = t
-    if respuesta is None or respuesta.tipo != HEADERS:
-        return False, f"{mandados >> 10} KiB mandados sin una respuesta: {c.visto()}"
-    estado = estado_h2(respuesta.carga)
-    return estado == "413", f"{mandados >> 20} MiB mandados de 11, y responde {estado}"
+        elif hasta_que(t):
+            return mandados, t
+    return mandados, None
+
+
+def es_413_o_corte(flujo: int):
+    def cumple(t: Trama) -> bool:
+        if t.flujo != flujo:
+            return t.tipo == GOAWAY
+        if t.tipo == HEADERS:
+            return estado_h2(t.carga) == "413"
+        return t.tipo == RST_STREAM
+    return cumple
+
+
+def h2_055(puerto: int):
+    c = H2(puerto)
+    c.mandar(trama(HEADERS, FIN_CABECERAS, 1, post("/eco", CUERPO_DE_MAS)))
+    anunciado = c.vigilar(3, lambda t: t.flujo == 1 or t.tipo == GOAWAY)
+    if anunciado is None or anunciado.tipo != HEADERS or estado_h2(anunciado.carga) != "413":
+        return False, f"content-length de 11 MiB sin mandar cuerpo: no responde 413 ({c.visto()})"
+    corte = c.vigilar(3, lambda t: t.flujo == 1 and t.tipo == RST_STREAM)
+    if corte is None or codigo_de(corte) != NO_ERROR:
+        return False, f"tras el 413 anunciado falta RST_STREAM NO_ERROR: {c.visto()}"
+    vistos = ["anunciado: 413 y RST NO_ERROR"]
+    for flujo, camino in ((3, "/eco"), (5, "/")):
+        c.mandar(trama(HEADERS, FIN_CABECERAS, flujo, post(camino)))
+        mandados, fin = subir(c, flujo, CUERPO_DE_MAS, es_413_o_corte(flujo))
+        if fin is None or fin.tipo == GOAWAY or (fin.tipo == RST_STREAM and codigo_de(fin) != NO_ERROR):
+            return False, f"{camino} sin anunciar, {mandados >> 10} KiB: ni 413 ni RST NO_ERROR ({c.visto()})"
+        vistos.append(f"{camino} sin anunciar: {'413' if fin.tipo == HEADERS else 'RST NO_ERROR'} a los {mandados >> 20} MiB")
+    return True, "; ".join(vistos)
+
+
+def descarga_legitima(puerto: int):
+    c = H2(puerto)
+    c.mandar(trama(HEADERS, FIN_FLUJO | FIN_CABECERAS, 1, get("/descarga")))
+    recibidos = 0
+    limite = time.monotonic() + 60
+    while time.monotonic() < limite and not c.cerrada:
+        t = c.siguiente(limite)
+        if t is None:
+            break
+        if t.tipo == GOAWAY or (t.tipo == RST_STREAM and t.flujo == 1):
+            return False, f"{recibidos >> 20} MiB y el servidor corta: {c.visto()}"
+        if t.tipo == DATA and t.flujo == 1:
+            recibidos += len(t.carga)
+            if t.carga:
+                credito = struct.pack(">I", len(t.carga))
+                c.mandar(trama(WINDOW_UPDATE, 0, 1, credito) + trama(WINDOW_UPDATE, 0, 0, credito))
+            if t.banderas & FIN_FLUJO:
+                return recibidos == 32 << 20, f"32 MiB con un WINDOW_UPDATE por trama: {recibidos >> 20} MiB recibidos"
+    return False, f"{recibidos >> 20} MiB de 32 y no termina: {c.visto()}"
 
 
 def leer_respuesta(s: socket.socket) -> tuple[bytes, bytes]:
@@ -323,7 +380,8 @@ def http_026(puerto: int):
             cabeza, _ = leer_respuesta(s)
         except socket.timeout:
             return False, "anuncia 11 MiB y el servidor se queda esperándolos"
-        return cabeza.startswith(b"HTTP/1.1 413"), f"anuncia 11 MiB: {cabeza.split(b'\r\n')[0]!r}"
+        linea = cabeza.split(b"\r\n")[0]
+        return cabeza.startswith(b"HTTP/1.1 413"), f"anuncia 11 MiB: {linea!r}"
 
 
 def escucha(puerto: int) -> bool:
@@ -364,7 +422,8 @@ VECTORES = [
     ("H2-052", "ventana a 0 y goteo de un octeto: el flujo se corta", h2_052),
     ("H2-053", "PING, WINDOW_UPDATE, SETTINGS y PRIORITY no reinician la inactividad", h2_053),
     ("H2-054", "presupuesto de respuestas en vuelo por conexión", h2_054),
-    ("H2-055", "un cuerpo de más de 10 MiB recibe 413", h2_055),
+    ("H2-055", "un cuerpo de más de 10 MiB: 413 o RST_STREAM NO_ERROR", h2_055),
+    ("H2-038", "legítimo: una descarga de 32 MiB no es una inundación", descarga_legitima),
     ("HTTP-024", "keep-alive ocioso: la conexión se cierra", http_024),
     ("HTTP-026", "un cuerpo de más de 10 MiB recibe 413", http_026),
 ]

@@ -8,6 +8,8 @@ Es lo que convierte `spec/` en un contrato comprobable en vez de un documento.
 python3 spec/banco/correr.py 127.0.0.1 8777
 ```
 
+Los dos guiones corren con Python 3.9 o posterior, sin nada fuera de la biblioteca estándar.
+
 ## Lo que el servidor bajo prueba tiene que ofrecer
 
 No basta con que escuche. Seis vectores esperan 200 y varios ejercitan el encuadre del cuerpo, y
@@ -19,6 +21,7 @@ pasa por válido sin haber parseado nada.
 | `/` | GET | responder 200 |
 | `/eco` | GET, POST | **leer el cuerpo entero** y devolverlo |
 | `/grande` | GET | responder 1 MiB, que es lo que usa `H2-054` |
+| `/descarga` | GET | responder 32 MiB, para el vector legítimo de `H2-038` |
 
 Esto se aprendió fallando: el primer servidor de prueba contestaba `ok` a todo sin tocar el
 cuerpo, y el vector del trozo no hexadecimal daba 200 en vez de 400. La implementación estaba
@@ -33,8 +36,10 @@ estado que se espera.
 
 ## Los ataques: `ataques.py`
 
-Nueve vectores más, para los requisitos que solo se ven con el reloj en la mano o con un tope: los
-seis de HTTP/2 Bomb (`H2-050` a `H2-055`) y los tres de HTTP/1.1 (`HTTP-024` a `HTTP-026`). Este
+Diez vectores más, para los requisitos que solo se ven con el reloj en la mano o con un tope: los
+seis de HTTP/2 Bomb (`H2-050` a `H2-055`), los tres de HTTP/1.1 (`HTTP-024` a `HTTP-026`) y uno
+legítimo, para que el juez vigile también el exceso de defensa: una descarga de 32 MiB tiene que
+terminar. Este
 no se conecta a un servidor que ya corre: **lo arranca él**, porque necesita plazos cortos y porque
 `HTTP-025` comprueba justo que el servidor se niegue a arrancar.
 
@@ -56,7 +61,8 @@ segundo, y tarda unos siete con C++ o Rust; algo más con Java, por el arranque 
 | `H2-052` | ventana inicial 0 y un `WINDOW_UPDATE` de un octeto cada cuarto de plazo | RST_STREAM CANCEL antes de que salga la respuesta entera, y no antes de ¾ del plazo |
 | `H2-053` | ningún flujo y `PING`, `WINDOW_UPDATE`, `SETTINGS` y `PRIORITY` cada cuarto de plazo | GOAWAY NO_ERROR al pasar la inactividad, y no antes de ¾ de ella |
 | `H2-054` | una petición a `/grande` sola, y después 40 con la ventana inicial a 0 | la sola se atiende; las 40, GOAWAY ENHANCE_YOUR_CALM |
-| `H2-055` | `POST /eco` con 11 MiB de cuerpo, respetando el control de flujo | `:status 413` |
+| `H2-055` | un `content-length` de 11 MiB sin cuerpo; después 11 MiB sin declarar a `/eco` y a `/`, respetando el control de flujo | 413 y RST NO_ERROR al declarado; a los otros, 413 o RST NO_ERROR |
+| `H2-038` (legítimo) | `GET /descarga`, 32 MiB, con un `WINDOW_UPDATE` de flujo y de conexión por cada DATA | la descarga termina: el crédito no es una inundación |
 | `HTTP-024` | una petición keep-alive, otra a media inactividad por la misma conexión, y silencio | las dos se atienden; la conexión se cierra, no antes de ¾ de la inactividad |
 | `HTTP-026` | `Content-Length` de 11 MiB y ningún octeto de cuerpo | 413 sin esperar al cuerpo |
 | `HTTP-025` | arrancar con un plazo de 0 y de -1 | el proceso termina con error y nadie escucha |

@@ -123,6 +123,11 @@ con `ENHANCE_YOUR_CALM`, que distingue «te estás pasando» de «esto está mal
 | `H2-038` | Las tramas de control sin abrir ningún flujo NO DEBEN admitirse sin tope. | 9113 §10.5 |
 | `H2-039` | Una lista de cabeceras que se expande al descomprimirse NO DEBE admitirse. | 7541 §7.1 |
 
+`H2-038` tiene un reverso que el banco también comprueba: el crédito no es control vacío. Un
+`WINDOW_UPDATE` sobre un flujo, o sobre la conexión mientras hay algún flujo vivo, es lo que hace
+un cliente que descarga, y contarlo cortaba con `ENHANCE_YOUR_CALM` cualquier descarga de más de
+unos 8 MiB. Solo cuenta el que llega sin ningún flujo vivo.
+
 `H2-039` es el que menos se ve venir: limitar el bloque comprimido no basta, porque tres
 kilobytes en el cable pueden ser trescientos al salir — basta con meter una entrada grande en la
 tabla dinámica y referenciarla cien veces, a un octeto por referencia. Hay que mirar lo que sale,
@@ -149,7 +154,7 @@ mientras espera.
 | `H2-052` | Un flujo que pasa el plazo configurado sin poder mandar una trama DATA completa por falta de ventana DEBE cortarse. Gotear `WINDOW_UPDATE` de un octeto NO DEBE reiniciar ese plazo. | RST_STREAM CANCEL | HTTP/2 Bomb |
 | `H2-053` | El plazo de inactividad de la conexión solo DEBE reiniciarse con HEADERS, CONTINUATION o DATA, y NO DEBE correr mientras algún flujo tenga su respuesta en marcha. `PING`, `WINDOW_UPDATE`, `SETTINGS` y `PRIORITY` NO DEBEN reiniciarlo. | GOAWAY NO_ERROR | 9113 §9.1 |
 | `H2-054` | Los octetos de respuesta construidos y todavía sin mandar en una conexión NO DEBEN pasar del presupuesto configurado, que por defecto son 32 MiB. Una respuesta que llega sin ninguna otra en vuelo DEBE admitirse aunque sola lo pase. | GOAWAY ENHANCE_YOUR_CALM | HTTP/2 Bomb |
-| `H2-055` | Un cuerpo de petición que pasa del tope configurado, 10 MiB por defecto, DEBE responderse con 413 y NO DEBE retenerse; el flujo se cierra con RST_STREAM NO_ERROR. | 413 y RST_STREAM NO_ERROR | 9110 §15.5.14 |
+| `H2-055` | Una petición que declara un `content-length` mayor que el tope configurado, 10 MiB por defecto, DEBE recibir 413 antes de que corra la acción. Un cuerpo sin longitud declarada que pasa del tope DEBE dejar de leerse, y DEBE recibir 413 si la respuesta no ha empezado o RST_STREAM NO_ERROR si ya empezó. | 413 o RST_STREAM NO_ERROR | 9110 §15.5.14 |
 
 Los seis se comprueban desde fuera en [`banco/ataques.py`](banco/ataques.py), con el servidor
 arrancado con plazos cortos.
@@ -175,9 +180,12 @@ arrancado con plazos cortos.
   cliente se ponga al día. La excepción es la respuesta que llega sola: si no hay nada más en vuelo,
   el presupuesto no protege a nadie y cortarla solo rompería una descarga grande.
 - **`H2-055` es el otro lado de la misma memoria.** La ventana de entrada se repone en cuanto llega
-  cada DATA, así que sin tope un solo flujo puede subir lo que quiera. Se responde lo mismo que en
-  HTTP/1.1 (`HTTP-026`) y se manda `RST_STREAM NO_ERROR` para que el cliente deje de enviar
-  (RFC 9113 §8.1).
+  cada DATA, así que sin tope un solo flujo puede subir lo que quiera. Con la longitud declarada se
+  sabe antes de empezar, y se responde lo mismo que en HTTP/1.1 (`HTTP-026`). Sin ella, el tope se
+  descubre a mitad: una implementación que pasa el cuerpo a la acción mientras llega puede haber
+  respondido ya, y entonces lo único honesto es cortar con `RST_STREAM NO_ERROR` (RFC 9113 §8.1).
+  En los dos casos lo que el cliente ya tenía en vuelo devuelve su ventana a la conexión: si no,
+  un 413 dejaría sin crédito a todas las subidas siguientes.
 
 ### Comportamiento
 

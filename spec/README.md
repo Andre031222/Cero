@@ -83,15 +83,15 @@ benchmarks/           mide, no especifica
 ## El banco ya no es una idea
 
 [`spec/banco/`](banco/) corre los 23 vectores de HTTP/1.1 contra cualquier servidor que escuche,
-en el lenguaje que sea, y los nueve ataques de plazos, topes y HTTP/2 Bomb contra el binario que se le
+en el lenguaje que sea, y los diez ataques de plazos, topes y HTTP/2 Bomb (uno de ellos legítimo, contra el exceso de defensa) contra el binario que se le
 dé, que arranca él mismo con plazos cortos. Y h2spec, que lo escribió otra gente, juzga HTTP/2
 igual de ciego.
 
 | Implementación | Banco HTTP/1.1 | Ataques | h2spec | Requisitos |
 |---|---|---|---|---|
-| `java/` | 23 de 23 | 9 de 9 | 145 de 146 | los 182 |
-| `rust/` | 23 de 23 | 9 de 9 | 145 de 146 | los 182 |
-| `c++/` | 23 de 23 | 9 de 9 | 145 de 146 | 157 citados en pruebas |
+| `java/` | 23 de 23 | 10 de 10 | 145 de 146 | los 182 |
+| `rust/` | 23 de 23 | 10 de 10 | 145 de 146 | los 182 |
+| `c++/` | 23 de 23 | 10 de 10 | 145 de 146 | 157 citados en pruebas |
 | `python/` | por empezar | por empezar | por empezar | por empezar |
 | `php/` | por empezar | por empezar | por empezar | por empezar |
 
