@@ -1,5 +1,10 @@
+import sqlite3
+import subprocess
+import sys
+import tempfile
 import threading
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from cero import sesion
@@ -7,7 +12,7 @@ from cero.peticion import Peticion
 from cero.respuesta import Respuesta
 from cero.ruta import Router
 from cero.servidor import Servidor
-from cero.sesion import Memoria, SesionInvalidada
+from cero.sesion import Memoria, SesionInvalidada, Tabla
 from pruebas.test_servidor import pedir as pedir_por_socket
 
 
@@ -150,6 +155,20 @@ class EnMemoria(CicloDeVida, unittest.TestCase):
         return Memoria()
 
 
+def archivo_temporal(prueba):
+    carpeta = tempfile.TemporaryDirectory()
+    prueba.addCleanup(carpeta.cleanup)
+    return str(Path(carpeta.name) / "sesiones.db")
+
+
+class EnTabla(CicloDeVida, unittest.TestCase):
+
+    def almacen(self):
+        if not hasattr(self, "ruta"):
+            self.ruta = archivo_temporal(self)
+        return Tabla(self.ruta, "sesiones")
+
+
 class Galleta(unittest.TestCase):
 
     def test_ses_009_banderas_de_la_cookie(self):
@@ -257,8 +276,16 @@ class Emision(unittest.TestCase):
         self.assertEqual(pedir(self.servidor, "/quien", viejo).cuerpo, b"nadie")
 
     def test_ses_007_peticiones_simultaneas_por_el_pipeline(self):
+        barrera = threading.Barrier(32)
+
+        def a_la_vez(p):
+            s = p.sesion()
+            barrera.wait()
+            s.poner(p.variables["clave"], "v")
+
+        self.servidor.router.agregar("GET", "/a-la-vez/{clave}", a_la_vez)
         id = id_emitido(pedir(self.servidor, "/entrar"))
-        hilos = [threading.Thread(target=pedir, args=(self.servidor, f"/poner/k{i}", id))
+        hilos = [threading.Thread(target=pedir, args=(self.servidor, f"/a-la-vez/k{i}", id))
                  for i in range(32)]
         for hilo in hilos:
             hilo.start()
@@ -320,3 +347,84 @@ class SobreElSocket(unittest.TestCase):
         estado, cabeceras, cuerpo = pedir_por_socket(servidor.puerto, crudo)
         self.assertEqual((estado, cuerpo), (200, b"ana"))
         self.assertNotIn("set-cookie", cabeceras)
+
+
+def sql(ruta, orden):
+    conexion = sqlite3.connect(ruta)
+    try:
+        with conexion:
+            return conexion.executescript(orden) if ";" in orden else conexion.execute(orden).fetchall()
+    finally:
+        conexion.close()
+
+
+class Almacenamiento(unittest.TestCase):
+
+    def setUp(self):
+        self.ruta = archivo_temporal(self)
+
+    def test_ses_012_una_sesion_abierta_en_una_instancia_se_reconoce_en_otra(self):
+        una = Servidor(router_de_sesiones(), sesiones=Tabla(self.ruta, "sesiones"))
+        otra = Servidor(router_de_sesiones(), sesiones=Tabla(self.ruta, "sesiones"))
+        id = id_emitido(pedir(una, "/entrar"))
+        respuesta = pedir(otra, "/quien", id)
+        self.assertEqual((respuesta.cuerpo, galletas(respuesta)), (b"ana", []))
+        nuevo = id_emitido(pedir(otra, "/rotar", id))
+        self.assertEqual(pedir(una, "/quien", nuevo).cuerpo, b"ana")
+        self.assertEqual(pedir(una, "/quien", id).cuerpo, b"nadie")
+        pedir(una, "/salir", nuevo)
+        self.assertEqual(pedir(otra, "/quien", nuevo).cuerpo, b"nadie")
+
+    def test_ses_012_otro_proceso_la_reconoce(self):
+        s = Tabla(self.ruta, "sesiones").crear()
+        s.poner("usuario", "ana")
+        s.almacen.guardar(s)
+        raiz = str(Path(__file__).resolve().parent.parent)
+        guion = ("import sys; sys.path.insert(0, sys.argv[1]); from cero.sesion import Tabla; "
+                 "print(Tabla(sys.argv[2], 'sesiones').recuperar(sys.argv[3]).leer('usuario'))")
+        salida = subprocess.run([sys.executable, "-I", "-c", guion, raiz, self.ruta, s.id],
+                                capture_output=True, text=True, timeout=30, check=True)
+        self.assertEqual(salida.stdout.strip(), "ana")
+
+    def test_ses_013_el_nombre_de_la_tabla_no_tiene_valor_por_omision(self):
+        with self.assertRaises(TypeError):
+            Tabla(self.ruta)
+
+    def test_ses_013_usa_la_tabla_que_se_le_nombra(self):
+        Tabla(self.ruta, "cero_sesiones_app").crear()
+        tablas = sql(self.ruta, "SELECT name FROM sqlite_master WHERE type = 'table'")
+        self.assertEqual(tablas, [("cero_sesiones_app",)])
+
+    def test_ses_013_dos_tablas_en_un_archivo_no_se_ven(self):
+        id = Tabla(self.ruta, "una").crear().id
+        self.assertIsNone(Tabla(self.ruta, "otra").recuperar(id))
+        self.assertIsNotNone(Tabla(self.ruta, "una").recuperar(id))
+
+    def test_ses_013_un_nombre_que_no_es_identificador_se_rechaza(self):
+        for nombre in ("", "1tabla", 'x"; DROP TABLE y; --', "a b", "sqlite_master", "t" * 64):
+            with self.assertRaises(ValueError, msg=nombre):
+                Tabla(self.ruta, nombre)
+
+    def test_una_peticion_que_no_cambia_nada_no_escribe(self):
+        servidor = Servidor(router_de_sesiones(), sesiones=Tabla(self.ruta, "sesiones"))
+        id = id_emitido(pedir(servidor, "/entrar"))
+        sql(self.ruta, """
+            CREATE TABLE escrituras (n INTEGER);
+            CREATE TRIGGER contar AFTER UPDATE ON sesiones BEGIN
+                INSERT INTO escrituras VALUES (1);
+            END;
+        """)
+        for _ in range(5):
+            pedir(servidor, "/quien", id)
+        pedir(servidor, "/poner/x", id)
+        self.assertEqual(sql(self.ruta, "SELECT count(*) FROM escrituras"), [(1,)])
+
+    def test_leer_renueva_la_inactividad_pasada_la_mitad(self):
+        a = Tabla(self.ruta, "sesiones", inactividad=100)
+        id = a.crear().id
+        ahora = sesion.time.time()
+        for desfase in (60, 120, 180):
+            with mock.patch.object(sesion.time, "time", return_value=ahora + desfase):
+                vista = a.recuperar(id)
+                self.assertIsNotNone(vista, desfase)
+                a.guardar(vista)
