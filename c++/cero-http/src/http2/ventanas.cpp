@@ -1,6 +1,7 @@
 #include "cero/http2/ventanas.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
@@ -57,7 +58,8 @@ bool Ventanas::reajustar(std::int64_t delta) {
     return true;
 }
 
-std::optional<std::size_t> Ventanas::reservar(std::uint32_t flujo, std::size_t quiero) {
+std::optional<std::size_t> Ventanas::reservar(std::uint32_t flujo, std::size_t quiero,
+                                              std::chrono::steady_clock::time_point hasta) {
     std::unique_lock tomado{candado_};
     while (abierto_) {
         const auto i = flujos_.find(flujo);
@@ -68,7 +70,7 @@ std::optional<std::size_t> Ventanas::reservar(std::uint32_t flujo, std::size_t q
             conexion_ -= cabe;
             return static_cast<std::size_t>(cabe);
         }
-        hay_.wait(tomado);
+        if (hay_.wait_until(tomado, hasta) == std::cv_status::timeout) return std::nullopt;
     }
     return std::nullopt;
 }

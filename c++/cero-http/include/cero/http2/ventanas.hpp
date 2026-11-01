@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +18,8 @@ public:
     void soltar(std::uint32_t flujo);
     bool ampliar(std::uint32_t flujo, std::int64_t cuanto);
     bool reajustar(std::int64_t delta);
-    std::optional<std::size_t> reservar(std::uint32_t flujo, std::size_t quiero);
+    std::optional<std::size_t> reservar(std::uint32_t flujo, std::size_t quiero,
+                                        std::chrono::steady_clock::time_point hasta);
     void cerrar();
     std::optional<std::int64_t> ventana(std::uint32_t flujo) const;
 

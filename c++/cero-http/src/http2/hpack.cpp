@@ -20,6 +20,8 @@ using Fallo = std::unexpected<FalloConexion>;
 
 Fallo mal(std::string_view porque) { return Fallo{FalloConexion{Error::Compresion, porque}}; }
 
+Fallo calma(std::string_view porque) { return Fallo{FalloConexion{Error::Calma, porque}}; }
+
 unsigned char en(std::string_view s, std::size_t i) {
     return static_cast<unsigned char>(s[i]);
 }
@@ -198,8 +200,9 @@ Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view blo
         if (!cual) return Fallo{cual.error()};
         tamano += cual->first.size() + cual->second.size() + kCosteFijo;
         if (tamano > max_lista_) {
-            return mal("la lista de cabeceras se pasa del máximo al expandirse");
+            return calma("la lista de cabeceras se pasa del máximo al expandirse");
         }
+        if (salida.size() == kMaxCampos) return calma("más campos de los que se admiten");
         salida.push_back(std::move(*cual));
     }
     return salida;

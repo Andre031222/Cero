@@ -287,6 +287,10 @@ Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view cam
 }
 
 int Servidor::escuchar(unsigned short puerto) const {
+    if (!plazos_.validos()) {
+        linea("cero · los plazos tienen que ser mayores que cero");
+        return 1;
+    }
     const int oyente = ::socket(AF_INET, SOCK_STREAM, 0);
     if (oyente < 0) return 1;
     const int si = 1;
@@ -312,6 +316,7 @@ int Servidor::escuchar(unsigned short puerto) const {
         sin_sigpipe(cliente);
         try {
             std::thread{[this, cliente, desde, plazos = plazos_] {
+                plazo_de_lectura(cliente, plazos.inactividad);
                 http2::DesdeSocket lector{cliente};
                 const http2::Atender atender = [this, &desde](const Peticion& p) {
                     return responder(p, desde);
@@ -321,7 +326,7 @@ int Servidor::escuchar(unsigned short puerto) const {
                     ::close(cliente);
                     return;
                 }
-                while (true) {
+                while (lector.esperar(plazos.inactividad)) {
                     auto peticion = leer(lector);
                     if (!peticion) {
                         const auto fallo = Respuesta::codigo(estado_de(peticion.error()));

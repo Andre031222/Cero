@@ -64,6 +64,12 @@ public:
         return escribir(octetos);
     }
 
+    void despedir(const Trama& goaway) {
+        const std::lock_guard tomado{candado_};
+        if (escribir(goaway.octetos())) ::shutdown(descriptor_, SHUT_WR);
+        rota_ = true;
+    }
+
     bool mandar(const std::vector<Trama>& tramas, std::uint32_t flujo = 0, bool ultima = false) {
         std::string junto;
         for (const auto& t : tramas) junto += t.octetos();
@@ -129,15 +135,55 @@ private:
     bool rota_ = false;
 };
 
+constexpr std::size_t kPresupuesto = 32 * 1024 * 1024;
+
 struct Comun {
-    Comun(int descriptor, cero::Plazos plazos) : salida(descriptor, plazos) {}
+    Comun(int descriptor, cero::Plazos p) : salida(descriptor, p), plazos(p) {}
+
+    bool cargar(std::size_t octetos) {
+        const std::lock_guard tomado{candado};
+        if (por_mandar + octetos > kPresupuesto) return false;
+        por_mandar += octetos;
+        return true;
+    }
+
+    void descargar(std::size_t octetos) {
+        const std::lock_guard tomado{candado};
+        por_mandar -= octetos;
+    }
+
+    void calmar() {
+        calma = true;
+        salida.despedir(Trama::goaway(ultimo, Error::Calma));
+        ventanas.cerrar();
+    }
 
     Salida salida;
     Ventanas ventanas;
+    cero::Plazos plazos;
     std::mutex candado;
     std::condition_variable avisa;
     std::size_t en_vuelo = 0;
-    std::atomic<int> calculando{0};
+    std::size_t por_mandar = 0;
+    std::atomic<std::uint32_t> ultimo{0};
+    std::atomic<bool> calma{false};
+};
+
+class PorMandar {
+public:
+    PorMandar(Comun& comun, std::size_t octetos) : comun_(comun), octetos_(octetos) {}
+    PorMandar(const PorMandar&) = delete;
+    PorMandar& operator=(const PorMandar&) = delete;
+    ~PorMandar() { comun_.descargar(octetos_); }
+
+    void mandados(std::size_t octetos) {
+        comun_.descargar(octetos);
+        octetos_ -= octetos;
+    }
+
+private:
+    Comun& comun_;
+    std::size_t octetos_;
 };
 
 bool responder(Comun& comun, std::uint32_t flujo, const cero::Respuesta& r, bool solo_cabeceras) {
@@ -152,16 +198,32 @@ bool responder(Comun& comun, std::uint32_t flujo, const cero::Respuesta& r, bool
         return false;
     }
     std::string_view resto = vacio ? std::string_view{} : std::string_view{r.cuerpo};
+    if (!comun.cargar(resto.size())) {
+        comun.calmar();
+        return false;
+    }
+    PorMandar pendiente{comun, resto.size()};
     while (!resto.empty()) {
-        const auto cabe = comun.ventanas.reservar(flujo, std::min(resto.size(), salida.max_trama()));
-        if (!cabe) return false;
-        const bool fin = *cabe == resto.size();
-        const std::uint8_t banderas = fin ? kFinFlujo : 0;
-        if (!salida.mandar({Trama{kData, banderas, flujo, std::string{resto.substr(0, *cabe)}}},
-                           flujo, fin)) {
-            return false;
+        auto trama = resto.substr(0, salida.max_trama());
+        const auto hasta = std::chrono::steady_clock::now() + comun.plazos.escritura;
+        while (!trama.empty()) {
+            const auto cabe = comun.ventanas.reservar(flujo, trama.size(), hasta);
+            if (!cabe) {
+                if (std::chrono::steady_clock::now() >= hasta) {
+                    salida.mandar({Trama::rst(flujo, Error::Anulado)});
+                }
+                return false;
+            }
+            const bool fin = *cabe == resto.size();
+            const std::uint8_t banderas = fin ? kFinFlujo : 0;
+            if (!salida.mandar({Trama{kData, banderas, flujo, std::string{resto.substr(0, *cabe)}}},
+                               flujo, fin)) {
+                return false;
+            }
+            resto.remove_prefix(*cabe);
+            trama.remove_prefix(*cabe);
+            pendiente.mandados(*cabe);
         }
-        resto.remove_prefix(*cabe);
     }
     return true;
 }
@@ -181,11 +243,9 @@ void lanzar(const std::shared_ptr<Comun>& comun, const Atender& atender, std::ui
     comun->salida.empezar(flujo);
     try {
         std::thread{[comun, &atender, flujo, acabar, p = std::move(p)] {
-            ++comun->calculando;
             const auto r = cero::metodo_conocido(p.metodo)
                                ? atender(p)
                                : cero::Respuesta::codigo(501, "método no implementado");
-            --comun->calculando;
             acabar(responder(*comun, flujo, r, p.metodo == "HEAD"));
         }}.detach();
     } catch (const std::system_error&) {
@@ -379,6 +439,7 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
         for (const auto* de_http11 : {"connection", "upgrade", "http2-settings", "keep-alive"}) {
             primera->cabeceras.erase(de_http11);
         }
+        comun->ultimo = 1;
         lanzar(comun, atender, 1, std::move(*primera));
     }
 
@@ -388,10 +449,20 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
         ventanas.soltar(flujo);
     };
 
+    const auto ocupada = [&] {
+        const std::lock_guard tomado{comun->candado};
+        return comun->en_vuelo > 0;
+    };
+    auto ociosa_desde = std::chrono::steady_clock::now();
     bool seguir = true;
-    while (seguir) {
-        if (!entrada.esperar(plazos.inactividad)) {
-            if (comun->calculando > 0) continue;
+    while (seguir && !comun->calma) {
+        const auto queda = std::chrono::duration_cast<std::chrono::milliseconds>(
+            ociosa_desde + plazos.inactividad - std::chrono::steady_clock::now());
+        if (!entrada.esperar(std::max(queda, std::chrono::milliseconds{0}))) {
+            if (ocupada()) {
+                ociosa_desde = std::chrono::steady_clock::now();
+                continue;
+            }
             salida.mandar({Trama::goaway(sesion.ultimo(), Error::Ninguno)});
             break;
         }
@@ -402,6 +473,10 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
             }
             break;
         }
+        if (comun->calma) break;
+        if (t->tipo == kHeaders || t->tipo == kContinuation || t->tipo == kData) {
+            ociosa_desde = std::chrono::steady_clock::now();
+        }
 
         for (const auto flujo : salida.recoger()) {
             sesion.respondido(flujo);
@@ -409,6 +484,7 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
         }
 
         auto d = sesion.recibir(*t);
+        comun->ultimo = sesion.ultimo();
         if (!d) {
             salida.mandar({Trama::goaway(sesion.ultimo(), d.error().codigo)});
             break;

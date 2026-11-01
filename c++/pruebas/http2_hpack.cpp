@@ -183,7 +183,30 @@ PRUEBA(h2_039_la_lista_que_se_expande_al_descomprimirse) {
     bloque += std::string(100, static_cast<char>(0x80 | 62));
 
     const auto r = dec.decodificar(bloque);
-    COMPRUEBA(!r.has_value() && r.error().codigo == Error::Compresion, "H2-039");
+    COMPRUEBA(!r.has_value() && r.error().codigo == Error::Calma, "H2-039");
+}
+
+PRUEBA(h2_050_mas_de_256_campos_con_cookies_partidas) {
+    const auto bloque = [](std::size_t campos) {
+        std::string b{"\x40\x06" "cookie" "\x03" "a=1"};
+        b += std::string(campos - 1, static_cast<char>(0x80 | 62));
+        return b;
+    };
+    Decodificador justo{4096, 64 * 1024};
+    COMPRUEBA(justo.decodificar(bloque(kMaxCampos)).has_value(), "H2-050: 256 trozos de cookie sí");
+
+    Decodificador pasado{4096, 64 * 1024};
+    const auto r = pasado.decodificar(bloque(kMaxCampos + 1));
+    COMPRUEBA(!r.has_value() && r.error().codigo == Error::Calma, "H2-050: 257 no");
+}
+
+PRUEBA(h2_051_el_tope_de_lista_es_el_que_se_anuncia) {
+    const std::string una{"\x40\x01" "a" "\x01" "b"};
+    const std::string otra(1, static_cast<char>(0x80 | 62));
+    Decodificador dec{4096, 3 * 34};
+    COMPRUEBA(dec.decodificar(una + otra + otra).has_value(), "H2-051: lo anunciado cabe");
+    const auto r = dec.decodificar(otra + otra + otra + otra);
+    COMPRUEBA(!r.has_value() && r.error().codigo == Error::Calma, "H2-051: un octeto más no");
 }
 
 PRUEBA(las_actualizaciones_de_tabla_tienen_su_sitio_y_su_tope) {

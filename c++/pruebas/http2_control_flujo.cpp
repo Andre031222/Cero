@@ -28,6 +28,7 @@ using prueba::get;
 
 constexpr std::uint16_t kVentanaInicial = 0x4;
 constexpr std::uint32_t kTope = 0x7fff'ffff;
+const auto kSiempre = std::chrono::steady_clock::now() + 24h;
 
 Trama pide(std::uint32_t flujo) {
     return Trama{kHeaders, kFinCabeceras | kFinFlujo, flujo, codificar(get())};
@@ -90,11 +91,11 @@ std::optional<Error> codigo_de(const std::optional<Trama>& x) {
 PRUEBA(h2_040_las_ventanas_reservan_lo_que_cabe) {
     Ventanas v{10};
     v.abrir(1);
-    COMPRUEBA(v.reservar(1, 4) == std::size_t{4}, "H2-040: pide menos de lo que hay");
-    COMPRUEBA(v.reservar(1, 100) == std::size_t{6}, "H2-040: el flujo pone el tope");
+    COMPRUEBA(v.reservar(1, 4, kSiempre) == std::size_t{4}, "H2-040: pide menos de lo que hay");
+    COMPRUEBA(v.reservar(1, 100, kSiempre) == std::size_t{6}, "H2-040: el flujo pone el tope");
     COMPRUEBA(v.ventana(1) == 0 && v.ventana(0) == 65'535 - 10, "H2-040: y se descuenta de los dos");
     COMPRUEBA(v.ampliar(1, 1'000'000), "crédito para el flujo");
-    COMPRUEBA(v.reservar(1, 1'000'000) == std::size_t{65'535 - 10}, "H2-040: la conexión pone el tope");
+    COMPRUEBA(v.reservar(1, 1'000'000, kSiempre) == std::size_t{65'535 - 10}, "H2-040: la conexión pone el tope");
     COMPRUEBA(v.ampliar(0, 0x7fff'ffff) && !v.ampliar(0, 1), "H2-041: la conexión no pasa de 2^31-1");
     COMPRUEBA(!v.ampliar(1, 0x7fff'ffff), "H2-041: ni el flujo");
     COMPRUEBA(v.ampliar(9, 0x7fff'ffff) && !v.ventana(9), "un flujo que ya no está se ignora");
@@ -109,7 +110,7 @@ PRUEBA(h2_040_quien_espera_ventana_despierta_al_soltar_o_cerrar) {
         std::atomic<bool> vuelto{false};
         std::optional<std::size_t> dado{7};
         std::thread espera{[&] {
-            dado = v.reservar(1, 10);
+            dado = v.reservar(1, 10, kSiempre);
             vuelto = true;
         }};
         std::this_thread::sleep_for(50ms);
@@ -122,6 +123,14 @@ PRUEBA(h2_040_quien_espera_ventana_despierta_al_soltar_o_cerrar) {
         espera.join();
         COMPRUEBA(!dado.has_value(), "H2-040: un flujo anulado o una conexión cerrada no esperan más");
     }
+}
+
+PRUEBA(h2_052_quien_espera_ventana_tiene_plazo) {
+    Ventanas v{0};
+    v.abrir(1);
+    const auto empezo = std::chrono::steady_clock::now();
+    COMPRUEBA(!v.reservar(1, 10, empezo + 100ms), "H2-052: sin crédito en el plazo, no hay reserva");
+    COMPRUEBA(std::chrono::steady_clock::now() - empezo < 1s, "H2-052: y no se espera más");
 }
 
 PRUEBA(h2_040_no_sale_data_sin_ventana_en_el_flujo) {

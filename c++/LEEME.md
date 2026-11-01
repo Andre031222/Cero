@@ -4,10 +4,10 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 10.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
-`Upgrade: h2c` en el mismo puerto, con control de flujo de salida. **23 de 23 vectores del banco**,
-**los 32 del apéndice C del RFC 7541**, **145 de 146 en h2spec** —el que falta es el mismo que en
-Java y en Rust— y 192 pruebas propias.
+**Estado: hito 11.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
+`Upgrade: h2c` en el mismo puerto, con control de flujo de salida y las defensas de HTTP/2 Bomb.
+**23 de 23 vectores del banco**, **7 de 7 en los ataques**, **los 32 del apéndice C del RFC 7541**,
+**145 de 146 en h2spec** —el que falta es el mismo que en Java y en Rust— y 200 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -21,10 +21,11 @@ Java y en Rust— y 192 pruebas propias.
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 6 de robustez |
+| 11 | Plazos y HTTP/2 Bomb | `H2-050`–`H2-054`, `HTTP-024`, `HTTP-025` · 7 de 7 en `ataques.py` · 8 pruebas |
 
 ## Cuántos requisitos citan las pruebas
 
-La cuenta que hace la integración continua, desde `c++/`: **148** requisitos distintos.
+La cuenta que hace la integración continua, desde `c++/`: **155** requisitos distintos.
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
@@ -37,6 +38,7 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
 ctest --test-dir build                       # las pruebas propias
 ./build/conforme 8777                        # y el servidor del banco
 python3 ../spec/banco/correr.py 127.0.0.1 8777
+python3 ../spec/banco/ataques.py ./build/conforme   # los ataques, que arrancan su propio servidor
 ```
 
 ## La decisión de fondo: C++ no tiene sockets
@@ -162,7 +164,9 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   conexión; un bloque que no se decodifica rompe la conexión (`H2-015`, `H2-016`) y los trailers se
   decodifican aunque se tiren. El índice 1 es la entrada más reciente; una que no cabe vacía la
   tabla (§4.4); el entero de longitud variable tiene tope de cinco septetos; el codificador no
-  indexa.
+  indexa. Un bloque que se expande a más de 256 campos (`H2-050`) o a más de lo anunciado en
+  `SETTINGS_MAX_HEADER_LIST_SIZE` (`H2-051`) corta la conexión con `ENHANCE_YOUR_CALM`; se cuenta
+  campo a campo según salen, cada `cookie` por separado, y no al terminar.
 - **`http2/flujo.hpp`.** Convierte tramas en peticiones, y `Sesion` vive lo que el socket: la tabla
   de HPACK y los identificadores no se reinician a mitad. Terminar de responder cierra **nuestra**
   mitad y no el flujo: el cliente puede seguir mandando cuerpo hasta `END_STREAM`, y hasta entonces
@@ -208,20 +212,29 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   `WINDOW_UPDATE` de la conexión solo cuentan como control sin flujo cuando no hay ninguno vivo: si
   no, una descarga larga acabaría en `ENHANCE_YOUR_CALM`. Una escritura que no avanza tiene plazo;
   al vencer, la salida se da por rota y el socket se cierra en los dos sentidos, para que el hilo que
-  lee también se entere. Una conexión que calla más que `inactividad` recibe GOAWAY `NO_ERROR` y se
-  cierra, y cerrarla despierta a los flujos que esperaban ventana; si algún manejador sigue
-  calculando, callar no cuenta como inactividad, porque el cliente está esperando la respuesta.
+  lee también se entere. Esperar ventana también tiene plazo: cada trama de hasta 16 KiB tiene
+  `escritura` para salir entera, y si el crédito no llega a tiempo el flujo se corta con
+  `RST_STREAM CANCEL` (`H2-052`); el plazo se fija por trama y no por octeto, porque un plazo que
+  reinicia cada `WINDOW_UPDATE` es justo lo que el goteo explota. Una conexión sin `HEADERS` ni `DATA`
+  durante `inactividad` recibe GOAWAY `NO_ERROR` y se cierra: `PING`, `SETTINGS` o `WINDOW_UPDATE`
+  no cuentan como trabajo (`H2-053`). Mientras algún flujo tenga su respuesta en marcha —calculándose
+  o esperando ventana— no hay inactividad. Lo construido y sin mandar se suma por conexión, y pasar
+  de 32 MiB manda GOAWAY `ENHANCE_YOUR_CALM`, cierra nuestra mitad y despierta a quien esperaba
+  ventana (`H2-054`); el hilo que lee se entera en la siguiente trama o cuando el cliente cierra.
 - **`socket.hpp`.** Lo que comparten HTTP/1.1 y h2 al escribir: sin `SIGPIPE` —un cliente que corta
   a mitad de respuesta mataba el proceso entero— y con `Plazos`, que son ajustes del `Servidor`
   (`.plazos(...)`): `sin_avance` (30 s sin mover un octeto), `escritura` (60 s por cada 16 KiB) e
-  `inactividad` (120 s sin una trama de h2). El plazo de `SO_SNDTIMEO` vuelve a empezar cada vez que
+  `inactividad` (120 s sin una petición nueva, en HTTP/1.1, y sin `HEADERS` ni `DATA`, en h2). Un
+  plazo de 0 o negativo no arranca: `escuchar` devuelve 1 sin abrir el puerto (`HTTP-025`), porque 0
+  en un socket quiere decir «sin plazo» y en una cuenta atrás «ya pasó». El plazo de `SO_SNDTIMEO` vuelve a empezar cada vez que
   el cliente lee algo, así que solo no basta: un cliente que lee un octeto antes de que venza retiene
   la conexión sin fin. Por eso cada 16 KiB tiene su plazo total, y se escribe en piezas de 4 KiB
   para que ninguna llamada a `send` pueda durar más que eso. En macOS el plazo de `send` se reinicia
   dentro de la misma llamada con cada avance; un `send` grande no vencería nunca. Si no se puede
   crear el hilo de una conexión, se cierra esa conexión y el servidor sigue.
 - **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
-  encuadre no comprueban nada.
+  encuadre no comprueban nada. `/grande` da 1 MiB para `H2-054`, y un segundo argumento fija los
+  plazos en milisegundos —el de inactividad, el doble—, que es como lo arranca `ataques.py`.
 - **`CMakeLists.txt`.** CMake es a C++ lo que Maven a Java y Cargo a Rust: construye, no se enlaza.
   Lo que se enlaza es la biblioteca estándar y nada más.
 - **`pruebas/prueba.hpp`.** `COMPRUEBA` es variádico y no de dos argumentos: con dos, una condición

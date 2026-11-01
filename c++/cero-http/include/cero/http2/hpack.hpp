@@ -14,6 +14,7 @@ namespace cero::http2 {
 using Cabecera = std::pair<std::string, std::string>;
 
 inline constexpr std::size_t kCosteFijo = 32;
+inline constexpr std::size_t kMaxCampos = 256;
 
 class TablaDinamica {
 public:

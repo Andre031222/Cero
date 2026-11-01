@@ -43,15 +43,20 @@ cero::Servidor servidor_grande() {
         "grande", [](const cero::Contexto&) { return cero::Respuesta::texto(std::string(8 << 20, 'x')); });
 }
 
+int conectar_una_vez(unsigned short puerto) {
+    const int d = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    a.sin_port = htons(puerto);
+    if (::connect(d, reinterpret_cast<sockaddr*>(&a), sizeof a) == 0) return d;
+    ::close(d);
+    return -1;
+}
+
 int conectar(unsigned short puerto) {
     for (int intento = 0; intento < 100; ++intento) {
-        const int d = ::socket(AF_INET, SOCK_STREAM, 0);
-        sockaddr_in a{};
-        a.sin_family = AF_INET;
-        a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        a.sin_port = htons(puerto);
-        if (::connect(d, reinterpret_cast<sockaddr*>(&a), sizeof a) == 0) return d;
-        ::close(d);
+        if (const int d = conectar_una_vez(puerto); d >= 0) return d;
         std::this_thread::sleep_for(50ms);
     }
     return -1;
@@ -114,6 +119,43 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
     COMPRUEBA(vivo, "un hilo que no se puede crear no tumba el proceso");
     ::kill(hijo, SIGKILL);
     if (vivo) ::waitpid(hijo, nullptr, 0);
+}
+
+PRUEBA(http_024_una_conexion_ociosa_entre_peticiones_se_cierra) {
+    const auto puerto = static_cast<unsigned short>(base() + 1);
+    std::thread{[puerto] {
+        cero::Router r;
+        (void)r.ruta("GET", "/", "hola");
+        (void)cero::Servidor{std::move(r)}
+            .accion("hola", [](const cero::Contexto&) { return cero::Respuesta::texto("hola"); })
+            .plazos({.sin_avance = 30s, .escritura = 30s, .inactividad = 300ms})
+            .escuchar(puerto);
+    }}.detach();
+    prueba::Cliente c{conectar(puerto)};
+    c.mandar("GET / HTTP/1.1\r\nHost: a\r\n\r\n");
+    COMPRUEBA(c.linea().starts_with("HTTP/1.1 200"), "HTTP-024: la primera petición se atiende");
+    while (c.linea() != "\r") {
+    }
+    char cuerpo[4];
+    (void)::read(c.descriptor(), cuerpo, sizeof cuerpo);
+    const auto empezo = std::chrono::steady_clock::now();
+    char algo = 0;
+    const auto leidos = ::read(c.descriptor(), &algo, 1);
+    COMPRUEBA(leidos == 0, "HTTP-024: callar después de una respuesta cierra la conexión");
+    COMPRUEBA(std::chrono::steady_clock::now() - empezo < 2s, "HTTP-024: dentro del plazo");
+}
+
+PRUEBA(http_025_un_plazo_de_cero_o_negativo_no_arranca) {
+    const auto puerto = static_cast<unsigned short>(base() + 2);
+    const auto arranca = [&](cero::Plazos p) {
+        return cero::Servidor{cero::Router{}}.plazos(p).escuchar(puerto) == 0;
+    };
+    for (const auto malo : {0ms, -1ms}) {
+        COMPRUEBA(!arranca({.sin_avance = malo}), "HTTP-025: sin_avance");
+        COMPRUEBA(!arranca({.escritura = malo}), "HTTP-025: escritura");
+        COMPRUEBA(!arranca({.inactividad = malo}), "HTTP-025: inactividad");
+    }
+    COMPRUEBA(conectar_una_vez(puerto) < 0, "HTTP-025: y nadie llegó a escuchar");
 }
 
 PRUEBA(un_cliente_que_corta_a_mitad_no_tumba_el_proceso) {
@@ -231,9 +273,9 @@ PRUEBA(un_cliente_que_lee_a_gotas_no_retiene_la_conexion) {
     hilo.join();
 }
 
-PRUEBA(un_cliente_callado_con_la_ventana_a_cero_se_despide) {
+PRUEBA(h2_052_un_cliente_callado_con_la_ventana_a_cero_suelta_sus_flujos) {
     std::atomic<int> llamadas{0};
-    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 30s, .inactividad = 300ms},
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 300ms, .inactividad = 300ms},
                                       [&](const cero::Peticion&) {
                                           ++llamadas;
                                           return cero::Respuesta::texto("hola");
@@ -244,14 +286,98 @@ PRUEBA(un_cliente_callado_con_la_ventana_a_cero_se_despide) {
         pedir(c, 1);
         pedir(c, 3);
         const auto empezo = std::chrono::steady_clock::now();
-        const auto adios = c.hasta(cero::http2::kGoaway);
+        int cortados = 0;
+        std::optional<cero::http2::Trama> adios;
+        for (auto x = c.trama(); x && !adios; x = c.trama()) {
+            if (x->tipo == cero::http2::kRstStream &&
+                cero::http2::entero32(x->carga, 0) == static_cast<std::uint32_t>(cero::http2::Error::Anulado)) {
+                ++cortados;
+            }
+            if (x->tipo == cero::http2::kGoaway) adios = x;
+        }
         const auto tardo = std::chrono::steady_clock::now() - empezo;
+        COMPRUEBA(cortados == 2, "H2-052: los dos flujos sin crédito se cortan con CANCEL");
         COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) == 0,
-                  "el silencio se despide con GOAWAY NO_ERROR");
-        COMPRUEBA(tardo < 2s, "dentro del plazo de inactividad");
+                  "H2-053: y después el silencio se despide con GOAWAY NO_ERROR");
+        COMPRUEBA(tardo < 2s, "dentro de los dos plazos");
         COMPRUEBA(esperar(*acabo, 2s), "y los hilos que esperaban ventana terminan");
         COMPRUEBA(llamadas == 2, "los dos flujos se habían atendido");
     }
+    hilo.join();
+}
+
+PRUEBA(h2_052_el_goteo_de_credito_no_reinicia_el_plazo) {
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 500ms, .inactividad = 30s},
+                                      [](const cero::Peticion&) {
+                                          return cero::Respuesta::texto(std::string(100, 'x'));
+                                      });
+    {
+        prueba::Cliente c{d};
+        c.abrir_h2(prueba::ajuste(0x4, 0));
+        pedir(c, 1);
+        std::atomic<bool> parar{false};
+        std::thread goteo{[&] {
+            while (!parar) {
+                c.mandar(cero::http2::Trama::ventana(1, 1));
+                std::this_thread::sleep_for(50ms);
+            }
+        }};
+        std::size_t datos = 0;
+        std::optional<cero::http2::Trama> corte;
+        for (auto x = c.trama(); x && !corte; x = c.trama()) {
+            if (x->tipo == cero::http2::kData && x->flujo == 1) datos += x->carga.size();
+            if (x->tipo == cero::http2::kRstStream && x->flujo == 1) corte = x;
+        }
+        parar = true;
+        goteo.join();
+        COMPRUEBA(corte && cero::http2::entero32(corte->carga, 0) ==
+                               static_cast<std::uint32_t>(cero::http2::Error::Anulado),
+                  "H2-052: un octeto de crédito cada 50 ms no salva una trama en 500 ms");
+        COMPRUEBA(datos > 0 && datos < 100, "H2-052: salió lo que cabía, y no la respuesta entera");
+    }
+    hilo.join();
+}
+
+PRUEBA(h2_053_los_ping_no_reinician_la_inactividad) {
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 30s, .inactividad = 300ms},
+                                      [](const cero::Peticion&) { return cero::Respuesta::texto("hola"); });
+    {
+        prueba::Cliente c{d};
+        c.abrir_h2();
+        std::atomic<bool> parar{false};
+        std::thread latido{[&] {
+            while (!parar) {
+                c.mandar(cero::http2::Trama{cero::http2::kPing, 0, 0, "12345678"});
+                c.mandar(cero::http2::Trama::ventana(0, 1));
+                std::this_thread::sleep_for(100ms);
+            }
+        }};
+        const auto empezo = std::chrono::steady_clock::now();
+        const auto adios = c.hasta(cero::http2::kGoaway);
+        const auto tardo = std::chrono::steady_clock::now() - empezo;
+        parar = true;
+        latido.join();
+        COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) == 0,
+                  "H2-053: PING y WINDOW_UPDATE no son trabajo, y la conexión se despide");
+        COMPRUEBA(tardo < 2s, "H2-053: dentro del plazo de inactividad");
+    }
+    hilo.join();
+}
+
+PRUEBA(h2_054_las_respuestas_en_vuelo_tienen_presupuesto) {
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 30s, .inactividad = 30s},
+                                      grande());
+    {
+        prueba::Cliente c{d};
+        c.abrir_h2(prueba::ajuste(0x4, 0));
+        for (std::uint32_t id = 1; id < 20; id += 2) pedir(c, id);
+        const auto adios = c.hasta(cero::http2::kGoaway);
+        COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) ==
+                               static_cast<std::uint32_t>(cero::http2::Error::Calma),
+                  "H2-054: 40 MiB construidos y sin salir pasan de los 32: ENHANCE_YOUR_CALM");
+        COMPRUEBA(!c.trama(), "H2-054: y el servidor cierra su mitad");
+    }
+    COMPRUEBA(esperar(*acabo, 2s), "H2-054: la conexión suelta la memoria y los hilos");
     hilo.join();
 }
 
