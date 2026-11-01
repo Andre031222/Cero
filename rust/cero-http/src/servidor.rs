@@ -41,6 +41,7 @@ pub struct Servidor {
     seguro: bool,
     plazos: Plazos,
     limites: Limites,
+    direccion: String,
 }
 
 impl Servidor {
@@ -68,6 +69,7 @@ impl Servidor {
             seguro: false,
             plazos: Plazos::default(),
             limites: Limites::default(),
+            direccion: "0.0.0.0".to_string(),
         }
     }
 
@@ -155,6 +157,11 @@ impl Servidor {
         self
     }
 
+    pub fn direccion(mut self, d: &str) -> Servidor {
+        self.direccion = d.to_string();
+        self
+    }
+
     pub fn tras_tls(mut self) -> Servidor {
         self.seguro = true;
         self
@@ -175,7 +182,7 @@ impl Servidor {
                 "los plazos y los topes tienen que ser mayores que cero",
             ));
         }
-        let oyente = TcpListener::bind(("0.0.0.0", puerto))?;
+        let oyente = TcpListener::bind((self.direccion.as_str(), puerto))?;
         let yo = Arc::new(self);
         yo.log.escribir(Nivel::Info, "cero · escuchando en :{}", &[&puerto.to_string()]);
         for conexion in oyente.incoming() {

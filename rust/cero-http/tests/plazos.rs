@@ -250,7 +250,7 @@ fn puerto_libre() -> u16 {
 
 fn servidor(p: Plazos) -> Servidor {
     let router = Router::nuevo().ruta("GET", "/", "hola").expect("patrón");
-    Servidor::nuevo(router).accion("hola", |_| Respuesta::texto("hola")).plazos(p)
+    Servidor::nuevo(router).accion("hola", |_| Respuesta::texto("hola")).plazos(p).direccion("127.0.0.1")
 }
 
 #[test]

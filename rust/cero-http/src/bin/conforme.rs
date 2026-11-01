@@ -29,5 +29,6 @@ fn main() -> std::io::Result<()> {
         .accion("grande", |_| Respuesta::texto(&"x".repeat(1 << 20)))
         .accion("descarga", |_| Respuesta::texto(&"x".repeat(32 << 20)))
         .plazos(plazos)
+        .direccion("127.0.0.1")
         .escuchar(puerto)
 }

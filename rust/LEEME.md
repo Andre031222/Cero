@@ -62,6 +62,9 @@ reservaba entero sin tope.
   (32 MiB) y el tope del cuerpo (10 MiB), con la misma regla: a cero no arranca. `mandar_todo` escribe en piezas de 4 KiB contra un plazo total por
   cada 16 KiB, porque el de `set_write_timeout` vuelve a empezar cada vez que el cliente lee algo.
 - **HTTP/1.1** espera la siguiente petición `inactividad` y cierra sin responder (`HTTP-024`).
+- **`Servidor::direccion`**: por defecto `0.0.0.0`. El servidor del banco y las pruebas escuchan
+  en `127.0.0.1`, porque en macOS un comodín con `SO_REUSEADDR` —que `std` pone siempre— comparte
+  puerto con otro proceso que escucha en la dirección concreta.
 - **HTTP/2.** La biblioteca estándar no tiene `poll`, así que la espera ociosa es un `peek` con
   plazo, y solo `HEADERS`, `CONTINUATION` y `DATA` reinician el reloj (`H2-053`). Esperar crédito
   tiene el plazo de `escritura` por trama, y vencido sale un `RST_STREAM CANCEL` (`H2-052`). Las
