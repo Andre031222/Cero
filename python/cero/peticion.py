@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass, field
 
+from cero.sesion import id_de_cookie
+
 METODOS = {"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE"}
 LIMITE_LINEA = 8192
 LIMITE_CABECERAS = 100
@@ -33,6 +35,10 @@ class Peticion:
     cabeceras: list
     cuerpo: bytearray = field(default_factory=bytearray)
     variables: dict = field(default_factory=dict)
+    segura: bool = False
+    almacen: object = field(default=None, repr=False)
+    abierta: object = field(default=None, repr=False)
+    buscada: bool = field(default=False, repr=False)
 
     def cabecera(self, nombre):
         valores = self.todas(nombre)
@@ -41,6 +47,20 @@ class Peticion:
     def todas(self, nombre):
         nombre = nombre.lower()
         return [v for n, v in self.cabeceras if n == nombre]
+
+    def sesion(self):
+        if not self.buscada and self.almacen is not None:
+            self.buscada = True
+            self.abierta = self.almacen.recuperar(id_de_cookie(self.todas("cookie")))
+        return self.abierta
+
+    def abrir_sesion(self):
+        actual = self.sesion()
+        if actual is None or not actual.viva:
+            if self.almacen is None:
+                raise RuntimeError("esta petición no tiene almacén de sesiones")
+            self.abierta = self.almacen.crear()
+        return self.abierta
 
     def persistente(self):
         conexion = {t.strip().lower() for t in (self.cabecera("connection") or "").split(",")}

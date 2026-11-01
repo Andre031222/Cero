@@ -10,6 +10,7 @@ from cero.peticion import (LIMITE_CUERPO, METODOS, Rechazo, encuadre, leer_cabec
                            leer_cuerpo)
 from cero.respuesta import Respuesta, como_respuesta, serializar, texto
 from cero.ruta import NoEncontrado, NoPermitido, Router
+from cero.sesion import Memoria, cabecera_cookie
 
 SIN_RECURSOS = {errno.EMFILE, errno.ENFILE, errno.ENOBUFS, errno.ENOMEM}
 
@@ -35,8 +36,9 @@ class _Plazo(io.RawIOBase):
 class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
-                 plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO):
+                 plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None):
         self.router = router or Router()
+        self.sesiones = Memoria() if sesiones is None else sesiones
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
@@ -47,6 +49,23 @@ class Servidor:
         self.cupo = threading.BoundedSemaphore(maximo_conexiones)
 
     def responder(self, peticion):
+        peticion.almacen = self.sesiones
+        respuesta = self._despachar(peticion)
+        sesion = peticion.abierta
+        if sesion is None:
+            return respuesta
+        try:
+            sesion.almacen.guardar(sesion)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            return texto(500, "error interno al guardar la sesión")
+        id = sesion.cookie_pendiente()
+        if id is None:
+            return respuesta
+        galleta = ("Set-Cookie", cabecera_cookie(id, peticion.segura))
+        return Respuesta(respuesta.estado, [*respuesta.cabeceras, galleta], respuesta.cuerpo)
+
+    def _despachar(self, peticion):
         if peticion.destino == "*":
             return Respuesta(200, [("Allow", ", ".join(sorted(METODOS)))])
         resultado = self.router.resolver(peticion.verbo, peticion.camino)
