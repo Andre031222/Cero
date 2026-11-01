@@ -38,10 +38,11 @@ class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
                  plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
-                 cabeceras=Cabeceras()):
+                 cabeceras=Cabeceras(), cors=None):
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
         self.cabeceras = cabeceras
+        self.cors = cors
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
@@ -52,7 +53,19 @@ class Servidor:
         self.cupo = threading.BoundedSemaphore(maximo_conexiones)
 
     def responder(self, peticion):
-        return self._blindar(self._con_sesion(peticion), peticion.segura)
+        corte, extra = self._antes(peticion)
+        respuesta = self._con_sesion(peticion) if corte is None else corte
+        return self._blindar(anadir(respuesta, extra), peticion.segura)
+
+    def _antes(self, peticion):
+        extra = []
+        if self.cors is not None:
+            estado, cabeceras = self.cors.decidir(peticion.verbo, peticion.cabecera("origin"),
+                                                  peticion.cabecera("access-control-request-method"))
+            extra += cabeceras
+            if estado is not None:
+                return Respuesta(estado), extra
+        return None, extra
 
     def _blindar(self, respuesta, segura=False):
         if self.cabeceras is None:
