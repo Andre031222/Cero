@@ -259,6 +259,19 @@ eso los vectores de encuadre no comprueban nada, y su raíz responde algo más l
 h2spec necesita un cuerpo que no quepa en una ventana apretada: con dos octetos se salta la prueba
 en vez de fallarla. El ejemplo usa todo el pipeline.
 
+## Lo que el contrato deja a cada implementación
+
+El contrato fija algunos números —256 campos por bloque, 32 MiB en vuelo, 10 MiB de cuerpo— y
+deja otros a lo «configurado». Las tres implementaciones no eligieron lo mismo en estos, y conviene
+saberlo antes de desplegar: una conexión keep-alive ociosa se cierra a los 30 s en Java y a los
+120 s en Rust y en C++.
+
+| Valor por defecto | Java | Rust | C++ | Requisito |
+|---|---|---|---|---|
+| Inactividad: keep-alive y h2 sin trabajo | 30 s (`idleTimeoutMillis`) | 120 s (`Plazos::inactividad`) | 120 s (`Plazos::inactividad`) | `HTTP-024`, `H2-053` |
+| `SETTINGS_MAX_HEADER_LIST_SIZE` anunciado | 32 KiB (`http2MaxListaCabeceras`) | 16 KiB | 16 KiB | `H2-051` |
+| Flujos anulados por conexión antes de `ENHANCE_YOUR_CALM` | 100 (`http2MaxAnulados`) | 200 | 200 | `H2-037` |
+
 ## Usarlo
 
 ```bash

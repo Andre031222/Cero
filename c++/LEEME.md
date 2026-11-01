@@ -250,6 +250,19 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
 - **`pruebas/prueba.hpp`.** `COMPRUEBA` es variádico y no de dos argumentos: con dos, una condición
   con llaves dentro —`T{a, b}`— parte el macro por la coma y el error no habla de eso.
 
+## Lo que el contrato deja a cada implementación
+
+El contrato fija algunos números —256 campos por bloque, 32 MiB en vuelo, 10 MiB de cuerpo— y
+deja otros a lo «configurado». Las tres implementaciones no eligieron lo mismo en estos, y conviene
+saberlo antes de desplegar: una conexión keep-alive ociosa se cierra a los 30 s en Java y a los
+120 s en Rust y en C++.
+
+| Valor por defecto | Java | Rust | C++ | Requisito |
+|---|---|---|---|---|
+| Inactividad: keep-alive y h2 sin trabajo | 30 s (`idleTimeoutMillis`) | 120 s (`Plazos::inactividad`) | 120 s (`Plazos::inactividad`) | `HTTP-024`, `H2-053` |
+| `SETTINGS_MAX_HEADER_LIST_SIZE` anunciado | 32 KiB (`http2MaxListaCabeceras`) | 16 KiB | 16 KiB | `H2-051` |
+| Flujos anulados por conexión antes de `ENHANCE_YOUR_CALM` | 100 (`http2MaxAnulados`) | 200 | 200 | `H2-037` |
+
 ## Lo que falta
 
 Los hitos 11 y 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
