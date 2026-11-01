@@ -23,8 +23,6 @@ namespace cero {
 
 class Servidor;
 
-// Lo que una acción recibe. El contrato no dice cómo se llama nada de esto: solo qué tiene que
-// estar disponible y qué forma toma la respuesta.
 class Contexto {
 public:
     const Peticion& peticion;
@@ -35,17 +33,10 @@ public:
     std::optional<std::string> consulta(std::string_view nombre) const;
     std::string consulta_o(std::string_view nombre, std::string_view defecto) const;
     std::optional<std::string> campo(std::string_view nombre) const;
-    // RUT-017: el cuerpo interpretado como JSON. Un cuerpo mal formado es 400 y no 500: lo mandó
-    // mal el cliente, no falló el servidor.
     std::expected<Json, FalloJson> cuerpo_json() const;
 
-    // SES-001: la de esta petición si llegó alguna. Leer no crea.
     const std::optional<Guardada>& sesion() const { return llegada_; }
-    // Solo esto la crea, y solo cuando la aplicación lo pide. Llamarlo dos veces devuelve la
-    // misma: si no fuera idempotente, la segunda llamada dejaría huérfana a la primera.
     std::optional<Guardada> abrir_sesion() const;
-    // SEG-017: el token de esta petición, creándolo si aún no lo hay. **Abre sesión**, porque un
-    // token que no esté atado a una sesión no protege de nada: lo pediría el sitio atacante.
     std::optional<std::string> token_csrf() const;
 
 private:
@@ -72,11 +63,8 @@ public:
     Servidor&& salud(std::shared_ptr<Salud> s) &&;
     Servidor&& sesiones(std::shared_ptr<Sesiones> s) &&;
     Servidor&& sin_registrar(std::vector<std::string> caminos) &&;
-    // SEG-005 y SEG-009 dependen de si la conexión es segura. Sin TLS propio, lo dice quien monta
-    // el servidor, y mentir aquí solo se perjudica a sí mismo.
     Servidor&& tras_tls() &&;
 
-    // El pipeline entero **sin socket**: se le da una petición y devuelve la respuesta.
     Respuesta responder(const Peticion& peticion, std::string_view cliente = "local") const;
 
     int escuchar(unsigned short puerto) const;
@@ -102,10 +90,8 @@ private:
     bool csrf_activo_ = false;
     std::vector<std::string> sin_registrar_;
     bool seguro_ = false;
-    // Detrás de puntero porque llevan un candado dentro y eso haría a `Servidor` inmovible, y el
-    // servidor se construye encadenando métodos que devuelven el objeto.
     std::shared_ptr<Metricas> metricas_ = std::make_shared<Metricas>();
     std::shared_ptr<Log> log_ = std::make_shared<Log>("cero", Nivel::Info);
 };
 
-}  // namespace cero
+}

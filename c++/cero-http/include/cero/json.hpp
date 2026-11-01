@@ -13,15 +13,11 @@
 
 namespace cero {
 
-// Un JSON propio, por el mismo motivo que lo tienen Java y Rust: un framework que obliga a traer
-// una biblioteca para devolver un objeto no tiene cero dependencias, tiene una escondida.
 class Json {
 public:
     struct Nulo {
         bool operator==(const Nulo&) const = default;
     };
-    // `std::map` y no una tabla: las claves salen **en orden estable**, así que dos respuestas
-    // iguales dan los mismos octetos y se pueden comparar y cachear.
     using Objeto = std::map<std::string, Json, std::less<>>;
     using Lista = std::vector<Json>;
 
@@ -60,4 +56,4 @@ struct FalloJson {
 
 std::expected<Json, FalloJson> leer(std::string_view entrada);
 
-}  // namespace cero
+}

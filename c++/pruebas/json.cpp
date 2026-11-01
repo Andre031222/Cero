@@ -1,6 +1,3 @@
-// El JSON propio. No hay requisitos numerados para él —`spec/` no cubre todavía la forma de la
-// petición y la respuesta—, así que lo que se comprueba es lo que lo hace seguro de usar.
-
 #include <optional>
 #include <string>
 #include <string_view>
@@ -11,8 +8,6 @@
 namespace {
 
 PRUEBA(las_claves_salen_en_orden_estable) {
-    // Dos respuestas iguales tienen que dar los mismos octetos, o no se pueden comparar ni
-    // cachear. Una tabla de dispersión no lo garantiza: el orden depende de la siembra.
     const auto uno = cero::Json::objeto({{"zeta", 1}, {"alfa", 2}, {"media", 3}});
     const auto otro = cero::Json::objeto({{"media", 3}, {"zeta", 1}, {"alfa", 2}});
     COMPRUEBA(uno.escribir() == otro.escribir(), "orden estable");
@@ -20,8 +15,6 @@ PRUEBA(las_claves_salen_en_orden_estable) {
 }
 
 PRUEBA(se_escapan_los_tres_que_cierran_una_etiqueta) {
-    // Un JSON incrustado en una página que contenga `</script` cierra la etiqueta, y lo que siga
-    // se ejecuta: es XSS a través de una respuesta perfectamente válida.
     const auto j = cero::Json{"</script><img src=x onerror=robar()>"};
     const auto salida = j.escribir();
     COMPRUEBA(salida.find('<') == std::string::npos, "el menor");
@@ -31,8 +24,6 @@ PRUEBA(se_escapan_los_tres_que_cierran_una_etiqueta) {
 }
 
 PRUEBA(hay_tope_de_anidamiento) {
-    // Cinco mil corchetes son diez kilobytes de cuerpo y desbordan la pila de un lector
-    // recursivo: denegación de servicio con una petición pequeña y perfectamente válida.
     const std::string bomba = std::string(5000, '[') + std::string(5000, ']');
     const auto r = cero::leer(bomba);
     COMPRUEBA(!r.has_value(), "se rechaza en vez de reventar");
@@ -80,6 +71,6 @@ PRUEBA(un_entero_grande_no_se_declara_entero_si_no_lo_es) {
     COMPRUEBA(cero::Json{"7"}.entero() == std::nullopt, "y una cadena no se convierte sola");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

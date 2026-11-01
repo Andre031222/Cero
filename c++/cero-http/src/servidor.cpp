@@ -21,18 +21,9 @@
 
 #include "cero/formato.hpp"
 
-// Aquí está la decisión de fondo de esta implementación: **C++ no tiene sockets**. Java los trae
-// en el JDK y Rust en `std::net`; el estándar de C++ no trae ninguno, porque el Networking TS se
-// abandonó. Las dos salidas eran traer asio —una dependencia, y este proyecto no admite ninguna— o
-// llamar a POSIX. Se llama a POSIX, igual que en Rust se usa un hilo del sistema en vez de un
-// runtime asíncrono: el contrato no habla de cómo se abre el socket, así que se cumple igual.
-
 namespace cero {
 namespace {
 
-// Los octetos del socket, de uno en uno sobre un búfer propio. Un búfer nuevo por petición tira lo
-// que ya tenga dentro, y lo que tenga dentro puede ser la petición siguiente de un cliente que las
-// encadena: es un fallo que no se ve con un navegador y sí con `curl` mandando dos de una vez.
 class DesdeSocket final : public Lector {
 public:
     explicit DesdeSocket(int descriptor) : descriptor_(descriptor) {}
@@ -93,8 +84,6 @@ std::string desescapar(std::string_view s) {
     return r;
 }
 
-// Parte `a=1&b=hola+mundo`. Un valor mal codificado no aborta la lectura entera: se conserva tal
-// cual, porque tirar el formulario completo por un campo roto es peor que quedarse con el campo.
 std::optional<std::string> de_pares(std::string_view cadena, std::string_view nombre) {
     while (!cadena.empty()) {
         const auto fin = cadena.find('&');
@@ -108,7 +97,7 @@ std::optional<std::string> de_pares(std::string_view cadena, std::string_view no
     return std::nullopt;
 }
 
-}  // namespace
+}
 
 std::optional<std::string_view> Contexto::variable(std::string_view nombre) const {
     const auto i = variables.find(nombre);
@@ -126,8 +115,6 @@ std::optional<std::string> Contexto::consulta(std::string_view nombre) const {
     return de_pares(std::string_view{peticion.destino}.substr(interrogante + 1), nombre);
 }
 
-// RUT-016: un defecto de cadena vacía no es lo mismo que «sin defecto». Para una búsqueda,
-// ausente puede querer decir «todo» y vacío «nada», y confundirlos cambia el resultado.
 std::string Contexto::consulta_o(std::string_view nombre, std::string_view defecto) const {
     return consulta(nombre).value_or(std::string{defecto});
 }
@@ -188,15 +175,11 @@ Servidor&& Servidor::salud(std::shared_ptr<Salud> s) && {
     return std::move(*this);
 }
 
-// SES-012: dos servidores con el **mismo** almacén reconocen las mismas sesiones. Es lo que separa
-// poder poner una segunda instancia detrás del balanceador de no poder.
 Servidor&& Servidor::sesiones(std::shared_ptr<Sesiones> s) && {
     sesiones_ = std::move(s);
     return std::move(*this);
 }
 
-// OBS-017 y OBS-023: el caso que lo pide es la sonda de salud, que en un orquestador entra cada
-// pocos segundos y ahoga todo lo demás. Se declara por camino y no se adivina.
 Servidor&& Servidor::sin_registrar(std::vector<std::string> caminos) && {
     sin_registrar_ = std::move(caminos);
     for (const auto& c : sin_registrar_) metricas_->ignorar(c);
@@ -212,7 +195,6 @@ Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const
     const auto empezo = std::chrono::steady_clock::now();
     const std::string camino{p.camino()};
 
-    // 1 · salud, antes que nada: un proceso que no puede atender tiene que poder decirlo.
     if (salud_) {
         const auto informe = camino == "/cero/vivo"  ? std::optional{salud_->vivo()}
                              : camino == "/cero/listo" ? std::optional{salud_->listo()}
@@ -224,7 +206,6 @@ Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const
         }
     }
 
-    // 2 · límite de peticiones.
     if (limitador_) {
         const auto v = limitador_->pedir(cliente);
         auto cabeceras = cabeceras_limite(v);
@@ -235,7 +216,6 @@ Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const
         }
     }
 
-    // 3 · CORS, que puede cortar en seco un preflight ajeno.
     Pares de_cors;
     if (cors_) {
         const auto decision = cors_->decidir(p.metodo, p.cabecera("origin"));
@@ -247,7 +227,6 @@ Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const
         de_cors = std::get<Cors::Sigue>(decision).cabeceras;
     }
 
-    // 4 · sesión: se recupera, nunca se crea.
     auto llegada = sesiones_->recuperar(id_de_cookie(p.cabecera("cookie")));
 
     const auto resolucion = router_.resolver(p.metodo, camino);
@@ -261,10 +240,6 @@ Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const
     return rematar(std::move(r), p, camino, empezo, ctx.final());
 }
 
-// El ruteo va **antes** que el CSRF. Un verbo no admitido tiene que dar 405 y un camino
-// inexistente 404: si el CSRF responde 403 primero, la respuesta atribuye el fallo a la causa
-// equivocada, que es lo que RUT-009 prohíbe al exigir distinguir 404 de 405. Se descubrió montando
-// el framework entero en Rust — con los módulos sueltos no se veía— y aquí está desde el principio.
 Respuesta Servidor::atender_ruta(const Contexto& ctx, std::string_view camino) const {
     const auto& p = ctx.peticion;
     if (p.destino == "*") {
@@ -272,24 +247,20 @@ Respuesta Servidor::atender_ruta(const Contexto& ctx, std::string_view camino) c
     }
 
     const auto resolucion = router_.resolver(p.metodo, camino);
-    // RUT-013: el 405 lleva `Allow`, o quien llama mal sabe que se equivocó pero no en qué.
     if (const auto* mal = std::get_if<VerboNoPermitido>(&resolucion)) {
         std::string lista;
         for (const auto& v : mal->verbos) lista += (lista.empty() ? "" : ", ") + v;
         return Respuesta::codigo(405).cabecera("Allow", lista);
     }
     const auto* hay = std::get_if<Encontrada>(&resolucion);
-    if (hay == nullptr) return Respuesta::codigo(404, "no encontrado");  // RUT-012
+    if (hay == nullptr) return Respuesta::codigo(404, "no encontrado");
 
-    // SEG-015 a SEG-019, ya sabiendo que la petición iba a alguna parte.
     if (csrf_activo_) {
         std::optional<std::string> en_sesion;
         if (const auto& g = ctx.sesion()) {
             const auto tomado = g->tomar();
             if (const auto t = g->sesion->leer(kClaveCsrf)) en_sesion = std::string{*t};
         }
-        // Por cabecera, por campo del formulario o por la consulta. Solo la cabecera dejaba fuera
-        // a un formulario HTML, que es justo donde el CSRF hace más falta.
         auto presentado = ctx.cabecera("x-csrf-token").transform([](auto v) { return std::string{v}; });
         if (!presentado) presentado = ctx.campo(kCampoCsrf);
         if (!presentado) presentado = ctx.consulta(kCampoCsrf);
@@ -304,15 +275,12 @@ Respuesta Servidor::atender_ruta(const Contexto& ctx, std::string_view camino) c
 
     const auto accion = acciones_.find(hay->nombre);
     if (accion == acciones_.end()) {
-        // RUT-024: el detalle interno no se filtra al cliente; va al log.
         log_->escribir(Nivel::Error, "la ruta {} no tiene acción registrada", {hay->nombre});
         return Respuesta::codigo(500, "error interno");
     }
     return accion->second(ctx);
 }
 
-// Lo que se aplica a **toda** respuesta salga por donde salga. Que sea un solo sitio no es estilo:
-// SES-010 nació de tener dos salidas y poner la cookie en una.
 Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view camino,
                             std::chrono::steady_clock::time_point empezo,
                             const std::optional<Guardada>& sesion) const {
@@ -322,7 +290,6 @@ Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view cam
     if (sesion) {
         {
             const auto tomado = sesion->tomar();
-            // SES-008 y SES-011: se consulta una sola vez, aquí, y consultarla la consume.
             if (const auto id = sesion->sesion->cookie_pendiente()) {
                 r.extra.emplace_back("Set-Cookie", cabecera_cookie(*id, seguro_));
             }
@@ -334,9 +301,6 @@ Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view cam
         std::chrono::steady_clock::now() - empezo);
     const auto patron = router_.patron_de(p.metodo, camino).value_or(std::string{camino});
     metricas_->anotar(patron, r.estado, tardo);
-    // OBS-012: el estado que se registra es el que **sale**. Anotarlo antes de que la acción pueda
-    // fallar deja un log lleno de doscientos que el cliente recibió como quinientos, y entonces el
-    // log dice justo lo contrario de lo que pasó.
     if (std::ranges::find(sin_registrar_, camino) == sin_registrar_.end()) {
         log_->escribir(Nivel::Info, "{}",
                        {linea_acceso(p.metodo, p.destino, r.estado, std::nullopt, tardo)});
@@ -367,8 +331,6 @@ int Servidor::escuchar(unsigned short puerto) const {
                                  (quien.sin_addr.s_addr >> 8) & 0xff,
                                  (quien.sin_addr.s_addr >> 16) & 0xff,
                                  (quien.sin_addr.s_addr >> 24) & 0xff);
-        // Un hilo del sistema por conexión, igual que en Rust y por el mismo motivo: Java tiene
-        // hilos virtuales en la plataforma y aquí no hay equivalente sin traer una dependencia.
         std::thread{[this, cliente, desde] {
             DesdeSocket lector{cliente};
             while (true) {
@@ -389,4 +351,4 @@ int Servidor::escuchar(unsigned short puerto) const {
     }
 }
 
-}  // namespace cero
+}

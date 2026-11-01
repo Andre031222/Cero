@@ -65,4 +65,4 @@ std::string_view razon(unsigned estado) {
     }
 }
 
-}  // namespace cero
+}

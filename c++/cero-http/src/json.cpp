@@ -16,8 +16,6 @@
 namespace cero {
 namespace {
 
-// Tope de anidamiento. Cinco mil corchetes son diez kilobytes de cuerpo y desbordan la pila de un
-// lector recursivo: denegación de servicio con una petición pequeña y perfectamente válida.
 constexpr int kMaxHondura = 200;
 
 using Fallo = std::unexpected<FalloJson>;
@@ -32,8 +30,6 @@ std::string escapar(std::string_view s) {
             case '\n': r += "\\n"; break;
             case '\r': r += "\\r"; break;
             case '\t': r += "\\t"; break;
-            // Un JSON incrustado en una página que contenga `</script` cierra la etiqueta, y lo
-            // que siga se ejecuta: es XSS a través de una respuesta perfectamente válida.
             case '<': r += "\\u003c"; break;
             case '>': r += "\\u003e"; break;
             case '&': r += "\\u0026"; break;
@@ -143,8 +139,6 @@ private:
                         return Fallo{{"\\u no hexadecimal"}};
                     }
                     i_ += 4;
-                    // UTF-8 a mano: el plano básico basta, y los pares subrogados se dejan como
-                    // el carácter de sustitución en vez de inventar un acoplamiento.
                     if (punto < 0x80) {
                         r += static_cast<char>(punto);
                     } else if (punto < 0x800) {
@@ -216,7 +210,7 @@ private:
     std::size_t i_ = 0;
 };
 
-}  // namespace
+}
 
 Json Json::objeto(std::vector<std::pair<std::string, Json>> pares) {
     Objeto m;
@@ -286,4 +280,4 @@ std::expected<Json, FalloJson> leer(std::string_view entrada) {
     return Lector{entrada}.todo();
 }
 
-}  // namespace cero
+}

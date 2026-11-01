@@ -28,4 +28,9 @@ if ! ./cero --version 2>/dev/null | grep -q 'Cero · por Andre Solorzano'; then
   fallo=1
 fi
 
+if ! git ls-files -z -- java rust c++ herramientas | xargs -0 python3 herramientas/comentarios.py --verificar; then
+  echo "código con comentarios"
+  fallo=1
+fi
+
 exit $fallo

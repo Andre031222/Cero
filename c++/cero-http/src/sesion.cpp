@@ -24,7 +24,6 @@ std::optional<std::string> identificador() {
     std::fclose(fuente);
     if (leidos != crudo.size()) return std::nullopt;
 
-    // base16 da 64 caracteres de 32 octetos: por encima del mínimo y sin alfabeto ambiguo.
     std::string id;
     id.reserve(crudo.size() * 2);
     for (unsigned char b : crudo) id += formato("{:02x}", b);
@@ -68,7 +67,6 @@ std::shared_ptr<Sesion> Sesion::rescatada(std::string_view id,
     s->atributos_ = std::move(atributos);
     s->creada_ = creada;
     s->tocada_ = tocada;
-    // Ya estaba guardada y el cliente ya tiene su cookie: es la que usó para llegar hasta aquí.
     s->cookie_pendiente_ = false;
     s->sucia_ = false;
     return s;
@@ -80,8 +78,6 @@ bool Almacen::caducada(Reloj::time_point creada, Reloj::time_point tocada) const
     return vida_maxima_ && ahora - creada > *vida_maxima_;
 }
 
-// SES-001: sin cookie no se recupera nada. Devolver una sesión nueva aquí es lo que convierte a
-// cualquier rastreador en un generador de sesiones huérfanas.
 std::optional<Guardada> Almacen::recuperar(std::optional<std::string_view> id) {
     if (!id) return std::nullopt;
     std::optional<Guardada> encontrada;
@@ -114,8 +110,6 @@ std::optional<Guardada> Almacen::crear() {
     return guardada;
 }
 
-// SES-005: cambia el identificador conservando los atributos y obliga a reemitir la cookie.
-// SES-006: una invalidada no se rota.
 std::optional<std::string> Almacen::rotar(const Guardada& g) {
     std::string viejo;
     std::string nuevo;
@@ -161,4 +155,4 @@ std::optional<std::string_view> id_de_cookie(std::optional<std::string_view> cab
     return std::nullopt;
 }
 
-}  // namespace cero
+}

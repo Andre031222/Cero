@@ -1,8 +1,3 @@
-// Una prueba por requisito de `spec/sesiones.md`, citándolo.
-//
-// No están copiadas de la batería de Java ni de la de Rust: están escritas leyendo el contrato. Si
-// el contrato fuera una descripción de Java con otras palabras, aquí se notaría.
-
 #include <atomic>
 #include <chrono>
 #include <optional>
@@ -36,7 +31,6 @@ PRUEBA(ses_002_el_identificador_es_largo_y_de_fuente_apta) {
 }
 
 PRUEBA(ses_003_dos_sesiones_no_comparten_identificador) {
-    // Mil y no dos: con dos, un generador roto que devuelva uno de cada dos valores pasaría.
     auto a = almacen();
     std::set<std::string> vistos;
     for (int i = 0; i < 1000; ++i) vistos.insert(a.crear()->sesion->id());
@@ -58,7 +52,7 @@ PRUEBA(ses_004_invalidar_deja_la_sesion_inutilizable) {
 PRUEBA(ses_005_y_006_rotar) {
     auto a = almacen();
     const auto g = *a.crear();
-    (void)g.sesion->cookie_pendiente();  // la de la creación, ya emitida
+    (void)g.sesion->cookie_pendiente();
     const auto viejo = g.sesion->id();
     (void)g.sesion->poner("usuario", "ana");
 
@@ -76,8 +70,6 @@ PRUEBA(ses_005_y_006_rotar) {
 }
 
 PRUEBA(ses_007_dos_peticiones_simultaneas_no_se_pisan) {
-    // El candado va **dentro** de la sesión y no alrededor del almacén: dos peticiones sobre la
-    // misma sesión no pueden perder escrituras, y dos sobre sesiones distintas no se esperan.
     auto a = almacen();
     const auto g = *a.crear();
     constexpr int kHilos = 8;
@@ -92,7 +84,7 @@ PRUEBA(ses_007_dos_peticiones_simultaneas_no_se_pisan) {
             }
         });
     }
-    hilos.clear();  // los `jthread` se esperan al destruirse
+    hilos.clear();
     COMPRUEBA(g.sesion->atributos().size() == kHilos * kVueltas, "SES-007");
 }
 
@@ -101,8 +93,6 @@ PRUEBA(ses_008_y_011_la_cookie_se_emite_una_vez) {
     const auto g = *a.crear();
     COMPRUEBA(g.sesion->cookie_pendiente() == g.sesion->id(), "SES-008: la que la crea la lleva");
     COMPRUEBA(!g.sesion->cookie_pendiente().has_value(), "SES-008: las siguientes no");
-    // SES-011: consultarlo **consume**. Que el método no sea `const` es lo que impide llamarlo
-    // dos veces por descuido desde dos caminos de salida, uno por protocolo.
     COMPRUEBA(!g.sesion->cookie_pendiente().has_value(), "SES-011");
 }
 
@@ -138,6 +128,6 @@ PRUEBA(una_sesion_rescatada_no_nace_sucia_ni_pidiendo_cookie) {
     COMPRUEBA(!s->sucia(), "y no hay nada que volver a guardar");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

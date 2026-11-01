@@ -1,8 +1,3 @@
-// El servidor contra el que corre el banco de `spec/banco/`.
-//
-// `/eco` lee el cuerpo: sin eso los vectores de encuadre no comprueban nada, porque un servidor
-// que responde sin leerlo pasa por válido sin haber parseado.
-
 #include <charconv>
 #include <string_view>
 #include <utility>

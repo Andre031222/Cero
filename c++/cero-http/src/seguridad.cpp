@@ -27,17 +27,15 @@ std::string unir(const std::vector<std::string>& partes) {
     return r;
 }
 
-}  // namespace
+}
 
 Pares Proteccion::aplicar(bool seguro) const {
     Pares h{
-        {"X-Content-Type-Options", "nosniff"},                        // SEG-001
-        {"X-Frame-Options", enmarcado},                               // SEG-002
-        {"Referrer-Policy", "strict-origin-when-cross-origin"},       // SEG-003
-        {"Permissions-Policy", "camera=(), microphone=(), geolocation=()"},  // SEG-004
+        {"X-Content-Type-Options", "nosniff"},
+        {"X-Frame-Options", enmarcado},
+        {"Referrer-Policy", "strict-origin-when-cross-origin"},
+        {"Permissions-Policy", "camera=(), microphone=(), geolocation=()"},
     };
-    // SEG-005: sin TLS no se manda HSTS. Prometer transporte seguro sobre texto plano es una
-    // promesa que no se puede cumplir, y el navegador la recuerda durante un año.
     if (seguro) h.emplace_back("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     if (csp) h.emplace_back("Content-Security-Policy", *csp);
     return h;
@@ -45,31 +43,24 @@ Pares Proteccion::aplicar(bool seguro) const {
 
 Cors::Decision Cors::decidir(std::string_view metodo,
                              std::optional<std::string_view> origen) const {
-    // SEG-011: sin `Origin` no se añade ninguna cabecera CORS.
     if (!origen) return Sigue{};
 
     const bool preflight = metodo == "OPTIONS";
     const bool permitido =
         origenes.empty() || std::ranges::find(origenes, *origen) != origenes.end();
     if (!permitido) {
-        // SEG-013: el preflight ajeno se rechaza, porque su único propósito es preguntar.
-        // SEG-010: la petición simple no se bloquea — ya llegó, y bloquearla daría una falsa
-        // sensación de protección. Quien decide es el navegador.
         if (preflight) return Corta{403, {}};
         return Sigue{{{"Vary", "Origin"}}};
     }
 
-    // SEG-014: con comodín y sin credenciales se responde comodín; con credenciales hay que
-    // devolver el origen concreto, porque el navegador rechaza `*` junto a credenciales.
     const std::string cual = origenes.empty() && !credenciales ? "*" : std::string{*origen};
     Pares h{
         {"Access-Control-Allow-Origin", cual},
-        {"Vary", "Origin"},  // SEG-009: la respuesta depende del origen; las cachés han de saberlo
+        {"Vary", "Origin"},
     };
     if (credenciales) h.emplace_back("Access-Control-Allow-Credentials", "true");
     if (!preflight) return Sigue{std::move(h)};
 
-    // SEG-012: el preflight admitido responde 204 anunciando qué se permite y por cuánto tiempo.
     h.emplace_back("Access-Control-Allow-Methods", unir(metodos));
     h.emplace_back("Access-Control-Allow-Headers", unir(cabeceras));
     h.emplace_back("Access-Control-Max-Age", formato("{}", max_age));
@@ -84,8 +75,6 @@ bool exento(std::string_view camino, const std::vector<std::string>& exenciones)
     });
 }
 
-// Comparación en tiempo constante: con `==` el tiempo depende del prefijo común y filtra el token
-// carácter a carácter.
 namespace {
 bool constante(std::string_view a, std::string_view b) {
     if (a.size() != b.size()) return false;
@@ -95,17 +84,15 @@ bool constante(std::string_view a, std::string_view b) {
     }
     return diferencia == 0;
 }
-}  // namespace
+}
 
 bool csrf_valido(std::string_view metodo, std::string_view camino,
                  const std::vector<std::string>& exenciones,
                  std::optional<std::string_view> token_sesion,
                  std::optional<std::string_view> token_peticion) {
-    // SEG-015: un método seguro pasa sin token.
     constexpr std::string_view seguros[]{"GET", "HEAD", "OPTIONS", "TRACE"};
     if (std::ranges::find(seguros, metodo) != std::end(seguros)) return true;
     if (exento(camino, exenciones)) return true;
-    // SEG-016 y SEG-018: sin token o con token erróneo, no pasa.
     if (!token_sesion || !token_peticion) return false;
     return constante(*token_sesion, *token_peticion);
 }
@@ -128,7 +115,6 @@ std::size_t Limitador::claves() const {
     return cuentas_.size();
 }
 
-// SEG-020 y SEG-021: el 429 lleva `Retry-After`, y toda respuesta anuncia límite y restante.
 Pares cabeceras_limite(const Veredicto& v) {
     Pares h{{"X-RateLimit-Limit", formato("{}", v.limite)},
             {"X-RateLimit-Remaining", formato("{}", v.restante)}};
@@ -140,9 +126,6 @@ namespace {
 
 constexpr std::string_view kProhibidas[]{"script", "style", "iframe", "object", "embed"};
 
-// Las dos formas de ejecutar sin un `<script>`: un manejador de evento y el protocolo
-// `javascript:`. Se corta la etiqueta donde empieza el atributo en vez de borrarla entera, que es
-// lo que `SEG-024` pide — un saneador que borra todo se desactiva, y entonces no sanea nada.
 std::string limpiar_atributos(std::string_view etiqueta) {
     const auto bajo = minuscula(etiqueta);
     if (const auto i = bajo.find(" on"); i != std::string::npos && bajo.contains('=')) {
@@ -155,7 +138,7 @@ std::string limpiar_atributos(std::string_view etiqueta) {
     return std::string{etiqueta};
 }
 
-}  // namespace
+}
 
 std::string sanear_html(std::string_view entrada) {
     std::string salida;
@@ -178,8 +161,6 @@ std::string sanear_html(std::string_view entrada) {
         }
 
         if (std::ranges::find(kProhibidas, nombre) != std::end(kProhibidas)) {
-            // Se descarta la etiqueta **y su contenido**: dejar fuera el texto de un `<script>`
-            // basta para que otro contexto lo vuelva a ejecutar.
             const auto cierre = "</" + nombre + ">";
             const auto donde = minuscula(resto).find(cierre);
             resto = donde == std::string::npos ? std::string_view{} : resto.substr(donde + cierre.size());
@@ -192,7 +173,6 @@ std::string sanear_html(std::string_view entrada) {
     return salida;
 }
 
-// SEG-025: a texto plano no queda ninguna etiqueta, y del contenido de `script` no queda rastro.
 std::string sanear_texto(std::string_view entrada) {
     const auto html = sanear_html(entrada);
     std::string salida;
@@ -205,7 +185,6 @@ std::string sanear_texto(std::string_view entrada) {
     return salida;
 }
 
-// SEG-026: quita rutas y separadores de los dos sistemas, y nunca devuelve vacío.
 std::string sanear_nombre(std::string_view entrada) {
     const auto corte = entrada.find_last_of("/\\");
     const auto base = corte == std::string_view::npos ? entrada : entrada.substr(corte + 1);
@@ -221,4 +200,4 @@ std::string sanear_nombre(std::string_view entrada) {
     return limpio.empty() ? "archivo" : limpio;
 }
 
-}  // namespace cero
+}

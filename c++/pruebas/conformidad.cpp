@@ -1,8 +1,3 @@
-// Una prueba por requisito de `spec/conformidad.md`, citándolo.
-//
-// Se parsea desde una cadena y no desde un socket: los mismos 23 vectores los corre después el
-// banco contra el proceso de verdad, así que aquí lo que se gana es saber **cuál** falló.
-
 #include <expected>
 #include <string>
 #include <string_view>
@@ -21,8 +16,6 @@ unsigned estado(std::string_view crudo) {
     const auto p = parsea(crudo);
     return p ? 200 : cero::estado_de(p.error());
 }
-
-// ── Forma de la petición ────────────────────────────────────────────────────
 
 PRUEBA(http_001_a_003_las_tres_formas_del_destino) {
     COMPRUEBA(estado("GET /ruta?q=1 HTTP/1.1\r\nHost: x\r\n\r\n") == 200, "HTTP-001");
@@ -53,8 +46,6 @@ PRUEBA(http_023_una_linea_desmedida) {
     COMPRUEBA(estado(larga) == 431, "HTTP-023");
 }
 
-// ── Cabeceras ───────────────────────────────────────────────────────────────
-
 PRUEBA(http_008_a_011_la_forma_de_una_cabecera) {
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost : x\r\n\r\n") == 400, "HTTP-008");
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: x\r\nX-A: uno\r\n dos\r\n\r\n") == 400, "HTTP-009");
@@ -80,8 +71,6 @@ PRUEBA(una_cabecera_repetible_se_une_con_coma) {
     COMPRUEBA(p && p->cabecera("accept") == "a, b", "RFC 9110 §5.3");
 }
 
-// ── Host ────────────────────────────────────────────────────────────────────
-
 PRUEBA(http_013_a_015_el_host) {
     COMPRUEBA(estado("GET / HTTP/1.1\r\n\r\n") == 400, "HTTP-013");
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: a\r\nHost: b\r\n\r\n") == 400, "HTTP-014");
@@ -89,10 +78,6 @@ PRUEBA(http_013_a_015_el_host) {
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: a\r\nHost: a\r\n\r\n") == 400,
               "HTTP-014: repetido es repetido aunque diga lo mismo");
 }
-
-// ── Longitud del cuerpo ─────────────────────────────────────────────────────
-//
-// Aquí vive el contrabando de peticiones, y por eso los cuatro son rechazos y no correcciones.
 
 PRUEBA(http_016_a_019_lo_que_mide_el_cuerpo) {
     COMPRUEBA(estado("POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n"
@@ -111,8 +96,6 @@ PRUEBA(http_016_a_019_lo_que_mide_el_cuerpo) {
               "HTTP-017: dos veces el mismo valor no es discrepancia");
 }
 
-// ── Codificación por trozos ─────────────────────────────────────────────────
-
 PRUEBA(http_020_a_022_los_trozos) {
     COMPRUEBA(estado("POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked, gzip\r\n\r\n"
                      "0\r\n\r\n") == 400, "HTTP-020");
@@ -127,12 +110,10 @@ PRUEBA(http_020_a_022_los_trozos) {
 }
 
 PRUEBA(un_cr_suelto_dentro_de_la_linea_no_se_tolera) {
-    // El RFC 9112 §2.2 pide CRLF. Aceptar LF suelto es la tolerancia habitual; un CR en medio no,
-    // porque es la vía del contrabando cuando hay un intermediario que sí lo parte.
     COMPRUEBA(estado("GET / HTTP/1.1\nHost: x\n\n") == 200, "LF suelto se tolera");
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: x\rX-A: b\r\n\r\n") == 400, "CR en medio, no");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

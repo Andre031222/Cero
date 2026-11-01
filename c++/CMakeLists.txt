@@ -1,5 +1,3 @@
-# CMake es a C++ lo que Maven a Java y Cargo a Rust: una herramienta de construcción, no una
-# dependencia de ejecución. Lo que se enlaza es la biblioteca estándar y nada más.
 cmake_minimum_required(VERSION 3.28)
 project(cero-cpp CXX)
 

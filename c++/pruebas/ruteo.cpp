@@ -1,9 +1,3 @@
-// Una prueba por requisito de `spec/ruteo.md`, citándolo.
-//
-// Desde el primer hito y en `pruebas/`, no citados en el código: en Rust los 35 requisitos de este
-// bloque figuraron cubiertos durante once hitos por estar citados junto a lo que los implementa,
-// que es justo donde citarlos no demuestra nada.
-
 #include <string>
 #include <string_view>
 #include <variant>
@@ -83,14 +77,12 @@ PRUEBA(rut_009_a_011_no_hay_ruta_no_es_verbo_equivocado) {
 }
 
 PRUEBA(el_patron_que_atendio_se_puede_nombrar) {
-    // OBS-014 lo necesita: sin esto, `/usuarios/{id}` genera una serie de métricas por
-    // identificador y el panel se llena de líneas de una sola petición.
     cero::Router r;
     (void)r.ruta("GET", "/usuarios/{id}", "ver");
     COMPRUEBA(r.patron_de("GET", "/usuarios/7") == "/usuarios/{id}", "OBS-014");
     COMPRUEBA(!r.patron_de("GET", "/nada").has_value(), "y lo que no casa no tiene patrón");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

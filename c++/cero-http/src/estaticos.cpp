@@ -26,8 +26,6 @@ Estaticos&& Estaticos::con_respaldo(std::string_view archivo) && {
 Respuesta Estaticos::servir(std::string_view camino) const {
     while (camino.starts_with('/')) camino.remove_prefix(1);
 
-    // Se descartan `..` y las raíces antes de tocar el disco: así un camino hostil no llega
-    // siquiera a resolverse.
     fs::path limpio;
     for (const auto& parte : fs::path{camino}) {
         const auto t = parte.string();
@@ -39,9 +37,6 @@ Respuesta Estaticos::servir(std::string_view camino) const {
     const auto real = fs::canonical(raiz_ / limpio, fallo);
     if (fallo) return respaldar();
 
-    // La comprobación que de verdad importa: tras resolver enlaces, ¿sigue dentro? Filtrar `..`
-    // antes no basta, porque un enlace simbólico dentro de la raíz apunta fuera sin que aparezca
-    // ningún `..`.
     const auto dentro = std::mismatch(raiz_.begin(), raiz_.end(), real.begin(), real.end()).first;
     if (dentro != raiz_.end()) return Respuesta::codigo(403, "fuera de la raíz");
 
@@ -76,9 +71,7 @@ std::string_view tipo_de(const std::filesystem::path& ruta) {
     if (ext == ".webp") return "image/webp";
     if (ext == ".woff2") return "font/woff2";
     if (ext == ".txt" || ext == ".md") return "text/plain; charset=utf-8";
-    // Lo que no se reconoce va como octetos, nunca adivinando: adivinar el tipo es justo lo que
-    // `X-Content-Type-Options: nosniff` existe para impedir del lado del navegador.
     return "application/octet-stream";
 }
 
-}  // namespace cero
+}

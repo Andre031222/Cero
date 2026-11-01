@@ -5,17 +5,8 @@
 #include <string_view>
 #include <utility>
 
-// Las dos tablas fijas de HPACK (RFC 7541): la estática y el código de Huffman.
-//
-// **Generadas, no escritas.** Salen de los apéndices A y B del RFC, y se extraen con un guion de
-// las que ya usan Java y Rust en vez de copiarse a mano. La comprobación que las respalda es la
-// suma de Kraft —la de dos elevado a menos cada longitud—, que en un código prefijo completo vale
-// exactamente 1, y hay una prueba que la calcula. Una tabla de 257 filas copiada a mano no
-// revienta cuando se equivoca: decodifica mal, en silencio.
-
 namespace cero::http2 {
 
-// Apéndice A. El índice 1 del protocolo es la posición 0 de aquí.
 inline constexpr std::array<std::pair<std::string_view, std::string_view>, 61> kEstatica{{
     {":authority", ""}, {":method", "GET"}, {":method", "POST"},
     {":path", "/"}, {":path", "/index.html"}, {":scheme", "http"},
@@ -69,7 +60,6 @@ inline constexpr std::array<std::uint32_t, 257> kCodigo{{
     0x7ffffec, 0x7ffffed, 0x7ffffee, 0x7ffffef, 0x7fffff0, 0x3ffffee, 0x3fffffff,
 }};
 
-// Y su longitud en bits. El símbolo 256 es EOS y no puede aparecer decodificado.
 inline constexpr std::array<std::uint8_t, 257> kLargo{{
     13, 23, 28, 28, 28, 28, 28, 28, 28, 24, 30, 28, 28, 30, 28, 28, 28, 28, 28, 28, 28, 28, 30, 28,
     28, 28, 28, 28, 28, 28, 28, 28, 6, 10, 10, 12, 13, 6, 8, 11, 10, 10, 8, 11, 8, 6, 6, 6,
@@ -84,7 +74,6 @@ inline constexpr std::array<std::uint8_t, 257> kLargo{{
     26, 27, 26, 26, 27, 27, 27, 27, 27, 28, 27, 27, 27, 27, 27, 26, 30,
 }};
 
-// El símbolo que marca el relleno y que nunca puede salir decodificado.
 inline constexpr std::size_t kEos = 256;
 
-}  // namespace cero::http2
+}

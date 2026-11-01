@@ -24,11 +24,6 @@ unsigned char en(std::string_view s, std::size_t i) {
     return static_cast<unsigned char>(s[i]);
 }
 
-// Entero de longitud variable, §5.1. El prefijo lleva `bits` útiles; si están todos a uno, siguen
-// septetos con el bit alto como continuación.
-//
-// El tope de cinco septetos no es decorativo: sin él, una tira de octetos `0xff` describe un
-// entero arbitrariamente grande y el bucle no termina.
 Resultado<std::size_t> leer_entero(std::string_view bloque, std::size_t& i, std::uint8_t bits) {
     const std::size_t mascara = (std::size_t{1} << bits) - 1;
     if (i >= bloque.size()) return mal("entero HPACK cortado");
@@ -46,7 +41,6 @@ Resultado<std::size_t> leer_entero(std::string_view bloque, std::size_t& i, std:
     }
 }
 
-// El símbolo más corto que casa con los bits de la cabeza, o nada si aún no hay bastantes.
 std::optional<std::pair<std::size_t, unsigned>> casar(std::uint64_t acumulado, unsigned bits) {
     for (std::size_t simbolo = 0; simbolo <= kEos; ++simbolo) {
         const unsigned largo = kLargo[simbolo];
@@ -58,7 +52,6 @@ std::optional<std::pair<std::size_t, unsigned>> casar(std::uint64_t acumulado, u
     return std::nullopt;
 }
 
-// Cadena, §5.2: un bit de «viene en Huffman», la longitud en el mismo octeto y los datos.
 Resultado<std::string> leer_cadena(std::string_view bloque, std::size_t& i) {
     if (i >= bloque.size()) return mal("cadena HPACK cortada");
     const bool huffman = (en(bloque, i) & 0x80) != 0;
@@ -101,8 +94,6 @@ void escribir_entero(std::string& salida, std::size_t valor, std::uint8_t bits,
     salida += static_cast<char>(resto);
 }
 
-// Se escribe en Huffman solo si sale más corto. Comprimir cuando no comprime es gastar CPU por
-// octetos de más, y el RFC lo deja a elección de quien codifica (§5.2).
 void escribir_cadena(std::string& salida, std::string_view texto) {
     const auto comprimido = comprimir(texto);
     if (comprimido.size() < texto.size()) {
@@ -114,7 +105,7 @@ void escribir_cadena(std::string& salida, std::string_view texto) {
     }
 }
 
-}  // namespace
+}
 
 void TablaDinamica::meter(std::string nombre, std::string valor) {
     const auto cuanto = coste(nombre, valor);
@@ -141,7 +132,6 @@ const Cabecera* TablaDinamica::en(std::size_t indice) const {
     return indice < entradas_.size() ? &entradas_[indice] : nullptr;
 }
 
-// `H2-015`: un índice fuera de las dos tablas rompe la conexión.
 Resultado<Cabecera> Decodificador::buscar(std::size_t indice) const {
     if (indice <= kEstatica.size()) {
         const auto& [n, v] = kEstatica[indice - 1];
@@ -176,7 +166,6 @@ Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view blo
     std::vector<Cabecera> salida;
     std::size_t tamano = 0;
     std::size_t i = 0;
-    // Una actualización de tamaño solo vale al principio del bloque (§4.2).
     bool admite_actualizacion = true;
 
     while (i < bloque.size()) {
@@ -184,7 +173,6 @@ Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view blo
         Resultado<Cabecera> cual = Cabecera{};
 
         if ((primero & 0x80) != 0) {
-            // Indexado entero: nombre y valor salen de la tabla.
             admite_actualizacion = false;
             const auto indice = leer_entero(bloque, i, 7);
             if (!indice) return Fallo{indice.error()};
@@ -203,8 +191,6 @@ Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view blo
             if (auto r = tabla_.redimensionar(*nuevo); !r) return Fallo{r.error()};
             continue;
         } else {
-            // 0x10 es «nunca indexar»; para decodificar se trata igual que «sin indexar». La
-            // diferencia solo obliga a quien reenvía, y aquí no se reenvía nada.
             admite_actualizacion = false;
             cual = literal(bloque, i, 4);
         }
@@ -219,8 +205,6 @@ Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view blo
     return salida;
 }
 
-// Huffman, §5.2. Se recorre bit a bit contra la tabla: 257 símbolos de hasta 30 bits no justifican
-// un árbol, y el bucle plano es el que se puede leer al lado del RFC.
 Resultado<std::string> descomprimir(std::string_view datos) {
     std::string salida;
     salida.reserve(datos.size() * 8 / 5);
@@ -234,7 +218,6 @@ Resultado<std::string> descomprimir(std::string_view datos) {
             const auto casado = casar(acumulado, bits);
             if (!casado) break;
             const auto [simbolo, largo] = *casado;
-            // H2-016: EOS dentro de la cadena, no como relleno.
             if (simbolo == kEos) return mal("EOS dentro de una cadena Huffman");
             salida += static_cast<char>(simbolo);
             bits -= largo;
@@ -242,8 +225,6 @@ Resultado<std::string> descomprimir(std::string_view datos) {
         }
     }
 
-    // Lo que queda tiene que ser relleno: menos de ocho bits y todos a uno (§5.2). Un relleno más
-    // largo o con un cero es un símbolo que se quedó a medias, y eso ya no es la misma cadena.
     if (bits >= 8) return mal("relleno Huffman de ocho bits o más");
     if (bits > 0 && acumulado != (std::uint64_t{1} << bits) - 1) {
         return mal("relleno Huffman que no son unos");
@@ -267,7 +248,6 @@ std::string comprimir(std::string_view datos) {
         }
     }
     if (bits > 0) {
-        // El relleno son los bits altos de EOS, que son todos unos.
         const auto hueco = 8 - bits;
         salida += static_cast<char>(
             ((acumulado << hueco) | ((std::uint64_t{1} << hueco) - 1)) & 0xff);
@@ -275,8 +255,6 @@ std::string comprimir(std::string_view datos) {
     return salida;
 }
 
-// Los nombres se pasan a minúsculas: en HTTP/2 una mayúscula en un nombre de campo es un mensaje
-// malformado (§8.2.1), así que emitirla sería emitir algo que el cliente tiene que rechazar.
 std::string codificar(const std::vector<Cabecera>& cabeceras) {
     std::string salida;
     for (const auto& [nombre, valor] : cabeceras) {
@@ -297,4 +275,4 @@ std::string codificar(const std::vector<Cabecera>& cabeceras) {
     return salida;
 }
 
-}  // namespace cero::http2
+}

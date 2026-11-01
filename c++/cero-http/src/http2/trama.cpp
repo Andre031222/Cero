@@ -20,7 +20,7 @@ std::string cuatro(std::uint32_t v) {
     return s;
 }
 
-}  // namespace
+}
 
 std::uint32_t entero32(std::string_view donde, std::size_t desde) {
     if (desde + 4 > donde.size()) return 0;
@@ -45,18 +45,15 @@ std::string Trama::octetos() const {
 Resultado<void> Trama::comprobar() const {
     switch (tipo) {
         case kData:
-            // H2-004.
             if (flujo == 0) return mal(Error::Protocolo, "DATA sobre el flujo 0");
             break;
         case kHeaders:
-            // H2-005 y H2-006.
             if (flujo == 0) return mal(Error::Protocolo, "HEADERS sobre el flujo 0");
             if (flujo % 2 == 0) {
                 return mal(Error::Protocolo, "HEADERS sobre un flujo par: los pares son del servidor");
             }
             break;
         case kSettings:
-            // H2-002 y H2-003.
             if (flujo != 0) return mal(Error::Protocolo, "SETTINGS sobre un flujo");
             if ((banderas & kReconoce) != 0 && !carga.empty()) {
                 return mal(Error::TamanoDeTrama, "SETTINGS con ACK y carga");
@@ -65,15 +62,12 @@ Resultado<void> Trama::comprobar() const {
                 return mal(Error::TamanoDeTrama, "SETTINGS no múltiplo de seis");
             }
             break;
-        // H2-009: un cliente no promete nada.
         case kPushPromise: return mal(Error::Protocolo, "PUSH_PROMISE de un cliente");
         case kPing:
-            // H2-010 y H2-011.
             if (flujo != 0) return mal(Error::Protocolo, "PING sobre un flujo");
             if (carga.size() != 8) return mal(Error::TamanoDeTrama, "PING que no mide ocho");
             break;
         case kWindowUpdate:
-            // H2-012 y H2-013.
             if (carga.size() != 4) {
                 return mal(Error::TamanoDeTrama, "WINDOW_UPDATE que no mide cuatro");
             }
@@ -125,7 +119,6 @@ Resultado<Trama> leer_trama(Fuente& origen, std::uint32_t max) {
     Trama t;
     t.tipo = static_cast<std::uint8_t>(b(3));
     t.banderas = static_cast<std::uint8_t>(b(4));
-    // El bit más alto del identificador está reservado y se ignora, no se rechaza.
     t.flujo = ((b(5) & 0x7f) << 24) | (b(6) << 16) | (b(7) << 8) | b(8);
     t.carga.resize(largo);
     if (largo > 0 && origen.leer(t.carga.data(), largo) != largo) {
@@ -144,7 +137,7 @@ Ajustes Ajustes::del_rfc() {
 Trama Ajustes::trama() const {
     std::string c;
     const std::pair<std::uint16_t, std::uint32_t> pares[]{
-        {0x2, 0},  // push deshabilitado
+        {0x2, 0},
         {0x3, max_flujos}, {0x4, ventana_inicial}, {0x5, max_trama}, {0x6, max_cabeceras},
     };
     for (const auto& [id, v] : pares) {
@@ -168,9 +161,6 @@ Resultado<std::int64_t> Ajustes::aplicar(std::string_view carga) {
             case 0x3: max_flujos = v; break;
             case 0x4:
                 if (v > 0x7fff'ffff) return mal(Error::ControlDeFlujo, "ventana inicial imposible");
-                // Se acumula: una misma trama puede traer el ajuste dos veces y hay que aplicarlos
-                // en orden (§6.5.3). Quedarse con el último delta en vez de la suma da un total
-                // que no es ni el primero ni el segundo.
                 delta += static_cast<std::int64_t>(v) - static_cast<std::int64_t>(ventana_inicial);
                 ventana_inicial = v;
                 break;
@@ -181,12 +171,10 @@ Resultado<std::int64_t> Ajustes::aplicar(std::string_view carga) {
                 max_trama = v;
                 break;
             case 0x6: max_cabeceras = v; break;
-            // Un ajuste desconocido se ignora, no se rechaza: es lo que permite extender el
-            // protocolo sin romper a quien no lo conoce.
             default: break;
         }
     }
     return delta;
 }
 
-}  // namespace cero::http2
+}

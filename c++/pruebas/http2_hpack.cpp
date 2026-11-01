@@ -1,10 +1,3 @@
-// HPACK contra el apéndice C del RFC 7541, más los requisitos de `spec/http2.md` que le tocan.
-//
-// Los vectores del apéndice son la única comprobación que no se puede escribir «de acuerdo con lo
-// que hace el código»: los octetos y el estado de la tabla vienen dados, y la tabla dinámica
-// después de cada paso está en el RFC. Un decodificador que acierte el resultado pero deje la
-// tabla distinta pasaría cualquier prueba propia y fallaría en la petición siguiente.
-
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -40,12 +33,7 @@ std::vector<Cabecera> pares(std::vector<std::pair<std::string_view, std::string_
     return salida;
 }
 
-// ── Las tablas ──────────────────────────────────────────────────────────────
-
 PRUEBA(el_codigo_de_huffman_es_un_codigo_prefijo_completo) {
-    // La suma de Kraft de un código prefijo completo vale exactamente 1. Es lo que demuestra que
-    // no falta ni sobra un símbolo en las 257 filas; una tabla mal copiada no revienta, decodifica
-    // mal y en silencio.
     double suma = 0;
     for (auto l : kLargo) suma += std::pow(2.0, -static_cast<int>(l));
     COMPRUEBA(std::fabs(suma - 1.0) < 1e-12, "suma de Kraft");
@@ -55,8 +43,6 @@ PRUEBA(el_codigo_de_huffman_es_un_codigo_prefijo_completo) {
     COMPRUEBA(kEstatica[60].first == "www-authenticate" && kEstatica[60].second.empty(),
               "y la última");
 }
-
-// ── Apéndice C.2: las cuatro formas de representar una cabecera ─────────────
 
 PRUEBA(c21_literal_con_nombre_literal_e_indexado) {
     auto dec = d();
@@ -87,11 +73,6 @@ PRUEBA(c24_indexado) {
     COMPRUEBA(salida.has_value() && *salida == pares({{":method", "GET"}}), "C.2.4");
 }
 
-// ── Apéndice C.3: tres peticiones seguidas, sin Huffman ─────────────────────
-//
-// Es el caso que de verdad ejercita la tabla: la segunda petición se apoya en lo que dejó la
-// primera, y la tercera en las dos. Decodificarlas por separado no prueba nada.
-
 PRUEBA(c3_tres_peticiones_encadenadas_sin_huffman) {
     auto dec = d();
 
@@ -119,8 +100,6 @@ PRUEBA(c3_tres_peticiones_encadenadas_sin_huffman) {
     COMPRUEBA(dec.tabla().ocupado() == 164 && dec.tabla().tamano() == 3, "C.3.3");
 }
 
-// ── Apéndice C.4: las mismas tres, con Huffman ──────────────────────────────
-
 PRUEBA(c4_tres_peticiones_encadenadas_con_huffman) {
     auto dec = d();
 
@@ -137,8 +116,6 @@ PRUEBA(c4_tres_peticiones_encadenadas_con_huffman) {
     COMPRUEBA(tres && (*tres)[4] == Cabecera{"custom-key", "custom-value"}, "C.4.3");
     COMPRUEBA(dec.tabla().ocupado() == 164, "C.4.3");
 }
-
-// ── Apéndice C.5: respuestas con una tabla de 256 octetos, que obliga a desalojar ──
 
 PRUEBA(c5_respuestas_con_tabla_pequena_desalojan) {
     Decodificador dec{256, 64 * 1024};
@@ -162,8 +139,6 @@ PRUEBA(c5_respuestas_con_tabla_pequena_desalojan) {
     COMPRUEBA(dec.tabla().tamano() == 3, "la tabla de 256 no da para más");
 }
 
-// ── Apéndice C.6: las mismas respuestas, con Huffman ────────────────────────
-
 PRUEBA(c6_respuestas_con_huffman_y_desalojo) {
     Decodificador dec{256, 64 * 1024};
 
@@ -185,29 +160,23 @@ PRUEBA(c6_respuestas_con_huffman_y_desalojo) {
     COMPRUEBA(dec.tabla().ocupado() == 215, "C.6.3");
 }
 
-// ── Los requisitos del contrato ─────────────────────────────────────────────
-
 PRUEBA(h2_015_indice_fuera_de_la_tabla) {
-    // Con la dinámica vacía, 62 ya no existe.
     COMPRUEBA(!d().decodificar("\xbe").has_value(), "H2-015");
     COMPRUEBA(!d().decodificar("\x80").has_value(), "H2-015: el índice 0 tampoco vale");
 }
 
 PRUEBA(h2_016_eos_dentro_de_una_cadena) {
-    // EOS es relleno, nunca un símbolo: treinta bits de unos son EOS entero.
     const std::string bloque{"\x00\x00\x84\xff\xff\xff\xff", 7};
     COMPRUEBA(!d().decodificar(bloque).has_value(), "H2-016");
 }
 
 PRUEBA(h2_039_la_lista_que_se_expande_al_descomprimirse) {
-    // El tope se mide en lo que **sale**, no en lo que entra. Una entrada grande en la tabla y
-    // cien referencias de un octeto caben en tres kilobytes de cable y no en el tope de salida.
     Decodificador dec{4096, 2048};
     std::string bloque;
-    bloque += '\x40';  // literal indexado, nombre nuevo
+    bloque += '\x40';
     bloque += '\x03';
     bloque += "big";
-    bloque += '\x7f';  // 1000 con prefijo de siete bits: 1000 - 127 = 873
+    bloque += '\x7f';
     bloque += '\xe9';
     bloque += '\x06';
     bloque += std::string(1000, 'a');
@@ -231,8 +200,6 @@ PRUEBA(las_actualizaciones_de_tabla_tienen_su_sitio_y_su_tope) {
 }
 
 PRUEBA(reducir_la_tabla_desaloja_en_el_acto) {
-    // Si esperara a tener que meter algo, la otra punta y esta dejarían de contar lo mismo y los
-    // índices se correrían.
     Decodificador dec{4096, 64 * 1024};
     COMPRUEBA(dec.decodificar(hex("8286 8441 0f77 7777 2e65 7861 6d70 6c65 2e63 6f6d")).has_value(),
               "se decodifica");
@@ -242,7 +209,6 @@ PRUEBA(reducir_la_tabla_desaloja_en_el_acto) {
 }
 
 PRUEBA(un_entero_sin_fin_no_cuelga) {
-    // Un entero que no termina nunca es una tira de `0xff`. Sin tope, el bucle tampoco termina.
     std::string bloque{"\x7f"};
     bloque += std::string(20, '\xff');
     COMPRUEBA(!d().decodificar(bloque).has_value(), "§5.1");
@@ -252,10 +218,7 @@ PRUEBA(una_cadena_cortada_no_lee_de_mas) {
     COMPRUEBA(!d().decodificar(std::string{"\x00\x0a" "hi", 4}).has_value(), "§5.2");
 }
 
-// ── Codificar ───────────────────────────────────────────────────────────────
-
 PRUEBA(lo_codificado_se_decodifica_igual) {
-    // Cubre los dos caminos a la vez, incluido el relleno de Huffman, que es donde se equivoca uno.
     const auto cabeceras = pares({
         {":status", "200"},
         {"content-type", "text/html; charset=utf-8"},
@@ -268,27 +231,22 @@ PRUEBA(lo_codificado_se_decodifica_igual) {
 }
 
 PRUEBA(una_entrada_de_la_estatica_ocupa_un_octeto) {
-    // Si deja de ser así, la respuesta más común del servidor engorda en cada petición.
     COMPRUEBA(codificar(pares({{":status", "200"}})) == std::string{"\x88"}, "§2.3.1");
 }
 
 PRUEBA(los_nombres_salen_en_minusculas) {
-    // Una mayúscula en un nombre de campo es un mensaje malformado en HTTP/2 (§8.2.1), así que no
-    // puede salir de aquí aunque quien llame la escriba.
     const auto bloque = codificar(pares({{"Content-Type", "text/plain"}}));
     const auto leidas = d().decodificar(bloque);
     COMPRUEBA(leidas && (*leidas)[0].first == "content-type", "H2-033");
 }
 
 PRUEBA(codificar_no_mueve_la_tabla_de_quien_lee) {
-    // Se emite sin indexar a propósito, y eso tiene que seguir siendo verdad porque es lo que hace
-    // la salida reproducible.
     const auto bloque = codificar(pares({{"x-una", "cosa"}}));
     auto dec = d();
     COMPRUEBA(dec.decodificar(bloque).has_value(), "se lee");
     COMPRUEBA(dec.tabla().tamano() == 0, "y la tabla sigue vacía");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

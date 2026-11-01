@@ -1,5 +1,3 @@
-// Una prueba por requisito de `spec/seguridad.md`, citándolo.
-
 #include <chrono>
 #include <optional>
 #include <string>
@@ -20,8 +18,6 @@ std::optional<std::string> tiene(const cero::Pares& h, std::string_view nombre) 
     }
     return std::nullopt;
 }
-
-// ── Cabeceras ───────────────────────────────────────────────────────────────
 
 PRUEBA(seg_001_a_004_las_cabeceras_por_defecto) {
     const auto h = cero::Proteccion{}.aplicar(false);
@@ -50,8 +46,6 @@ PRUEBA(seg_006_y_007_la_csp_y_el_enmarcado) {
     COMPRUEBA(tiene(h, "X-Frame-Options") == "SAMEORIGIN", "SEG-007");
     COMPRUEBA(tiene(h, "X-Content-Type-Options") == "nosniff", "SEG-007: y sin tocar el resto");
 }
-
-// ── CORS ────────────────────────────────────────────────────────────────────
 
 PRUEBA(seg_008_y_009_un_origen_permitido) {
     const cero::Cors c{{"https://mio.dev"}};
@@ -101,13 +95,10 @@ PRUEBA(seg_014_el_comodin_y_las_credenciales) {
     con.credenciales = true;
     const auto d = con.decidir("GET", "https://cualquiera.dev");
     const auto* b = std::get_if<cero::Cors::Sigue>(&d);
-    // El navegador rechaza `*` junto a credenciales, así que el comodín deja de valer.
     COMPRUEBA(b && tiene(b->cabeceras, "Access-Control-Allow-Origin") == "https://cualquiera.dev",
               "SEG-014");
     COMPRUEBA(b && tiene(b->cabeceras, "Access-Control-Allow-Credentials") == "true", "SEG-014");
 }
-
-// ── CSRF ────────────────────────────────────────────────────────────────────
 
 PRUEBA(seg_015_a_018_el_token) {
     COMPRUEBA(cero::csrf_valido("GET", "/a", {}, std::nullopt, std::nullopt), "SEG-015");
@@ -123,13 +114,9 @@ PRUEBA(seg_019_la_exencion_casa_por_segmento) {
     const std::vector<std::string> exentas{"/api/publico"};
     COMPRUEBA(cero::exento("/api/publico", exentas), "SEG-019");
     COMPRUEBA(cero::exento("/api/publico/dentro", exentas), "SEG-019: y lo que cuelga");
-    // El hallazgo de auditoría que dio origen al requisito: con prefijo pelado, eximir
-    // `/api/publico` eximía también `/api/publicoSECRETO`.
     COMPRUEBA(!cero::exento("/api/publicoSECRETO", exentas), "SEG-019");
     COMPRUEBA(!cero::exento("/api/privado", exentas), "SEG-019");
 }
-
-// ── Límite de peticiones ────────────────────────────────────────────────────
 
 PRUEBA(seg_020_y_021_lo_que_anuncia_el_limite) {
     cero::Limitador l{2, 60s};
@@ -146,9 +133,6 @@ PRUEBA(seg_020_y_021_lo_que_anuncia_el_limite) {
 }
 
 PRUEBA(seg_022_la_cuota_no_depende_de_la_ruta) {
-    // El fallo que dio origen al requisito tenía dos caras: con la ruta en la clave, cambiar de
-    // camino daba cupo nuevo, y además el mapa crecía sin tope con rutas inventadas. No era solo
-    // un límite esquivable, era agotamiento de memoria.
     cero::Limitador l{2, 60s};
     (void)l.pedir("1.2.3.4");
     (void)l.pedir("1.2.3.4");
@@ -157,14 +141,11 @@ PRUEBA(seg_022_la_cuota_no_depende_de_la_ruta) {
     COMPRUEBA(l.pedir("5.6.7.8").permitida, "y otro cliente tiene la suya");
 }
 
-// ── Saneado ─────────────────────────────────────────────────────────────────
-
 PRUEBA(seg_023_y_024_el_saneado_de_html) {
     const auto limpio = cero::sanear_html("<p>hola</p><script>robar()</script><b>mundo</b>");
     COMPRUEBA(limpio.find("script") == std::string::npos, "SEG-023");
     COMPRUEBA(limpio.find("robar") == std::string::npos,
               "SEG-023: y su contenido, o otro contexto lo vuelve a ejecutar");
-    // SEG-024: uno que borra todo se desactiva, y entonces no sanea nada.
     COMPRUEBA(limpio.find("<p>") != std::string::npos, "SEG-024");
     COMPRUEBA(limpio.find("<b>") != std::string::npos, "SEG-024");
     COMPRUEBA(limpio.find("mundo") != std::string::npos, "SEG-024");
@@ -195,7 +176,6 @@ PRUEBA(seg_026_el_saneado_de_nombres_de_archivo) {
     COMPRUEBA(cero::sanear_nombre("C:\\Windows\\system32\\x.dll") == "x.dll",
               "SEG-026: los dos sistemas");
     COMPRUEBA(cero::sanear_nombre("informe final.bin") == "informe final.bin", "lo inocuo pasa");
-    // Nunca vacío: un nombre vacío en una cabecera `Content-Disposition` la deja a medias.
     for (std::string_view malo : {"", "...", "/", "   ", "\\\\"}) {
         COMPRUEBA(!cero::sanear_nombre(malo).empty(), "SEG-026");
     }
@@ -204,6 +184,6 @@ PRUEBA(seg_026_el_saneado_de_nombres_de_archivo) {
               "SEG-026: por aquí se intentó colar una cookie");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

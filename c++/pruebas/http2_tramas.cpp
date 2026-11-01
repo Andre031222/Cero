@@ -1,8 +1,3 @@
-// La capa de tramas de HTTP/2: una prueba por requisito de `spec/http2.md` que esta capa verifica.
-//
-// Casi todos son rechazos. La asimetría no es casual: un servidor HTTP/2 permisivo es un servidor
-// que desacuerda con el proxy que tiene delante, y ahí empieza el contrabando.
-
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -53,7 +48,6 @@ PRUEBA(h2_002_y_003_los_settings) {
 PRUEBA(h2_004_a_006_los_flujos_que_no_valen) {
     COMPRUEBA(rechaza(t(kData, 0, 0, "x")) == Error::Protocolo, "H2-004");
     COMPRUEBA(rechaza(t(kHeaders, 0, 0, "x")) == Error::Protocolo, "H2-005");
-    // Los pares son del servidor: un cliente que abre uno está hablando de un flujo que no es suyo.
     COMPRUEBA(rechaza(t(kHeaders, 0, 2, "x")) == Error::Protocolo, "H2-006");
     COMPRUEBA(!rechaza(t(kHeaders, 0, 3, "x")).has_value(), "y los impares sí");
 }
@@ -88,8 +82,6 @@ PRUEBA(las_demas_formas_que_el_rfc_rechaza) {
 }
 
 PRUEBA(h2_014_una_trama_mayor_que_el_maximo) {
-    // La cabecera anuncia 20 000 y el máximo son 16 384: se rechaza **antes** de leer la carga,
-    // porque si no, anunciar 16 MB bastaría para que el servidor los reservara.
     std::string cabecera;
     cabecera += '\x00';
     cabecera += '\x4e';
@@ -136,7 +128,6 @@ PRUEBA(h2_027_los_ajustes_del_servidor_anuncian_push_deshabilitado) {
 
 PRUEBA(los_ajustes_del_cliente_se_aplican_y_los_imposibles_se_rechazan) {
     Ajustes par = Ajustes::del_rfc();
-    // MAX_FRAME_SIZE = 0x00ffffff, dentro de rango.
     const std::string bueno{"\x00\x05\x00\xff\xff\xff", 6};
     COMPRUEBA(par.aplicar(bueno).has_value() && par.max_trama == 0x00ff'ffff, "§6.5.2");
 
@@ -155,15 +146,12 @@ PRUEBA(los_ajustes_del_cliente_se_aplican_y_los_imposibles_se_rechazan) {
 }
 
 PRUEBA(un_ajuste_desconocido_se_ignora_no_se_rechaza) {
-    // Es lo que permite extender el protocolo sin romper a quien no lo conoce.
     Ajustes par = Ajustes::del_rfc();
     const std::string raro{"\x00\x63\x00\x00\x00\x07", 6};
     COMPRUEBA(par.aplicar(raro).has_value(), "§6.5.2");
 }
 
 PRUEBA(la_ventana_inicial_repetida_en_una_trama_acumula_su_delta) {
-    // Quedarse con el último delta en vez de la suma da un total que no es ni el primero ni el
-    // segundo, y entonces el cliente y el servidor cuentan distinto.
     Ajustes par = Ajustes::del_rfc();
     const std::string dos_veces{"\x00\x04\x00\x00\x00\x64\x00\x04\x00\x00\x00\xc8", 12};
     const auto delta = par.aplicar(dos_veces);
@@ -173,13 +161,12 @@ PRUEBA(la_ventana_inicial_repetida_en_una_trama_acumula_su_delta) {
 }
 
 PRUEBA(los_ajustes_que_se_le_suponen_al_cliente_son_los_del_rfc) {
-    // Suponer aquí los nuestros sería mandarle tramas de un tamaño que no ha aceptado.
     const auto par = Ajustes::del_rfc();
     COMPRUEBA(par.max_trama == 16'384, "§6.5.2");
     COMPRUEBA(par.ventana_inicial == 65'535, "§6.5.2");
     COMPRUEBA(Ajustes{}.max_flujos == 128, "y los nuestros son otros");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN

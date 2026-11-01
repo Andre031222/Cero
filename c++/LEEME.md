@@ -102,6 +102,62 @@ punto que emite la cookie solo miraba la que había llegado **con** la petición
 sesión y no recibía nada. Es `SES-010` con otra cara, y por eso emitir la cookie, guardar la sesión
 y anotar las métricas pasan por un único sitio.
 
+## Pieza por pieza: lo que el código no dice solo
+
+El código no lleva comentarios, y el requisito que comprueba una prueba va en su nombre
+—`PRUEBA(rut_029_…)`— o en el mensaje de su `COMPRUEBA`. Se cuentan así, sin distinguir mayúsculas
+y juntando guion y guion bajo:
+
+```bash
+grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
+```
+
+Lo que explicaban los comentarios, y no está ya contado arriba:
+
+- **`peticion.hpp`.** El parser lee de un `Lector`, que en producción es el socket y en las pruebas
+  una cadena: por eso los 23 vectores se corren sin abrir un puerto. El estado de un rechazo lo fija
+  el RFC y viaja con el motivo. `Content-Length` con `Transfer-Encoding` se rechaza: son dos
+  longitudes del mismo cuerpo, y es la puerta del contrabando.
+- **`servidor.cpp`.** `DesdeSocket` lee sobre un búfer propio que **dura lo que la conexión**: uno
+  nuevo por petición tira la siguiente de un cliente que las encadena. `Contexto` es lo que recibe
+  la acción; el contrato no dice cómo se llama, solo qué tiene que estar. El log de acceso anota el
+  estado que sale (`OBS-012`).
+- **`ruta.hpp`.** Las rutas se registran en vez de leerse de anotaciones, y los requisitos se
+  cumplen igual. `VerboNoPermitido` existe porque el camino que existe con otro verbo no es un 404
+  (`RUT-009`) y hay que poder enumerar los que valen (`RUT-010`). La barra final se normaliza a mano
+  y no con `views::split`, que necesita un constructor que libstdc++ no tiene hasta GCC 14.
+- **`seguridad.hpp`.** El contrato fija el comportamiento por defecto, no la política. El preflight
+  ajeno se rechaza (`SEG-013`) y la petición simple no (`SEG-010`). El limitador usa solo el
+  cliente como clave (`SEG-022`). El token CSRF se compara en tiempo constante: con `==` el tiempo
+  depende del prefijo común. El saneador corta la etiqueta donde empieza un manejador de evento o
+  un `javascript:` en vez de borrarla entera (`SEG-024`).
+- **`observabilidad.hpp`.** `vivo()` no admite comprobaciones (`OBS-001`). Un error se registra con su
+  tipo (`OBS-010`), que se pasa a mano porque el nombre de un tipo en ejecución viene decorado y
+  deshacerlo no es portable. Las métricas van por patrón y no por URL (`OBS-014`).
+- **`sesion.hpp`.** Reloj de pared y no `steady_clock`, porque una sesión en una tabla la leen dos
+  instancias. El candado va dentro de cada sesión y no alrededor del almacén (`SES-007`).
+  `cookie_pendiente()` no es `const`: consultarla la marca como emitida (`SES-011`). El identificador
+  sale de la fuente del sistema operativo (`SES-002`). `Sesiones` es una interfaz para que el nombre
+  de la tabla sea asunto de quien la implementa (`SES-013`).
+- **`estaticos.cpp`.** Tras resolver enlaces se comprueba que el camino sigue dentro de la raíz.
+- **`json.hpp`.** Propio, porque una biblioteca de JSON sería una dependencia escondida.
+- **`formato.hpp`.** `formato(...)` y `linea(...)` sobre `<format>`, porque `std::print` pide GCC 14.
+- **`http2/trama.hpp`.** Casi todo son rechazos. `FalloConexion` se lleva la conexión y `Cortado` solo
+  un flujo, y la distinción importa. `Fuente` separa el parser del socket. Hay dos juegos de
+  `Ajustes` por conexión, y los del cliente no pisan los nuestros. Los ajustes de una trama se
+  acumulan en orden (§6.5.3).
+- **`http2/hpack.hpp`.** La tabla dinámica es estado compartido con el cliente y vive lo que la
+  conexión; un bloque que no se decodifica rompe la conexión (`H2-015`, `H2-016`) y los trailers se
+  decodifican aunque se tiren. El índice 1 es la entrada más reciente; una que no cabe vacía la
+  tabla (§4.4); el entero de longitud variable tiene tope de cinco septetos; el codificador no
+  indexa.
+- **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
+  encuadre no comprueban nada.
+- **`CMakeLists.txt`.** CMake es a C++ lo que Maven a Java y Cargo a Rust: construye, no se enlaza.
+  Lo que se enlaza es la biblioteca estándar y nada más.
+- **`pruebas/prueba.hpp`.** `COMPRUEBA` es variádico y no de dos argumentos: con dos, una condición
+  con llaves dentro —`T{a, b}`— parte el macro por la coma y el error no habla de eso.
+
 ## Lo que falta
 
 Los hitos 9 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato

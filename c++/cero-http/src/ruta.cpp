@@ -11,9 +11,6 @@
 
 namespace cero {
 
-// RUT-004: la barra final se normaliza, así que `/a/7` y `/a/7/` trocean igual. A mano y no con
-// `views::split`: el adaptador devuelve subrangos y convertirlos a `string_view` necesita un
-// constructor que libstdc++ no tiene hasta GCC 14. Esto son seis líneas y funciona en todas.
 std::vector<std::string_view> trocear(std::string_view camino) {
     std::vector<std::string_view> partes;
     while (!camino.empty()) {
@@ -29,7 +26,7 @@ namespace {
 
 bool es_variable(std::string_view p) { return p.starts_with('{') && p.ends_with('}'); }
 
-}  // namespace
+}
 
 std::expected<Patron, std::string> Patron::nuevo(std::string_view crudo) {
     const auto partes = trocear(crudo);
@@ -48,7 +45,6 @@ std::optional<Captura> Patron::casa(std::string_view camino) const {
     Captura captura;
     for (std::size_t i = 0; i < patron.size(); ++i) {
         const std::string_view seg = patron[i];
-        // RUT-005: el comodín se lleva el resto, sea un segmento o cinco.
         if (seg == "*") {
             if (i >= partes.size()) {
                 captura["*"] = "";
@@ -65,7 +61,6 @@ std::optional<Captura> Patron::casa(std::string_view camino) const {
         }
         if (partes[i] != seg) return std::nullopt;
     }
-    // RUT-001: ni más segmentos ni menos.
     return partes.size() == patron.size() ? std::optional{captura} : std::nullopt;
 }
 
@@ -84,8 +79,6 @@ std::expected<void, std::string> Router::ruta(std::string_view metodo, std::stri
     return {};
 }
 
-// RUT-008: entre dos patrones que casan gana el que tiene más literales, así que `/usuarios/nuevo`
-// no lo atiende `/usuarios/{id}` — o el formulario de alta acabaría buscando al usuario «nuevo».
 std::vector<const Router::Ruta*> Router::candidatas(std::string_view camino) const {
     std::vector<const Ruta*> salida;
     for (const auto& r : rutas_) {
@@ -97,7 +90,6 @@ std::vector<const Router::Ruta*> Router::candidatas(std::string_view camino) con
 }
 
 Resolucion Router::resolver(std::string_view metodo, std::string_view camino) const {
-    // RUT-011: HEAD se resuelve contra la ruta GET del mismo camino.
     const std::string_view buscado = metodo == "HEAD" ? "GET" : metodo;
     const auto candidatas = this->candidatas(camino);
 
@@ -128,4 +120,4 @@ std::optional<std::string> Router::patron_de(std::string_view metodo,
     return candidatas.front()->patron.crudo();
 }
 
-}  // namespace cero
+}

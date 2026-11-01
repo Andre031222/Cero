@@ -1,9 +1,3 @@
-// El framework montado entero: lo que solo se ve conectando los módulos.
-//
-// En Rust este hito destapó dos fallos que ninguna prueba de módulo podía ver, y los dos están
-// aquí comprobados desde el principio: el CSRF tapando el 405 y la sesión abierta dentro de la
-// acción sin emitir su cookie.
-
 #include <chrono>
 #include <memory>
 #include <optional>
@@ -70,11 +64,7 @@ cero::Servidor montado() {
         });
 }
 
-// ── Lo que el pipeline aplica a toda respuesta ──────────────────────────────
-
-PRUEBA(las_cabeceras_de_seguridad_van_tambien_en_el_404) {
-    // RUT-029 por el lado que más se incumple: un 404 sin cabeceras de seguridad deja sin
-    // proteger justo las respuestas que más se provocan desde fuera.
+PRUEBA(rut_029_las_cabeceras_de_seguridad_van_tambien_en_el_404) {
     const auto s = montado();
     for (const char* camino : {"/a", "/no-existe"}) {
         const auto r = s.responder(peticion("GET", camino));
@@ -98,12 +88,7 @@ PRUEBA(el_contexto_llega_con_lo_de_la_peticion) {
               "RUT-016: ausente y vacío no son lo mismo, y aquí toca el defecto");
 }
 
-// ── El fallo que destapó montar el framework en Rust ────────────────────────
-
 PRUEBA(el_csrf_no_puede_tapar_el_405) {
-    // El CSRF corría antes del ruteo, así que un verbo no admitido recibía 403 en vez de 405: la
-    // respuesta atribuía el fallo a la causa equivocada, que es lo que RUT-009 prohíbe al exigir
-    // distinguir 404 de 405. Con los módulos sueltos no se ve.
     const auto s = cero::Servidor{router()}
                        .csrf({})
                        .accion("texto", [](const cero::Contexto&) {
@@ -115,8 +100,6 @@ PRUEBA(el_csrf_no_puede_tapar_el_405) {
 }
 
 PRUEBA(ses_010_la_sesion_abierta_en_la_accion_emite_su_cookie) {
-    // `abrir_sesion()` la creaba, pero el punto que emite la cookie solo miraba la que había
-    // llegado **con** la petición: el cliente abría sesión y no recibía nada.
     const auto s = montado();
     const auto r = s.responder(peticion("GET", "/entrar"));
     const auto cookie = cabecera(r, "Set-Cookie");
@@ -135,11 +118,7 @@ PRUEBA(ses_008_la_sesion_que_llega_no_reemite_la_cookie) {
     COMPRUEBA(!cabecera(s.responder(segunda), "Set-Cookie").has_value(), "SES-008");
 }
 
-// ── SEG-017, el token de punta a punta ─────────────────────────────────────
-
 PRUEBA(seg_017_el_token_se_emite_y_lo_ata_una_sesion) {
-    // Sin esto el servidor sabe validar el token y no sabe darlo, así que una ruta protegida es
-    // imposible de usar: ningún cliente tiene de dónde sacarlo.
     const auto s = cero::Servidor{router()}
                        .csrf({})
                        .accion("formulario",
@@ -170,15 +149,11 @@ PRUEBA(seg_017_el_token_se_emite_y_lo_ata_una_sesion) {
     ambos.cabeceras.emplace("x-csrf-token", token);
     COMPRUEBA(s.responder(ambos).estado == 200, "SEG-018");
 
-    // Por campo del formulario también: solo la cabecera dejaba fuera a un formulario HTML, que
-    // es justo donde el CSRF hace más falta.
     auto por_campo = peticion("POST", "/guardar");
     por_campo.cabeceras.emplace("cookie", id);
     por_campo.cuerpo = "_csrf=" + token;
     COMPRUEBA(s.responder(por_campo).estado == 200, "SEG-018: y por campo");
 }
-
-// ── Observabilidad del pipeline ────────────────────────────────────────────
 
 PRUEBA(obs_012_el_log_lleva_el_estado_que_de_verdad_salio) {
     const auto s = montado();
@@ -215,8 +190,6 @@ PRUEBA(obs_014_las_metricas_agrupan_por_patron) {
     COMPRUEBA(s.metricas().peticiones("/numero/{id}") == 50, "OBS-014");
 }
 
-// ── CORS y límite, ya dentro del pipeline ──────────────────────────────────
-
 PRUEBA(el_preflight_ajeno_corta_y_el_permitido_responde_204) {
     const auto s = montado().cors(cero::Cors{{"https://mio.dev"}});
     auto ajeno = peticion("OPTIONS", "/a");
@@ -244,8 +217,6 @@ PRUEBA(al_pasarse_del_limite_sale_un_429_con_retry_after) {
 PRUEBA(la_salud_se_atiende_antes_que_todo_lo_demas) {
     auto estado = std::make_shared<cero::Salud>();
     estado->comprobacion("base", [] { return cero::Comprobado::va(); });
-    // Con el límite agotado, la salud tiene que seguir contestando: un proceso que no puede
-    // atender tiene que poder decirlo, y si el límite la tapa el orquestador lo mata por sano.
     const auto s = montado().salud(estado).limite(1, 60s);
     (void)s.responder(peticion("GET", "/a"), "1.2.3.4");
     (void)s.responder(peticion("GET", "/a"), "1.2.3.4");
@@ -272,6 +243,6 @@ PRUEBA(ses_012_dos_servidores_con_el_mismo_almacen_ven_lo_mismo) {
     COMPRUEBA(otra.responder(segunda).cuerpo == "ana", "SES-012");
 }
 
-}  // namespace
+}
 
 PRUEBAS_MAIN
