@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 
-def _trozos(camino):
+def trozos(camino):
     limpio = camino.strip("/")
     return limpio.split("/") if limpio else []
 
@@ -13,7 +13,7 @@ class Patron:
         if not texto.startswith("/"):
             raise ValueError(f"el patrón {texto!r} debe empezar por /")
         self.texto = texto
-        self.segmentos = tuple(_trozos(texto))
+        self.segmentos = tuple(trozos(texto))
         for i, segmento in enumerate(self.segmentos):
             if segmento == "*":
                 if i != len(self.segmentos) - 1:
@@ -27,13 +27,13 @@ class Patron:
                 raise ValueError(f"segmento mal formado en {texto!r}: {segmento!r}")
 
     def casar(self, camino):
-        trozos = _trozos(camino)
+        partes = trozos(camino)
         comodin = self.segmentos[-1:] == ("*",)
         fijos = self.segmentos[:-1] if comodin else self.segmentos
-        if len(trozos) < len(fijos) + comodin or (not comodin and len(trozos) != len(fijos)):
+        if len(partes) < len(fijos) + comodin or (not comodin and len(partes) != len(fijos)):
             return None
         variables = {}
-        for segmento, trozo in zip(fijos, trozos):
+        for segmento, trozo in zip(fijos, partes):
             if segmento.startswith("{"):
                 if not trozo:
                     return None
@@ -41,7 +41,7 @@ class Patron:
             elif segmento != trozo:
                 return None
         if comodin:
-            variables["*"] = "/".join(trozos[len(fijos):])
+            variables["*"] = "/".join(partes[len(fijos):])
         return variables
 
     def peso(self):

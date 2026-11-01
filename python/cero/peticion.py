@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass, field
 
+from cero.seguridad import token_csrf
 from cero.sesion import id_de_cookie
 
 METODOS = {"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE"}
@@ -62,6 +63,9 @@ class Peticion:
                 raise RuntimeError("esta petición no tiene almacén de sesiones")
             self.abierta = self.almacen.crear()
         return self.abierta
+
+    def token_csrf(self):
+        return token_csrf(self.abrir_sesion())
 
     def persistente(self):
         conexion = {t.strip().lower() for t in (self.cabecera("connection") or "").split(",")}

@@ -4,7 +4,8 @@ from unittest import mock
 from cero.peticion import Peticion
 from cero.respuesta import Respuesta
 from cero.ruta import Router
-from cero.seguridad import Cabeceras, Cors
+from cero import seguridad
+from cero.seguridad import Cabeceras, Cors, Csrf
 from cero.servidor import Servidor
 from pruebas.test_servidor import arrancar, pedir
 
@@ -203,6 +204,128 @@ class CorsTests(unittest.TestCase):
     def test_options_sin_access_control_request_method_no_es_preflight(self):
         r = self.responder(self.lista(), "OPTIONS", "/api", ("Origin", "https://app.pe"))
         self.assertEqual(r.estado, 405)
+
+
+def galleta(respuesta):
+    valor = cabeceras(respuesta).get("set-cookie", "")
+    return valor.split(";", 1)[0] if valor else None
+
+
+class CsrfTests(unittest.TestCase):
+
+    def setUp(self):
+        self.hechas = []
+        r = Router()
+        r.agregar("GET", "/token", lambda p: p.token_csrf())
+        r.agregar("GET", "/api", lambda p: "ok")
+        r.agregar("POST", "/entrar", self.entrar)
+        for verbo in ("POST", "PUT", "PATCH", "DELETE"):
+            r.agregar(verbo, "/api", self.escribir)
+        for camino in ("/api/publico", "/api/publico/*", "/api/publicoSECRETO"):
+            r.agregar("POST", camino, self.escribir)
+        self.servidor = Servidor(r, csrf=Csrf(exentas=["/api/publico"]))
+
+    def escribir(self, p):
+        self.hechas.append((p.verbo, p.camino))
+        return "hecho"
+
+    def entrar(self, p):
+        p.sesion().rotar()
+        return p.token_csrf()
+
+    def pedir(self, verbo, camino, *cab, cuerpo=b""):
+        return self.servidor.responder(peticion(verbo, camino, *cab, cuerpo=cuerpo))
+
+    def token(self):
+        r = self.pedir("GET", "/token")
+        return galleta(r), r.cuerpo.decode()
+
+    def test_seg_015_metodo_seguro_pasa_sin_token(self):
+        for verbo in ("GET", "HEAD"):
+            with self.subTest(verbo=verbo):
+                self.assertEqual(self.pedir(verbo, "/api").estado, 200)
+
+    def test_seg_016_metodo_que_escribe_sin_token_403(self):
+        for verbo in ("POST", "PUT", "PATCH", "DELETE"):
+            with self.subTest(verbo=verbo):
+                self.assertEqual(self.pedir(verbo, "/api").estado, 403)
+        cookie, _ = self.token()
+        self.assertEqual(self.pedir("POST", "/api", ("Cookie", cookie)).estado, 403)
+        self.assertEqual(self.hechas, [])
+
+    def test_seg_016_el_csrf_no_tapa_el_404_ni_el_405(self):
+        self.assertEqual(self.pedir("POST", "/nada").estado, 404)
+        self.assertEqual(self.pedir("POST", "/token").estado, 405)
+
+    def test_seg_017_se_emite_un_token_atado_a_una_sesion(self):
+        with mock.patch.object(seguridad.secrets, "token_urlsafe",
+                               wraps=seguridad.secrets.token_urlsafe) as fuente:
+            cookie, token = self.token()
+        fuente.assert_called_once_with(32)
+        self.assertGreaterEqual(len(token), 40)
+        self.assertTrue(cookie.startswith("cero_sid="))
+        id = cookie.split("=", 1)[1]
+        self.assertEqual(self.servidor.sesiones.recuperar(id).leer("csrf"), token)
+        otra = self.pedir("GET", "/token", ("Cookie", cookie))
+        self.assertEqual(otra.cuerpo.decode(), token)
+
+    def test_seg_018_token_valido_pasa(self):
+        cookie, token = self.token()
+        r = self.pedir("POST", "/api", ("Cookie", cookie), ("X-CSRF-Token", token))
+        self.assertEqual((r.estado, self.hechas), (200, [("POST", "/api")]))
+
+    def test_seg_018_token_en_un_formulario_pasa(self):
+        cookie, token = self.token()
+        r = self.pedir("POST", "/api", ("Cookie", cookie),
+                       ("Content-Type", "application/x-www-form-urlencoded"),
+                       cuerpo=f"nombre=ana&_csrf={token}".encode())
+        self.assertEqual(r.estado, 200)
+
+    def test_seg_018_token_erroneo_403(self):
+        cookie, token = self.token()
+        otra, ajeno = self.token()
+        for cab in ((("Cookie", cookie), ("X-CSRF-Token", "token-inventado")),
+                    (("Cookie", cookie), ("X-CSRF-Token", token[:-1])),
+                    (("Cookie", cookie), ("X-CSRF-Token", ajeno)),
+                    (("X-CSRF-Token", token),),
+                    (("Cookie", cookie), ("X-CSRF-Token", token), ("X-CSRF-Token", token))):
+            with self.subTest(cab=cab):
+                self.assertEqual(self.pedir("POST", "/api", *cab).estado, 403)
+        self.assertEqual(self.hechas, [])
+
+    def test_seg_018_se_compara_en_tiempo_constante(self):
+        cookie, token = self.token()
+        with mock.patch.object(seguridad.hmac, "compare_digest",
+                               wraps=seguridad.hmac.compare_digest) as comparar:
+            self.pedir("POST", "/api", ("Cookie", cookie), ("X-CSRF-Token", token))
+        comparar.assert_called_once()
+
+    def test_seg_019_exencion_por_segmento_completo(self):
+        self.assertEqual(self.pedir("POST", "/api/publico").estado, 200)
+        self.assertEqual(self.pedir("POST", "/api/publico/").estado, 200)
+        self.assertEqual(self.pedir("POST", "/api/publico/x").estado, 200)
+        self.assertEqual(self.pedir("POST", "/api/publicoSECRETO").estado, 403)
+        self.assertEqual(self.pedir("POST", "/api").estado, 403)
+
+    def test_seg_019_la_barra_final_de_la_exencion_no_cambia_nada(self):
+        self.servidor.csrf = Csrf(exentas=["/api/publico/"])
+        self.assertEqual(self.pedir("POST", "/api/publico").estado, 200)
+        self.assertEqual(self.pedir("POST", "/api/publicoSECRETO").estado, 403)
+
+    def test_rotar_al_entrar_cambia_el_token(self):
+        cookie, viejo = self.token()
+        r = self.pedir("POST", "/entrar", ("Cookie", cookie), ("X-CSRF-Token", viejo))
+        nueva, nuevo = galleta(r), r.cuerpo.decode()
+        self.assertEqual(r.estado, 200)
+        self.assertNotEqual(nuevo, viejo)
+        self.assertEqual(self.pedir("POST", "/api", ("Cookie", nueva),
+                                    ("X-CSRF-Token", viejo)).estado, 403)
+        self.assertEqual(self.pedir("POST", "/api", ("Cookie", nueva),
+                                    ("X-CSRF-Token", nuevo)).estado, 200)
+
+    def test_sin_csrf_configurado_no_se_exige(self):
+        self.servidor.csrf = None
+        self.assertEqual(self.pedir("POST", "/api").estado, 200)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ import time
 from contextlib import closing
 
 COOKIE = "cero_sid"
+CLAVE_CSRF = "csrf"
 INACTIVIDAD = 30 * 60
 IDENTIFICADOR = re.compile(r"[0-9a-f]{64}")
 NOMBRE_TABLA = re.compile(r"(?!(?i:sqlite_))[A-Za-z_][A-Za-z0-9_]{0,62}")
@@ -83,6 +84,8 @@ class Sesion:
         self._comprobar()
         nuevo = self.almacen.renombrar(self.id)
         self.id, self.pendiente = nuevo, True
+        if CLAVE_CSRF in self.atributos:
+            self.quitar(CLAVE_CSRF)
         return nuevo
 
     def cookie_pendiente(self):

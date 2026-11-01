@@ -1,4 +1,13 @@
+import hmac
+import secrets
+from urllib.parse import parse_qs
+
 from cero.respuesta import Respuesta
+from cero.ruta import trozos
+from cero.sesion import CLAVE_CSRF
+
+SEGUROS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+FORMULARIO = "application/x-www-form-urlencoded"
 
 
 class Cabeceras:
@@ -62,3 +71,40 @@ class Cors:
                   ("Access-Control-Allow-Headers", self.cabeceras),
                   ("Access-Control-Max-Age", str(self.max_age))]
         return 204, extra
+
+
+class Csrf:
+
+    def __init__(self, exentas=()):
+        self.exentas = [trozos(e) for e in exentas]
+
+    def exenta(self, camino):
+        partes = trozos(camino)
+        return any(partes[:len(e)] == e for e in self.exentas)
+
+    def admite(self, peticion):
+        if peticion.verbo in SEGUROS or self.exenta(peticion.camino):
+            return True
+        sesion = peticion.sesion()
+        esperado = sesion.leer(CLAVE_CSRF) if sesion else None
+        dado = peticion.cabecera("x-csrf-token") or _campo(peticion, "_csrf")
+        if esperado is None or dado is None:
+            return False
+        return hmac.compare_digest(esperado.encode(), dado.encode())
+
+
+def _campo(peticion, nombre):
+    tipo = (peticion.cabecera("content-type") or "").split(";")[0].strip().lower()
+    if tipo != FORMULARIO:
+        return None
+    campos = parse_qs(peticion.cuerpo.decode("utf-8", "replace"), max_num_fields=1000)
+    valores = campos.get(nombre, [])
+    return valores[0] if len(valores) == 1 else None
+
+
+def token_csrf(sesion):
+    token = sesion.leer(CLAVE_CSRF)
+    if token is None:
+        token = secrets.token_urlsafe(32)
+        sesion.poner(CLAVE_CSRF, token)
+    return token

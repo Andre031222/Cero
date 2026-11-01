@@ -38,11 +38,12 @@ class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
                  plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
-                 cabeceras=Cabeceras(), cors=None):
+                 cabeceras=Cabeceras(), cors=None, csrf=None):
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
         self.cabeceras = cabeceras
         self.cors = cors
+        self.csrf = csrf
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
@@ -101,6 +102,8 @@ class Servidor:
             return texto(404, "no encontrado")
         if isinstance(resultado, NoPermitido):
             return texto(405, "método no permitido", [("Allow", ", ".join(resultado.verbos))])
+        if self.csrf is not None and not self.csrf.admite(peticion):
+            return texto(403, "token CSRF ausente o inválido")
         peticion.variables = resultado.variables
         return como_respuesta(resultado.accion(peticion))
 
