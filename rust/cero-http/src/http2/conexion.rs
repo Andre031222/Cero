@@ -251,6 +251,10 @@ where
                     }
                 }
                 Accion::Peticion { flujo, cabeceras, fin } => {
+                    if anuncia_de_mas(&cabeceras, limites.cuerpo) {
+                        cuerpo_de_mas(&comun, &mut sesion, flujo);
+                        continue;
+                    }
                     comun.credito.abrir(flujo);
                     en_curso.insert(flujo, EnCurso { cabeceras, cuerpo: Vec::new() });
                     if fin {
@@ -260,13 +264,8 @@ where
                 Accion::Cuerpo { flujo, datos, fin } => {
                     let Some(c) = en_curso.get_mut(&flujo) else { continue };
                     if datos.len() > limites.cuerpo - c.cuerpo.len() {
-                        let cabeceras = [("content-length".to_string(), "0".to_string())];
-                        let bloque = cabeceras_de_respuesta(413, &cabeceras);
-                        comun.escribir(&Trama { tipo: HEADERS, banderas: FIN_CABECERAS | FIN_FLUJO, flujo, carga: bloque });
-                        comun.escribir(&Trama::rst(flujo, Error::Ninguno));
                         en_curso.remove(&flujo);
-                        comun.credito.anular(flujo);
-                        sesion.desechar(flujo);
+                        cuerpo_de_mas(&comun, &mut sesion, flujo);
                         continue;
                     }
                     c.cuerpo.extend_from_slice(&datos);
@@ -287,6 +286,22 @@ where
     }
     despedirse(&mut lectura);
     Ok(())
+}
+
+fn anuncia_de_mas(cabeceras: &[(String, String)], tope: usize) -> bool {
+    cabeceras
+        .iter()
+        .find(|(n, _)| n == "content-length")
+        .and_then(|(_, v)| v.parse::<u64>().ok())
+        .is_some_and(|largo| largo > tope as u64)
+}
+
+fn cuerpo_de_mas(comun: &Comun, sesion: &mut Sesion, flujo: u32) {
+    let bloque = cabeceras_de_respuesta(413, &[("content-length".to_string(), "0".to_string())]);
+    comun.escribir(&Trama { tipo: HEADERS, banderas: FIN_CABECERAS | FIN_FLUJO, flujo, carga: bloque });
+    comun.escribir(&Trama::rst(flujo, Error::Ninguno));
+    comun.credito.anular(flujo);
+    sesion.desechar(flujo);
 }
 
 fn despedirse(socket: &mut TcpStream) {

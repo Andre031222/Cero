@@ -23,7 +23,7 @@ dedicado a h2c y no aplica aquí.
 | 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
 | 11 | Ruteo, fallos, dependencias y validación | 172 de los 173 requisitos · 36 pruebas |
 | 12 | Sesiones en tabla, y `cero-data` sabe escribir | 173 de 173 · 9 pruebas |
-| 13 | Plazos, topes y HTTP/2 Bomb | **182 de 182** · 9 de 9 en `ataques.py` · 12 pruebas |
+| 13 | Plazos, topes y HTTP/2 Bomb | **182 de 182** · 10 de 10 en `ataques.py` · 13 pruebas |
 
 **Los 182 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y los otros 159
 por una prueba que los cita; los nueve de octubre, además, por `spec/banco/ataques.py`. Se cuentan así:
@@ -67,7 +67,10 @@ reservaba entero sin tope.
   tiene el plazo de `escritura` por trama, y vencido sale un `RST_STREAM CANCEL` (`H2-052`). Las
   respuestas construidas y sin mandar se suman por conexión, y pasar de 32 MiB es GOAWAY
   `ENHANCE_YOUR_CALM` (`H2-054`), salvo que no haya nada más en vuelo. Un cuerpo de más de 10 MiB
-  recibe 413, en HTTP/1.1 sin leerlo (`HTTP-026`) y en h2 con `RST_STREAM NO_ERROR` (`H2-055`). HPACK corta en 256 campos (`H2-050`) y en el tope anunciado
+  recibe 413, en HTTP/1.1 sin leerlo (`HTTP-026`) y en h2 con `RST_STREAM NO_ERROR` (`H2-055`); lo
+  que el cliente ya tenía en vuelo sobre ese flujo devuelve su ventana a la conexión, como
+  cualquier DATA sobre un flujo cerrado. Un `WINDOW_UPDATE` de la conexión solo cuenta como control
+  vacío (`H2-038`) cuando no hay ningún flujo vivo: contarlos todos cortaba una descarga de 8 MiB. HPACK corta en 256 campos (`H2-050`) y en el tope anunciado
   (`H2-051`), con `ENHANCE_YOUR_CALM` en los dos casos.
 
 ## El hito 12: las sesiones fuera del proceso

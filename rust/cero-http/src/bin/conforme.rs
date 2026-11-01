@@ -18,7 +18,8 @@ fn main() -> std::io::Result<()> {
         .ruta("GET", "/", "raiz").expect("patrón")
         .ruta("GET", "/eco", "eco").expect("patrón")
         .ruta("POST", "/eco", "eco").expect("patrón")
-        .ruta("GET", "/grande", "grande").expect("patrón");
+        .ruta("GET", "/grande", "grande").expect("patrón")
+        .ruta("GET", "/descarga", "descarga").expect("patrón");
     Servidor::nuevo(router)
         .accion("raiz", |_| Respuesta::texto("cero, conforme\n"))
         .accion("eco", |c| Respuesta {
@@ -26,6 +27,7 @@ fn main() -> std::io::Result<()> {
             ..Respuesta::texto("")
         })
         .accion("grande", |_| Respuesta::texto(&"x".repeat(1 << 20)))
+        .accion("descarga", |_| Respuesta::texto(&"x".repeat(32 << 20)))
         .plazos(plazos)
         .escuchar(puerto)
 }

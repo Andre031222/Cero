@@ -197,8 +197,40 @@ fn h2_055_un_cuerpo_de_mas_recibe_413() {
     assert!(respuesta.banderas & FIN_FLUJO != 0, "H2-055: con fin de flujo");
     let (corte, _) = hasta(&mut c, |t| t.tipo == RST_STREAM);
     assert_eq!(corte.map(|t| (t.flujo, codigo(&t))), Some((1, 0)), "H2-055: y RST_STREAM NO_ERROR");
+
+    for _ in 0..4 {
+        Trama { tipo: DATA, banderas: 0, flujo: 1, carga: vec![b'x'; 16_380] }.escribir(&mut c).unwrap();
+    }
+    Trama { tipo: HEADERS, banderas: FIN_CABECERAS, flujo: 3, carga: Codificador::codificar(&cabeceras) }
+        .escribir(&mut c)
+        .unwrap();
+    Trama { tipo: DATA, banderas: FIN_FLUJO, flujo: 3, carga: vec![b'y'; 90] }.escribir(&mut c).unwrap();
+    let (eco, datos) = hasta(&mut c, |t| t.flujo == 3 && (t.tipo == DATA && t.banderas & FIN_FLUJO != 0 || t.tipo == GOAWAY));
+    assert!(eco.is_some_and(|t| t.tipo == DATA) && datos >= 90,
+            "H2-055: lo que el cliente ya tenía en vuelo tras el 413 devuelve su ventana, y la conexión sigue subiendo");
+
+    let mut anunciadas = cabeceras.to_vec();
+    anunciadas.push(("content-length".to_string(), "1000".to_string()));
+    Trama { tipo: HEADERS, banderas: FIN_CABECERAS, flujo: 5, carga: Codificador::codificar(&anunciadas) }
+        .escribir(&mut c)
+        .unwrap();
+    let (anunciado, _) = hasta(&mut c, |t| t.flujo == 5);
+    let anunciado = anunciado.expect("H2-055: responde al content-length de más");
+    let estado = Decodificador::nuevo(4096, 1 << 20).decodificar(&anunciado.carga).unwrap()[0].1.clone();
+    assert_eq!(estado, "413", "H2-055: un content-length de más es 413 antes de mandar nada");
     drop(c);
     hilo.join().unwrap();
+}
+
+#[test]
+fn h2_038_una_descarga_larga_no_es_una_inundacion() {
+    let mut s = http2::Sesion::nueva(Ajustes::default());
+    let pedido = Trama { tipo: HEADERS, banderas: FIN_FLUJO | FIN_CABECERAS, flujo: 1, carga: GET_RAIZ.to_vec() };
+    assert!(s.recibir(pedido).is_ok());
+    for _ in 0..4_000 {
+        assert!(s.recibir(Trama::ventana(0, 16_384)).is_ok(), "H2-038: el crédito de una descarga en curso no es control vacío");
+        assert!(s.recibir(Trama::ventana(1, 16_384)).is_ok(), "H2-038: ni el del flujo");
+    }
 }
 
 #[test]

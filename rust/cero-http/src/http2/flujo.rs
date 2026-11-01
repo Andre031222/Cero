@@ -154,7 +154,9 @@ impl Sesion {
     fn window_update(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
         let cuanto = u32::from_be_bytes([t.carga[0] & 0x7f, t.carga[1], t.carga[2], t.carga[3]]) as i64;
         if t.flujo == 0 {
-            self.control()?;
+            if self.flujos.is_empty() {
+                self.control()?;
+            }
             return Ok((vec![Accion::Credito { flujo: 0, cuanto }], None));
         }
         if t.flujo > self.ultimo {
@@ -322,6 +324,9 @@ impl Sesion {
         }
 
         let datos = recortar(&t)?;
+        self.ventana += tamano;
+        let credito = || (tamano > 0).then(|| Accion::Escribir(Trama::ventana(0, tamano as u32)));
+        let con_credito = |acciones: Vec<Accion>| credito().into_iter().chain(acciones).collect::<Vec<_>>();
         let estado = match self.flujos.get_mut(&t.flujo) {
             Some(f) => {
                 f.ventana -= tamano;
@@ -330,7 +335,7 @@ impl Sesion {
                 }
                 if f.estado == Estado::MitadCerradoRemoto {
                     return Ok((
-                        vec![Accion::Escribir(Trama::rst(t.flujo, Error::FlujoCerrado))],
+                        con_credito(vec![Accion::Escribir(Trama::rst(t.flujo, Error::FlujoCerrado))]),
                         Some(Cortado { flujo: t.flujo, codigo: Error::FlujoCerrado, porque: "DATA tras fin de flujo" }),
                     ));
                 }
@@ -344,7 +349,8 @@ impl Sesion {
                 };
                 if miente {
                     let porque = "el cuerpo no mide lo que dijo content-length";
-                    return Ok((self.cortar(t.flujo, porque), Some(Cortado { flujo: t.flujo, codigo: Error::Protocolo, porque })));
+                    let cortado = Some(Cortado { flujo: t.flujo, codigo: Error::Protocolo, porque });
+                    return Ok((con_credito(self.cortar(t.flujo, porque)), cortado));
                 }
                 Some(f.estado)
             }
@@ -355,21 +361,18 @@ impl Sesion {
                 return Err(conexion(Error::Protocolo, "DATA sobre un flujo que nunca se abrió"));
             }
             return Ok((
-                vec![Accion::Escribir(Trama::rst(t.flujo, Error::FlujoCerrado))],
+                con_credito(vec![Accion::Escribir(Trama::rst(t.flujo, Error::FlujoCerrado))]),
                 Some(Cortado { flujo: t.flujo, codigo: Error::FlujoCerrado, porque: "DATA sobre un flujo cerrado" }),
             ));
         }
 
         let mut acciones = vec![Accion::Cuerpo { flujo: t.flujo, datos, fin: t.fin_flujo() }];
-        if tamano > 0 {
-            self.ventana += tamano;
-            acciones.push(Accion::Escribir(Trama::ventana(0, tamano as u32)));
-            if !t.fin_flujo() {
-                if let Some(f) = self.flujos.get_mut(&t.flujo) {
-                    f.ventana += tamano;
-                }
-                acciones.push(Accion::Escribir(Trama::ventana(t.flujo, tamano as u32)));
+        acciones.extend(credito());
+        if tamano > 0 && !t.fin_flujo() {
+            if let Some(f) = self.flujos.get_mut(&t.flujo) {
+                f.ventana += tamano;
             }
+            acciones.push(Accion::Escribir(Trama::ventana(t.flujo, tamano as u32)));
         }
         Ok((acciones, None))
     }

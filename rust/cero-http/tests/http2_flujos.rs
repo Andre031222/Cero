@@ -285,7 +285,11 @@ fn cuerpo_despues_del_fin_de_flujo() {
     pedir(&mut s, 1, &get(), true);
     let (acciones, corte) = s.recibir(t(DATA, 0, 1, b"tarde".to_vec())).unwrap();
     assert_eq!(corte.unwrap().codigo, Error::FlujoCerrado);
-    assert_eq!(acciones, vec![Accion::Escribir(Trama::rst(1, Error::FlujoCerrado))]);
+    assert_eq!(
+        acciones,
+        vec![Accion::Escribir(Trama::ventana(0, 5)), Accion::Escribir(Trama::rst(1, Error::FlujoCerrado))],
+        "lo que llega tarde devuelve su ventana a la conexión"
+    );
 }
 
 #[test]
@@ -420,7 +424,9 @@ fn h2_043_el_cuerpo_tiene_que_medir_lo_que_dijo() {
         let banderas = if fin { FIN_FLUJO } else { 0 };
         let (acciones, corte) = s.recibir(t(DATA, banderas, 1, cuerpo.as_bytes().to_vec())).unwrap();
         assert_eq!(corte.expect("H2-043").codigo, Error::Protocolo);
-        assert_eq!(acciones, vec![Accion::Escribir(Trama::rst(1, Error::Protocolo))]);
+        let credito = Accion::Escribir(Trama::ventana(0, cuerpo.len() as u32));
+        assert_eq!(acciones, vec![credito, Accion::Escribir(Trama::rst(1, Error::Protocolo))],
+                   "H2-043: y la conexión recupera la ventana");
     }
 }
 
