@@ -1,6 +1,6 @@
 import json
-import math
 import os
+import re
 import sys
 import threading
 import time
@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from cero.respuesta import Respuesta
 from cero.ruta import trozos
 
+CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 NIVELES = ("TRAZA", "DEPURA", "INFO", "AVISO", "ERROR", "NADA")
 
 
@@ -41,17 +42,21 @@ class _Sumidero:
         self.candado = threading.Lock()
 
     def __call__(self, linea):
-        if self.funcion is not None:
-            self.funcion(linea)
-            return
-        salida = self.archivo or getattr(sys, self.flujo)
-        with self.candado:
-            salida.write(linea + "\n")
-            salida.flush()
+        try:
+            with self.candado:
+                if self.funcion is not None:
+                    self.funcion(linea)
+                    return
+                salida = self.archivo or getattr(sys, self.flujo)
+                salida.write(linea + "\n")
+                salida.flush()
+        except Exception:
+            pass
 
     def cerrar(self):
-        if self.archivo is not None:
-            self.archivo.close()
+        with self.candado:
+            if self.archivo is not None:
+                self.archivo.close()
 
 
 def _json(estado, cuerpo):
@@ -59,11 +64,21 @@ def _json(estado, cuerpo):
                      json.dumps(cuerpo, ensure_ascii=False).encode())
 
 
+def _probar(funcion, resultado):
+    try:
+        resultado.append("bien" if funcion() else "mal")
+    except Exception as fallo:
+        resultado.append(f"mal: {type(fallo).__name__}: {_texto(fallo)}")
+
+
 class Salud:
 
-    def __init__(self, publico=False):
+    def __init__(self, publico=False, plazo=2):
         self.publico = publico
+        self.plazo = plazo
         self.comprobaciones = []
+        self.en_curso = {}
+        self.candado = threading.Lock()
         self.arranque = time.monotonic()
 
     def comprobacion(self, nombre, funcion):
@@ -73,13 +88,25 @@ class Salud:
         activo = round((time.monotonic() - self.arranque) * 1000)
         return _json(200, {"estado": "vivo", "activo_ms": activo})
 
+    def _lanzar(self, nombre, funcion):
+        with self.candado:
+            hilo, resultado = self.en_curso.get(nombre, (None, None))
+            if hilo is None or not hilo.is_alive():
+                resultado = []
+                hilo = threading.Thread(target=_probar, args=(funcion, resultado), daemon=True)
+                hilo.start()
+                self.en_curso[nombre] = (hilo, resultado)
+            return hilo, resultado
+
     def listo(self, peticion):
+        limite = time.monotonic() + self.plazo
+        lanzadas = [(nombre, *self._lanzar(nombre, funcion))
+                    for nombre, funcion in self.comprobaciones]
         detalle = {}
-        for nombre, funcion in self.comprobaciones:
-            try:
-                detalle[nombre] = "bien" if funcion() else "mal"
-            except Exception as fallo:
-                detalle[nombre] = f"mal: {type(fallo).__name__}: {_texto(fallo)}"
+        for nombre, hilo, resultado in lanzadas:
+            hilo.join(max(limite - time.monotonic(), 0))
+            plazo = f"mal: sin respuesta en el plazo de {self.plazo} s"
+            detalle[nombre] = resultado[0] if resultado else plazo
         listo = all(valor == "bien" for valor in detalle.values())
         cuerpo = {"estado": "listo" if listo else "no listo"}
         if not self.publico:
@@ -104,7 +131,7 @@ class Registro:
         linea = f"{fecha} {nivel} {_texto(origen)} {interpolar(plantilla, *valores)}"
         if excepcion is not None:
             linea += f" | {type(excepcion).__name__}: {_texto(excepcion)}{_lugar(excepcion)}"
-        self.sumidero(linea.replace("\r", "\\r").replace("\n", "\\n"))
+        self.sumidero(CONTROL.sub(lambda m: f"\\x{ord(m.group()):02x}", linea))
 
     def cerrar(self):
         self.sumidero.cerrar()
@@ -119,7 +146,7 @@ def _lugar(excepcion):
 
 SIN_RUTA = "(sin ruta)"
 MUESTRAS = 1024
-CUANTILES = ("0.5", "0.95", "0.99")
+CUANTILES = (("0.5", 50), ("0.95", 95), ("0.99", 99))
 MESES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 
@@ -144,8 +171,8 @@ class _Serie:
         self.recientes = deque(maxlen=MUESTRAS)
 
 
-def _cuantil(ordenadas, q):
-    return ordenadas[max(math.ceil(float(q) * len(ordenadas)) - 1, 0)]
+def _cuantil(ordenadas, centesimas):
+    return ordenadas[max(-(-centesimas * len(ordenadas) // 100) - 1, 0)]
 
 
 def _etiqueta(valor):
@@ -197,8 +224,8 @@ class Metricas:
                 f"Latencia en milisegundos; cuantiles de las últimas {MUESTRAS} peticiones")
         for ruta, (peticiones, _, suma, ordenadas) in series.items():
             ruta = _etiqueta(ruta)
-            for q in CUANTILES:
-                valor = _numero(_cuantil(ordenadas, q))
+            for q, centesimas in CUANTILES:
+                valor = _numero(_cuantil(ordenadas, centesimas))
                 lineas.append(f'cero_request_duration_ms{{ruta="{ruta}",quantile="{q}"}} {valor}')
             lineas.append(f'cero_request_duration_ms_sum{{ruta="{ruta}"}} {_numero(suma)}')
             lineas.append(f'cero_request_duration_ms_count{{ruta="{ruta}"}} {peticiones}')

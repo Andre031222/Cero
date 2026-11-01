@@ -115,10 +115,10 @@ class Servidor:
             return texto(404, "no encontrado")
         if isinstance(resultado, NoPermitido):
             return texto(405, "método no permitido", [("Allow", ", ".join(resultado.verbos))])
+        peticion.patron = resultado.patron
         if self.csrf is not None and not self.csrf.admite(peticion):
             return texto(403, "token CSRF ausente o inválido")
         peticion.variables = resultado.variables
-        peticion.patron = resultado.patron
         return como_respuesta(resultado.accion(peticion))
 
     def escuchar(self, puerto, anfitrion="127.0.0.1"):
@@ -146,6 +146,9 @@ class Servidor:
 
     def cerrar(self):
         self.parado.set()
+        for sumidero in (self.registro, self.acceso):
+            if sumidero is not None:
+                sumidero.cerrar()
 
     def _repartir(self, conexion):
         if not self.cupo.acquire(blocking=False):

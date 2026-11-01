@@ -37,7 +37,7 @@ def fallar(peticion):
 
 def main():
     entorno = os.environ
-    registro = Registro(entorno.get("CERO_CONF_LOG"), entorno.get("CERO_CONF_NIVEL", "INFO"))
+    registro = Registro(entorno.get("CERO_CONF_LOG") or None, entorno.get("CERO_CONF_NIVEL") or "INFO")
     salud = Salud(publico=entorno.get("CERO_CONF_SALUD_PUBLICA") == "1")
     interruptores = {nombre: Interruptor(nombre) for nombre in ("uno", "dos")}
     for nombre, interruptor in interruptores.items():
@@ -74,7 +74,7 @@ def main():
     puerto = int(sys.argv[1]) if len(sys.argv) > 1 else 8777
     print(f"cero escucha en 127.0.0.1:{puerto}", file=sys.stderr, flush=True)
     Servidor(router, registro=registro, metricas=metricas,
-             acceso=Acceso(entorno.get("CERO_CONF_ACCESO"), ignoradas=IGNORADAS)).escuchar(puerto)
+             acceso=Acceso(entorno.get("CERO_CONF_ACCESO") or None, ignoradas=IGNORADAS)).escuchar(puerto)
 
 
 if __name__ == "__main__":

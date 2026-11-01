@@ -6,15 +6,15 @@ los mismos vectores de conformidad, que son bytes sobre un socket y no saben en 
 escrito quien responde.
 
 **Estado: hito 4.** HTTP/1.1, ruteo, sesiones, seguridad transversal y observabilidad. **23 de 23
-vectores del banco** y 220 pruebas propias.
+vectores del banco** y 231 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
 | 1 bis | Un solo archivo | `python3 -m cero.empaquetar` · 3 pruebas |
 | 2 | Sesiones | 12 de 13, más `SES-010` a medias hasta que haya HTTP/2 · 50 pruebas |
-| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 81 pruebas |
-| 4 | Observabilidad | 23 de 23 · `OBS-001`–`OBS-023` · 39 pruebas |
+| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 83 pruebas |
+| 4 | Observabilidad | 23 de 23 · `OBS-001`–`OBS-023` · 48 pruebas |
 
 ## Usarlo
 
@@ -27,14 +27,14 @@ python3 -m cero.empaquetar miapp/ app.pyz app:main
 python3 app.pyz 8080
 ```
 
-`cero.empaquetar` está hecho sobre `zipapp`: copia la carpeta de la aplicación y el paquete `cero`
-y los cierra en un `.pyz`. La entrada es `modulo:funcion`; si se omite, la carpeta tiene que traer
-su `__main__.py`. Deja fuera `__pycache__`, los `.pyz` viejos y los archivos ocultos, para que un
+`cero.empaquetar` está hecho sobre `zipapp`: copia la carpeta de la aplicación y el paquete `cero` y
+los cierra en un `.pyz`. La entrada es `modulo:funcion`; si se omite, la carpeta tiene que traer su
+`__main__.py`. Deja fuera `__pycache__`, los `.pyz` viejos y los archivos ocultos, para que un
 `.env` no viaje dentro, y del framework solo lleva lo que se ejecuta: ni `empaquetar.py` ni
 `conforme.py`. Se niega a seguir enlaces simbólicos (uno a `~/.ssh` acabaría dentro) y a escribir la
 salida dentro de la carpeta que empaqueta. Lo que no sea oculto viaja: un `secrets.json` o una base
-SQLite junto al código se empaquetan, así que no se dejan ahí. La prueba lo arranca con `python3 -I`, que no mira ni `site-packages` ni un venv: si
-funciona así, no depende de nada instalado.
+SQLite junto al código se empaquetan, así que no se dejan ahí. La prueba lo arranca con
+`python3 -I`, que no mira ni `site-packages` ni un venv: si funciona así, no depende de nada instalado.
 
 `miapp/app.py` registra sus rutas a mano y arranca el servidor:
 
@@ -258,13 +258,13 @@ gana la suya y no salen dos.
 con `Origin` **y** `Access-Control-Request-Method`; sin la segunda es un `OPTIONS` normal y va al
 router. Un preflight de un origen admitido que pide un método o una cabecera que no están en
 `metodos` o `cabeceras` también es 403: el navegador lo haría cumplir igual, pero el servidor no
-anuncia permisos que no da. El comodín con credenciales no se deja construir (`ValueError`), ni como `"*"` ni dentro de
-una lista: devolver el origen que llegue con credenciales es abrir la API a cualquier sitio. Con
-CORS configurado, **toda** respuesta lleva `Vary: Origin`, también la que llega sin `Origin`: la
-respuesta depende de que la cabecera esté, y una caché que guarde la versión sin permiso se la
-serviría después al navegador que sí lo tenía (es lo que recomienda Fetch). `Vary` no es una
-cabecera CORS, así que `SEG-011` se cumple; si la acción ya trae `Vary`, se le suma `Origin`. Un 429
-lleva las cabeceras CORS, para que el navegador pueda leer el motivo.
+anuncia permisos que no da. El comodín con credenciales no se deja construir (`ValueError`), ni como
+`"*"` ni dentro de una lista: devolver el origen que llegue con credenciales es abrir la API a
+cualquier sitio. Con CORS configurado, **toda** respuesta lleva `Vary: Origin`, también la que llega
+sin `Origin`: la respuesta depende de que la cabecera esté, y una caché que guarde la versión sin
+permiso se la serviría después al navegador que sí lo tenía (es lo que recomienda Fetch). `Vary` no
+es una cabecera CORS, así que `SEG-011` se cumple; si la acción ya trae `Vary`, se le suma `Origin`.
+Un 429 lleva las cabeceras CORS, para que el navegador pueda leer el motivo.
 
 **CSRF.** Corre después del ruteo, así que un verbo no admitido sigue siendo 405 y no 403. El
 token lo pide la acción con `peticion.token_csrf()`, que abre sesión si no hay y guarda en ella 32
@@ -305,15 +305,19 @@ atributos solo `href` y `title` en `a`. Un `href` vale si es relativo o su esque
 `https` o `mailto`, mirado después de quitar espacios y controles. **`//otro.pe/x` cuenta como
 relativo**: no tiene esquema, y el navegador lo resuelve con el de la página hacia otro anfitrión.
 No ejecuta nada, así que no es un agujero de `SEG-024`, pero es un enlace a otro dominio igual que
-`https://otro.pe/x`; quien solo quiera enlaces internos tiene que filtrarlo aparte. Cualquier otra etiqueta se
-quita y su texto se queda; `script`, `style`, `template`, `iframe`, `object`, `embed`, `svg`,
-`math` y parecidos se quitan **con** su contenido. Todo texto y todo atributo sale escapado.
+`https://otro.pe/x`; quien solo quiera enlaces internos tiene que filtrarlo aparte. Cualquier otra
+etiqueta se quita y su texto se queda; `script`, `style`, `template`, `iframe`, `object`, `embed`,
+`svg`, `math` y parecidos se quitan **con** su contenido. Todo texto y todo atributo sale escapado.
 
 **La salida sale equilibrada.** El saneador lleva una pila de lo que abrió: lo que queda abierto al
 final se cierra, un cierre que no corresponde a nada abierto se tira, y un cierre de algo que está
 más abajo en la pila cierra antes lo de encima (`<b><i>x</b>` da `<b><i>x</i></b>`). Sin eso, un
 `<div>` sin cerrar en un comentario deformaba el resto de la página donde se pegara. `<b/>` sale como
-`<b></b>`, porque en HTML la barra no cierra una etiqueta que no es vacía.
+`<b></b>`, porque en HTML la barra no cierra una etiqueta que no es vacía. Saber si un cierre
+corresponde a algo abierto se mira en un contador por etiqueta, no recorriendo la pila: con la pila,
+`<b>` repetido y luego `</i>` repetido era cuadrático, y 240 KB tardaban 10 s de CPU con el GIL
+tomado. Además la pila no pasa de 100 niveles; lo que se abra más adentro se quita y su texto se
+queda. Hay una prueba con un mega hostil que tiene que acabar en menos de un segundo.
 
 La primera versión era una lista de lo prohibido, y cumplía `SEG-023` y `SEG-024` al pie de la
 letra: quitaba `script`, `style`, `iframe`, manejadores y `javascript:`, y conservaba lo inocuo. La
@@ -435,8 +439,16 @@ comprobación y responde 200 o 503 con `{"estado": …, "comprobaciones": {"bd":
 "mal: ConnectionError: …"}}`. En modo público el cuerpo es solo `{"estado": "listo"}` o
 `{"estado": "no listo"}` (`OBS-006`, `OBS-007`). Una comprobación que devuelve algo falso está mal;
 una que lanza también (`OBS-005`). Se atrapa `Exception`, no `BaseException`: un `KeyboardInterrupt`
-o un `SystemExit` siguen parando el proceso. Lo que no se cubre es una comprobación que **se cuelga**:
-no hay plazo, y `listo` se cuelga con ella. Ponérselo es tarea de la comprobación.
+o un `SystemExit` siguen parando el proceso.
+
+**Cada comprobación tiene plazo.** La primera versión no lo tenía, y la revisión vio lo que eso
+cuesta: con una comprobación colgada, cada sonda a `listo` retenía un hilo de los 256 del cupo, y
+unas cuantas sondas después tampoco había hilo para `vivo`, que contestaba 503 por falta de cupo
+aunque el proceso estuviera bien. Ahora cada comprobación corre en un hilo propio y `listo` espera
+como mucho `Salud(plazo=2)` segundos por todas a la vez; la que no contesta cuenta como `"mal: sin
+respuesta en el plazo de 2 s"` y la respuesta es 503. El hilo colgado no se puede matar desde
+Python, así que se reutiliza: mientras siga vivo, las sondas siguientes esperan a ese mismo hilo
+y no lanzan otro, y como mucho hay uno colgado por comprobación. `vivo` no toca nada de esto.
 
 **`OBS-005` en Python.** Rust encontró que «una comprobación que lanza» era vocabulario de Java,
 porque en Rust el error corriente es un valor y lanzar es `panic!`. En Python lanzar **es** el
@@ -451,10 +463,16 @@ niveles son `TRAZA`, `DEPURA`, `INFO`, `AVISO`, `ERROR` y `NADA`, el vocabulario
 `CERO_CONF_NIVEL`, y un nivel que no está en la lista (`WARN`) es un `ValueError` y no un silencio.
 `interpolar` parte la plantilla por `{}` antes de sustituir, así que un valor que contenga `{}` no
 se vuelve a interpolar, y un `__str__` que lanza deja `<Tipo ilegible>` en vez de llevarse la línea
-(`OBS-011`). Los saltos de línea de la línea entera se escriben como `\n`: con uno de verdad, quien
-controla un valor puede fabricar una línea `ERROR` falsa. El servidor usa el mismo registro para las
+(`OBS-011`). Todo carácter de control de la línea se escribe como `\xNN`: con un salto de línea
+de verdad, quien controla un valor puede fabricar una línea `ERROR` falsa, y con un `ESC` puede
+mandar secuencias a la terminal de quien lea el log. El servidor usa el mismo registro para las
 excepciones no controladas y para la respuesta que no se puede serializar, con tipo, mensaje y el
 archivo y la línea donde saltó (`OBS-010`), en una sola línea y sin la traza entera.
+
+**Observar nunca rompe lo observado.** Si el destino falla (disco lleno, `stdout` cerrado, una
+función que lanza), la línea se pierde y nada más. La primera versión dejaba subir la excepción, y
+como la línea de acceso se escribe antes de mandar la respuesta, el cliente recibía la conexión
+cerrada en vez de su 200. `Servidor.cerrar()` cierra los archivos del registro y del acceso.
 
 **`OBS-012`: el estado que sale.** En Python el fallo «después de fijar 200» es una `Respuesta(200)`
 con una cabecera que lleva un salto de línea: `serializar` la rechaza y lo que sale es un 500. Las
@@ -479,7 +497,8 @@ cero_uptime_ms 1665
 Los nombres son los de Java. La etiqueta `ruta` es el **patrón** que casó, no el camino
 (`OBS-014`): `/tienda/1`, `/tienda/2` y `/tienda/3` son una serie. Lo que no casó con ningún
 patrón —un 404, un 405, un `OPTIONS *`, un 429 o un 403 de CORS cortados antes del router, un
-rechazo del parser— va a una sola serie, `ruta="(sin ruta)"`. Así el número de series lo fija la
+rechazo del parser— va a una sola serie, `ruta="(sin ruta)"`. Un 403 de CSRF sí cuenta en su
+ruta, porque el router ya casó. Así el número de series lo fija la
 aplicación al declarar sus rutas, y no quien manda peticiones. Error es todo estado 4xx o 5xx, y un
 404 cuenta (`OBS-016`).
 
@@ -495,14 +514,24 @@ aplicación al declarar sus rutas, y no quien manda peticiones. Error es todo es
   series por ruta en el mismo nombre contaría dos veces, así que va en su propia familia,
   `cero_all_requests_total` y `cero_all_request_errors_total`. El nombre está por acordar.
 
-**Percentiles de verdad (`OBS-015`).** Java los estima con cubos fijos (1, 2, 5, 10, 25… ms), así que
-un cuantil sale redondeado al tope del cubo. Rust y C++ los calculan bien, pero guardan **todas** las
-duraciones de cada patrón, sin tope de memoria, y su exposición no los incluye. Aquí cada ruta guarda sus **últimas 1024 duraciones** y el cuantil es el de rango más cercano
-sobre ellas, ordenadas al exponer: con 19 peticiones de 1 ms y una de 300 ms, `0.5` da 1 ms y `0.99`
-da 300. `_sum` y `_count` son de toda la vida del proceso, como manda el tipo `summary`; los
-cuantiles, de la ventana. La memoria es 1024 flotantes por patrón, y los patrones los fija la
-aplicación. La duración va desde que se leyó la cabecera hasta que la respuesta está serializada;
-no incluye el envío.
+**Percentiles de verdad (`OBS-015`).** Java los estima con cubos fijos (1, 2, 5, 10, 25… ms), así
+que un cuantil sale redondeado al tope del cubo. Rust y C++ los calculan bien, pero guardan
+**todas** las duraciones de cada patrón, sin tope de memoria, y su exposición no los incluye. Aquí
+cada ruta guarda sus **últimas 1024 duraciones** y el cuantil es el de rango más cercano sobre
+ellas, ordenadas al exponer: con 19 peticiones de 1 ms y una de 300 ms, `0.5` da 1 ms y `0.99` da
+300. `_sum` y `_count` son de toda la vida del proceso, como manda el tipo `summary`; los cuantiles,
+de la ventana. La memoria es 1024 flotantes por patrón, y los patrones los fija la aplicación. La
+duración va desde que se leyó la cabecera hasta que la respuesta está serializada; no incluye el
+envío. El rango se calcula con enteros (`-(-95 * n // 100)`); con coma flotante no hay ningún `n`
+hasta 1024 en que salga distinto para 0.5, 0.95 o 0.99, pero así no depende de ello.
+
+**El candado de las métricas no tiene prueba que lo vigile.** Hay una que anota desde ocho hilos
+mientras otros dos exponen, con `sys.setswitchinterval(1e-6)`, y comprueba que no se pierde ninguna
+cuenta. Con el candado quitado **sigue pasando**: en CPython 3.12 el GIL solo cambia de hilo en los
+saltos hacia atrás y en las llamadas, no entre leer y escribir `serie.peticiones += 1`, y
+`setdefault` y `deque.append` son atómicos. El candado está para la compilación sin GIL (PEP 703),
+donde esa suma sí se puede perder, y aquí no hay una con que probarlo. La prueba se queda, sin
+citar ningún requisito: el día que corra sobre `python3.13t` sí podrá fallar.
 
 **El log de acceso.**
 
@@ -542,7 +571,7 @@ el formato CLF y el contrato no la menciona; queda anotado para cuando se reescr
 ### Cómo se comprobó que las pruebas pueden fallar
 
 Igual que en el hito 3: para cada `OBS-0xx` se escribió al menos un mutante que incumple el
-requisito y se corrieron, con `python -B`, solo las pruebas que citan ese identificador. Son 33
+requisito y se corrieron, con `python -B`, solo las pruebas que citan ese identificador. Son 34
 mutantes para los 23 requisitos, y caen todos. Algunos de los que se probaron: `vivo` que corre las
 comprobaciones (`OBS-003`), `except ArithmeticError` en vez de `Exception` (`OBS-005`, que entonces
 da 500), el camino en vez del patrón y el camino solo para el 404 (`OBS-014`), la media en lugar del

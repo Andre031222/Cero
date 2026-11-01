@@ -1,4 +1,5 @@
 import re
+from collections import Counter
 from html import escape
 from html.parser import HTMLParser
 
@@ -16,6 +17,7 @@ ESQUEMA = re.compile(r"([a-z][a-z0-9+.-]*):")
 RESERVADOS = {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)),
               *(f"lpt{i}" for i in range(1, 10))}
 SEGURO = re.compile(r"[^A-Za-z0-9._-]")
+PROFUNDIDAD = 100
 
 
 class _Saneador(HTMLParser):
@@ -26,6 +28,7 @@ class _Saneador(HTMLParser):
         self.dentro = 0
         self.salida = []
         self.abiertas = []
+        self.cuantas = Counter()
 
     def _abrir(self, etiqueta, atributos, cierre):
         if etiqueta in CON_CONTENIDO or self.dentro:
@@ -33,10 +36,13 @@ class _Saneador(HTMLParser):
                 self.dentro += 1
             return
         if self.con_marcado and etiqueta in PERMITIDAS:
+            if etiqueta not in VACIAS and len(self.abiertas) >= PROFUNDIDAD:
+                return
             partes = [etiqueta, *_atributos(etiqueta, atributos)]
             self.salida.append("<" + " ".join(partes) + ">")
             if etiqueta not in VACIAS:
                 self.abiertas.append(etiqueta)
+                self.cuantas[etiqueta] += 1
                 if cierre:
                     self.handle_endtag(etiqueta)
 
@@ -51,10 +57,13 @@ class _Saneador(HTMLParser):
             if etiqueta in CON_CONTENIDO:
                 self.dentro -= 1
             return
-        if etiqueta in self.abiertas:
-            while (cima := self.abiertas.pop()) != etiqueta:
+        if self.cuantas[etiqueta]:
+            while True:
+                cima = self.abiertas.pop()
+                self.cuantas[cima] -= 1
                 self.salida.append(f"</{cima}>")
-            self.salida.append(f"</{etiqueta}>")
+                if cima == etiqueta:
+                    break
 
     def handle_data(self, datos):
         if not self.dentro:

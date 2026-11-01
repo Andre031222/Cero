@@ -2,6 +2,7 @@ import http.client
 import json
 import os
 import re
+import sys
 import tempfile
 import threading
 import time
@@ -126,6 +127,42 @@ class Salud_(unittest.TestCase):
         self.assertEqual(respuesta.estado, 200)
         self.assertEqual(leer_json(respuesta), {"estado": "listo"})
 
+    def test_obs_005_una_comprobacion_colgada_da_503_dentro_del_plazo(self):
+        suelta = threading.Event()
+        self.addCleanup(suelta.set)
+        llamadas = []
+
+        def colgada():
+            llamadas.append(1)
+            suelta.wait(10)
+            return True
+        salud = Salud(plazo=0.2)
+        salud.comprobacion("colgada", colgada)
+        salud.comprobacion("disco", lambda: True)
+        for _ in range(3):
+            inicio = time.monotonic()
+            respuesta = salud.listo(peticion("GET", "/salud/lista"))
+            self.assertLess(time.monotonic() - inicio, 1)
+            self.assertEqual(respuesta.estado, 503)
+            cuerpo = leer_json(respuesta)
+            self.assertIn("plazo", cuerpo["comprobaciones"]["colgada"])
+            self.assertEqual(cuerpo["comprobaciones"]["disco"], "bien")
+        self.assertEqual(len(llamadas), 1)
+        inicio = time.monotonic()
+        self.assertEqual(salud.vivo(peticion("GET", "/salud/vida")).estado, 200)
+        self.assertLess(time.monotonic() - inicio, 0.05)
+        suelta.set()
+        time.sleep(0.05)
+        self.assertEqual(salud.listo(peticion("GET", "/salud/lista")).estado, 200)
+
+    def test_las_comprobaciones_corren_a_la_vez(self):
+        salud = Salud(plazo=1)
+        for nombre in ("a", "b", "c", "d"):
+            salud.comprobacion(nombre, lambda: time.sleep(0.3) or True)
+        inicio = time.monotonic()
+        self.assertEqual(salud.listo(None).estado, 200)
+        self.assertLess(time.monotonic() - inicio, 0.9)
+
     def test_la_salud_va_en_json(self):
         for respuesta in (self.salud.vivo(None), self.salud.listo(None)):
             self.assertIn(("Content-Type", "application/json"), respuesta.cabeceras)
@@ -220,6 +257,20 @@ class Registro_(unittest.TestCase):
         self.assertEqual(len(self.lineas), 1)
         self.assertNotIn("\n", self.lineas[0])
         self.assertNotIn("\r", self.lineas[0])
+
+    def test_un_destino_que_falla_no_rompe_nada(self):
+        def roto(linea):
+            raise OSError(28, "No queda espacio en el dispositivo")
+        Registro(roto, "INFO").escribir("ERROR", "x", "y")
+        router = Router()
+        router.agregar("GET", "/falla", lambda p: 1 / 0)
+        respuesta = Servidor(router, registro=Registro(roto)).responder(peticion("GET", "/falla"))
+        self.assertEqual(respuesta.estado, 500)
+
+    def test_los_caracteres_de_control_no_llegan_a_la_terminal(self):
+        self.registro("INFO").escribir("INFO", "x", "valor {}", "a\x1b[2Jb\x07")
+        self.assertNotRegex(self.lineas[0], "[\x00-\x1f\x7f]")
+        self.assertIn("\\x1b", self.lineas[0])
 
     def test_el_archivo_se_escribe_linea_a_linea(self):
         with tempfile.TemporaryDirectory() as carpeta:
@@ -356,6 +407,55 @@ class Metricas_(ConServidor):
         self.assertEqual(serie(muestras, "cero_requests_total", ruta="/tienda"), 1)
         self.assertTrue(cuerpo.endswith(b"\n"))
 
+    def test_los_cuantiles_salen_de_una_ventana_acotada(self):
+        metricas = Metricas()
+        for _ in range(100):
+            metricas.anotar("/a", "/a", 200, 1000.0)
+        for _ in range(1024):
+            metricas.anotar("/a", "/a", 200, 1.0)
+        muestras, _ = prometheus(metricas.exponer(None).cuerpo.decode())
+        self.assertEqual(serie(muestras, "cero_request_duration_ms", ruta="/a", quantile="0.99"), 1)
+        self.assertEqual(serie(muestras, "cero_request_duration_ms_count", ruta="/a"), 1124)
+
+    def test_el_cuantil_es_el_de_rango_mas_cercano(self):
+        metricas = Metricas()
+        for valor in range(1, 101):
+            metricas.anotar("/a", "/a", 200, float(valor))
+        muestras, _ = prometheus(metricas.exponer(None).cuerpo.decode())
+        for q, esperado in (("0.5", 50), ("0.95", 95), ("0.99", 99)):
+            self.assertEqual(serie(muestras, "cero_request_duration_ms", ruta="/a", quantile=q),
+                             esperado)
+
+    def test_anotar_y_exponer_a_la_vez_no_pierde_cuentas(self):
+        previo = sys.getswitchinterval()
+        sys.setswitchinterval(1e-6)
+        self.addCleanup(sys.setswitchinterval, previo)
+        metricas, fallos = Metricas(), []
+
+        def anotar(n):
+            try:
+                for i in range(3000):
+                    metricas.anotar(f"/r{(i + n) % 7}", "/r", 500, 1.0)
+            except Exception as fallo:
+                fallos.append(fallo)
+
+        def exponer():
+            try:
+                for _ in range(200):
+                    metricas.exponer(None)
+            except Exception as fallo:
+                fallos.append(fallo)
+        hilos = [threading.Thread(target=anotar, args=(n,)) for n in range(8)]
+        hilos += [threading.Thread(target=exponer) for _ in range(2)]
+        for hilo in hilos:
+            hilo.start()
+        for hilo in hilos:
+            hilo.join()
+        self.assertEqual(fallos, [])
+        muestras, _ = prometheus(metricas.exponer(None).cuerpo.decode())
+        self.assertEqual(serie(muestras, "cero_all_requests_total"), 24000)
+        self.assertEqual(serie(muestras, "cero_all_request_errors_total"), 24000)
+
     def test_la_etiqueta_se_escapa(self):
         metricas = Metricas()
         metricas.anotar('/a"b\\c\nd', "/x", 200, 1.0)
@@ -433,6 +533,24 @@ class Acceso_(ConServidor):
         conexion.close()
         self.assertEqual(len(self.lineas), 1)
         self.assertIn('"POST /tienda?x=1 HTTP/1.1" 417', self.lineas[0])
+
+    def test_un_destino_que_falla_no_rompe_la_respuesta(self):
+        def roto(linea):
+            raise OSError(28, "No queda espacio en el dispositivo")
+        self.servidor.acceso = Acceso(roto)
+        for _ in range(2):
+            estado, cuerpo, _ = self.pedir("/tienda")
+            self.assertEqual((estado, cuerpo), (200, "catálogo".encode()))
+
+    def test_un_403_de_csrf_cuenta_en_su_ruta(self):
+        from cero.seguridad import Csrf
+        self.servidor.csrf = Csrf()
+        self.servidor.router.agregar("POST", "/tienda", lambda p: "comprado")
+        self.lineas.clear()
+        estado, _, _ = self.pedir("/tienda", "POST")
+        self.assertEqual(estado, 403)
+        muestras, _ = prometheus(self.servidor.metricas.exponer(None).cuerpo.decode())
+        self.assertEqual(serie(muestras, "cero_request_errors_total", ruta="/tienda"), 1)
 
     def test_las_comillas_del_destino_no_rompen_la_linea(self):
         _, (_, _, _, peticion, _, _) = self.una('/tienda?q="x"\\')

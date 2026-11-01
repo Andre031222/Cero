@@ -1,8 +1,9 @@
+import time
 import unittest
 
 from html.parser import HTMLParser
 
-from cero.saneado import sanear_html, sanear_nombre, sanear_texto
+from cero.saneado import PROFUNDIDAD, sanear_html, sanear_nombre, sanear_texto
 
 PERMITIDAS = {"p", "b", "i", "em", "strong", "a", "ul", "ol", "li", "br", "code", "pre",
               "blockquote", "div", "span"}
@@ -161,6 +162,22 @@ class SaneadoHtml(unittest.TestCase):
                 lector.feed(sanear_html(entrada))
                 lector.close()
                 self.assertEqual(pila, [])
+
+    def test_una_entrada_hostil_de_un_mega_no_se_vuelve_cuadratica(self):
+        for entrada in ("<b>" * 170_000 + "</i>" * 85_000,
+                        "<div>" * 100_000 + "</div>" * 100_000,
+                        "<p><b>" * 70_000 + "</p>" * 70_000):
+            with self.subTest(entrada=entrada[:12]):
+                inicio = time.process_time()
+                salida = sanear_html(entrada)
+                self.assertLess(time.process_time() - inicio, 1)
+                self.assertEqual(salida.count("<"), salida.count("</") * 2)
+
+    def test_la_profundidad_tiene_tope(self):
+        salida = sanear_html("<div>" * 1000 + "x" + "</div>" * 1000)
+        self.assertLessEqual(salida.count("<div>"), PROFUNDIDAD)
+        self.assertEqual(salida.count("<div>"), salida.count("</div>"))
+        self.assertIn("x", salida)
 
     def test_el_texto_que_parece_marcado_sale_escapado(self):
         self.assertEqual(sanear_html("<a title='\"><script>'>x</a>"),
