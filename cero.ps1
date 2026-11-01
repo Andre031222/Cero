@@ -61,9 +61,9 @@ function Classpath([string] $modulo) {
 }
 
 $Implementaciones = @(
-    'java|java|mvn java|mvn -B install||java -cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme||'
-    'rust|rust|cargo|cargo test --all && cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe|cero-http\tests cero-data\tests|159'
-    'c++|c++|cmake ctest|cmake -S . -B "%OBJ%" -DCMAKE_BUILD_TYPE=Release && cmake --build "%OBJ%" -j && ctest --test-dir "%OBJ%" --output-on-failure||"%OBJ%\conforme.exe"|pruebas|157'
+    'java|java|mvn java|mvn -B install||java::-cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme||'
+    'rust|rust|cargo|cargo test --all ;; cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe::|cero-http\tests cero-data\tests|159'
+    'c++|c++|cmake ctest|cmake -S . -B "$env:OBJ" -DCMAKE_BUILD_TYPE=Release ;; cmake --build "$env:OBJ" --config Release -j ;; ctest --test-dir "$env:OBJ" -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|157'
 )
 
 $Codigo = if ($env:CERO_LANG) { $env:CERO_LANG } elseif ($env:LC_ALL) { $env:LC_ALL } elseif ($env:LANG) { $env:LANG } else { (Get-Culture).Name }
@@ -73,6 +73,7 @@ $TextoEs = @{
     'ver-comprobando'   = 'comprobando {0}…'
     'ver-falta'         = 'falta {0}'
     'ver-sin-python'    = 'falta Python 3.12 o superior (python3.14, python3.12, python3 o py): lo que lo necesita sale ✗'
+    'ver-sin-sh'        = 'falta sh: viene con Git for Windows (https://git-scm.com/download/win)'
     'ver-python'        = 'python: {0} ({1})'
     'ver-ocupado'       = 'el puerto {0} ya está ocupado'
     'ver-no-arranca'    = 'el servidor no llegó a escuchar'
@@ -82,7 +83,12 @@ $TextoEs = @{
     'ver-comentarios'   = '{0} comentarios'
     'ver-pruebas'       = 'pruebas'
     'ver-n-pruebas'     = '{0} pruebas'
-    'ver-sin-motores'   = 'motores reales sin probar'
+    'ver-sin-motores'   = 'motores reales sin probar (CI lo exige)'
+    'ver-omitido'       = 'omitido a pedido'
+    'ver-no-ci'         = 'lo demás está bien, pero esta corrida NO equivale a CI: motores reales omitidos a pedido'
+    'ver-sin-vectores'  = 'sin resumen del banco'
+    'ver-n-orden'       = 'orden'
+    'ver-n-coment'      = 'comentarios'
     'ver-n-vectores'    = '{0} vectores'
     'ver-banco'         = 'banco'
     'ver-ataques'       = 'ataques'
@@ -98,6 +104,7 @@ $TextoEn = @{
     'ver-comprobando'   = 'checking {0}…'
     'ver-falta'         = 'missing: {0}'
     'ver-sin-python'    = 'Python 3.12 or newer is missing (python3.14, python3.12, python3 or py): whatever needs it shows ✗'
+    'ver-sin-sh'        = 'sh is missing: it comes with Git for Windows (https://git-scm.com/download/win)'
     'ver-python'        = 'python: {0} ({1})'
     'ver-ocupado'       = 'port {0} is already in use'
     'ver-no-arranca'    = 'the server never started listening'
@@ -107,7 +114,12 @@ $TextoEn = @{
     'ver-comentarios'   = '{0} comments'
     'ver-pruebas'       = 'tests'
     'ver-n-pruebas'     = '{0} tests'
-    'ver-sin-motores'   = 'real engines untested'
+    'ver-sin-motores'   = 'real engines untested (CI requires them)'
+    'ver-omitido'       = 'skipped on request'
+    'ver-no-ci'         = 'the rest is fine, but this run is NOT equivalent to CI: real engines skipped on request'
+    'ver-sin-vectores'  = 'no bench summary'
+    'ver-n-orden'       = 'order'
+    'ver-n-coment'      = 'comments'
     'ver-n-vectores'    = '{0} vectors'
     'ver-banco'         = 'bench'
     'ver-ataques'       = 'attacks'
@@ -126,11 +138,12 @@ function T([string] $clave, [object[]] $valores = @()) {
     return ($texto -f $valores)
 }
 
-$V = @{ Puerto = $(if ($env:CERO_PUERTO) { $env:CERO_PUERTO } else { '8777' }); Py = ''; Tmp = ''; Proceso = $null }
+$V = @{ Puerto = $(if ($env:CERO_PUERTO) { $env:CERO_PUERTO } else { '8777' }); Py = ''; Sh = ''; Tmp = ''; Proceso = $null; SinMotores = $false }
 $Filas = New-Object System.Collections.ArrayList
 
-function Anotar([string] $nombre, [string] $cifra, [bool] $ok, [string] $registro = '') {
-    [void]$Filas.Add([pscustomobject]@{ Nombre = $nombre; Cifra = $cifra; Ok = $ok; Registro = $registro })
+function Anotar([string] $nombre, [string] $cifra, [object] $ok, [string] $registro = '') {
+    if ($ok -is [bool]) { $estado = $(if ($ok) { 'ok' } else { 'mal' }) } else { $estado = [string]$ok }
+    [void]$Filas.Add([pscustomobject]@{ Nombre = $nombre; Cifra = $cifra; Estado = $estado; Registro = $registro })
 }
 
 function BuscarPython {
@@ -143,22 +156,43 @@ function BuscarPython {
     return ''
 }
 
+function BuscarSh {
+    $orden = Get-Command sh -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($orden) { return $orden.Source }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return '' }
+    $exec = "$(& git --exec-path 2>$null)".Trim()
+    if (-not $exec) { return '' }
+    $raiz = Split-Path (Split-Path (Split-Path $exec))
+    foreach ($candidato in (Join-Path $raiz 'usr\bin\sh.exe'), (Join-Path $raiz 'bin\sh.exe')) {
+        if (Test-Path $candidato) { return $candidato }
+    }
+    return ''
+}
+
 function Faltan([string[]] $herramientas) {
     $faltan = @()
     foreach ($h in $herramientas) {
         if ($h -eq 'python3') { if (-not $V.Py) { $faltan += 'python3.12' } }
+        elseif ($h -eq 'sh') { if (-not $V.Sh) { $faltan += 'sh' } }
         elseif (-not (Get-Command $h -ErrorAction SilentlyContinue)) { $faltan += $h }
     }
     return ($faltan -join ' ')
 }
 
-function Ejecutar([string] $dir, [string] $orden, [string] $registro) {
+function Ejecutar([string] $dir, [string] $pasos, [string] $registro) {
+    $ErrorActionPreference = 'Continue'
+    $codigo = 0
     Push-Location $dir
     try {
-        & cmd.exe /c "$orden >> `"$registro`" 2>&1"
-        return $LASTEXITCODE
+        foreach ($paso in ($pasos -split ' ;; ')) {
+            $global:LASTEXITCODE = 0
+            Invoke-Expression "$paso *>> `"$registro`""
+            $codigo = [int]$global:LASTEXITCODE
+            if ($codigo -ne 0) { break }
+        }
     }
     finally { Pop-Location }
+    return $codigo
 }
 
 function Escucha {
@@ -168,9 +202,27 @@ function Escucha {
     finally { $c.Close() }
 }
 
+function ResolverExe([string] $dir, [string] $exe) {
+    $exe = [Environment]::ExpandEnvironmentVariables($exe)
+    if (-not ($exe.Contains('\') -or $exe.Contains('/'))) { return $exe }
+    if (-not [IO.Path]::IsPathRooted($exe)) { $exe = Join-Path $dir $exe }
+    if (-not (Test-Path $exe)) {
+        $otro = Join-Path (Join-Path (Split-Path $exe) 'Release') (Split-Path $exe -Leaf)
+        if (Test-Path $otro) { return $otro }
+    }
+    return $exe
+}
+
+function PartirServidor([string] $dir, [string] $servidor) {
+    $partes = $servidor -split '::', 2
+    return @((ResolverExe $dir $partes[0]), ([Environment]::ExpandEnvironmentVariables($partes[1])))
+}
+
 function ArrancarServidor([string] $dir, [string] $servidor, [string] $registro) {
-    $V.Proceso = Start-Process cmd.exe -ArgumentList '/c', "$servidor $($V.Puerto) > `"$registro`" 2>&1" `
-        -WorkingDirectory $dir -PassThru -WindowStyle Hidden
+    $p = PartirServidor $dir $servidor
+    $argumentos = ("$($p[1]) $($V.Puerto)").Trim()
+    $V.Proceso = Start-Process -FilePath $p[0] -ArgumentList $argumentos -WorkingDirectory $dir -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput $registro -RedirectStandardError "$registro.err"
     for ($i = 0; $i -lt 30; $i++) {
         if (Escucha) { return $true }
         if ($V.Proceso.HasExited) { return $false }
@@ -206,36 +258,46 @@ function ContarPruebas([string] $registro) {
 
 function CifraVectores([string] $registro) {
     $l = Get-Content $registro -ErrorAction SilentlyContinue | Where-Object { $_ -match ' vectores ·' } | Select-Object -Last 1
-    if ($l -match '(\d+) vectores · (\d+) pasan') { return (T 'ver-n-vectores' @("$($Matches[2])/$($Matches[1])")) }
-    return ''
+    if ("$l" -match '(\d+) vectores · (\d+) pasan') { return (T 'ver-n-vectores' @("$($Matches[2])/$($Matches[1])")) }
+    return (T 'ver-sin-vectores')
+}
+
+function CarpetasCodigo {
+    $carpetas = @()
+    foreach ($linea in $Implementaciones) { $carpetas += $linea.Split('|')[1] }
+    $carpetas += 'herramientas'
+    return ($carpetas -join ' ')
 }
 
 function PasoOrden {
-    Azul (T 'ver-comprobando' @('orden'))
-    $f = Faltan @('git', 'sh', 'python3')
-    if ($f) { Anotar 'orden' (T 'ver-falta' @($f)) $false }
+    $nombreOrden = T 'ver-n-orden'
+    $nombreComent = T 'ver-n-coment'
+    Azul (T 'ver-comprobando' @($nombreOrden))
+    $f = Faltan @('git', 'python3')
+    if ($f) { Anotar $nombreOrden (T 'ver-falta' @($f)) $false }
+    elseif (-not $V.Sh) { Anotar $nombreOrden (T 'ver-sin-sh') $false }
     else {
         $registro = Join-Path $V.Tmp 'orden.log'
         New-Item -ItemType File -Path $registro -Force | Out-Null
-        if ((Ejecutar $Aqui 'sh herramientas/verificar-orden.sh' $registro) -eq 0) {
-            Anotar 'orden' (T 'ver-sin-hallazgos') $true
+        $env:PATH = "$(Split-Path $V.Sh);$env:PATH"
+        if ((Ejecutar $Aqui "& `"$($V.Sh)`" herramientas/verificar-orden.sh" $registro) -eq 0) {
+            Anotar $nombreOrden (T 'ver-sin-hallazgos') $true
         } else {
-            Anotar 'orden' (T 'ver-hallazgos' @((Get-Content $registro | Measure-Object).Count)) $false $registro
+            Anotar $nombreOrden (T 'ver-hallazgos' @((Get-Content $registro | Measure-Object).Count)) $false $registro
         }
     }
 
-    Azul (T 'ver-comprobando' @('comentarios'))
+    Azul (T 'ver-comprobando' @($nombreComent))
     $f = Faltan @('python3')
-    if ($f) { Anotar 'comentarios' (T 'ver-falta' @($f)) $false; return }
+    if ($f) { Anotar $nombreComent (T 'ver-falta' @($f)) $false; return }
     $registro = Join-Path $V.Tmp 'comentarios.log'
     New-Item -ItemType File -Path $registro -Force | Out-Null
-    $py = "`"$($V.Py)`""
-    $orden = "$py herramientas/comentarios.py --verificar java rust c++ herramientas && $py -I herramientas/pruebas_comentarios.py"
-    if ((Ejecutar $Aqui $orden $registro) -eq 0) {
-        Anotar 'comentarios' (T 'ver-ninguno') $true
+    $pasos = "& `"$($V.Py)`" herramientas/comentarios.py --verificar $(CarpetasCodigo) ;; & `"$($V.Py)`" -I herramientas/pruebas_comentarios.py"
+    if ((Ejecutar $Aqui $pasos $registro) -eq 0) {
+        Anotar $nombreComent (T 'ver-ninguno') $true
     } else {
         $n = (Get-Content $registro | Where-Object { $_ -match '^\S+:\d+' } | Measure-Object).Count
-        Anotar 'comentarios' (T 'ver-comentarios' @($n)) $false $registro
+        Anotar $nombreComent (T 'ver-comentarios' @($n)) $false $registro
     }
 }
 
@@ -253,8 +315,12 @@ function PasoPruebas {
         $ok = ((Ejecutar (Join-Path $Aqui $p[1]) $p[3] $registro) -eq 0)
         if ($p[4] -and ((Ejecutar (Join-Path $Aqui $p[1]) $p[4] $registro) -ne 0)) { $ok = $false }
         $cifra = T 'ver-n-pruebas' @(ContarPruebas $registro)
-        if (Select-String -Path $registro -Pattern 'no está accesible' -Quiet) { $cifra = "$cifra · $(T 'ver-sin-motores')" }
-        Anotar $etiqueta $cifra $ok $(if ($ok) { '' } else { $registro })
+        if ($ok -and (Select-String -Path $registro -Pattern 'no está accesible' -Quiet)) {
+            if ($V.SinMotores) { Anotar $etiqueta "$cifra · $(T 'ver-omitido')" 'omitido' }
+            else { Anotar $etiqueta "$cifra · $(T 'ver-sin-motores')" $false $registro }
+        }
+        elseif ($ok) { Anotar $etiqueta $cifra $true }
+        else { Anotar $etiqueta $cifra $false $registro }
     }
 }
 
@@ -263,17 +329,17 @@ function PasoBanco {
         $p = $linea.Split('|')
         $nombre = $p[0]; $dir = Join-Path $Aqui $p[1]; $servidor = $p[5]
         $env:OBJ = Join-Path $V.Tmp "obj-$nombre"
+        $f = Faltan (@('python3') + ($p[2] -split ' '))
 
         $etiqueta = "$(T 'ver-banco') · $nombre"
         Azul (T 'ver-comprobando' @($etiqueta))
-        $f = Faltan @('python3')
         if ($f) { Anotar $etiqueta (T 'ver-falta' @($f)) $false }
         else {
             $registro = Join-Path $V.Tmp "$nombre-banco.log"
             if (ConServidor $etiqueta $dir $servidor (Join-Path $V.Tmp "$nombre-servidor.log")) {
                 $correr = Join-Path $Aqui 'spec\banco\correr.py'
                 New-Item -ItemType File -Path $registro -Force | Out-Null
-                $ok = ((Ejecutar $dir "`"$($V.Py)`" `"$correr`" 127.0.0.1 $($V.Puerto)" $registro) -eq 0)
+                $ok = ((Ejecutar $dir "& `"$($V.Py)`" `"$correr`" 127.0.0.1 $($V.Puerto)" $registro) -eq 0)
                 Anotar $etiqueta (CifraVectores $registro) $ok $(if ($ok) { '' } else { $registro })
                 PararServidor
             }
@@ -285,7 +351,8 @@ function PasoBanco {
         $registro = Join-Path $V.Tmp "$nombre-ataques.log"
         New-Item -ItemType File -Path $registro -Force | Out-Null
         $ataques = Join-Path $Aqui 'spec\banco\ataques.py'
-        $ok = ((Ejecutar $dir "`"$($V.Py)`" `"$ataques`" $servidor" $registro) -eq 0)
+        $s = PartirServidor $dir $servidor
+        $ok = ((Ejecutar $dir "& `"$($V.Py)`" `"$ataques`" `"$($s[0])`" $($s[1])" $registro) -eq 0)
         Anotar $etiqueta (CifraVectores $registro) $ok $(if ($ok) { '' } else { $registro })
     }
 }
@@ -296,7 +363,7 @@ function PasoH2spec {
         $nombre = $p[0]
         $etiqueta = "h2spec · $nombre"
         Azul (T 'ver-comprobando' @($etiqueta))
-        $f = Faltan @('h2spec')
+        $f = Faltan (@('h2spec') + ($p[2] -split ' '))
         if ($f) { Anotar $etiqueta (T 'ver-falta' @($f)) $false; continue }
         $env:OBJ = Join-Path $V.Tmp "obj-$nombre"
         $registro = Join-Path $V.Tmp "$nombre-h2spec.log"
@@ -305,9 +372,10 @@ function PasoH2spec {
             [void](Ejecutar $Aqui "h2spec -h 127.0.0.1 -p $($V.Puerto) --timeout 5" $registro)
             PararServidor
             $resumen = Get-Content $registro | Where-Object { $_ -match '^\d+ tests,' } | Select-Object -Last 1
-            $fallos = if ("$resumen" -match ', (\d+) failed') { [int]$Matches[1] } else { 99 }
-            if ($fallos -le 1) { Anotar $etiqueta $resumen $true }
-            else { Anotar $etiqueta $(if ($resumen) { $resumen } else { T 'ver-sin-resumen' }) $false $registro }
+            $fallos = 99
+            if ("$resumen" -match ', (\d+) failed') { $fallos = [int]$Matches[1] }
+            if ($fallos -le 1) { Anotar $etiqueta "$resumen" $true }
+            else { Anotar $etiqueta $(if ($resumen) { "$resumen" } else { T 'ver-sin-resumen' }) $false $registro }
         }
     }
 }
@@ -327,29 +395,37 @@ function PasoRequisitos {
 function Tabla {
     Write-Host ''
     $fallos = 0
+    $omitidos = 0
     foreach ($f in $Filas) {
-        if ($f.Ok) { $marca = "$Laton✓$Fin" } else { $marca = "$Rojo✗$Fin"; $fallos++ }
+        if ($f.Estado -eq 'ok') { $marca = "${Laton}✓${Fin}" }
+        elseif ($f.Estado -eq 'omitido') { $marca = '–'; $omitidos++ }
+        else { $marca = "${Rojo}✗${Fin}"; $fallos++ }
         Write-Host ('  {0,-26}  {1,-46}  {2}' -f $f.Nombre, $f.Cifra, $marca)
     }
     Write-Host ''
     foreach ($f in $Filas) {
-        if (-not $f.Ok -and $f.Registro -and (Test-Path $f.Registro)) {
-            Write-Host "$Rojo$(T 'ver-detalle' @($f.Nombre))$Fin"
-            @(Get-Content $f.Registro | Where-Object { $_ -match 'XX |FALLA|FAILED|panicked' } | Select-Object -First 10) + @(Get-Content $f.Registro -Tail 8) |
-                ForEach-Object { Write-Host "    $_" }
+        if ($f.Estado -eq 'mal' -and $f.Registro -and (Test-Path $f.Registro)) {
+            Write-Host "${Rojo}$(T 'ver-detalle' @($f.Nombre))${Fin}"
+            $lineas = @(Get-Content $f.Registro | Where-Object { $_ -match 'XX |FALLA|FAILED|panicked|no está accesible' } | Select-Object -First 10)
+            $lineas += @(Get-Content $f.Registro -Tail 8)
+            foreach ($l in $lineas) { Write-Host "    $l" }
         }
     }
-    if ($fallos -eq 0) { Azul (T 'ver-todo-bien') } else { Write-Host "$Rojo$(T 'ver-fallan' @($fallos))$Fin" }
+    if ($fallos -gt 0) { Write-Host "${Rojo}$(T 'ver-fallan' @($fallos))${Fin}" }
+    elseif ($omitidos -gt 0) { Gris (T 'ver-no-ci') }
+    else { Azul (T 'ver-todo-bien') }
     return $fallos
 }
 
-function Verificar {
+function Verificar([bool] $sinMotores) {
+    $V.SinMotores = $sinMotores
     $V.Tmp = Join-Path ([IO.Path]::GetTempPath()) ("cero-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $V.Tmp | Out-Null
     try {
         $V.Py = BuscarPython
+        $V.Sh = BuscarSh
         if ($V.Py) { Gris (T 'ver-python' @($V.Py, (& $V.Py -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])'))) }
-        else { Write-Host "$Rojo$(T 'ver-sin-python')$Fin" }
+        else { Write-Host "${Rojo}$(T 'ver-sin-python')${Fin}" }
         PasoOrden
         PasoPruebas
         PasoBanco
@@ -524,7 +600,7 @@ switch -Regex ($Orden) {
     }
 
     '^(verificar|verify)$' {
-        if ((Verificar) -gt 0) { exit 1 }
+        if ((Verificar ($Resto -contains '--sin-motores')) -gt 0) { exit 1 }
     }
 
     default {
@@ -541,7 +617,7 @@ switch -Regex ($Orden) {
         Write-Host ('  {0,-24} {1}' -f 'cero status',          'resumen del proyecto')
         Write-Host ('  {0,-24} {1}' -f 'cero migraciones',     'con --verificar, prueba las migraciones en una base desechable')
         Write-Host ('  {0,-24} {1}' -f 'cero migrar <ruta>',   'migra una aplicación anterior a Cero 0.6.0')
-        Write-Host ('  {0,-24} {1}' -f 'cero verificar',       'lo mismo que CI, en una orden: ✓ o ✗ por comprobación')
+        Write-Host ('  {0,-24} {1}' -f 'cero verificar',       'lo esencial de CI, en una orden: ✓ o ✗ por comprobación')
         Write-Host ''
         Gris '  `cero dist` arma los paquetes de la descarga y solo está en macOS y Linux:'
         Gris '  lo corre quien publica una versión, y comprueba el paquete desempaquetándolo.'
