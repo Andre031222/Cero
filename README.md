@@ -3,19 +3,20 @@
 **Cero no es un framework; es el contrato de un framework de backend, con implementaciones en varios
 lenguajes que lo cumplen y un juez que no conoce el lenguaje.**
 
-El contrato son los 173 requisitos numerados de [`spec/`](spec/). El juez es el banco de
+El contrato son los 180 requisitos numerados de [`spec/`](spec/). El juez es el banco de
 [`spec/banco/`](spec/banco/): bytes sobre un socket, que no saben en qué lenguaje está escrito
 quien responde. Sin dependencias de terceros en ejecución, en ninguna implementación.
 
-| Implementación | Estado | Banco | h2spec | Requisitos |
-|---|---|---|---|---|
-| [Java](java/) | completa | 23 de 23 | 145 de 146 | 173 de 173 |
-| [Rust](rust/) | completa | 23 de 23 | 145 de 146 | 173 de 173 |
-| [C++](c++/) | en marcha, hito 8 | 23 de 23 | por llegar | 116 citados en pruebas, de 173 |
-| Python | planeada | por empezar | por empezar | por empezar |
-| PHP | planeada | por empezar | por empezar | por empezar |
+| Implementación | Estado | Banco | Ataques | h2spec | Requisitos |
+|---|---|---|---|---|---|
+| [Java](java/) | completa | 23 de 23 | 7 de 7 | 145 de 146 | 180 de 180 |
+| [Rust](rust/) | completa | 23 de 23 | 7 de 7 | 145 de 146 | 180 de 180 |
+| [C++](c++/) | en marcha, hito 11 | 23 de 23 | 7 de 7 | 145 de 146 | 155 citados en pruebas, de 180 |
+| Python | planeada | por empezar | por empezar | por empezar | por empezar |
+| PHP | planeada | por empezar | por empezar | por empezar | por empezar |
 
-El único fallo de h2spec es el mismo en Java y en Rust: asume un puerto dedicado a h2c.
+El único fallo de h2spec es el mismo en las tres: asume un puerto dedicado a h2c. Los ataques son
+los de HTTP/2 Bomb (CVE-2026-49975) y los plazos, en [`spec/banco/ataques.py`](spec/banco/ataques.py).
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=0b1220&color=38bdf8)](https://central.sonatype.com/namespace/dev.ginit.cero)
 [![Java 25+](https://img.shields.io/badge/java-25%2B-38bdf8?style=flat-square&labelColor=0b1220&logo=openjdk&logoColor=38bdf8)](https://openjdk.org/)
@@ -264,7 +265,7 @@ versión, en [docs/publicar.md](docs/publicar.md).
 
 ### Las otras implementaciones
 
-El contrato de [`spec/`](spec/) tiene **173 requisitos numerados** y **dos implementaciones los
+El contrato de [`spec/`](spec/) tiene **180 requisitos numerados** y **dos implementaciones los
 pasan todos**: `java/` y [`rust/`](rust/). Las dos dan 23 de 23 en el banco de conformidad y 145 de
 146 en h2spec, con el mismo único fallo, que asume un puerto dedicado a h2c.
 
@@ -272,15 +273,16 @@ Lo que dice que el contrato no es una transcripción de Java: diez de esos requi
 `H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
 cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el contrato y no `java/`.
 
-[`c++/`](c++/) va por el hito 8: 23 de 23 en el banco y 116 requisitos citados en sus pruebas, con
-los flujos de HTTP/2 en curso. Después vienen Python y PHP, en ese orden, cada uno escrito contra
+[`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 7 de 7 en los ataques, 145 de 146 en h2spec
+y 155 requisitos citados en sus pruebas; le faltan el contenedor de dependencias y las sesiones en
+tabla. Después vienen Python y PHP, en ese orden, cada uno escrito contra
 los requisitos y no contra el código de otro lenguaje.
 
 ## Estructura
 
 ```text
-java/         Primera implementación: los siete módulos — 173 de 173
-rust/         Segunda implementación del contrato — 173 de 173
+java/         Primera implementación: los siete módulos — 180 de 180
+rust/         Segunda implementación del contrato — 180 de 180
 c++/          Tercera implementación, en marcha
 spec/         El contrato y su banco, neutrales respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida

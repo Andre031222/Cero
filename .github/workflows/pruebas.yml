@@ -49,6 +49,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.jdk }}
+          check-latest: true
           cache: maven
 
       - name: Pruebas
@@ -89,7 +90,7 @@ jobs:
           retention-days: 14
 
   conformidad-http2:
-    name: h2spec · conformidad HTTP/2
+    name: java/ · banco, ataques y h2spec
     runs-on: ubuntu-latest
 
     steps:
@@ -99,31 +100,26 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          check-latest: true
           cache: maven
 
       - name: Compilar
         working-directory: java
         run: mvn -B -q -DskipTests -pl cero-http -am install
 
-      - name: h2spec
+      - name: El banco, los ataques y h2spec
         run: |
           set -o pipefail
+          CLASES=java/cero-http/target/classes:java/cero-http/target/test-classes
+          java -cp "$CLASES" cero.http.Conforme 8777 &
+          for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:8777/ && break || sleep 1; done
+
+          python3 spec/banco/correr.py 127.0.0.1 8777
+          python3 spec/banco/ataques.py java -cp "$CLASES" cero.http.Conforme
+
           curl -fsSL -o h2spec.tar.gz \
             https://github.com/summerwind/h2spec/releases/download/v2.6.0/h2spec_linux_amd64.tar.gz
           tar -xzf h2spec.tar.gz
-
-          mkdir -p /tmp/h2 && cat > /tmp/h2/Conforme.java <<'JAVA'
-          import cero.http.*;
-          public class Conforme {
-              public static void main(String[] a) throws Exception {
-                  Server.start(8777, (req, res) -> res.text("ok")).await();
-              }
-          }
-          JAVA
-          JAR=$(ls java/cero-http/target/cero-http-*.jar | head -1)
-          javac -cp "$JAR" -d /tmp/h2 /tmp/h2/Conforme.java
-          java -cp "$JAR:/tmp/h2" Conforme &
-          for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:8777/ && break || sleep 1; done
 
           ./h2spec -h 127.0.0.1 -p 8777 --timeout 5 | tee h2spec.log || true
 
@@ -157,8 +153,8 @@ jobs:
           N=$(grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' cero-http/tests cero-data/tests \
               | tr a-z_ A-Z- | sort -u | wc -l)
           echo "$N requisitos distintos"
-          if [ "$N" -lt 150 ]; then
-            echo "::error::Las pruebas de Rust citan $N requisitos; eran 150."
+          if [ "$N" -lt 157 ]; then
+            echo "::error::Las pruebas de Rust citan $N requisitos; eran 157."
             exit 1
           fi
 
@@ -177,6 +173,7 @@ jobs:
           for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:8777/ && break || sleep 1; done
 
           python3 ../spec/banco/correr.py 127.0.0.1 8777
+          python3 ../spec/banco/ataques.py ./target/release/conforme
 
           curl -fsSL -o h2spec.tar.gz \
             https://github.com/summerwind/h2spec/releases/download/v2.6.0/h2spec_linux_amd64.tar.gz
@@ -192,7 +189,7 @@ jobs:
           fi
 
   cxx:
-    name: c++/ · pruebas y banco
+    name: c++/ · pruebas, banco y ataques
     runs-on: ubuntu-latest
 
     steps:
@@ -204,8 +201,8 @@ jobs:
           N=$(grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas \
               | tr a-z_ A-Z- | sort -u | wc -l)
           echo "$N requisitos distintos"
-          if [ "$N" -lt 148 ]; then
-            echo "::error::Las pruebas de C++ citan $N requisitos; eran 148."
+          if [ "$N" -lt 155 ]; then
+            echo "::error::Las pruebas de C++ citan $N requisitos; eran 155."
             exit 1
           fi
 
@@ -223,6 +220,7 @@ jobs:
           for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:8777/ && break || sleep 1; done
 
           python3 ../spec/banco/correr.py 127.0.0.1 8777
+          python3 ../spec/banco/ataques.py ./build/conforme
 
   comentarios:
     name: código sin comentarios
@@ -248,6 +246,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          check-latest: true
           cache: maven
 
       - name: Inventario y aviso

@@ -31,6 +31,19 @@ function Requisitos {
     $linea = (& java -version 2>&1 | Select-Object -First 1)
     if ("$linea" -match '"(\d+)') { $v = [int]$Matches[1] }
     if ($v -lt 25) { Malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v" }
+    if (JdkAfectado "$linea") {
+        Write-Host "${Rojo}aviso: el JDK $(("$linea" -split '"')[1]) está entre los afectados por CVE-2026-91403 (aviso de OpenJDK del 2026-10-21); instala la última 25.0.x$Fin"
+    }
+}
+
+function JdkAfectado([string] $linea) {
+    if ($linea -notmatch '"(\d+)(?:\.\d+)?(?:\.(\d+))?') { return $false }
+    $parche = if ($Matches[2]) { [int]$Matches[2] } else { 0 }
+    switch ([int]$Matches[1]) {
+        25 { return $parche -le 5 }
+        27 { return $parche -le 1 }
+        default { return $false }
+    }
 }
 
 function Python {

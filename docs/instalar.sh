@@ -115,6 +115,8 @@ texto_es() {
     e-compilar)    printf '%s' 'la compilación falló' ;;
     e-no-responde) printf '%s' 'quedó instalado pero "cero status" no responde' ;;
     a-windows)     printf '%s' 'estás en Windows' ;;
+    a-jdk)         printf '%s' 'JDK con CVE-2026-91403' ;;
+    a-jdk-nota)    printf '%s' '%s está entre los afectados según el aviso de OpenJDK del 2026-10-21: instala la última 25.0.x' ;;
     a-sin-sha)     printf '%s' 'sin comprobar: no hay shasum ni sha256sum' ;;
     f-instalado)   printf '%s' 'Cero %s instalado' ;;
     f-sistema)     printf '%s' 'sistema' ;;
@@ -180,6 +182,8 @@ texto_en() {
     e-compilar)    printf '%s' 'the build failed' ;;
     e-no-responde) printf '%s' 'it installed but "cero status" does not answer' ;;
     a-windows)     printf '%s' 'you are on Windows' ;;
+    a-jdk)         printf '%s' 'JDK with CVE-2026-91403' ;;
+    a-jdk-nota)    printf '%s' '%s is among those affected per the OpenJDK advisory of 2026-10-21: install the latest 25.0.x' ;;
     a-sin-sha)     printf '%s' 'not verified: no shasum or sha256sum available' ;;
     f-instalado)   printf '%s' 'Cero %s installed' ;;
     f-sistema)     printf '%s' 'system' ;;
@@ -406,6 +410,17 @@ version_java() {
   java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/'
 }
 
+jdk_afectado() {
+  local mayor parche
+  mayor=$(printf '%s' "$1" | cut -d. -f1)
+  parche=$(printf '%s' "$1" | cut -s -d. -f3 | sed 's/[^0-9].*//')
+  case "$mayor" in
+    25) [ "${parche:-0}" -le 5 ] ;;
+    27) [ "${parche:-0}" -le 1 ] ;;
+    *) return 1 ;;
+  esac
+}
+
 if [ "$SOLO_DETECTAR" = si ]; then
   marca
   jv=$(version_java)
@@ -450,6 +465,10 @@ if [ "${JAVA_V:-0}" -lt "$JAVA_MINIMO" ] 2>/dev/null; then
 fi
 MAVEN_V=$(mvn -v 2>/dev/null | head -1 | cut -d' ' -f1-3)
 bien "$(t b-entorno)" "$DETALLE_SO · Java $JAVA_V · $MAVEN_V"
+JDK_COMPLETO=$(java -version 2>&1 | head -1 | sed -E 's/[^"]*"([^"]*)".*/\1/')
+if jdk_afectado "$JDK_COMPLETO"; then
+  aviso "$(t a-jdk)" "$(printf "$(t a-jdk-nota)" "$JDK_COMPLETO")"
+fi
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
 paso "$(t p-version)"

@@ -19,7 +19,22 @@ funcionalidad y bastante en confianza.
 - Observabilidad mínima: métricas por ruta con percentiles, log y log de acceso.
 - Autenticación: OAuth 2.0 / OIDC con PKCE y verificación real de firma, y PBKDF2 para
   contraseñas.
-- **Corre en Linux en cada push**, con PostgreSQL y MySQL levantados, sobre JDK 25.
+- **Corre en Linux en cada push**, con PostgreSQL y MySQL levantados, sobre la última JDK 25.
+
+## El JDK mínimo
+
+**La última 25.0.x, y en ningún caso 25.0.5 o anterior.** El 21 de octubre de 2026 OpenJDK publicó
+el aviso de [CVE-2026-91403](https://openjdk.org/groups/vulnerability/advisories/2026-10-21)
+(CVSS 9.1; el aviso lo sitúa en `security-libs/java.security`), y dice
+textualmente: *«The affected versions are 27.0.1, 25.0.5, 21.0.13, 17.0.21, 11.0.32.1, 8u504, and
+earlier.»* Ni ese aviso ni nada que se haya podido leer de Oracle nombra la versión que lo
+corrige, así que aquí no se fija un número: se fija el que no vale.
+
+`./cero`, `cero.ps1` y los dos instaladores avisan si `java -version` dice 25.0.5 o anterior. Una
+reedición con un cuarto número —la `25.0.5.0.3` de Homebrew, por ejemplo— también recibe el aviso,
+porque desde fuera no se puede saber si trae la corrección; si tu proveedor dice que sí, el aviso
+sobra y lo puedes ignorar. La integración continua instala siempre la última 25 que publica
+Temurin.
 
 ## Lo que falta para poder decir que sí
 
@@ -47,7 +62,7 @@ Están la capa de tramas, HPACK completo, multiplexación de verdad —24 petici
 saliendo en tramas según se escriben, CONTINUATION, trailers, SETTINGS negociados, PING,
 RST_STREAM y GOAWAY con el código exacto que pide el RFC en cada caso.
 
-Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **39 requisitos
+Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **54 requisitos
 numerados** en [spec/http2.md](../spec/http2.md), separando los que rompen la conexión de los que
 solo cortan un flujo — confundirlos convierte una petición mal formada en una caída de todo lo que
 ese cliente tuviera en vuelo.
@@ -58,8 +73,13 @@ expansión en HPACK. Ninguna es una entrada malformada —cada trama es válida 
 no las caza ningún control de sintaxis: hacen falta topes explícitos, y aquí están puestos y
 probados.
 
-**Lo que sigue faltando** está escrito allí: prioridad de escritura entre flujos,
-`SETTINGS_MAX_HEADER_LIST_SIZE` y vectores de expansión en HPACK. Nada de eso impide usarlo.
+Y desde octubre, **HTTP/2 Bomb** (CVE-2026-49975): tope de 256 campos por bloque, el tope de
+lista que se anuncia es el que se aplica, plazo para el crédito de cada trama que el goteo de
+`WINDOW_UPDATE` no reinicia, una inactividad que `PING` no reinicia y un presupuesto de 32 MiB de
+respuestas en vuelo por conexión (`http2MaxEnVuelo`). Son `H2-050` a `H2-054`, y
+[`spec/banco/ataques.py`](../spec/banco/ataques.py) los comprueba desde fuera.
+
+**Lo que sigue faltando** está escrito allí: prioridad de escritura entre flujos. No impide usarlo.
 
 Con esto, **«sin contenedor» deja de llevar nota al pie**: el proxy delante ya es una elección de
 despliegue, no un requisito para que un navegador hable con Cero.

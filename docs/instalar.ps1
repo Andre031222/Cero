@@ -56,6 +56,18 @@ function OrdenJava {
     }
 }
 
+function JdkAfectado {
+    if (-not (Donde 'java')) { return $false }
+    $linea = (& java -version 2>&1 | Select-Object -First 1)
+    if ("$linea" -notmatch '"(\d+)(?:\.\d+)?(?:\.(\d+))?') { return $false }
+    $parche = if ($Matches[2]) { [int]$Matches[2] } else { 0 }
+    switch ([int]$Matches[1]) {
+        25 { return $parche -le 5 }
+        27 { return $parche -le 1 }
+        default { return $false }
+    }
+}
+
 function VersionJava {
     if (-not (Donde 'java')) { return 0 }
     $linea = (& java -version 2>&1 | Select-Object -First 1)
@@ -103,6 +115,8 @@ $TextosEs = @{
     'p-instalando'  = 'instalando la orden cero'
     'p-comprobando' = 'comprobando la instalacion'
     'b-entorno'     = 'entorno'
+    'a-jdk'         = 'JDK con CVE-2026-91403'
+    'a-jdk-nota'    = 'entre los afectados según el aviso de OpenJDK del 2026-10-21: instala la última 25.0.x'
     'b-version'     = 'version'
     'b-descargado'  = 'descargado'
     'b-huella'      = 'huella'
@@ -164,6 +178,8 @@ $TextosEn = @{
     'p-instalando'  = 'installing the cero command'
     'p-comprobando' = 'checking the installation'
     'b-entorno'     = 'environment'
+    'a-jdk'         = 'JDK with CVE-2026-91403'
+    'a-jdk-nota'    = 'among those affected per the OpenJDK advisory of 2026-10-21: install the latest 25.0.x'
     'b-version'     = 'version'
     'b-descargado'  = 'downloaded'
     'b-huella'      = 'checksum'
@@ -358,6 +374,7 @@ if ($javaV -lt $JavaMinimo) {
 }
 $mavenV = ((& cmd.exe /c 'mvn -v' 2>$null) | Select-Object -First 1)
 Bien (T 'b-entorno') "$DetalleSo - Java $javaV"
+if (JdkAfectado) { Aviso (T 'a-jdk') (T 'a-jdk-nota') }
 
 # ─── 2 · qué versión ────────────────────────────────────────────────────────────────────
 Paso (T 'p-version')
