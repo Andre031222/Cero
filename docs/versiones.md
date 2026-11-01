@@ -21,6 +21,39 @@ Salen `cero-view` (el motor de plantillas), `ViewRenderer`, `Live`, `Cero.views(
 `cero-http`. `ejemplo` pasa a ser una API JSON, y `cero new` genera un proyecto que depende solo
 de `cero-core`.
 
+### Cambios incompatibles y de comportamiento en Java
+
+Lo de arriba no es lo único que rompe. Quien actualice desde la 0.8.0 tiene que mirar esto:
+
+- **`ServerOptions` tiene dos componentes más**, `writeTimeoutMillis` y `http2MaxEnVuelo`. Es un
+  `record` público, así que quien llame a su constructor canónico o lo deconstruya con un patrón de
+  `record` deja de compilar. Con `ServerOptions.builder()` no cambia nada.
+- **0 y los negativos ya no valen** en `idleTimeoutMillis`, `handlerTimeoutMillis`,
+  `writeTimeoutMillis`, `maxBodyBytes` ni `http2MaxEnVuelo`: `build()` lanza
+  `IllegalArgumentException` y el servidor no llega a escuchar (`HTTP-025`). Antes,
+  `maxBodyBytes(0)` se aceptaba y `handlerTimeoutMillis(0)` quería decir «sin plazo».
+- **Un `Sse` sobre HTTP/1.1 se corta a los 30 s.** No cambia de protocolo como un WebSocket, así
+  que sigue dentro del manejador y el `Watchdog` lo cierra al pasar `handlerTimeoutMillis`, que
+  por defecto son 30 s. Quien usaba `handlerTimeoutMillis(0)` para tener flujos SSE largos tiene
+  que poner un número que los cubra, por ejemplo `handlerTimeoutMillis(24 * 60 * 60 * 1000)`
+  para un día.
+- **`Result.Kind.VIEW` ya no existe.** Un `switch` exhaustivo sobre `Result.Kind` deja de
+  compilar hasta quitar ese caso.
+- **HTTP/2 se defiende de HTTP/2 Bomb**, con lo que un cliente ve cosas nuevas:
+  - una petición con más de 10 MiB de cuerpo (`maxBodyBytes`) recibe 413, o `RST_STREAM
+    NO_ERROR` si la respuesta ya había empezado (`H2-055`);
+  - pasar de 32 MiB de respuestas construidas y sin mandar en una conexión (`http2MaxEnVuelo`)
+    cierra la conexión con `GOAWAY ENHANCE_YOUR_CALM`; una respuesta sola pasa siempre
+    (`H2-054`);
+  - `PING`, `WINDOW_UPDATE`, `SETTINGS` y `PRIORITY` ya no cuentan como actividad: una conexión
+    que solo manda eso se cierra al pasar `idleTimeoutMillis` (`H2-053`);
+  - un flujo que no recibe crédito para una trama en `writeTimeoutMillis`, 60 s, se corta con
+    `RST_STREAM CANCEL` (`H2-052`).
+- **Cada escritura de un WebSocket tiene 60 s** (`writeTimeoutMillis`): un cliente que no lee
+  pierde la conexión en vez de retener el hilo.
+- **`TestServer.start(...)` escucha en `127.0.0.1`**, no en todas las interfaces. Una prueba que
+  llegaba al servidor por otra dirección de la máquina tiene que usar `127.0.0.1` o `localhost`.
+
 ### La orden y los dos instaladores hablan inglés
 
 Cero se escribió entero en castellano —el código, los mensajes, la documentación— y eso se
