@@ -75,7 +75,8 @@ spec/banco/           el juez: bytes sobre un socket, sin lenguaje
 java/                 primera implementación · referencia en lo que el contrato aún no cubre
 rust/                 segunda implementación · 182 de 182
 c++/                  tercera implementación · en marcha, hito 11
-python/ y php/        planeadas, en ese orden
+python/               cuarta implementación · en marcha, hito 4, sin HTTP/2
+php/                  planeada
 benchmarks/           mide, no especifica
 ```
 
@@ -91,10 +92,10 @@ igual de ciego.
 | `java/` | 23 de 23 | 11 de 11 | 145 de 146 | los 182 |
 | `rust/` | 23 de 23 | 11 de 11 | 145 de 146 | los 182 |
 | `c++/` | 23 de 23 | 11 de 11 | 145 de 146 | 157 citados en pruebas |
-| `python/` | por empezar | por empezar | por empezar | por empezar |
+| `python/` | 23 de 23 | 3 de 3, los de HTTP/1.1 | no aplica: sin HTTP/2 | 83 citados en pruebas |
 | `php/` | por empezar | por empezar | por empezar | por empezar |
 
-El fallo que les queda a las tres es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
+El fallo que les queda a las tres que hablan HTTP/2 es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
 dedicado a h2c, y en uno compartido con HTTP/1.1 pide la respuesta equivocada.
 
 Rust pasó 22 de los 23 vectores a la primera. El que falló —`Content-Length` y `Transfer-Encoding`

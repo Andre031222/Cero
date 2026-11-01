@@ -12,10 +12,11 @@ quien responde. Sin dependencias de terceros en ejecución, en ninguna implement
 | [Java](java/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 182 de 182 |
 | [Rust](rust/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 182 de 182 |
 | [C++](c++/) | en marcha, hito 11 | 23 de 23 | 11 de 11 | 145 de 146 | 157 citados en pruebas, de 182 |
-| Python | planeada | por empezar | por empezar | por empezar | por empezar |
+| [Python](python/) | en marcha, hito 4 | 23 de 23 | 3 de 3, sin h2 | no aplica, sin h2 | 83 citados en pruebas, de 182 |
 | PHP | planeada | por empezar | por empezar | por empezar | por empezar |
 
-El único fallo de h2spec es el mismo en las tres: asume un puerto dedicado a h2c. Los ataques,
+El único fallo de h2spec es el mismo en las tres que hablan HTTP/2: asume un puerto dedicado a
+h2c. Python todavía no habla h2, así que de los once ataques corre los tres de HTTP/1.1. Los ataques,
 inspirados en la familia de ataques HTTP/2 Bomb, y los plazos están en
 [`spec/banco/ataques.py`](spec/banco/ataques.py).
 
@@ -56,7 +57,7 @@ De ahí las tres decisiones que definen el proyecto:
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
 2. **No es solo Java.** Lo que define a Cero es un *contrato* —rutas, pipeline,
    request/response, inyección, configuración— escrito de forma neutral e implementado en
-   **Java, Rust y C++**, con Python y PHP por venir y un mismo banco de conformidad para todos. Por
+   **Java, Rust y C++**, con Python en marcha, PHP por venir y un mismo banco de conformidad para todos. Por
    eso existe [`spec/`](spec/) en vez de tomar el código Java como referencia.
 3. **Solo backend.** Cero responde JSON y bytes; no pinta HTML.
 
@@ -197,8 +198,10 @@ si algún motor quedó sin probar** — para que la suite no pueda mentir por om
 ```
 
 Corre lo esencial de integración continua, sin parar en el primer fallo: el orden y los comentarios,
-las pruebas de Java, Rust y C++ (esta última en un directorio de compilación nuevo), el banco y los
-ataques contra las tres, h2spec contra las tres y la cuenta de requisitos. Termina con una línea por
+las pruebas de Java, Rust, C++ (esta en un directorio de compilación nuevo) y Python, el banco y los
+ataques contra las cuatro, h2spec contra las tres que hablan HTTP/2 y la cuenta de requisitos. La
+línea de h2spec de Python sale con «n/a», que no cuenta como fallo, y sus ataques corren con
+`--solo-http1`. Termina con una línea por
 comprobación, con su cifra y un ✓ o un ✗, y sale con 1 si alguna falla. Hacen falta Maven y JDK 25,
 cargo, cmake, h2spec y Python 3.12 o superior (busca `python3.14`, `python3.13`, `python3.12` y
 `python3`, y dice cuál usó). Una herramienta que falta marca su línea con ✗ y la razón: nada se
@@ -305,8 +308,13 @@ cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el con
 
 [`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 11 de 11 en los ataques, 145 de 146 en h2spec
 y 157 requisitos citados en sus pruebas; le faltan el contenedor de dependencias y las sesiones en
-tabla. Después vienen Python y PHP, en ese orden, cada uno escrito contra
-los requisitos y no contra el código de otro lenguaje.
+tabla.
+
+[`python/`](python/) va por el hito 4: HTTP/1.1, ruteo, sesiones, seguridad transversal y
+observabilidad, sin HTTP/2 todavía. Da 23 de 23 en el banco y 3 de 3 en los ataques de HTTP/1.1
+(los ocho de h2 y h2spec no aplican), y sus pruebas citan 83 requisitos; con los 19 de HTTP/1.1 que
+solo cubre el banco son 102 de 182. Le faltan HTTP/2, `RUT-014`–`RUT-037` y `SES-010`. Después
+viene PHP, escrito, como las demás, contra los requisitos y no contra el código de otro lenguaje.
 
 ## Estructura
 
@@ -314,6 +322,7 @@ los requisitos y no contra el código de otro lenguaje.
 java/         Primera implementación: los siete módulos — 182 de 182
 rust/         Segunda implementación del contrato — 182 de 182
 c++/          Tercera implementación, en marcha
+python/       Cuarta implementación, en marcha: hito 4, sin HTTP/2
 spec/         El contrato y su banco, neutrales respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida
 docs/         Documentación
