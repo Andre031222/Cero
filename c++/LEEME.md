@@ -236,6 +236,9 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   para que ninguna llamada a `send` pueda durar más que eso. En macOS el plazo de `send` se reinicia
   dentro de la misma llamada con cada avance; un `send` grande no vencería nunca. Si no se puede
   crear el hilo de una conexión, se cierra esa conexión y el servidor sigue.
+- **`Servidor::direccion`.** Por defecto se escucha en `0.0.0.0`; el servidor del banco y las
+  pruebas escuchan en `127.0.0.1`, porque en macOS `SO_REUSEADDR` deja que un socket comodín
+  comparta puerto con otro proceso que escucha en la dirección concreta.
 - **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
   encuadre no comprueban nada. `/grande` da 1 MiB para `H2-054`, y un segundo argumento fija los
   plazos en milisegundos —el de inactividad, el doble—, que es como lo arranca `ataques.py`.

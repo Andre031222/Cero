@@ -1,5 +1,6 @@
 #include "cero/servidor.hpp"
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -169,6 +170,11 @@ Servidor&& Servidor::limites(Limites l) && {
     return std::move(*this);
 }
 
+Servidor&& Servidor::direccion(std::string d) && {
+    direccion_ = std::move(d);
+    return std::move(*this);
+}
+
 Servidor&& Servidor::tras_tls() && {
     seguro_ = true;
     return std::move(*this);
@@ -303,8 +309,8 @@ int Servidor::escuchar(unsigned short puerto) const {
 
     sockaddr_in donde{};
     donde.sin_family = AF_INET;
-    donde.sin_addr.s_addr = INADDR_ANY;
     donde.sin_port = htons(puerto);
+    if (::inet_pton(AF_INET, direccion_.c_str(), &donde.sin_addr) != 1) return 1;
     if (::bind(oyente, reinterpret_cast<sockaddr*>(&donde), sizeof donde) < 0) return 1;
     if (::listen(oyente, 128) < 0) return 1;
     linea("cero · escuchando en :{}", puerto);

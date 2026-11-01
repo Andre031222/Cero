@@ -66,6 +66,7 @@ public:
     Servidor&& sin_registrar(std::vector<std::string> caminos) &&;
     Servidor&& plazos(Plazos p) &&;
     Servidor&& limites(Limites l) &&;
+    Servidor&& direccion(std::string d) &&;
     Servidor&& tras_tls() &&;
 
     Respuesta responder(const Peticion& peticion, std::string_view cliente = "local") const;
@@ -95,6 +96,7 @@ private:
     bool seguro_ = false;
     Plazos plazos_;
     Limites limites_;
+    std::string direccion_ = "0.0.0.0";
     std::shared_ptr<Metricas> metricas_ = std::make_shared<Metricas>();
     std::shared_ptr<Log> log_ = std::make_shared<Log>("cero", Nivel::Info);
 };

@@ -38,5 +38,6 @@ int main(int argc, char** argv) {
             return cero::Respuesta::texto(std::string(32 << 20, 'x'));
         })
         .plazos(plazos)
+        .direccion("127.0.0.1")
         .escuchar(puerto);
 }

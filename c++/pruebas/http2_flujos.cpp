@@ -780,6 +780,7 @@ unsigned short puerto() {
         std::thread{[elegido, r = std::move(r)]() mutable {
             cero::Servidor{std::move(r)}
                 .accion("raiz", [](const cero::Contexto&) { return cero::Respuesta::texto("cero"); })
+                .direccion("127.0.0.1")
                 .escuchar(elegido);
         }}.detach();
         return elegido;

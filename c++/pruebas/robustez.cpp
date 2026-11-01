@@ -39,8 +39,9 @@ unsigned short base() { return static_cast<unsigned short>(30'000 + ::getpid() %
 cero::Servidor servidor_grande() {
     cero::Router r;
     (void)r.ruta("GET", "/", "grande");
-    return cero::Servidor{std::move(r)}.accion(
-        "grande", [](const cero::Contexto&) { return cero::Respuesta::texto(std::string(8 << 20, 'x')); });
+    return cero::Servidor{std::move(r)}
+        .accion("grande", [](const cero::Contexto&) { return cero::Respuesta::texto(std::string(8 << 20, 'x')); })
+        .direccion("127.0.0.1");
 }
 
 int conectar_una_vez(unsigned short puerto) {
@@ -135,6 +136,7 @@ PRUEBA(http_024_una_conexion_ociosa_entre_peticiones_se_cierra) {
         (void)cero::Servidor{std::move(r)}
             .accion("hola", [](const cero::Contexto&) { return cero::Respuesta::texto("hola\n"); })
             .plazos({.sin_avance = 30s, .escritura = 30s, .inactividad = 400ms})
+            .direccion("127.0.0.1")
             .escuchar(puerto);
     }}.detach();
     prueba::Cliente c{conectar(puerto)};
