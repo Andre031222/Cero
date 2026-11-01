@@ -50,7 +50,11 @@ class Servidor:
 
     def responder(self, peticion):
         peticion.almacen = self.sesiones
-        respuesta = self._despachar(peticion)
+        try:
+            respuesta = self._despachar(peticion)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            return texto(500, f"error interno en {peticion.verbo} {peticion.camino}")
         sesion = peticion.abierta
         if sesion is None:
             return respuesta
@@ -74,11 +78,7 @@ class Servidor:
         if isinstance(resultado, NoPermitido):
             return texto(405, "método no permitido", [("Allow", ", ".join(resultado.verbos))])
         peticion.variables = resultado.variables
-        try:
-            return como_respuesta(resultado.accion(peticion))
-        except Exception:
-            traceback.print_exc(file=sys.stderr)
-            return texto(500, f"error interno en {peticion.verbo} {peticion.camino}")
+        return como_respuesta(resultado.accion(peticion))
 
     def escuchar(self, puerto, anfitrion="127.0.0.1"):
         try:

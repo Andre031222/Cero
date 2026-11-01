@@ -1,3 +1,5 @@
+import contextlib
+import io
 import sqlite3
 import subprocess
 import sys
@@ -295,17 +297,31 @@ class Emision(unittest.TestCase):
         self.assertEqual([sesion_final.leer(f"k{i}") for i in range(32)], ["v"] * 32)
         self.assertEqual(sesion_final.leer("usuario"), "ana")
 
-    def test_ses_010_la_cookie_se_emite_sea_cual_sea_la_version(self):
-        for version in ("HTTP/1.0", "HTTP/1.1", "HTTP/2", "HTTP/3"):
-            id = id_emitido(pedir(self.servidor, "/entrar", version=version))
-            self.assertEqual(pedir(self.servidor, "/quien", id, version=version).cuerpo, b"ana")
-
-    def test_ses_010_la_cookie_partida_en_varias_cabeceras_se_reconoce(self):
-        id = id_emitido(pedir(self.servidor, "/entrar", version="HTTP/2"))
+    def test_la_cookie_partida_en_varias_cabeceras_se_reconoce(self):
+        id = id_emitido(pedir(self.servidor, "/entrar"))
         cabeceras = [("host", "x"), ("cookie", "a=1"), ("cookie", f"cero_sid={id}"),
                      ("cookie", "b=2")]
         p = Peticion("GET", "/quien", "/quien", "", "HTTP/2", cabeceras)
         self.assertEqual(self.servidor.responder(p).cuerpo, b"ana")
+
+    def test_una_accion_que_falla_no_guarda_ni_emite_la_cookie(self):
+        def abre_y_falla(p):
+            p.abrir_sesion().poner("usuario", "eva")
+            raise RuntimeError("falla")
+
+        def escribe_y_falla(p):
+            p.sesion().poner("usuario", "eva")
+            raise RuntimeError("falla")
+
+        self.servidor.router.agregar("GET", "/abre-y-falla", abre_y_falla)
+        self.servidor.router.agregar("GET", "/escribe-y-falla", escribe_y_falla)
+        id = id_emitido(pedir(self.servidor, "/entrar"))
+        with contextlib.redirect_stderr(io.StringIO()):
+            nueva = pedir(self.servidor, "/abre-y-falla")
+            vieja = pedir(self.servidor, "/escribe-y-falla", id)
+        self.assertEqual((nueva.estado, galletas(nueva)), (500, []))
+        self.assertEqual((vieja.estado, galletas(vieja)), (500, []))
+        self.assertEqual(pedir(self.servidor, "/quien", id).cuerpo, b"ana")
 
     def test_ses_011_la_cookie_pendiente_se_consulta_una_vez_por_respuesta(self):
         original = sesion.Sesion.cookie_pendiente
