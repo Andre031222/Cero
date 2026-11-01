@@ -17,10 +17,6 @@ final class Watchdog implements AutoCloseable {
     private volatile boolean corriendo = true;
 
     Watchdog(int timeoutMillis) {
-        if (timeoutMillis <= 0) {
-            barrendero = null;
-            return;
-        }
         long tick = Math.max(25, Math.min(500, timeoutMillis / 4L));
         barrendero = new Thread(() -> barrer(tick), "cero-watchdog");
         barrendero.setDaemon(true);
@@ -28,15 +24,11 @@ final class Watchdog implements AutoCloseable {
     }
 
     void vigilar(Vigilada conexion) {
-        if (barrendero != null) {
-            abiertas.add(conexion);
-        }
+        abiertas.add(conexion);
     }
 
     void soltar(Vigilada conexion) {
-        if (barrendero != null) {
-            abiertas.remove(conexion);
-        }
+        abiertas.remove(conexion);
     }
 
     private void barrer(long tick) {
@@ -60,9 +52,7 @@ final class Watchdog implements AutoCloseable {
     @Override
     public void close() {
         corriendo = false;
-        if (barrendero != null) {
-            barrendero.interrupt();
-        }
+        barrendero.interrupt();
         abiertas.clear();
     }
 }

@@ -8,6 +8,7 @@ import java.util.Locale;
 final class Hpack {
 
     static final int TAMANO_TABLA = 4096;
+    static final int MAX_CAMPOS = 256;
 
     record Campo(String nombre, String valor) {
 
@@ -19,6 +20,13 @@ final class Hpack {
     static final class Rota extends RuntimeException {
 
         Rota(String mensaje) {
+            super(mensaje);
+        }
+    }
+
+    static final class Desmedida extends RuntimeException {
+
+        Desmedida(String mensaje) {
             super(mensaje);
         }
     }
@@ -197,29 +205,32 @@ final class Hpack {
         private int coste;
         private int tope = TAMANO_TABLA;
         private final int topeMaximo;
+        private final int maxLista;
+        private final int maxCampos;
 
-        Decodificador(int topeMaximo) {
+        Decodificador(int topeMaximo, int maxLista, int maxCampos) {
             this.topeMaximo = topeMaximo;
+            this.maxLista = maxLista;
+            this.maxCampos = maxCampos;
         }
 
         List<Campo> decodificar(byte[] bloque) {
             List<Campo> campos = new ArrayList<>();
             Lector in = new Lector(bloque);
             boolean todaviaAlPrincipio = true;
+            long lista = 0;
             while (in.hay()) {
                 int b = in.leer();
+                Campo c;
                 if ((b & 0x80) != 0) {
                     int i = leerEntero(in, 7);
                     if (i == 0) {
                         throw new Rota("índice 0 no existe");
                     }
-                    todaviaAlPrincipio = false;
-                    campos.add(enIndice(i));
+                    c = enIndice(i);
                 } else if ((b & 0x40) != 0) {
-                    todaviaAlPrincipio = false;
-                    Campo c = literal(in, 6);
+                    c = literal(in, 6);
                     indexar(c);
-                    campos.add(c);
                 } else if ((b & 0x20) != 0) {
                     if (!todaviaAlPrincipio) {
                         throw new Rota("cambio de tamaño de tabla fuera del principio del bloque");
@@ -230,10 +241,19 @@ final class Hpack {
                     }
                     tope = nuevo;
                     podar();
+                    continue;
                 } else {
-                    todaviaAlPrincipio = false;
-                    campos.add(literal(in, 4));
+                    c = literal(in, 4);
                 }
+                todaviaAlPrincipio = false;
+                lista += c.coste();
+                if (lista > maxLista) {
+                    throw new Desmedida("la lista de cabeceras se pasa del máximo al expandirse");
+                }
+                if (campos.size() == maxCampos) {
+                    throw new Desmedida("más campos de los que se admiten");
+                }
+                campos.add(c);
             }
             return campos;
         }

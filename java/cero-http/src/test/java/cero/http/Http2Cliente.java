@@ -57,7 +57,7 @@ final class Http2Cliente implements AutoCloseable {
     private final InputStream in;
     private final OutputStream out;
     private final Hpack.Codificador codificador = new Hpack.Codificador();
-    private final Hpack.Decodificador decodificador = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
+    private final Hpack.Decodificador decodificador = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
     private int siguienteFlujo = 1;
 
     private final Map<Integer, Parcial> enCurso = new LinkedHashMap<>();

@@ -9,6 +9,7 @@ public record ServerOptions(
         int maxConnections,
         int idleTimeoutMillis,
         int handlerTimeoutMillis,
+        int writeTimeoutMillis,
         int shutdownGraceMillis,
         int maxRequestLineBytes,
         int maxHeaderBytes,
@@ -22,6 +23,7 @@ public record ServerOptions(
         int http2MaxListaCabeceras,
         int http2MaxAnulados,
         int http2MaxControlSeguidas,
+        int http2MaxEnVuelo,
         int sessionTimeoutMillis,
         long sessionMaxLifetimeMillis,
         SessionStore sessionStore,
@@ -47,6 +49,9 @@ public record ServerOptions(
         if (maxBodyBytes < 0) {
             throw new IllegalArgumentException("maxBodyBytes negativo");
         }
+        if (idleTimeoutMillis <= 0 || handlerTimeoutMillis <= 0 || writeTimeoutMillis <= 0) {
+            throw new IllegalArgumentException("los plazos tienen que ser mayores que cero");
+        }
     }
 
     public static ServerOptions defaults() {
@@ -65,6 +70,7 @@ public record ServerOptions(
         return new Builder()
                 .host(host).port(port).backlog(backlog).maxConnections(maxConnections)
                 .idleTimeoutMillis(idleTimeoutMillis).handlerTimeoutMillis(handlerTimeoutMillis)
+                .writeTimeoutMillis(writeTimeoutMillis)
                 .shutdownGraceMillis(shutdownGraceMillis).maxRequestLineBytes(maxRequestLineBytes)
                 .maxHeaderBytes(maxHeaderBytes).maxHeaderCount(maxHeaderCount)
                 .maxBodyBytes(maxBodyBytes).readBufferBytes(readBufferBytes)
@@ -74,6 +80,7 @@ public record ServerOptions(
                 .http2MaxListaCabeceras(http2MaxListaCabeceras)
                 .http2MaxAnulados(http2MaxAnulados)
                 .http2MaxControlSeguidas(http2MaxControlSeguidas)
+                .http2MaxEnVuelo(http2MaxEnVuelo)
                 .sessionTimeoutMillis(sessionTimeoutMillis)
                 .sessionMaxLifetime(sessionMaxLifetimeMillis)
                 .sessionStore(sessionStore)
@@ -88,6 +95,7 @@ public record ServerOptions(
         private int maxConnections = 10_000;
         private int idleTimeoutMillis = 30_000;
         private int handlerTimeoutMillis = 30_000;
+        private int writeTimeoutMillis = 60_000;
         private int shutdownGraceMillis = 10_000;
         private int maxRequestLineBytes = 8_192;
         private int maxHeaderBytes = 32_768;
@@ -102,6 +110,7 @@ public record ServerOptions(
         private int http2MaxListaCabeceras = 32 * 1024;
         private int http2MaxAnulados = 100;
         private int http2MaxControlSeguidas = 1_000;
+        private int http2MaxEnVuelo = 32 << 20;
         private int sessionTimeoutMillis = 30 * 60_000;
         private long sessionMaxLifetimeMillis;
         private SessionStore sessionStore;
@@ -138,6 +147,11 @@ public record ServerOptions(
 
         public Builder handlerTimeoutMillis(int value) {
             handlerTimeoutMillis = value;
+            return this;
+        }
+
+        public Builder writeTimeoutMillis(int value) {
+            writeTimeoutMillis = value;
             return this;
         }
 
@@ -201,6 +215,11 @@ public record ServerOptions(
             return this;
         }
 
+        public Builder http2MaxEnVuelo(int value) {
+            http2MaxEnVuelo = value;
+            return this;
+        }
+
         public Builder maxKeepAliveRequests(int value) {
             maxKeepAliveRequests = value;
             return this;
@@ -259,10 +278,10 @@ public record ServerOptions(
 
         public ServerOptions build() {
             return new ServerOptions(host, port, backlog, maxConnections, idleTimeoutMillis,
-                    handlerTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
+                    handlerTimeoutMillis, writeTimeoutMillis, shutdownGraceMillis, maxRequestLineBytes, maxHeaderBytes,
                     maxHeaderCount, maxBodyBytes, readBufferBytes, maxKeepAliveRequests,
                     http2, http2MaxFlujos, http2MaxBloqueCabeceras, http2MaxListaCabeceras,
-                    http2MaxAnulados, http2MaxControlSeguidas,
+                    http2MaxAnulados, http2MaxControlSeguidas, http2MaxEnVuelo,
                     sessionTimeoutMillis, sessionMaxLifetimeMillis, sessionStore,
                     gzipMinBytes, requireHost, behindProxy, trustedProxies, tls);
         }

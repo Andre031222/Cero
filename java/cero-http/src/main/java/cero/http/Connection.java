@@ -19,6 +19,8 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     private volatile long limiteNanos;
 
+    private volatile OutgoingResponse enCurso;
+
     private volatile boolean ociosa = true;
 
     private AsciiBuffer head;
@@ -33,7 +35,8 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     @Override
     public long limiteNanos() {
-        return limiteNanos;
+        OutgoingResponse respuesta = enCurso;
+        return respuesta != null && respuesta.upgraded() ? 0 : limiteNanos;
     }
 
     @Override
@@ -106,6 +109,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             boolean keepAlive = wantsKeepAlive(request) && !last && context.accepting().getAsBoolean();
 
             OutgoingResponse response = new OutgoingResponse(out, request, options, head);
+            enCurso = response;
             response.source(reader);
             response.keepAlive(keepAlive);
 
@@ -137,9 +141,6 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     private boolean guarded(IncomingRequest request, OutgoingResponse response, OutputStream out) {
         int timeout = context.options().handlerTimeoutMillis();
-        if (timeout <= 0) {
-            return dispatch(request, response, out);
-        }
         long limite = System.nanoTime() + timeout * 1_000_000L;
         limiteNanos = limite == 0 ? 1 : limite;
         try {

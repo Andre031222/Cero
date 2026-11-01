@@ -157,7 +157,7 @@ final class WebSocketTests {
     }
 
     private static Server servidorConOrigenes(String... admitidos) {
-        return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(0).build(),
+        return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(300).build(),
                 (peticion, respuesta) -> WebSockets.accept(peticion, respuesta,
                         new WebSocketHandler() {
                         }, java.util.Set.of(admitidos)),
@@ -182,7 +182,7 @@ final class WebSocketTests {
     }
 
     private static Server servidor(WebSocketHandler handler) {
-        return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(0).build(),
+        return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(300).build(),
                 (peticion, respuesta) -> {
                     if (peticion.path().equals("/ws")) {
                         WebSockets.accept(peticion, respuesta, handler);
@@ -241,8 +241,10 @@ final class WebSocketTests {
             enviarTexto(socket, "hola");
             Check.equal("devuelve el mensaje", recibirTexto(socket), "eco:hola");
 
+            Thread.sleep(600);
             enviarTexto(socket, "otra vez");
-            Check.equal("y sigue la conversación", recibirTexto(socket), "eco:otra vez");
+            Check.equal("y sigue la conversación, pasado el plazo del manejador",
+                    recibirTexto(socket), "eco:otra vez");
 
             String acentos = "eñe y tildes: áéíóú";
             enviarTexto(socket, acentos);

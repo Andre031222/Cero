@@ -145,7 +145,6 @@ final class LimitsTests {
     private static void gracefulShutdown() throws Exception {
         ServerOptions options = ServerOptions.builder()
                 .port(0)
-                .handlerTimeoutMillis(0)
                 .shutdownGraceMillis(5_000)
                 .build();
 

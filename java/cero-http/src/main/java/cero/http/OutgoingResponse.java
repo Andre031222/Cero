@@ -19,7 +19,7 @@ final class OutgoingResponse implements Response {
     private int status = 200;
     private boolean committed;
     private boolean keepAlive = true;
-    private boolean upgraded;
+    private volatile boolean upgraded;
     private ChunkedOutput chunked;
     private ByteReader source;
 

@@ -71,7 +71,7 @@ final class ProtocolTests {
     private static void apagadoEsperaLoQueEstaEnVuelo() throws Exception {
         java.util.concurrent.CountDownLatch dentro = new java.util.concurrent.CountDownLatch(1);
         ServerOptions options = ServerOptions.builder()
-                .port(0).shutdownGraceMillis(5_000).handlerTimeoutMillis(0).build();
+                .port(0).shutdownGraceMillis(5_000).build();
         Server server = Server.start(options, (peticion, respuesta) -> {
             dentro.countDown();
             try {

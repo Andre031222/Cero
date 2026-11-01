@@ -8,6 +8,7 @@ public final class TestSuite {
     public static void main(String[] args) throws Exception {
         HpackTests.run();
         Http2Tests.run();
+        PlazosTests.run();
         FuzzTests.run();
         ProtocolTests.run();
         ProtocolTests.trasProxy();

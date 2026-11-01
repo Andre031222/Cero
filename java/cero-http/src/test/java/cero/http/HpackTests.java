@@ -18,6 +18,30 @@ final class HpackTests {
         respuestasConTablaPequena();
         idaYVuelta();
         entradasHostiles();
+        bomba();
+    }
+
+    private static void bomba() {
+        Check.that("H2-050: 256 trozos de cookie sí", desmedida(cookies(Hpack.MAX_CAMPOS), 64 * 1024) == null);
+        Check.that("H2-050: 257 no", desmedida(cookies(Hpack.MAX_CAMPOS + 1), 64 * 1024) != null);
+        Check.that("H2-051: lo anunciado cabe", desmedida(hex("4001610162 be be"), 3 * 34) == null);
+        Check.that("H2-051: un campo más no", desmedida(hex("4001610162 be be be"), 3 * 34) != null);
+    }
+
+    private static byte[] cookies(int campos) {
+        byte[] bloque = new byte[12 + campos - 1];
+        System.arraycopy(hex("4006636f6f6b6965 03613d31"), 0, bloque, 0, 12);
+        java.util.Arrays.fill(bloque, 12, bloque.length, (byte) (0x80 | 62));
+        return bloque;
+    }
+
+    private static Hpack.Desmedida desmedida(byte[] bloque, int maxLista) {
+        try {
+            new Hpack.Decodificador(Hpack.TAMANO_TABLA, maxLista, Hpack.MAX_CAMPOS).decodificar(bloque);
+            return null;
+        } catch (Hpack.Desmedida fallo) {
+            return fallo;
+        }
     }
 
     private static byte[] hex(String texto) {
@@ -76,7 +100,7 @@ final class HpackTests {
     }
 
     private static void peticionesSinHuffman() {
-        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
+        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
 
         Check.equal("C.3.1 · primera petición",
                 texto(d.decodificar(hex("8286 8441 0f77 7777 2e65 7861 6d70 6c65 2e63 6f6d"))),
@@ -98,7 +122,7 @@ final class HpackTests {
     }
 
     private static void peticionesConHuffman() {
-        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
+        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
 
         Check.equal("C.4.1 · primera petición",
                 texto(d.decodificar(hex("8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4 ff"))),
@@ -115,7 +139,7 @@ final class HpackTests {
     }
 
     private static void respuestasConTablaPequena() {
-        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
+        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
         d.decodificar(hex("3f e1 1f"));
 
         Check.equal("C.5.1 · primera respuesta",
@@ -155,7 +179,7 @@ final class HpackTests {
                 new Hpack.Campo("x-vacia", ""));
 
         byte[] bloque = new Hpack.Codificador().codificar(campos);
-        List<Hpack.Campo> vuelta = new Hpack.Decodificador(Hpack.TAMANO_TABLA).decodificar(bloque);
+        List<Hpack.Campo> vuelta = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE).decodificar(bloque);
         Check.equal("lo codificado se vuelve a leer igual", texto(vuelta), texto(campos));
         Check.that("y ocupa menos que el texto plano equivalente",
                 bloque.length < texto(campos).length());
@@ -173,7 +197,7 @@ final class HpackTests {
 
     private static void rechaza(String nombre, String hexadecimal) {
         try {
-            new Hpack.Decodificador(Hpack.TAMANO_TABLA).decodificar(hex(hexadecimal));
+            new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE).decodificar(hex(hexadecimal));
             Check.that("se rechaza: " + nombre, false);
         } catch (Hpack.Rota esperado) {
             Check.that("se rechaza: " + nombre, true);

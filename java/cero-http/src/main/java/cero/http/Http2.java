@@ -14,9 +14,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-final class Http2 {
+final class Http2 implements Watchdog.Vigilada {
 
     static final byte[] PREAMBULO =
             "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
@@ -63,7 +64,7 @@ final class Http2 {
     private final String remoto;
     private final ExecutorService hilos;
 
-    private final Hpack.Decodificador hpackIn = new Hpack.Decodificador(Hpack.TAMANO_TABLA);
+    private final Hpack.Decodificador hpackIn;
     private final Hpack.Codificador hpackOut = new Hpack.Codificador();
 
     private final Map<Integer, Flujo> flujos = new ConcurrentHashMap<>();
@@ -78,8 +79,16 @@ final class Http2 {
     private final int maxListaCabeceras;
     private final int maxAnulados;
     private final int maxControlSeguidas;
+    private final long maxEnVuelo;
+    private final int escrituraMillis;
+    private final int inactividadMillis;
 
-    private int ultimoFlujoVisto;
+    private long porMandar;
+    private final AtomicInteger enCurso = new AtomicInteger();
+    private long ociosaDesde = System.nanoTime();
+    private volatile long limiteNanos;
+
+    private volatile int ultimoFlujoVisto;
     private volatile boolean vivo = true;
 
     private int anulados;
@@ -100,6 +109,25 @@ final class Http2 {
         this.maxListaCabeceras = o.http2MaxListaCabeceras();
         this.maxAnulados = o.http2MaxAnulados();
         this.maxControlSeguidas = o.http2MaxControlSeguidas();
+        this.maxEnVuelo = o.http2MaxEnVuelo();
+        this.escrituraMillis = o.writeTimeoutMillis();
+        this.inactividadMillis = o.idleTimeoutMillis();
+        this.hpackIn = new Hpack.Decodificador(Hpack.TAMANO_TABLA, maxListaCabeceras, Hpack.MAX_CAMPOS);
+    }
+
+    @Override
+    public long limiteNanos() {
+        return limiteNanos;
+    }
+
+    @Override
+    public void abortar() {
+        limiteNanos = 0;
+        vivo = false;
+        try {
+            socketCrudo.close();
+        } catch (IOException yaEstaba) {
+        }
     }
 
     static void servir(Socket socket, InputStream in, OutputStream out, ServerContext context,
@@ -194,9 +222,15 @@ final class Http2 {
             lanzar(f, deUpgrade);
         }
 
+        context.watchdog().vigilar(this);
         try {
             while (vivo) {
-                if (!unaTrama()) {
+                int primero = primerOcteto();
+                if (primero == OCIOSA) {
+                    adios(ERROR_NINGUNO, "conexión inactiva");
+                    break;
+                }
+                if (primero < 0 || !unaTrama(primero)) {
                     break;
                 }
             }
@@ -204,11 +238,36 @@ final class Http2 {
             adios(fallo.codigo, fallo.getMessage());
         } catch (Hpack.Rota rota) {
             adios(ERROR_COMPRESION, rota.getMessage());
+        } catch (Hpack.Desmedida desmedida) {
+            adios(ERROR_CALMA, desmedida.getMessage());
         } catch (java.io.EOFException cortado) {
         } finally {
             vivo = false;
+            context.watchdog().soltar(this);
             for (Flujo f : flujos.values()) {
                 f.cerrarEntrada();
+            }
+            synchronized (ventanaSalida) {
+                ventanaSalida.notifyAll();
+            }
+        }
+    }
+
+    private static final int OCIOSA = -2;
+
+    private int primerOcteto() throws IOException {
+        while (true) {
+            long queda = ociosaDesde + inactividadMillis * 1_000_000L - System.nanoTime();
+            socketCrudo.setSoTimeout((int) Math.max(1, queda / 1_000_000));
+            try {
+                int primero = in.read();
+                socketCrudo.setSoTimeout(inactividadMillis);
+                return primero;
+            } catch (java.net.SocketTimeoutException ociosa) {
+                if (enCurso.get() == 0) {
+                    return OCIOSA;
+                }
+                ociosaDesde = System.nanoTime();
             }
         }
     }
@@ -226,13 +285,14 @@ final class Http2 {
         return f.finEntrada ? Estado.MEDIO_CERRADO : Estado.ABIERTO;
     }
 
-    private boolean unaTrama() throws IOException {
+    private boolean unaTrama(int primero) throws IOException {
         byte[] cabecera = new byte[9];
-        int leidos = 0;
+        cabecera[0] = (byte) primero;
+        int leidos = 1;
         while (leidos < 9) {
             int n = in.read(cabecera, leidos, 9 - leidos);
             if (n < 0) {
-                return leidos == 0 ? false : false;
+                return false;
             }
             leidos += n;
         }
@@ -247,6 +307,9 @@ final class Http2 {
         }
         byte[] carga = new byte[largo];
         leerDelTodo(carga);
+        if (tipo == DATA || tipo == HEADERS) {
+            ociosaDesde = System.nanoTime();
+        }
 
         switch (tipo) {
             case DATA -> datos(flujo, banderas, carga);
@@ -343,7 +406,6 @@ final class Http2 {
             escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
             return;
         }
-        comprobarTamano(campos);
         Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo);
         flujos.put(idFlujo, flujo);
         if ((banderas & FIN_FLUJO) != 0) {
@@ -428,16 +490,6 @@ final class Http2 {
         return bloque.toByteArray();
     }
 
-    private void comprobarTamano(List<Hpack.Campo> campos) {
-        long total = 0;
-        for (Hpack.Campo c : campos) {
-            total += c.coste();
-            if (total > maxListaCabeceras) {
-                throw new ErrorConexion(ERROR_CALMA, "lista de cabeceras desmedida");
-            }
-        }
-    }
-
     private IncomingRequest aPeticion(List<Hpack.Campo> campos, Flujo flujo) {
         String metodo = null;
         String destino = null;
@@ -505,6 +557,7 @@ final class Http2 {
     }
 
     private void lanzar(Flujo flujo, IncomingRequest peticion) {
+        enCurso.incrementAndGet();
         hilos.execute(() -> {
             Http2Respuesta respuesta = new Http2Respuesta(this, flujo, peticion);
             try {
@@ -516,6 +569,7 @@ final class Http2 {
                 context.reporter().handler(peticion, fallo);
                 respuesta.error(500, "error interno");
             } finally {
+                enCurso.decrementAndGet();
                 flujo.cerrarEntrada();
                 if (flujo.finEntrada) {
                     flujos.remove(flujo.id);
@@ -691,13 +745,19 @@ final class Http2 {
 
     void escribirTrama(int tipo, int banderas, int flujo, byte[] carga) throws IOException {
         synchronized (candadoEscritura) {
-            out.write(new byte[] {
-                    (byte) (carga.length >>> 16), (byte) (carga.length >>> 8), (byte) carga.length,
-                    (byte) tipo, (byte) banderas,
-                    (byte) (flujo >>> 24), (byte) (flujo >>> 16), (byte) (flujo >>> 8), (byte) flujo,
-            });
-            out.write(carga);
-            out.flush();
+            long limite = System.nanoTime() + escrituraMillis * 1_000_000L;
+            limiteNanos = limite == 0 ? 1 : limite;
+            try {
+                out.write(new byte[] {
+                        (byte) (carga.length >>> 16), (byte) (carga.length >>> 8), (byte) carga.length,
+                        (byte) tipo, (byte) banderas,
+                        (byte) (flujo >>> 24), (byte) (flujo >>> 16), (byte) (flujo >>> 8), (byte) flujo,
+                });
+                out.write(carga);
+                out.flush();
+            } finally {
+                limiteNanos = 0;
+            }
         }
     }
 
@@ -728,18 +788,61 @@ final class Http2 {
             }
             return;
         }
+        cargar(cuerpo.length);
         int pos = 0;
-        while (pos < cuerpo.length) {
-            int quedan = cuerpo.length - pos;
-            int trozo = esperarHueco(flujo, Math.min(quedan, tramaMaxima));
-            boolean ultimo = fin && pos + trozo >= cuerpo.length;
-            escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
-                    java.util.Arrays.copyOfRange(cuerpo, pos, pos + trozo));
-            pos += trozo;
+        try {
+            while (pos < cuerpo.length) {
+                int finTrama = Math.min(cuerpo.length, pos + tramaMaxima);
+                long hasta = System.nanoTime() + escrituraMillis * 1_000_000L;
+                while (pos < finTrama) {
+                    int trozo = esperarHueco(flujo, finTrama - pos, hasta);
+                    boolean ultimo = fin && pos + trozo >= cuerpo.length;
+                    escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
+                            java.util.Arrays.copyOfRange(cuerpo, pos, pos + trozo));
+                    pos += trozo;
+                    descargar(trozo);
+                }
+            }
+        } finally {
+            descargar(cuerpo.length - pos);
         }
     }
 
-    private int esperarHueco(Flujo flujo, int deseado) throws IOException {
+    private void cargar(int octetos) throws IOException {
+        if (!cabe(octetos)) {
+            calmar();
+            throw new IOException("respuestas en vuelo por encima del presupuesto");
+        }
+    }
+
+    private synchronized boolean cabe(int octetos) {
+        if (porMandar + octetos > maxEnVuelo) {
+            return false;
+        }
+        porMandar += octetos;
+        return true;
+    }
+
+    private synchronized void descargar(int octetos) {
+        porMandar -= octetos;
+    }
+
+    private void calmar() {
+        if (!vivo) {
+            return;
+        }
+        vivo = false;
+        try {
+            escribirTrama(GOAWAY, 0, 0, goaway(ERROR_CALMA, "respuestas en vuelo por encima del presupuesto"));
+            socketCrudo.shutdownOutput();
+        } catch (IOException yaNoSePuede) {
+        }
+        synchronized (ventanaSalida) {
+            ventanaSalida.notifyAll();
+        }
+    }
+
+    private int esperarHueco(Flujo flujo, int deseado, long hasta) throws IOException {
         while (vivo) {
             long conexion = ventanaSalida.get();
             int delFlujo = flujo.ventana.get();
@@ -749,10 +852,15 @@ final class Http2 {
                 flujo.ventana.addAndGet(-posible);
                 return posible;
             }
+            long queda = (hasta - System.nanoTime()) / 1_000_000;
+            if (queda <= 0) {
+                escribirTrama(RST_STREAM, 0, flujo.id, deEntero(ERROR_ANULADO));
+                throw new IOException("sin crédito en el plazo");
+            }
             try {
                 Object cerrojo = conexion <= 0 ? ventanaSalida : flujo.ventana;
                 synchronized (cerrojo) {
-                    cerrojo.wait(5_000);
+                    cerrojo.wait(Math.min(queda, 5_000));
                 }
             } catch (InterruptedException cortado) {
                 Thread.currentThread().interrupt();
@@ -764,24 +872,20 @@ final class Http2 {
 
     private void adios(int codigo, String motivo) {
         try {
-            byte[] carga = new byte[8 + (motivo == null ? 0 : motivo.length())];
-            carga[0] = (byte) (ultimoFlujoVisto >>> 24);
-            carga[1] = (byte) (ultimoFlujoVisto >>> 16);
-            carga[2] = (byte) (ultimoFlujoVisto >>> 8);
-            carga[3] = (byte) ultimoFlujoVisto;
-            carga[4] = (byte) (codigo >>> 24);
-            carga[5] = (byte) (codigo >>> 16);
-            carga[6] = (byte) (codigo >>> 8);
-            carga[7] = (byte) codigo;
-            if (motivo != null) {
-                byte[] texto = motivo.getBytes(StandardCharsets.ISO_8859_1);
-                System.arraycopy(texto, 0, carga, 8, texto.length);
-            }
-            escribirTrama(GOAWAY, 0, 0, carga);
+            escribirTrama(GOAWAY, 0, 0, goaway(codigo, motivo));
         } catch (IOException yaNoSePuede) {
         }
         vivo = false;
         cerrarConSuavidad();
+    }
+
+    private byte[] goaway(int codigo, String motivo) {
+        byte[] texto = motivo.getBytes(StandardCharsets.ISO_8859_1);
+        byte[] carga = new byte[8 + texto.length];
+        System.arraycopy(deEntero(ultimoFlujoVisto), 0, carga, 0, 4);
+        System.arraycopy(deEntero(codigo), 0, carga, 4, 4);
+        System.arraycopy(texto, 0, carga, 8, texto.length);
+        return carga;
     }
 
     private int activos() {
