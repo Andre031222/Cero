@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -107,7 +108,7 @@ final class MailTests {
         }
 
         static Servidor arrancar(boolean rechaza) throws IOException {
-            Servidor servidor = new Servidor(new ServerSocket(0), rechaza);
+            Servidor servidor = new Servidor(new ServerSocket(0, 50, InetAddress.getLoopbackAddress()), rechaza);
             Thread.ofVirtual().start(servidor::atender);
             return servidor;
         }
