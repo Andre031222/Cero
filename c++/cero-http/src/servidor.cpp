@@ -1,13 +1,15 @@
 #include "cero/servidor.hpp"
 
-#include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <charconv>
 #include <chrono>
+#include <cstring>
 #include <expected>
 #include <functional>
 #include <memory>
@@ -297,33 +299,68 @@ Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view cam
     return r;
 }
 
+namespace {
+
+int abrir_oyente(const std::string& direccion, unsigned short puerto) {
+    addrinfo pista{};
+    pista.ai_family = AF_UNSPEC;
+    pista.ai_socktype = SOCK_STREAM;
+    pista.ai_flags = AI_PASSIVE;
+    addrinfo* lista = nullptr;
+    const auto servicio = std::to_string(puerto);
+    if (const int fallo = ::getaddrinfo(direccion.c_str(), servicio.c_str(), &pista, &lista);
+        fallo != 0) {
+        aviso("cero · dirección no válida: {} ({})", direccion, ::gai_strerror(fallo));
+        return -1;
+    }
+    int oyente = -1;
+    int error = 0;
+    for (const addrinfo* a = lista; a != nullptr; a = a->ai_next) {
+        oyente = ::socket(a->ai_family, a->ai_socktype, a->ai_protocol);
+        if (oyente < 0) {
+            error = errno;
+            continue;
+        }
+        const int si = 1;
+        ::setsockopt(oyente, SOL_SOCKET, SO_REUSEADDR, &si, sizeof si);
+        if (::bind(oyente, a->ai_addr, a->ai_addrlen) == 0 && ::listen(oyente, 128) == 0) break;
+        error = errno;
+        ::close(oyente);
+        oyente = -1;
+    }
+    ::freeaddrinfo(lista);
+    if (oyente < 0) {
+        aviso("cero · no se puede escuchar en {}:{}: {}", direccion, puerto, std::strerror(error));
+    }
+    return oyente;
+}
+
+std::string quien_es(const sockaddr_storage& quien, socklen_t cuanto) {
+    char texto[NI_MAXHOST] = {};
+    if (::getnameinfo(reinterpret_cast<const sockaddr*>(&quien), cuanto, texto, sizeof texto,
+                      nullptr, 0, NI_NUMERICHOST) != 0) {
+        return "desconocido";
+    }
+    return texto;
+}
+
+}
+
 int Servidor::escuchar(unsigned short puerto) const {
     if (!plazos_.validos() || !limites_.validos()) {
-        linea("cero · los plazos y los topes tienen que ser mayores que cero");
+        aviso("cero · los plazos y los topes tienen que ser mayores que cero");
         return 1;
     }
-    const int oyente = ::socket(AF_INET, SOCK_STREAM, 0);
+    const int oyente = abrir_oyente(direccion_, puerto);
     if (oyente < 0) return 1;
-    const int si = 1;
-    ::setsockopt(oyente, SOL_SOCKET, SO_REUSEADDR, &si, sizeof si);
-
-    sockaddr_in donde{};
-    donde.sin_family = AF_INET;
-    donde.sin_port = htons(puerto);
-    if (::inet_pton(AF_INET, direccion_.c_str(), &donde.sin_addr) != 1) return 1;
-    if (::bind(oyente, reinterpret_cast<sockaddr*>(&donde), sizeof donde) < 0) return 1;
-    if (::listen(oyente, 128) < 0) return 1;
     linea("cero · escuchando en :{}", puerto);
 
     while (true) {
-        sockaddr_in quien{};
+        sockaddr_storage quien{};
         auto cuanto = static_cast<socklen_t>(sizeof quien);
         const int cliente = ::accept(oyente, reinterpret_cast<sockaddr*>(&quien), &cuanto);
         if (cliente < 0) continue;
-        const auto desde = formato("{}.{}.{}.{}", quien.sin_addr.s_addr & 0xff,
-                                 (quien.sin_addr.s_addr >> 8) & 0xff,
-                                 (quien.sin_addr.s_addr >> 16) & 0xff,
-                                 (quien.sin_addr.s_addr >> 24) & 0xff);
+        const auto desde = quien_es(quien, cuanto);
         sin_sigpipe(cliente);
         try {
             std::thread{[this, cliente, desde, plazos = plazos_, limites = limites_] {

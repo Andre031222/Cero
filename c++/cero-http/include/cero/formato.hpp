@@ -19,4 +19,11 @@ void linea(std::format_string<Datos...> plantilla, Datos&&... datos) {
     std::fputc('\n', stdout);
 }
 
+template <class... Datos>
+void aviso(std::format_string<Datos...> plantilla, Datos&&... datos) {
+    const auto s = formato(plantilla, std::forward<Datos>(datos)...);
+    std::fwrite(s.data(), 1, s.size(), stderr);
+    std::fputc('\n', stderr);
+}
+
 }

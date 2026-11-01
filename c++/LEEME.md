@@ -238,7 +238,10 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   crear el hilo de una conexión, se cierra esa conexión y el servidor sigue.
 - **`Servidor::direccion`.** Por defecto se escucha en `0.0.0.0`; el servidor del banco y las
   pruebas escuchan en `127.0.0.1`, porque en macOS `SO_REUSEADDR` deja que un socket comodín
-  comparta puerto con otro proceso que escucha en la dirección concreta.
+  comparta puerto con otro proceso que escucha en la dirección concreta. Admite lo mismo que
+  Rust: un literal IPv4 o IPv6 (`::1`) o un nombre (`localhost`), resuelto con `getaddrinfo`, y
+  escucha en la primera dirección que se deja. Si no vale o el puerto está ocupado, `escuchar`
+  lo dice en stderr y devuelve 1.
 - **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
   encuadre no comprueban nada. `/grande` da 1 MiB para `H2-054`, y un segundo argumento fija los
   plazos en milisegundos —el de inactividad, el doble—, que es como lo arranca `ataques.py`.

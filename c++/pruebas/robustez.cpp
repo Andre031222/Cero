@@ -1,3 +1,4 @@
+#include <netdb.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <sys/resource.h>
@@ -171,6 +172,52 @@ PRUEBA(http_025_un_plazo_de_cero_o_negativo_no_arranca) {
     COMPRUEBA(!con_topes({.en_vuelo = 0}), "HTTP-025: el presupuesto de respuestas en vuelo");
     COMPRUEBA(!con_topes({.cuerpo = 0}), "HTTP-025: el tope del cuerpo");
     COMPRUEBA(conectar_una_vez(puerto) < 0, "HTTP-025: y nadie llegó a escuchar");
+}
+
+int conectar_por_nombre(const char* nombre, unsigned short puerto) {
+    addrinfo pista{};
+    pista.ai_socktype = SOCK_STREAM;
+    for (int intento = 0; intento < 100; ++intento) {
+        addrinfo* lista = nullptr;
+        if (::getaddrinfo(nombre, std::to_string(puerto).c_str(), &pista, &lista) != 0) return -1;
+        for (const addrinfo* a = lista; a != nullptr; a = a->ai_next) {
+            const int d = ::socket(a->ai_family, a->ai_socktype, a->ai_protocol);
+            if (d >= 0 && ::connect(d, a->ai_addr, a->ai_addrlen) == 0) {
+                ::freeaddrinfo(lista);
+                return d;
+            }
+            if (d >= 0) ::close(d);
+        }
+        ::freeaddrinfo(lista);
+        std::this_thread::sleep_for(50ms);
+    }
+    return -1;
+}
+
+PRUEBA(una_direccion_que_no_vale_o_un_puerto_ocupado_no_arranca) {
+    const auto puerto = static_cast<unsigned short>(base() + 3);
+    COMPRUEBA(cero::Servidor{cero::Router{}}.direccion("no es una dirección").escuchar(puerto) == 1,
+              "una dirección que no vale no arranca");
+    const int ocupa = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    a.sin_port = htons(puerto);
+    const bool ocupado = ::bind(ocupa, reinterpret_cast<sockaddr*>(&a), sizeof a) == 0 && ::listen(ocupa, 1) == 0;
+    COMPRUEBA(ocupado, "el puerto queda ocupado");
+    COMPRUEBA(cero::Servidor{cero::Router{}}.direccion("127.0.0.1").escuchar(puerto) == 1,
+              "un puerto ocupado no arranca");
+    ::close(ocupa);
+}
+
+PRUEBA(la_direccion_admite_nombres_e_ipv6) {
+    for (const auto [nombre, desfase] : {std::pair{"localhost", 4}, std::pair{"::1", 5}}) {
+        const auto puerto = static_cast<unsigned short>(base() + desfase);
+        std::thread{[nombre, puerto] { (void)servidor_grande().direccion(nombre).escuchar(puerto); }}.detach();
+        const int d = conectar_por_nombre(nombre, puerto);
+        COMPRUEBA(d >= 0, cero::formato("escucha en {}", nombre));
+        if (d >= 0) ::close(d);
+    }
 }
 
 PRUEBA(un_cliente_que_corta_a_mitad_no_tumba_el_proceso) {
