@@ -189,7 +189,7 @@ jobs:
           fi
 
   cxx:
-    name: c++/ · pruebas, banco y ataques
+    name: c++/ · pruebas, banco, ataques y h2spec
     runs-on: ubuntu-latest
 
     steps:
@@ -213,17 +213,31 @@ jobs:
           cmake --build build -j
           ctest --test-dir build --output-on-failure
 
-      - name: El banco de conformidad
+      - name: El banco de conformidad y h2spec
         working-directory: c++
         run: |
+          set -o pipefail
           ./build/conforme 8777 &
           for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:8777/ && break || sleep 1; done
 
           python3 ../spec/banco/correr.py 127.0.0.1 8777
           python3 ../spec/banco/ataques.py ./build/conforme
 
+          curl -fsSL -o h2spec.tar.gz \
+            https://github.com/summerwind/h2spec/releases/download/v2.6.0/h2spec_linux_amd64.tar.gz
+          tar -xzf h2spec.tar.gz
+
+          ./h2spec -h 127.0.0.1 -p 8777 --timeout 5 | tee h2spec.log || true
+          RESUMEN=$(grep -E "^[0-9]+ tests," h2spec.log | tail -1)
+          echo "$RESUMEN"
+          FALLOS=$(echo "$RESUMEN" | sed -E "s/.*, ([0-9]+) failed.*/\1/")
+          if [ "${FALLOS:-99}" -gt 1 ]; then
+            echo "::error::h2spec encontró $FALLOS fallos en C++; solo se admite el 3.5.2."
+            exit 1
+          fi
+
   comentarios:
-    name: código sin comentarios
+    name: código sin comentarios y en orden
     runs-on: ubuntu-latest
 
     steps:
@@ -234,6 +248,9 @@ jobs:
 
       - name: Las pruebas de la herramienta
         run: python3 -I herramientas/pruebas_comentarios.py
+
+      - name: En orden
+        run: sh herramientas/verificar-orden.sh
 
   dependencias:
     name: dependencias con CVE conocido
