@@ -252,6 +252,17 @@ def compactar(s):
 
 
 def procesar(texto, extension):
+    sustituto = None
+    if MARCA in texto:
+        sustituto = next(chr(c) for c in range(0xE000, 0xF900) if chr(c) not in texto)
+        texto = texto.replace(MARCA, sustituto)
+    limpio, encontrados = procesar_sin_nulos(texto, extension)
+    if sustituto:
+        limpio = limpio.replace(sustituto, MARCA)
+    return limpio, encontrados
+
+
+def procesar_sin_nulos(texto, extension):
     lenguaje = LENGUAJES[extension]
     fin_windows = "\r\n" in texto
     if fin_windows:

@@ -108,6 +108,11 @@ class PruebasComentarios(unittest.TestCase):
         entrada = 'auto s = R"x(a // b)x"; /* c */\n'
         self.assertEqual(quitar(entrada, ".cpp"), 'auto s = R"x(a // b)x";\n')
 
+    def test_byte_nulo_en_cadena_se_conserva(self):
+        entrada = 'String s = "a\x00b"; // fin\n'
+        self.assertEqual(quitar(entrada, ".java"), 'String s = "a\x00b";\n')
+        self.assertEqual(quitar('String s = "a\x00b";\n', ".java"), 'String s = "a\x00b";\n')
+
     def test_bloque_en_medio_de_una_linea(self):
         self.assertEqual(quitar("int /* c */ x;\n", ".java"), "int x;\n")
         self.assertEqual(quitar("int/**/x;\n", ".java"), "int x;\n")
