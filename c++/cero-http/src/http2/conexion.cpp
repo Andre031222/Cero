@@ -135,14 +135,12 @@ private:
     bool rota_ = false;
 };
 
-constexpr std::size_t kPresupuesto = 32 * 1024 * 1024;
-
 struct Comun {
-    Comun(int descriptor, cero::Plazos p) : salida(descriptor, p), plazos(p) {}
+    Comun(int descriptor, cero::Plazos p, cero::Limites l) : salida(descriptor, p), plazos(p), limites(l) {}
 
     bool cargar(std::size_t octetos) {
         const std::lock_guard tomado{candado};
-        if (por_mandar + octetos > kPresupuesto) return false;
+        if (por_mandar > 0 && por_mandar + octetos > limites.en_vuelo) return false;
         por_mandar += octetos;
         return true;
     }
@@ -161,6 +159,7 @@ struct Comun {
     Salida salida;
     Ventanas ventanas;
     cero::Plazos plazos;
+    cero::Limites limites;
     std::mutex candado;
     std::condition_variable avisa;
     std::size_t en_vuelo = 0;
@@ -403,11 +402,11 @@ cero::Peticion armar(std::vector<Cabecera> cabeceras, std::string cuerpo) {
 }
 
 void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
-            std::optional<cero::Peticion> primera, cero::Plazos plazos) {
+            std::optional<cero::Peticion> primera, cero::Plazos plazos, cero::Limites limites) {
     const int descriptor = entrada.descriptor();
     sin_sigpipe(descriptor);
     plazo_de_lectura(descriptor, plazos.inactividad);
-    auto comun = std::make_shared<Comun>(descriptor, plazos);
+    auto comun = std::make_shared<Comun>(descriptor, plazos, limites);
     auto& salida = comun->salida;
     auto& ventanas = comun->ventanas;
 
@@ -518,9 +517,18 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
                         ventanas.abrir(a.flujo);
                         en_curso[a.flujo] = EnCurso{std::move(a.cabeceras), {}};
                     } else if constexpr (std::is_same_v<A, Cuerpo>) {
-                        if (const auto i = en_curso.find(a.flujo); i != en_curso.end()) {
-                            i->second.cuerpo += a.datos;
+                        const auto i = en_curso.find(a.flujo);
+                        if (i == en_curso.end()) return;
+                        if (a.datos.size() > limites.cuerpo - i->second.cuerpo.size()) {
+                            const auto bloque = cabeceras_de_respuesta(413, {{"content-length", "0"}});
+                            auto tramas = tramas_de_cabeceras(a.flujo, bloque, salida.max_trama(), true);
+                            tramas.push_back(Trama::rst(a.flujo, Error::Ninguno));
+                            salida.mandar(tramas);
+                            olvidar(a.flujo);
+                            sesion.desechar(a.flujo);
+                            return;
                         }
+                        i->second.cuerpo += a.datos;
                     }
                     std::uint32_t flujo = 0;
                     bool fin = false;

@@ -1,7 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <string_view>
+
+#include "cero/peticion.hpp"
 
 namespace cero {
 
@@ -13,6 +16,13 @@ struct Plazos {
     bool validos() const {
         return sin_avance.count() > 0 && escritura.count() > 0 && inactividad.count() > 0;
     }
+};
+
+struct Limites {
+    std::size_t en_vuelo = 32 * 1024 * 1024;
+    std::size_t cuerpo = kMaxCuerpo;
+
+    bool validos() const { return en_vuelo > 0 && cuerpo > 0; }
 };
 
 void sin_sigpipe(int descriptor);

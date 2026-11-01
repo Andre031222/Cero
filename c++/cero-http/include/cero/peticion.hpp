@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <expected>
 #include <functional>
 #include <map>
@@ -27,13 +28,16 @@ private:
     std::size_t i_ = 0;
 };
 
-enum class Rechazo { MalFormada, NoImplementado, VersionNoSoportada, Demasiado };
+enum class Rechazo { MalFormada, NoImplementado, VersionNoSoportada, Demasiado, CuerpoGrande };
+
+inline constexpr std::size_t kMaxCuerpo = 10 * 1024 * 1024;
 
 constexpr unsigned estado_de(Rechazo r) {
     switch (r) {
         case Rechazo::NoImplementado: return 501;
         case Rechazo::VersionNoSoportada: return 505;
         case Rechazo::Demasiado: return 431;
+        case Rechazo::CuerpoGrande: return 413;
         case Rechazo::MalFormada: break;
     }
     return 400;
@@ -53,6 +57,6 @@ struct Peticion {
 
 bool metodo_conocido(std::string_view metodo);
 
-std::expected<Peticion, Rechazo> leer(Lector& lector);
+std::expected<Peticion, Rechazo> leer(Lector& lector, std::size_t max_cuerpo = kMaxCuerpo);
 
 }

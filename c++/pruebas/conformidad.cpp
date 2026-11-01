@@ -46,6 +46,17 @@ PRUEBA(http_023_una_linea_desmedida) {
     COMPRUEBA(estado(larga) == 431, "HTTP-023");
 }
 
+PRUEBA(http_026_un_cuerpo_de_mas_no_se_lee) {
+    COMPRUEBA(estado("POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 11534336\r\n\r\n") == 413,
+              "HTTP-026: un Content-Length de 11 MiB es 413 sin esperar al cuerpo");
+    cero::DesdeTexto justo{"POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nhola"};
+    COMPRUEBA(cero::leer(justo, 4).has_value(), "HTTP-026: lo que cabe en el tope se lee");
+    cero::DesdeTexto trozos{"POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n"
+                            "3\r\nhol\r\n2\r\nas\r\n0\r\n\r\n"};
+    const auto r = cero::leer(trozos, 4);
+    COMPRUEBA(!r && cero::estado_de(r.error()) == 413, "HTTP-026: por trozos también cuenta la suma");
+}
+
 PRUEBA(http_008_a_011_la_forma_de_una_cabecera) {
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost : x\r\n\r\n") == 400, "HTTP-008");
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: x\r\nX-A: uno\r\n dos\r\n\r\n") == 400, "HTTP-009");

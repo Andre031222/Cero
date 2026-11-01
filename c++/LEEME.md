@@ -6,8 +6,8 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 
 **Estado: hito 11.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
 `Upgrade: h2c` en el mismo puerto, con control de flujo de salida y las defensas de HTTP/2 Bomb.
-**23 de 23 vectores del banco**, **7 de 7 en los ataques**, **los 32 del apéndice C del RFC 7541**,
-**145 de 146 en h2spec** —el que falta es el mismo que en Java y en Rust— y 200 pruebas propias.
+**23 de 23 vectores del banco**, **9 de 9 en los ataques**, **los 32 del apéndice C del RFC 7541**,
+**145 de 146 en h2spec** —el que falta es el mismo que en Java y en Rust— y 203 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -21,11 +21,11 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 6 de robustez |
-| 11 | Plazos y HTTP/2 Bomb | `H2-050`–`H2-054`, `HTTP-024`, `HTTP-025` · 7 de 7 en `ataques.py` · 8 pruebas |
+| 11 | Plazos, topes y HTTP/2 Bomb | `H2-050`–`H2-055`, `HTTP-024`–`HTTP-026` · 9 de 9 en `ataques.py` · 11 pruebas |
 
 ## Cuántos requisitos citan las pruebas
 
-La cuenta que hace la integración continua, desde `c++/`: **155** requisitos distintos.
+La cuenta que hace la integración continua, desde `c++/`: **157** requisitos distintos.
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
@@ -219,14 +219,17 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   durante `inactividad` recibe GOAWAY `NO_ERROR` y se cierra: `PING`, `SETTINGS` o `WINDOW_UPDATE`
   no cuentan como trabajo (`H2-053`). Mientras algún flujo tenga su respuesta en marcha —calculándose
   o esperando ventana— no hay inactividad. Lo construido y sin mandar se suma por conexión, y pasar
-  de 32 MiB manda GOAWAY `ENHANCE_YOUR_CALM`, cierra nuestra mitad y despierta a quien esperaba
+  de 32 MiB —salvo si no hay nada más en vuelo— manda GOAWAY `ENHANCE_YOUR_CALM`, cierra nuestra mitad y despierta a quien esperaba
   ventana (`H2-054`); el hilo que lee se entera en la siguiente trama o cuando el cliente cierra.
 - **`socket.hpp`.** Lo que comparten HTTP/1.1 y h2 al escribir: sin `SIGPIPE` —un cliente que corta
   a mitad de respuesta mataba el proceso entero— y con `Plazos`, que son ajustes del `Servidor`
   (`.plazos(...)`): `sin_avance` (30 s sin mover un octeto), `escritura` (60 s por cada 16 KiB) e
   `inactividad` (120 s sin una petición nueva, en HTTP/1.1, y sin `HEADERS` ni `DATA`, en h2). Un
   plazo de 0 o negativo no arranca: `escuchar` devuelve 1 sin abrir el puerto (`HTTP-025`), porque 0
-  en un socket quiere decir «sin plazo» y en una cuenta atrás «ya pasó». El plazo de `SO_SNDTIMEO` vuelve a empezar cada vez que
+  en un socket quiere decir «sin plazo» y en una cuenta atrás «ya pasó». `Limites`
+  (`.limites(...)`) lleva el presupuesto de respuestas en vuelo (32 MiB) y el tope del cuerpo
+  (10 MiB): un cuerpo mayor es 413, en HTTP/1.1 antes de leerlo (`HTTP-026`; antes se reservaba lo
+  que dijera `Content-Length`) y en h2 con `RST_STREAM NO_ERROR` (`H2-055`). El plazo de `SO_SNDTIMEO` vuelve a empezar cada vez que
   el cliente lee algo, así que solo no basta: un cliente que lee un octeto antes de que venza retiene
   la conexión sin fin. Por eso cada 16 KiB tiene su plazo total, y se escribe en piezas de 4 KiB
   para que ninguna llamada a `send` pueda durar más que eso. En macOS el plazo de `send` se reinicia

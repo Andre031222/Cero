@@ -122,7 +122,7 @@ std::expected<std::string, Rechazo> exactos(Lector& lector, std::size_t cuantos)
     return datos;
 }
 
-std::expected<std::string, Rechazo> por_trozos(Lector& lector) {
+std::expected<std::string, Rechazo> por_trozos(Lector& lector, std::size_t max_cuerpo) {
     std::string cuerpo;
     while (true) {
         const auto cabecera = linea(lector);
@@ -135,6 +135,7 @@ std::expected<std::string, Rechazo> por_trozos(Lector& lector) {
         const auto leido = std::from_chars(medida.data(), fin, tamano, 16);
         if (leido.ec != std::errc{} || leido.ptr != fin) return Fallo{Rechazo::MalFormada};
 
+        if (tamano > max_cuerpo - cuerpo.size()) return Fallo{Rechazo::CuerpoGrande};
         if (tamano == 0) {
             for (auto t = linea(lector); !t || !t->empty(); t = linea(lector)) {
                 if (!t) return Fallo{t.error()};
@@ -150,7 +151,7 @@ std::expected<std::string, Rechazo> por_trozos(Lector& lector) {
     }
 }
 
-std::expected<void, Rechazo> leer_cuerpo(Lector& lector, Peticion& p) {
+std::expected<void, Rechazo> leer_cuerpo(Lector& lector, Peticion& p, std::size_t max_cuerpo) {
     const auto te = p.cabecera("transfer-encoding");
     const auto cl = p.cabecera("content-length");
     if (te) {
@@ -158,7 +159,7 @@ std::expected<void, Rechazo> leer_cuerpo(Lector& lector, Peticion& p) {
         const auto coma = te->rfind(',');
         const auto ultima = recortar(coma == std::string_view::npos ? *te : te->substr(coma + 1));
         if (minuscula(ultima) != "chunked") return Fallo{Rechazo::MalFormada};
-        auto cuerpo = por_trozos(lector);
+        auto cuerpo = por_trozos(lector, max_cuerpo);
         if (!cuerpo) return Fallo{cuerpo.error()};
         p.cuerpo = std::move(*cuerpo);
         return {};
@@ -169,6 +170,7 @@ std::expected<void, Rechazo> leer_cuerpo(Lector& lector, Peticion& p) {
     const auto fin = cl->data() + cl->size();
     const auto leido = std::from_chars(cl->data(), fin, largo);
     if (leido.ec != std::errc{} || leido.ptr != fin) return Fallo{Rechazo::MalFormada};
+    if (largo > max_cuerpo) return Fallo{Rechazo::CuerpoGrande};
 
     auto cuerpo = exactos(lector, static_cast<std::size_t>(largo));
     if (!cuerpo) return Fallo{cuerpo.error()};
@@ -200,14 +202,14 @@ bool metodo_conocido(std::string_view metodo) {
     return std::ranges::find(kMetodos, metodo) != kMetodos.end();
 }
 
-std::expected<Peticion, Rechazo> leer(Lector& lector) {
+std::expected<Peticion, Rechazo> leer(Lector& lector, std::size_t max_cuerpo) {
     Peticion p;
     const auto inicial = linea(lector);
     if (!inicial) return Fallo{inicial.error()};
     if (auto r = partir_inicial(*inicial, p); !r) return Fallo{r.error()};
     if (auto r = leer_cabeceras(lector, p); !r) return Fallo{r.error()};
     if (p.version == "HTTP/1.1" && !p.cabecera("host")) return Fallo{Rechazo::MalFormada};
-    if (auto r = leer_cuerpo(lector, p); !r) return Fallo{r.error()};
+    if (auto r = leer_cuerpo(lector, p, max_cuerpo); !r) return Fallo{r.error()};
     return p;
 }
 

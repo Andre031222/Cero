@@ -51,6 +51,7 @@ std::vector<Trama> tramas_de_cabeceras(std::uint32_t flujo, std::string_view blo
 cero::Peticion armar(std::vector<Cabecera> cabeceras, std::string cuerpo);
 
 void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
-            std::optional<cero::Peticion> primera = std::nullopt, cero::Plazos plazos = {});
+            std::optional<cero::Peticion> primera = std::nullopt, cero::Plazos plazos = {},
+            cero::Limites limites = {});
 
 }

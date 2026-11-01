@@ -164,6 +164,11 @@ Servidor&& Servidor::plazos(Plazos p) && {
     return std::move(*this);
 }
 
+Servidor&& Servidor::limites(Limites l) && {
+    limites_ = l;
+    return std::move(*this);
+}
+
 Servidor&& Servidor::tras_tls() && {
     seguro_ = true;
     return std::move(*this);
@@ -287,8 +292,8 @@ Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view cam
 }
 
 int Servidor::escuchar(unsigned short puerto) const {
-    if (!plazos_.validos()) {
-        linea("cero · los plazos tienen que ser mayores que cero");
+    if (!plazos_.validos() || !limites_.validos()) {
+        linea("cero · los plazos y los topes tienen que ser mayores que cero");
         return 1;
     }
     const int oyente = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -315,19 +320,19 @@ int Servidor::escuchar(unsigned short puerto) const {
                                  (quien.sin_addr.s_addr >> 24) & 0xff);
         sin_sigpipe(cliente);
         try {
-            std::thread{[this, cliente, desde, plazos = plazos_] {
+            std::thread{[this, cliente, desde, plazos = plazos_, limites = limites_] {
                 plazo_de_lectura(cliente, plazos.inactividad);
                 http2::DesdeSocket lector{cliente};
                 const http2::Atender atender = [this, &desde](const Peticion& p) {
                     return responder(p, desde);
                 };
                 if (lector.asomar(http2::kPreambulo)) {
-                    http2::servir(lector, http2::Ajustes{}, atender, std::nullopt, plazos);
+                    http2::servir(lector, http2::Ajustes{}, atender, std::nullopt, plazos, limites);
                     ::close(cliente);
                     return;
                 }
                 while (lector.esperar(plazos.inactividad)) {
-                    auto peticion = leer(lector);
+                    auto peticion = leer(lector, limites.cuerpo);
                     if (!peticion) {
                         const auto fallo = Respuesta::codigo(estado_de(peticion.error()));
                         mandar_todo(cliente, escribir(fallo, false, true), plazos);
@@ -335,7 +340,7 @@ int Servidor::escuchar(unsigned short puerto) const {
                     }
                     if (http2::pide_h2c(*peticion)) {
                         http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion),
-                                      plazos);
+                                      plazos, limites);
                         break;
                     }
                     const auto conexion = peticion->cabecera("connection").value_or("");
