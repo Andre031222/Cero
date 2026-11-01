@@ -5,15 +5,49 @@ traducción del código de otro lenguaje: la referencia son los requisitos numer
 los mismos vectores de conformidad, que son bytes sobre un socket y no saben en qué lenguaje está
 escrito quien responde.
 
-**Estado: hito 1.** HTTP/1.1 y ruteo. **23 de 23 vectores del banco** y 31 pruebas propias.
+**Estado: hito 1.** HTTP/1.1 y ruteo. **23 de 23 vectores del banco** y 33 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
+| 1 bis | Un solo archivo | `python3 -m cero.empaquetar` · 2 pruebas |
 
 ## Usarlo
 
-Solo la biblioteca estándar, Python 3.12 o posterior.
+**Sin pip, sin venv, sin requirements.txt.** Cero solo usa la biblioteca estándar, Python 3.12 o
+posterior, así que no hay nada que instalar ni que aislar. Una aplicación y el framework caben en un
+solo archivo, el equivalente de `java -jar app.jar`:
+
+```bash
+python3 -m cero.empaquetar miapp/ app.pyz app:main
+python3 app.pyz 8080
+```
+
+`cero.empaquetar` está hecho sobre `zipapp`: copia la carpeta de la aplicación y el paquete `cero`
+y los cierra en un `.pyz`. La entrada es `modulo:funcion`; si se omite, la carpeta tiene que traer
+su `__main__.py`. Deja fuera `__pycache__` y los archivos ocultos, para que un `.env` no viaje
+dentro. La prueba lo arranca con `python3 -I`, que no mira ni `site-packages` ni un venv: si
+funciona así, no depende de nada instalado.
+
+`miapp/app.py` registra sus rutas a mano y arranca el servidor:
+
+```python
+import sys
+
+from cero.ruta import Router
+from cero.servidor import Servidor
+
+
+def main():
+    router = Router()
+    router.agregar("GET", "/usuarios/{id}", lambda peticion: "usuario " + peticion.variables["id"])
+    Servidor(router).escuchar(int(sys.argv[1]))
+```
+
+Una acción devuelve una cadena (texto plano), unos bytes (`application/octet-stream`), `None`
+(204) o una `Respuesta` hecha a mano.
+
+Las pruebas y el banco:
 
 ```bash
 cd python
@@ -21,20 +55,6 @@ python3 -I -m unittest discover -s pruebas -t .   # las pruebas propias
 python3 -m cero.conforme 8777                     # y el servidor del banco
 python3 ../spec/banco/correr.py 127.0.0.1 8777
 ```
-
-Una aplicación registra sus rutas a mano y arranca el servidor:
-
-```python
-from cero.ruta import Router
-from cero.servidor import Servidor
-
-router = Router()
-router.agregar("GET", "/usuarios/{id}", lambda peticion: "usuario " + peticion.variables["id"])
-Servidor(router).escuchar(8080)
-```
-
-Una acción devuelve una cadena (texto plano), unos bytes (`application/octet-stream`), `None`
-(204) o una `Respuesta` hecha a mano.
 
 ## La decisión de concurrencia: un hilo del sistema por conexión
 
