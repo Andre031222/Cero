@@ -91,12 +91,17 @@ igual de ciego.
 |---|---|---|---|---|
 | `java/` | 23 de 23 | 11 de 11 | 145 de 146 | los 182 |
 | `rust/` | 23 de 23 | 11 de 11 | 145 de 146 | los 182 |
-| `c++/` | 23 de 23 | 11 de 11 | 145 de 146 | 157 citados en pruebas |
+| `c++/` | 23 de 23 | 11 de 11 | 145 de 146 | los 175 aplicables |
 | `python/` | 23 de 23 | 3 de 3, los de HTTP/1.1 | no aplica: sin HTTP/2 | 83 citados en pruebas |
 | `php/` | por empezar | por empezar | por empezar | por empezar |
 
 El fallo que les queda a las tres que hablan HTTP/2 es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
 dedicado a h2c, y en uno compartido con HTTP/1.1 pide la respuesta equivocada.
+
+Los 175 de C++ son los 182 menos siete que se retiran por no poderse observar desde fuera:
+`RUT-032` a `RUT-034`, `RUT-036` y `RUT-037` (la forma del API del contenedor de dependencias),
+`SES-011` y `SES-013`. `RUT-035`, el ciclo de dependencias, se queda. Java y Rust los cumplen
+también, y por eso su columna sigue diciendo 182.
 
 Rust pasó 22 de los 23 vectores a la primera. El que falló —`Content-Length` y `Transfer-Encoding`
 juntos, RFC 9112 §6.3— es una precondición de contrabando de peticiones, y lo encontró el contrato

@@ -11,9 +11,12 @@ quien responde. Sin dependencias de terceros en ejecución, en ninguna implement
 |---|---|---|---|---|---|
 | [Java](java/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 182 de 182 |
 | [Rust](rust/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 182 de 182 |
-| [C++](c++/) | en marcha, hito 11 | 23 de 23 | 11 de 11 | 145 de 146 | 157 citados en pruebas, de 182 |
+| [C++](c++/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 175 de 175 aplicables |
 | [Python](python/) | en marcha, hito 4 | 23 de 23 | 3 de 3, sin h2 | no aplica, sin h2 | 83 citados en pruebas, de 182 |
 | PHP | planeada | por empezar | por empezar | por empezar | por empezar |
+
+C++ no cita siete requisitos que se retiran por no poderse observar desde fuera —`RUT-032` a
+`RUT-034`, `RUT-036`, `RUT-037`, `SES-011` y `SES-013`—; de ahí 175 y no 182.
 
 El único fallo de h2spec es el mismo en las tres que hablan HTTP/2: asume un puerto dedicado a
 h2c. Python todavía no habla h2, así que de los once ataques corre los tres de HTTP/1.1. Los ataques,
@@ -306,9 +309,9 @@ Lo que dice que el contrato no es una transcripción de Java: diez de esos requi
 `H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
 cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el contrato y no `java/`.
 
-[`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 11 de 11 en los ataques, 145 de 146 en h2spec
-y 157 requisitos citados en sus pruebas; le faltan el contenedor de dependencias y las sesiones en
-tabla.
+[`c++/`](c++/) es la tercera que lo cumple: 23 de 23 en el banco, 11 de 11 en los ataques, 145 de
+146 en h2spec y los 175 requisitos aplicables citados en sus pruebas —los otros siete se retiran
+por no poderse observar desde fuera—, con las sesiones compartidas en disco en vez de en una tabla.
 
 [`python/`](python/) va por el hito 4: HTTP/1.1, ruteo, sesiones, seguridad transversal y
 observabilidad, sin HTTP/2 todavía. Da 23 de 23 en el banco y 3 de 3 en los ataques de HTTP/1.1
@@ -321,7 +324,7 @@ viene PHP, escrito, como las demás, contra los requisitos y no contra el códig
 ```text
 java/         Primera implementación: los siete módulos — 182 de 182
 rust/         Segunda implementación del contrato — 182 de 182
-c++/          Tercera implementación, en marcha
+c++/          Tercera implementación del contrato — 175 de 175 aplicables
 python/       Cuarta implementación, en marcha: hito 4, sin HTTP/2
 spec/         El contrato y su banco, neutrales respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida

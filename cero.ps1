@@ -63,7 +63,7 @@ function Classpath([string] $modulo) {
 $Implementaciones = @(
     'java|java|mvn java|mvn -B install||java::-cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme|||h2'
     'rust|rust|cargo|cargo test --all ;; cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe::|cero-http\tests cero-data\tests|159|h2'
-    'c++|c++|cmake ctest|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release ;; cmake --build %OBJ% --config Release -j ;; ctest --test-dir %OBJ% -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|157|h2'
+    'c++|c++|cmake ctest|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release ;; cmake --build %OBJ% --config Release -j ;; ctest --test-dir %OBJ% -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|175|h2'
     'python|python|python3|%CERO_PY% -B -I -m unittest discover -s pruebas -t . -v||%CERO_PY%::-B -m cero.conforme|pruebas|83|'
 )
 

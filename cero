@@ -201,7 +201,7 @@ version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<
 IMPLEMENTACIONES='
 java|java|mvn java|mvn -B install||java -cp cero-http/target/classes:cero-http/target/test-classes cero.http.Conforme|||h2
 rust|rust|cargo|cargo test --all && cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|./target/release/conforme|cero-http/tests cero-data/tests|159|h2
-c++|c++|cmake ctest|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release && cmake --build "$OBJ" -j && ctest --test-dir "$OBJ" --output-on-failure||"$OBJ/conforme"|pruebas|157|h2
+c++|c++|cmake ctest|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release && cmake --build "$OBJ" -j && ctest --test-dir "$OBJ" --output-on-failure||"$OBJ/conforme"|pruebas|175|h2
 python|python|python3|python3 -B -I -m unittest discover -s pruebas -t . -v||python3 -B -m cero.conforme|--include=*.py pruebas|83|
 '
 

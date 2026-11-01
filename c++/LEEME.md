@@ -4,15 +4,17 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 11.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
-`Upgrade: h2c` en el mismo puerto, con control de flujo de salida y las defensas de HTTP/2 Bomb.
-**23 de 23 vectores del banco**, **11 de 11 en los ataques**, **los 32 del apéndice C del RFC 7541**,
-**145 de 146 en h2spec** —el que falta es el mismo que en Java y en Rust— y 203 pruebas propias.
+**Estado: hito 13, y el contrato está cubierto entero.** El framework sobre HTTP/1.1 y HTTP/2 en
+claro (h2c) por prefacio y por `Upgrade: h2c` en el mismo puerto, con control de flujo de salida,
+las defensas de HTTP/2 Bomb, middleware, manejo de fallos, contenedor de dependencias, validación y
+sesiones en disco. **23 de 23 vectores del banco**, **11 de 11 en los ataques**, **los 32 del
+apéndice C del RFC 7541**, **145 de 146 en h2spec** —el que falta es el mismo que en Java y en
+Rust— y **175 de los 175 requisitos aplicables** citados por una prueba.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
-| 2 | Sesiones | `SES-001`–`SES-011` · 11 pruebas |
+| 2 | Sesiones | `SES-001`–`SES-010` · 11 pruebas |
 | 3 | Seguridad transversal | `SEG-001`–`SEG-026` menos el token · 15 pruebas |
 | 4 | Observabilidad | `OBS-001`–`OBS-022` menos dos del pipeline · 15 pruebas |
 | 5 | El framework montado | pipeline completo · 15 pruebas |
@@ -22,10 +24,20 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 6 de robustez |
 | 11 | Plazos, topes y HTTP/2 Bomb | `H2-050`–`H2-055`, `HTTP-024`–`HTTP-026` · 11 de 11 en `ataques.py` · 11 pruebas |
+| 12 | Ruteo, fallos, dependencias y validación | `RUT-014`–`RUT-031`, `RUT-035`, `SEG-027`, `SEG-028` · 24 pruebas |
+| 13 | Sesiones en disco, y `cero-data` | `SES-012` entre almacenes que no comparten memoria · **175 de 175** · 8 pruebas |
 
 ## Cuántos requisitos citan las pruebas
 
-La cuenta que hace la integración continua, desde `c++/`: **157** requisitos distintos.
+La cuenta que hace la integración continua, desde `c++/`: **175** requisitos distintos, que son
+todos los aplicables.
+
+El contrato tiene 182. Siete se retiran por no poderse observar desde fuera, y aquí no se citan:
+`RUT-032`, `RUT-033`, `RUT-034`, `RUT-036` y `RUT-037` hablan de la forma del API del contenedor
+de dependencias; `SES-011`, de que consultar la cookie pendiente la marque como emitida; `SES-013`,
+del nombre de una tabla. `RUT-035` —detectar un ciclo— sí se queda: un ciclo que cuelga el
+proceso se ve desde fuera. La prueba que antes citaba `SES-011` sigue, y ahora cita `SES-008`, que
+es lo que se ve: la cookie sale una vez.
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
@@ -150,9 +162,44 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   deshacerlo no es portable. Las métricas van por patrón y no por URL (`OBS-014`).
 - **`sesion.hpp`.** Reloj de pared y no `steady_clock`, porque una sesión en una tabla la leen dos
   instancias. El candado va dentro de cada sesión y no alrededor del almacén (`SES-007`).
-  `cookie_pendiente()` no es `const`: consultarla la marca como emitida (`SES-011`). El identificador
-  sale de la fuente del sistema operativo (`SES-002`). `Sesiones` es una interfaz para que el nombre
-  de la tabla sea asunto de quien la implementa (`SES-013`).
+  `cookie_pendiente()` no es `const`: consultarla la marca como emitida. El identificador
+  sale de la fuente del sistema operativo (`SES-002`). `Sesiones` es una interfaz, y hay dos: el
+  `Almacen` en memoria y `AlmacenEnDisco` en `cero-data`. `Caducidad` es la regla que comparten, y
+  `Sesion::nueva` y `renovar_id` lo que los dos necesitan para crear y rotar.
+- **`fallo.hpp` y `servidor.hpp`.** Una acción devuelve `Respuesta`, texto, `Json` o nada, y
+  `accion` lo convierte (`RUT-019`, `RUT-020`); devolver nada es 204. Para fallar **lanza**: es lo
+  que C++ tiene, y `Fallo` es el tipo hecho para eso. Un `Fallo` por debajo de 500 conserva estado
+  y mensaje (`RUT-026`); de 500 en adelante, y cualquier otra excepción —estándar o no—, el cliente
+  recibe `{"error":"error interno","ruta":"/patrón"}` y el mensaje va al log (`RUT-024`, `RUT-025`).
+  Antes de este hito una excepción en una acción subía hasta el hilo de la conexión y, sin nadie que
+  la atrapara, llamaba a `std::terminate`: una petición tumbaba el servidor. `al_fallar` decide antes
+  que la regla por defecto, incluso sobre un 500 (`RUT-027`), y si también lanza se aplica la regla.
+  `usar` compone el middleware por índice, en el orden en que se declaró (`RUT-028`), y corre
+  también sin ruta (`RUT-029`); `por_defecto` atiende lo no enrutado sin tocar el 405 (`RUT-030`,
+  `RUT-031`). Lo que lance un middleware se atrapa en `responder`. `variable_como<T>` acepta los
+  enteros, porque es lo que `from_chars` da igual en libc++ y en libstdc++, y exige consumir el
+  segmento entero: `7x` no es 7 (`RUT-015`). `cuerpo_como<T>` pide a `T` un `de_json`: no hay
+  reflexión, y la forma de leerse es cosa del tipo. JSON mal formado es 400; bien formado y con
+  otra forma, 422 (`RUT-017`).
+- **`dependencias.hpp`.** Cada servicio se registra con la función que lo construye, se guarda por
+  `type_index` y se construye una vez. Los ciclos se detectan con una pila por hilo, que lleva
+  también qué contenedor resuelve, y la fábrica corre fuera del candado, como en Rust (`RUT-035`).
+  No va dentro del `Contexto`: una acción que lo necesite lo captura.
+- **`validacion.hpp`.** 422 y no 400 (`SEG-028`), con el motivo de cada campo; se para en la primera
+  regla que falla de cada campo, y el cuerpo vuelve tal cual (`SEG-027`). Los caracteres se cuentan
+  como puntos de código UTF-8, no como octetos. `Json::entero` ya no convierte un número que no cabe:
+  con 2^63 el `static_cast` era comportamiento indefinido, y en ARM devolvía un entero falso.
+- **`cero-data/disco.hpp`.** `SES-012` pide que una sesión abierta en una instancia se reconozca en
+  otra. Sin dependencias no hay base de datos, pero hay sistema de archivos: un archivo por sesión
+  en una carpeta que configura la aplicación. Lo que la respalda es una prueba con dos servidores
+  que no comparten nada salvo la carpeta. El identificador llega de la cookie, así que se exige
+  hexadecimal de 64 antes de tocar el disco: si no, `../` lee sesiones de otra carpeta. La carpeta es
+  0700 y cada archivo 0600. Se escribe en un provisional con `O_EXCL` y se renombra, que en POSIX es
+  atómico: quien lee ve la versión vieja o la nueva, nunca media. Como en Rust: se guarda solo si
+  cambió, rotar escribe el nuevo antes de borrar el viejo, y la caducada se borra al tocarla. Lo que
+  no hace: dos peticiones que escriben a la vez la misma sesión desde dos instancias se pisan, y gana
+  la última; el candado de `SES-007` es por proceso. Una carpeta en red (NFS) sirve para varias
+  máquinas solo si su `rename` es atómico.
 - **`estaticos.cpp`.** Tras resolver enlaces se comprueba que el camino sigue dentro de la raíz.
 - **`json.hpp`.** Propio, porque una biblioteca de JSON sería una dependencia escondida.
 - **`formato.hpp`.** `formato(...)` y `linea(...)` sobre `<format>`, porque `std::print` pide GCC 14.
@@ -265,8 +312,7 @@ saberlo antes de desplegar: una conexión keep-alive ociosa se cierra a los 30 s
 
 ## Lo que falta
 
-Los hitos 11 y 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: el contenedor de dependencias y las sesiones en tabla.
+Del contrato, nada. Los siete requisitos retirados están arriba.
 
 El único fallo que queda en h2spec es el `3.5.2`, que no aplica en un puerto compartido
 (`spec/README.md`), igual que en Java y en Rust.

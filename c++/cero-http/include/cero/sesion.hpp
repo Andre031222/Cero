@@ -13,6 +13,14 @@
 namespace cero {
 
 using Reloj = std::chrono::system_clock;
+using Atributos = std::map<std::string, std::string, std::less<>>;
+
+struct Caducidad {
+    std::chrono::seconds inactividad;
+    std::optional<std::chrono::seconds> vida_maxima;
+
+    bool vencida(Reloj::time_point creada, Reloj::time_point tocada) const;
+};
 
 class Sesion {
 public:
@@ -20,7 +28,7 @@ public:
     bool viva() const { return viva_; }
     Reloj::time_point creada() const { return creada_; }
     Reloj::time_point tocada() const { return tocada_; }
-    const std::map<std::string, std::string, std::less<>>& atributos() const { return atributos_; }
+    const Atributos& atributos() const { return atributos_; }
 
     bool poner(std::string_view clave, std::string_view valor);
     std::optional<std::string_view> leer(std::string_view clave) const;
@@ -28,15 +36,15 @@ public:
 
     std::optional<std::string> cookie_pendiente();
     bool sucia();
+    std::optional<std::string> renovar_id();
 
-    static std::shared_ptr<Sesion> rescatada(std::string_view id,
-                                             std::map<std::string, std::string, std::less<>> atributos,
+    static std::shared_ptr<Sesion> nueva();
+    static std::shared_ptr<Sesion> rescatada(std::string_view id, Atributos atributos,
                                              Reloj::time_point creada, Reloj::time_point tocada);
 
 private:
-    friend class Almacen;
     std::string id_;
-    std::map<std::string, std::string, std::less<>> atributos_;
+    Atributos atributos_;
     Reloj::time_point creada_{};
     Reloj::time_point tocada_{};
     bool viva_ = true;
@@ -65,20 +73,17 @@ public:
 class Almacen final : public Sesiones {
 public:
     Almacen(std::chrono::seconds inactividad, std::optional<std::chrono::seconds> vida_maxima)
-        : inactividad_(inactividad), vida_maxima_(vida_maxima) {}
+        : caducidad_{inactividad, vida_maxima} {}
 
     std::optional<Guardada> recuperar(std::optional<std::string_view> id) override;
     std::optional<Guardada> crear() override;
     std::optional<std::string> rotar(const Guardada& g) override;
     std::size_t cuantas() const override;
 
-    bool caducada(Reloj::time_point creada, Reloj::time_point tocada) const;
-
 private:
     mutable std::shared_mutex candado_;
     std::map<std::string, Guardada, std::less<>> sesiones_;
-    std::chrono::seconds inactividad_;
-    std::optional<std::chrono::seconds> vida_maxima_;
+    Caducidad caducidad_;
 };
 
 std::optional<std::string> identificador();

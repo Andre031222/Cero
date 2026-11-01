@@ -28,6 +28,10 @@ target_include_directories(cero-http PUBLIC cero-http/include)
 find_package(Threads REQUIRED)
 target_link_libraries(cero-http PUBLIC Threads::Threads)
 
+add_library(cero-data cero-data/src/disco.cpp)
+target_include_directories(cero-data PUBLIC cero-data/include)
+target_link_libraries(cero-data PUBLIC cero-http)
+
 add_executable(conforme cero-http/src/conforme.cpp)
 target_link_libraries(conforme PRIVATE cero-http)
 
@@ -38,3 +42,7 @@ foreach(suite conformidad dependencias despacho estaticos fallos http2_control_f
     target_link_libraries(pruebas-${suite} PRIVATE cero-http)
     add_test(NAME ${suite} COMMAND pruebas-${suite})
 endforeach()
+add_executable(pruebas-sesiones_disco pruebas/sesiones_disco.cpp)
+target_include_directories(pruebas-sesiones_disco PRIVATE pruebas)
+target_link_libraries(pruebas-sesiones_disco PRIVATE cero-data)
+add_test(NAME sesiones_disco COMMAND pruebas-sesiones_disco)

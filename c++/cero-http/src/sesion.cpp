@@ -14,34 +14,36 @@
 
 #include "cero/formato.hpp"
 
+using namespace std;
+
 namespace cero {
 
-std::optional<std::string> identificador() {
-    std::array<unsigned char, 32> crudo{};
-    std::FILE* fuente = std::fopen("/dev/urandom", "rb");
-    if (fuente == nullptr) return std::nullopt;
-    const auto leidos = std::fread(crudo.data(), 1, crudo.size(), fuente);
-    std::fclose(fuente);
-    if (leidos != crudo.size()) return std::nullopt;
+optional<string> identificador() {
+    array<unsigned char, 32> crudo{};
+    FILE* fuente = fopen("/dev/urandom", "rb");
+    if (fuente == nullptr) return nullopt;
+    const auto leidos = fread(crudo.data(), 1, crudo.size(), fuente);
+    fclose(fuente);
+    if (leidos != crudo.size()) return nullopt;
 
-    std::string id;
+    string id;
     id.reserve(crudo.size() * 2);
     for (unsigned char b : crudo) id += formato("{:02x}", b);
     return id;
 }
 
-bool Sesion::poner(std::string_view clave, std::string_view valor) {
+bool Sesion::poner(string_view clave, string_view valor) {
     if (!viva_) return false;
-    atributos_[std::string{clave}] = std::string{valor};
+    atributos_[string{clave}] = string{valor};
     tocada_ = Reloj::now();
     sucia_ = true;
     return true;
 }
 
-std::optional<std::string_view> Sesion::leer(std::string_view clave) const {
-    if (!viva_) return std::nullopt;
+optional<string_view> Sesion::leer(string_view clave) const {
+    if (!viva_) return nullopt;
     const auto i = atributos_.find(clave);
-    if (i == atributos_.end()) return std::nullopt;
+    if (i == atributos_.end()) return nullopt;
     return i->second;
 }
 
@@ -51,19 +53,38 @@ void Sesion::invalidar() {
     sucia_ = true;
 }
 
-std::optional<std::string> Sesion::cookie_pendiente() {
-    if (!cookie_pendiente_) return std::nullopt;
+optional<string> Sesion::cookie_pendiente() {
+    if (!cookie_pendiente_) return nullopt;
     cookie_pendiente_ = false;
     return id_;
 }
 
-bool Sesion::sucia() { return std::exchange(sucia_, false); }
+bool Sesion::sucia() { return exchange(sucia_, false); }
 
-std::shared_ptr<Sesion> Sesion::rescatada(std::string_view id,
-                                          std::map<std::string, std::string, std::less<>> atributos,
+optional<string> Sesion::renovar_id() {
+    if (!viva_) return nullopt;
+    auto id = identificador();
+    if (!id) return nullopt;
+    id_ = *id;
+    cookie_pendiente_ = true;
+    sucia_ = true;
+    return id;
+}
+
+shared_ptr<Sesion> Sesion::nueva() {
+    const auto id = identificador();
+    if (!id) return nullptr;
+    auto s = make_shared<Sesion>();
+    s->id_ = *id;
+    s->creada_ = Reloj::now();
+    s->tocada_ = s->creada_;
+    return s;
+}
+
+shared_ptr<Sesion> Sesion::rescatada(string_view id, Atributos atributos,
                                           Reloj::time_point creada, Reloj::time_point tocada) {
-    auto s = std::make_shared<Sesion>();
-    s->id_ = std::string{id};
+    auto s = make_shared<Sesion>();
+    s->id_ = string{id};
     s->atributos_ = std::move(atributos);
     s->creada_ = creada;
     s->tocada_ = tocada;
@@ -72,87 +93,78 @@ std::shared_ptr<Sesion> Sesion::rescatada(std::string_view id,
     return s;
 }
 
-bool Almacen::caducada(Reloj::time_point creada, Reloj::time_point tocada) const {
+bool Caducidad::vencida(Reloj::time_point creada, Reloj::time_point tocada) const {
     const auto ahora = Reloj::now();
-    if (ahora - tocada > inactividad_) return true;
-    return vida_maxima_ && ahora - creada > *vida_maxima_;
+    if (ahora - tocada > inactividad) return true;
+    return vida_maxima && ahora - creada > *vida_maxima;
 }
 
-std::optional<Guardada> Almacen::recuperar(std::optional<std::string_view> id) {
-    if (!id) return std::nullopt;
-    std::optional<Guardada> encontrada;
+optional<Guardada> Almacen::recuperar(optional<string_view> id) {
+    if (!id) return nullopt;
+    optional<Guardada> encontrada;
     {
-        std::shared_lock lectura{candado_};
+        shared_lock lectura{candado_};
         const auto i = sesiones_.find(*id);
-        if (i == sesiones_.end()) return std::nullopt;
+        if (i == sesiones_.end()) return nullopt;
         encontrada = i->second;
     }
     const auto g = encontrada->tomar();
     const auto& s = *encontrada->sesion;
-    if (s.viva() && !caducada(s.creada(), s.tocada())) return encontrada;
+    if (s.viva() && !caducidad_.vencida(s.creada(), s.tocada())) return encontrada;
 
-    std::unique_lock escritura{candado_};
-    sesiones_.erase(std::string{*id});
-    return std::nullopt;
+    unique_lock escritura{candado_};
+    sesiones_.erase(string{*id});
+    return nullopt;
 }
 
-std::optional<Guardada> Almacen::crear() {
-    const auto id = identificador();
-    if (!id) return std::nullopt;
-    auto sesion = std::make_shared<Sesion>();
-    sesion->id_ = *id;
-    sesion->creada_ = Reloj::now();
-    sesion->tocada_ = sesion->creada_;
-    const Guardada guardada{std::move(sesion), std::make_shared<std::mutex>()};
+optional<Guardada> Almacen::crear() {
+    auto sesion = Sesion::nueva();
+    if (!sesion) return nullopt;
+    const Guardada guardada{std::move(sesion), make_shared<mutex>()};
 
-    std::unique_lock escritura{candado_};
-    sesiones_.emplace(*id, guardada);
+    unique_lock escritura{candado_};
+    sesiones_.emplace(guardada.sesion->id(), guardada);
     return guardada;
 }
 
-std::optional<std::string> Almacen::rotar(const Guardada& g) {
-    std::string viejo;
-    std::string nuevo;
+optional<string> Almacen::rotar(const Guardada& g) {
+    string viejo;
+    optional<string> nuevo;
     {
         const auto tomado = g.tomar();
-        if (!g.sesion->viva()) return std::nullopt;
-        const auto id = identificador();
-        if (!id) return std::nullopt;
-        viejo = g.sesion->id_;
-        nuevo = *id;
-        g.sesion->id_ = nuevo;
-        g.sesion->cookie_pendiente_ = true;
-        g.sesion->sucia_ = true;
+        viejo = g.sesion->id();
+        nuevo = g.sesion->renovar_id();
     }
-    std::unique_lock escritura{candado_};
+    if (!nuevo) return nullopt;
+    unique_lock escritura{candado_};
     sesiones_.erase(viejo);
-    sesiones_.emplace(nuevo, g);
+    sesiones_.emplace(*nuevo, g);
     return nuevo;
 }
 
-std::size_t Almacen::cuantas() const {
-    std::shared_lock lectura{candado_};
+size_t Almacen::cuantas() const {
+    shared_lock lectura{candado_};
     return sesiones_.size();
 }
 
-std::string cabecera_cookie(std::string_view id, bool seguro) {
+string cabecera_cookie(string_view id, bool seguro) {
     auto c = formato("cero_sid={}; Path=/; HttpOnly; SameSite=Lax", id);
     if (seguro) c += "; Secure";
     return c;
 }
 
-std::optional<std::string_view> id_de_cookie(std::optional<std::string_view> cabecera) {
-    if (!cabecera) return std::nullopt;
-    std::string_view resto = *cabecera;
+optional<string_view> id_de_cookie(optional<string_view> cabecera) {
+    if (!cabecera) return nullopt;
+    string_view resto = *cabecera;
     while (!resto.empty()) {
         const auto fin = resto.find(';');
-        std::string_view par = resto.substr(0, fin);
+        string_view par = resto.substr(0, fin);
         while (par.starts_with(' ')) par.remove_prefix(1);
         if (par.starts_with("cero_sid=")) return par.substr(9);
-        if (fin == std::string_view::npos) break;
+        if (fin == string_view::npos) break;
         resto.remove_prefix(fin + 1);
     }
-    return std::nullopt;
+    return nullopt;
 }
 
 }
