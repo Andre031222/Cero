@@ -39,6 +39,8 @@ class Peticion:
     segura: bool = False
     cliente: str = ""
     datos: object = None
+    patron: str = None
+    usuario: str = None
     almacen: object = field(default=None, repr=False)
     abierta: object = field(default=None, repr=False)
     buscada: bool = field(default=False, repr=False)

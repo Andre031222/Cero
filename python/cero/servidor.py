@@ -1,11 +1,10 @@
 import errno
 import io
 import socket
-import sys
 import threading
 import time
-import traceback
 
+from cero.observabilidad import Registro
 from cero.peticion import (LIMITE_CUERPO, METODOS, Rechazo, encuadre, leer_cabecera,
                            leer_cuerpo)
 from cero.respuesta import Respuesta, como_respuesta, serializar, texto
@@ -38,13 +37,17 @@ class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
                  plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
-                 cabeceras=None, cors=None, csrf=None, limitador=None):
+                 cabeceras=None, cors=None, csrf=None, limitador=None, registro=None,
+                 metricas=None, acceso=None):
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
         self.cabeceras = Cabeceras() if cabeceras is None else cabeceras
         self.cors = cors
         self.csrf = csrf
         self.limitador = limitador
+        self.registro = Registro() if registro is None else registro
+        self.metricas = metricas
+        self.acceso = acceso
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
@@ -85,16 +88,18 @@ class Servidor:
         peticion.almacen = self.sesiones
         try:
             respuesta = self._despachar(peticion)
-        except Exception:
-            traceback.print_exc(file=sys.stderr)
+        except Exception as fallo:
+            self.registro.escribir("ERROR", "cero", "{} {} falló", peticion.verbo, peticion.camino,
+                                   excepcion=fallo)
             return texto(500, f"error interno en {peticion.verbo} {peticion.camino}")
         sesion = peticion.abierta
         if sesion is None:
             return respuesta
         try:
             sesion.almacen.guardar(sesion)
-        except Exception:
-            traceback.print_exc(file=sys.stderr)
+        except Exception as fallo:
+            self.registro.escribir("ERROR", "cero", "{} {}: no se pudo guardar la sesión",
+                                   peticion.verbo, peticion.camino, excepcion=fallo)
             return texto(500, "error interno al guardar la sesión")
         id = sesion.cookie_pendiente()
         if id is None:
@@ -113,6 +118,7 @@ class Servidor:
         if self.csrf is not None and not self.csrf.admite(peticion):
             return texto(403, "token CSRF ausente o inválido")
         peticion.variables = resultado.variables
+        peticion.patron = resultado.patron
         return como_respuesta(resultado.accion(peticion))
 
     def escuchar(self, puerto, anfitrion="127.0.0.1"):
@@ -166,10 +172,12 @@ class Servidor:
 
     def _una(self, conexion, reloj, entrada, cliente):
         reloj.limite = time.monotonic() + self.plazo_cabecera
+        peticion, inicio = None, time.monotonic()
         try:
             peticion = leer_cabecera(entrada)
             if peticion is None:
                 return False
+            inicio = time.monotonic()
             peticion.cliente = cliente
             forma = encuadre(peticion, self.limite_cuerpo)
             reloj.limite = time.monotonic() + self.plazo_cuerpo
@@ -182,22 +190,41 @@ class Servidor:
                     conexion.sendall(b"HTTP/1.1 100 Continue\r\n\r\n")
             leer_cuerpo(entrada, peticion, forma, self.limite_cuerpo)
         except Rechazo as rechazo:
-            _rechazar(conexion, self._blindar(texto(rechazo.estado, rechazo.motivo)))
+            self._cortar(conexion, peticion, inicio, texto(rechazo.estado, rechazo.motivo))
             return False
         except TimeoutError:
-            _rechazar(conexion, self._blindar(texto(408, "la petición tardó demasiado")))
+            self._cortar(conexion, peticion, inicio, texto(408, "la petición tardó demasiado"))
             return False
         seguir = peticion.persistente()
         modo = "close" if not seguir else "keep-alive" if peticion.version == "HTTP/1.0" else None
+        sin_cuerpo = peticion.verbo == "HEAD"
         try:
-            datos = serializar(self.responder(peticion), peticion.verbo == "HEAD", modo)
-        except ValueError:
-            traceback.print_exc(file=sys.stderr)
-            datos = serializar(self._blindar(texto(500, "error interno")), conexion="close")
-            seguir = False
+            respuesta = self.responder(peticion)
+            datos = serializar(respuesta, sin_cuerpo, modo)
+        except ValueError as fallo:
+            self.registro.escribir("ERROR", "cero", "{} {}: respuesta imposible de enviar",
+                                   peticion.verbo, peticion.camino, excepcion=fallo)
+            respuesta = self._blindar(texto(500, "error interno"))
+            datos = serializar(respuesta, conexion="close")
+            seguir, sin_cuerpo = False, False
+        self._observar(peticion, inicio, respuesta, sin_cuerpo)
         conexion.settimeout(self.espera)
         conexion.sendall(datos)
         return seguir
+
+    def _cortar(self, conexion, peticion, inicio, respuesta):
+        respuesta = self._blindar(respuesta)
+        if peticion is not None:
+            self._observar(peticion, inicio, respuesta, False)
+        _rechazar(conexion, respuesta)
+
+    def _observar(self, peticion, inicio, respuesta, sin_cuerpo):
+        enviados = 0 if sin_cuerpo or respuesta.estado in (204, 304) else len(respuesta.cuerpo)
+        if self.metricas is not None:
+            milisegundos = (time.monotonic() - inicio) * 1000
+            self.metricas.anotar(peticion.patron, peticion.camino, respuesta.estado, milisegundos)
+        if self.acceso is not None:
+            self.acceso.anotar(peticion, respuesta.estado, enviados)
 
 
 def _rechazar(conexion, respuesta, espera=1):

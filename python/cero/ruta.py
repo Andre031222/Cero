@@ -52,6 +52,7 @@ class Patron:
 class Resuelto:
     accion: Callable
     variables: dict
+    patron: str
 
 
 @dataclass(frozen=True)
@@ -86,8 +87,8 @@ class Router:
         for buscado in [verbo, "GET"] if verbo == "HEAD" else [verbo]:
             candidatos = [c for c in casan if c[0] == buscado]
             if candidatos:
-                _, _, accion, variables = min(candidatos, key=lambda c: c[1].peso())
-                return Resuelto(accion, variables)
+                _, patron, accion, variables = min(candidatos, key=lambda c: c[1].peso())
+                return Resuelto(accion, variables, patron.texto)
         verbos = {c[0] for c in casan}
         if "GET" in verbos:
             verbos.add("HEAD")
