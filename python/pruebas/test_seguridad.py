@@ -1,3 +1,6 @@
+import socket
+import threading
+import time
 import unittest
 from unittest import mock
 
@@ -5,7 +8,7 @@ from cero.peticion import Peticion
 from cero.respuesta import Respuesta
 from cero.ruta import Router
 from cero import seguridad
-from cero.seguridad import Cabeceras, Cors, Csrf
+from cero.seguridad import Cabeceras, Cors, Csrf, Limitador
 from cero.servidor import Servidor
 from pruebas.test_servidor import arrancar, pedir
 
@@ -326,6 +329,79 @@ class CsrfTests(unittest.TestCase):
     def test_sin_csrf_configurado_no_se_exige(self):
         self.servidor.csrf = None
         self.assertEqual(self.pedir("POST", "/api").estado, 200)
+
+
+class LimiteDePeticiones(unittest.TestCase):
+
+    def setUp(self):
+        self.atendidas = 0
+
+        def contar(p):
+            self.atendidas += 1
+            return "ok"
+        self.router = Router()
+        self.router.agregar("GET", "/", contar)
+        self.router.agregar("GET", "/otra/{x}", contar)
+        self.limitador = Limitador(cupo=3, ventana=30)
+        self.servidor = Servidor(self.router, limitador=self.limitador)
+
+    def pedir(self, camino="/", cliente="10.0.0.1"):
+        return self.servidor.responder(peticion("GET", camino, cliente=cliente))
+
+    def test_seg_021_anuncia_el_limite_y_lo_que_queda(self):
+        for queda in ("2", "1", "0"):
+            c = cabeceras(self.pedir())
+            self.assertEqual((c["x-ratelimit-limit"], c["x-ratelimit-remaining"]), ("3", queda))
+
+    def test_seg_020_al_alcanzar_el_limite_429_con_retry_after(self):
+        for _ in range(3):
+            self.assertEqual(self.pedir().estado, 200)
+        r = self.pedir()
+        c = cabeceras(r)
+        self.assertEqual((r.estado, self.atendidas), (429, 3))
+        self.assertEqual(c["x-ratelimit-remaining"], "0")
+        self.assertTrue(1 <= int(c["retry-after"]) <= 30)
+        self.assertEqual(c["x-content-type-options"], "nosniff")
+
+    def test_seg_022_cambiar_de_ruta_no_da_cupo_nuevo(self):
+        for _ in range(3):
+            self.pedir()
+        for camino in ("/otra/1", "/otra/2", "/nada", "/OTRA", "//"):
+            with self.subTest(camino=camino):
+                self.assertEqual(self.pedir(camino).estado, 429)
+        self.assertEqual(self.pedir(cliente="10.0.0.2").estado, 200)
+
+    def test_seg_022_otra_conexion_del_mismo_cliente_no_da_cupo_nuevo(self):
+        hilo = threading.Thread(target=self.servidor.escuchar, args=(0,), daemon=True)
+        hilo.start()
+        self.servidor.listo.wait(5)
+        try:
+            estados = [pedir(self.servidor.puerto,
+                             f"GET /otra/{i} HTTP/1.1\r\nHost: x\r\n\r\n".encode())[0]
+                       for i in range(5)]
+        finally:
+            self.servidor.cerrar()
+        self.assertEqual(estados, [200, 200, 200, 429, 429])
+
+    def test_las_claves_no_crecen_con_las_rutas(self):
+        for i in range(200):
+            self.pedir(f"/otra/{i}")
+        self.assertEqual(len(self.limitador.cuentas), 1)
+
+    def test_los_clientes_que_no_vuelven_se_barren(self):
+        limitador = Limitador(cupo=3, ventana=0.05)
+        for i in range(100):
+            limitador.pedir(f"10.0.{i}.1")
+        time.sleep(0.1)
+        limitador.pedir("10.9.9.9")
+        self.assertEqual(len(limitador.cuentas), 1)
+
+    def test_pasada_la_ventana_vuelve_el_cupo(self):
+        self.servidor.limitador = Limitador(cupo=1, ventana=0.05)
+        self.assertEqual(self.pedir().estado, 200)
+        self.assertEqual(self.pedir().estado, 429)
+        time.sleep(0.1)
+        self.assertEqual(self.pedir().estado, 200)
 
 
 if __name__ == "__main__":

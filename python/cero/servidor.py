@@ -38,12 +38,13 @@ class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
                  plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
-                 cabeceras=Cabeceras(), cors=None, csrf=None):
+                 cabeceras=Cabeceras(), cors=None, csrf=None, limitador=None):
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
         self.cabeceras = cabeceras
         self.cors = cors
         self.csrf = csrf
+        self.limitador = limitador
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
@@ -60,6 +61,11 @@ class Servidor:
 
     def _antes(self, peticion):
         extra = []
+        if self.limitador is not None:
+            admitida, cabeceras = self.limitador.pedir(peticion.cliente)
+            extra += cabeceras
+            if not admitida:
+                return texto(429, "demasiadas peticiones"), extra
         if self.cors is not None:
             estado, cabeceras = self.cors.decidir(peticion.verbo, peticion.cabecera("origin"),
                                                   peticion.cabecera("access-control-request-method"))
@@ -145,9 +151,10 @@ class Servidor:
 
     def _atender(self, conexion):
         try:
+            cliente = conexion.getpeername()[0]
             reloj = _Plazo(conexion, self.espera)
             with io.BufferedReader(reloj) as entrada:
-                while self._una(conexion, reloj, entrada):
+                while self._una(conexion, reloj, entrada, cliente):
                     pass
         except OSError:
             pass
@@ -155,12 +162,13 @@ class Servidor:
             conexion.close()
             self.cupo.release()
 
-    def _una(self, conexion, reloj, entrada):
+    def _una(self, conexion, reloj, entrada, cliente):
         reloj.limite = time.monotonic() + self.plazo_cabecera
         try:
             peticion = leer_cabecera(entrada)
             if peticion is None:
                 return False
+            peticion.cliente = cliente
             forma = encuadre(peticion, self.limite_cuerpo)
             reloj.limite = time.monotonic() + self.plazo_cuerpo
             expect = peticion.cabecera("expect")

@@ -1,5 +1,8 @@
 import hmac
+import math
 import secrets
+import threading
+import time
 from urllib.parse import parse_qs
 
 from cero.respuesta import Respuesta
@@ -108,3 +111,32 @@ def token_csrf(sesion):
         token = secrets.token_urlsafe(32)
         sesion.poner(CLAVE_CSRF, token)
     return token
+
+
+class Limitador:
+
+    def __init__(self, cupo, ventana):
+        self.cupo = cupo
+        self.ventana = ventana
+        self.cuentas = {}
+        self.candado = threading.Lock()
+        self.barrido = time.monotonic()
+
+    def pedir(self, cliente):
+        ahora = time.monotonic()
+        with self.candado:
+            if ahora - self.barrido > self.ventana:
+                self.cuentas = {k: c for k, c in self.cuentas.items()
+                                if ahora - c[1] <= self.ventana}
+                self.barrido = ahora
+            cuenta = self.cuentas.get(cliente)
+            if cuenta is None or ahora - cuenta[1] > self.ventana:
+                cuenta = self.cuentas[cliente] = [0, ahora]
+            cuenta[0] += 1
+            usadas, desde = cuenta
+        cabeceras = [("X-RateLimit-Limit", str(self.cupo)),
+                     ("X-RateLimit-Remaining", str(max(self.cupo - usadas, 0)))]
+        if usadas <= self.cupo:
+            return True, cabeceras
+        espera = max(math.ceil(desde + self.ventana - ahora), 1)
+        return False, [*cabeceras, ("Retry-After", str(espera))]
