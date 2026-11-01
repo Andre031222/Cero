@@ -31,6 +31,13 @@ class Interruptor:
         return self.estado == "bien"
 
 
+def plazos(argumentos):
+    if not argumentos:
+        return {}
+    plazo = int(argumentos[0]) / 1000
+    return {"espera": plazo, "inactividad": 2 * plazo}
+
+
 def fallar(peticion):
     raise RuntimeError("SECRETO-7f3")
 
@@ -72,9 +79,15 @@ def main():
     router.agregar("GET", "/registrar", registrar)
     router.agregar("GET", "/registrar/interpolar", interpolado)
     puerto = int(sys.argv[1]) if len(sys.argv) > 1 else 8777
+    try:
+        servidor = Servidor(router, registro=registro, metricas=metricas,
+                            acceso=Acceso(entorno.get("CERO_CONF_ACCESO") or None, ignoradas=IGNORADAS),
+                            **plazos(sys.argv[2:3]))
+    except ValueError as fallo:
+        print(f"cero no arranca: plazo inválido: {fallo}", file=sys.stderr, flush=True)
+        raise SystemExit(2)
     print(f"cero escucha en 127.0.0.1:{puerto}", file=sys.stderr, flush=True)
-    Servidor(router, registro=registro, metricas=metricas,
-             acceso=Acceso(entorno.get("CERO_CONF_ACCESO") or None, ignoradas=IGNORADAS)).escuchar(puerto)
+    servidor.escuchar(puerto)
 
 
 if __name__ == "__main__":

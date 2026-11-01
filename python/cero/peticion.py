@@ -7,7 +7,7 @@ from cero.sesion import id_de_cookie
 METODOS = {"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE"}
 LIMITE_LINEA = 8192
 LIMITE_CABECERAS = 100
-LIMITE_CUERPO = 1024 * 1024
+LIMITE_CUERPO = 10 * 1024 * 1024
 PORCION = 64 * 1024
 
 TOKEN = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")

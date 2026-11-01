@@ -36,9 +36,12 @@ class _Plazo(io.RawIOBase):
 class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
-                 plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
+                 plazo_cuerpo=60, inactividad=10, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
                  cabeceras=None, cors=None, csrf=None, limitador=None, registro=None,
                  metricas=None, acceso=None):
+        _positivos(maximo_conexiones=maximo_conexiones, espera=espera,
+                   plazo_cabecera=plazo_cabecera, plazo_cuerpo=plazo_cuerpo,
+                   inactividad=inactividad, limite_cuerpo=limite_cuerpo)
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
         self.cabeceras = Cabeceras() if cabeceras is None else cabeceras
@@ -51,6 +54,7 @@ class Servidor:
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
+        self.inactividad = inactividad
         self.limite_cuerpo = limite_cuerpo
         self.listo = threading.Event()
         self.parado = threading.Event()
@@ -165,13 +169,23 @@ class Servidor:
             cliente = conexion.getpeername()[0]
             reloj = _Plazo(conexion, self.espera)
             with io.BufferedReader(reloj) as entrada:
-                while self._una(conexion, reloj, entrada, cliente):
+                while self._una(conexion, reloj, entrada, cliente) and self._ociosa(reloj, entrada):
                     pass
         except OSError:
             pass
         finally:
             conexion.close()
             self.cupo.release()
+
+    def _ociosa(self, reloj, entrada):
+        reloj.espera = self.inactividad
+        reloj.limite = time.monotonic() + self.inactividad
+        try:
+            return bool(entrada.peek(1))
+        except TimeoutError:
+            return False
+        finally:
+            reloj.espera = self.espera
 
     def _una(self, conexion, reloj, entrada, cliente):
         reloj.limite = time.monotonic() + self.plazo_cabecera
@@ -228,6 +242,12 @@ class Servidor:
             self.metricas.anotar(peticion.patron, peticion.camino, respuesta.estado, milisegundos)
         if self.acceso is not None:
             self.acceso.anotar(peticion, respuesta.estado, enviados)
+
+
+def _positivos(**ajustes):
+    for nombre, valor in ajustes.items():
+        if not valor > 0:
+            raise ValueError(f"{nombre} tiene que ser mayor que 0, y es {valor}")
 
 
 def _rechazar(conexion, respuesta, espera=1):

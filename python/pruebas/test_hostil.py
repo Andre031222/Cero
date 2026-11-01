@@ -128,12 +128,6 @@ class Plazos(unittest.TestCase):
         self.assertIsNotNone(respuesta)
         self.assertLess(tiempo, 2.0)
 
-    def test_el_cuerpo_por_defecto_no_pasa_de_un_mib(self):
-        servidor = self.arrancar()
-        estado, _, _ = pedir(servidor.puerto, b"POST /eco HTTP/1.1\r\nHost: x\r\n"
-                                              b"Content-Length: 1048577\r\n\r\n")
-        self.assertEqual(estado, 413)
-
     def test_http_1_0_keep_alive_lo_dice_y_lo_cumple(self):
         servidor = self.arrancar()
         with socket.create_connection(("127.0.0.1", servidor.puerto), timeout=5) as conexion:

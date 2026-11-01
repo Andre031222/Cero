@@ -6,7 +6,7 @@ los mismos vectores de conformidad, que son bytes sobre un socket y no saben en 
 escrito quien responde.
 
 **Estado: hito 4.** HTTP/1.1, ruteo, sesiones, seguridad transversal y observabilidad. **23 de 23
-vectores del banco** y 231 pruebas propias.
+vectores del banco**, 3 de 3 ataques de HTTP/1.1 y 240 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -15,6 +15,7 @@ vectores del banco** y 231 pruebas propias.
 | 2 | Sesiones | 12 de 13, más `SES-010` a medias hasta que haya HTTP/2 · 50 pruebas |
 | 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 83 pruebas |
 | 4 | Observabilidad | 23 de 23 · `OBS-001`–`OBS-023` · 48 pruebas |
+| 4 bis | Plazos y topes | 3 de 3 · `HTTP-024`–`HTTP-026` · 3 de 3 ataques de HTTP/1.1 · 10 pruebas |
 
 ## Usarlo
 
@@ -64,7 +65,12 @@ cd python
 python3 -I -m unittest discover -s pruebas -t .   # las pruebas propias
 python3 -m cero.conforme 8777 > /dev/null         # y el servidor del banco
 python3 ../spec/banco/correr.py 127.0.0.1 8777
+python3 ../spec/banco/ataques.py --solo-http1 python3 -m cero.conforme
 ```
+
+`ataques.py` arranca el servidor él mismo, con plazos de un segundo. Con `--solo-http1` corre los
+tres vectores de HTTP/1.1 (`HTTP-024` a `HTTP-026`) y marca los ocho de HTTP/2 como «n/a»: esta
+implementación todavía no habla h2, y h2spec tampoco aplica.
 
 ## La decisión de concurrencia: un hilo del sistema por conexión
 
@@ -87,7 +93,7 @@ de la decisión y no un detalle. Todos se ajustan al construir el servidor:
 
 ```python
 Servidor(router, maximo_conexiones=256, espera=30, plazo_cabecera=10, plazo_cuerpo=60,
-         limite_cuerpo=1024 * 1024)
+         inactividad=10, limite_cuerpo=10 * 1024 * 1024)
 ```
 
 | Límite | Defecto | Qué corta |
@@ -96,7 +102,25 @@ Servidor(router, maximo_conexiones=256, espera=30, plazo_cabecera=10, plazo_cuer
 | `plazo_cabecera` | 10 s | la línea de petición y las cabeceras, **en total**: 408 |
 | `plazo_cuerpo` | 60 s | el cuerpo entero, en total: 408 |
 | `espera` | 30 s | cada lectura suelta, y cada escritura de la respuesta |
-| `limite_cuerpo` | 1 MiB | 413 |
+| `inactividad` | 10 s | keep-alive sin una petición nueva: se cierra sin responder (`HTTP-024`) |
+| `limite_cuerpo` | 10 MiB | 413 y cierre, sin que corra la acción (`HTTP-026`) |
+
+Un valor de 0 o negativo en cualquiera de los seis es un `ValueError` al construir el servidor
+(`HTTP-025`): en un socket, 0 querría decir «sin plazo», y en una cuenta atrás, «ya pasó».
+`python3 -m cero.conforme <puerto> <plazo en ms>` usa ese plazo como `espera` y el doble como
+`inactividad`, que es como lo arranca `ataques.py`, y con un plazo de 0 o negativo sale con 2 sin
+llegar a escuchar.
+
+La inactividad solo corre entre peticiones. La primera de una conexión espera `plazo_cabecera`, y
+no `inactividad`, para que una conexión que no manda nada no retenga el hilo más que un slowloris.
+Mientras se espera la siguiente, cada lectura usa `inactividad` y no `espera`, así que una
+`espera` más corta no acorta el keep-alive. Los 10 s no son ni los 30 de Java ni los 120 de Rust y
+C++: con un hilo por conexión, una ociosa cuesta un hilo, y 10 s era lo que ya aguantaba antes de
+tener su propio ajuste.
+
+`HTTP-026` pide además cerrar la conexión si el tope se pasa con la respuesta ya empezada. Aquí no
+puede pasar: el cuerpo entero se lee antes de que corra la acción, así que el 413 siempre llega
+antes que cualquier otra cosa, con `Connection: close`.
 
 **El plazo es por petición, no por lectura.** La primera versión solo tenía `espera`, y un cliente
 que mandaba un byte cada 29 segundos retenía el hilo para siempre. Con 512 de esos el servidor
@@ -104,8 +128,10 @@ contestaba 503 a todo el mundo, desde una sola máquina y con un guion de cinco 
 socket se lee a través de un reloj que, antes de cada `recv`, ajusta la espera a lo que le queda al
 plazo de esa petición.
 
-El techo de memoria es el producto de dos límites: 256 conexiones por 1 MiB son 256 MiB de cuerpos
-en vuelo. El cuerpo se acumula en un `bytearray` que crece por porciones de 64 KiB, sin la lista de
+El techo de memoria es el producto de dos límites: 256 conexiones por 10 MiB son 2,5 GiB de
+cuerpos en vuelo. El contrato fija los 10 MiB por defecto; hasta la versión anterior Python usaba
+1 MiB, y quien despliegue en una máquina pequeña puede bajar `limite_cuerpo` o
+`maximo_conexiones`. El cuerpo se acumula en un `bytearray` que crece por porciones de 64 KiB, sin la lista de
 trozos más el `join` que duplicaba el pico.
 
 `maximo_conexiones` es 256 y no 512 porque en macOS el límite blando de descriptores es 256.
@@ -637,10 +663,12 @@ y solo en `pruebas/`:
 grep -rhoiE --include='*.py' '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u
 ```
 
-Hoy son 80: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` salvo `SES-010`, `SEG-001`–`SEG-028`,
-`OBS-001`–`OBS-023`, y
+Hoy son 83: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` salvo `SES-010`, `SEG-001`–`SEG-028`,
+`OBS-001`–`OBS-023`, `HTTP-024`–`HTTP-026`, y
 `HTTP-017`, `HTTP-019`, `HTTP-021` y `HTTP-022`, que el banco ya cubre y aquí se prueban además por
-otro lado. Los de sesiones y los de seguridad se cuentan solos:
+otro lado. Con los 19 de HTTP/1.1 que solo cubre el banco son 102 de los 182 del contrato. Faltan 80:
+los 55 de HTTP/2, `RUT-014`–`RUT-037` (vinculación de tipos, forma de la respuesta, errores,
+pipeline e inyección de dependencias) y `SES-010`. Los de sesiones y los de seguridad se cuentan solos:
 
 ```bash
 grep -rhoiE --include='*.py' 'SES[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 12
