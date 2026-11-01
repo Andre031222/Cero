@@ -4,8 +4,9 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 8.** El framework usable sobre HTTP/1.1, y de HTTP/2 las tramas y HPACK. **23 de 23
-vectores del banco**, **los 32 del apéndice C del RFC 7541** y 123 pruebas propias.
+**Estado: hito 9.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
+`Upgrade: h2c` en el mismo puerto. **23 de 23 vectores del banco**, **los 32 del apéndice C del RFC
+7541**, **138 de 146 en h2spec** y 167 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -17,10 +18,11 @@ vectores del banco**, **los 32 del apéndice C del RFC 7541** y 123 pruebas prop
 | 6 | JSON, formularios y estáticos | lo que hacía falta para usarlo · 12 pruebas |
 | 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
+| 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 44 pruebas |
 
 ## Cuántos requisitos citan las pruebas
 
-La cuenta que hace la integración continua, desde `c++/`: **116** requisitos distintos.
+La cuenta que hace la integración continua, desde `c++/`: **146** requisitos distintos.
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
@@ -159,6 +161,33 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   decodifican aunque se tiren. El índice 1 es la entrada más reciente; una que no cabe vacía la
   tabla (§4.4); el entero de longitud variable tiene tope de cinco septetos; el codificador no
   indexa.
+- **`http2/flujo.hpp`.** Convierte tramas en peticiones, y `Sesion` vive lo que el socket: la tabla
+  de HPACK y los identificadores no se reinician a mitad. Terminar de responder cierra **nuestra**
+  mitad y no el flujo: el cliente puede seguir mandando cuerpo hasta `END_STREAM`, y hasta entonces
+  hay que validarlo (es el fallo que la 0.8.0 arregló en Java: el `content-length` dejaba de
+  comprobarse para lo que llegara después). Un flujo malo no es una conexión mala: las peticiones
+  malformadas (`H2-018` a `H2-026`, `H2-043`) cortan el flujo y la conexión sigue. Entre HEADERS y su
+  última CONTINUATION no cabe ninguna trama (§6.2). Un bloque se decodifica **siempre**, aunque el
+  flujo vaya a cortarse —rechazado por el tope, cerrado o dependiente de sí mismo—: saltárselo
+  descoloca HPACK para todo lo que venga después (`H2-035`). PRIORITY se descarta, pero un flujo que
+  depende de sí mismo se corta (`H2-044`). El tope de flujos cuenta todos los vivos, incluido el que
+  ya dijo `END_STREAM` y espera respuesta (`H2-046`). La ventana de la conexión empieza en 65 535 sea
+  cual sea la inicial anunciada, se descuenta con el relleno incluido y se devuelve también por lo
+  que llega a un flujo cerrado; si no, la conexión se queda sin crédito poco a poco. El
+  `content-length` se compara con los datos sin relleno, y también al llegar los trailers. Los
+  topes de inundación (`H2-036` a `H2-038`) no son ajustes del protocolo sino política: holgados para
+  un cliente normal y finitos para uno anormal, porque cada trama de una inundación es válida.
+- **`http2/conexion.hpp`.** El conductor: el hilo de la conexión lee y un hilo por flujo atiende
+  (`H2-029`), igual que en Rust; atenderlos en fila sobre el que lee sería HTTP/1.1 con más ceremonia.
+  La salida va con candado y una trama sale entera o no sale; un bloque de cabeceras que no cabe en
+  una trama sigue en CONTINUATION y sale de una vez, para que nada se meta por medio. El hilo que
+  responde avisa al que lee, que es quien da el flujo por cerrado. `DesdeSocket` es a la vez el
+  `Lector` de HTTP/1.1 y la `Fuente` de h2, así que el preámbulo se ojea sin consumirlo y lo que ya
+  estuviera en el búfer tras un `101` no se pierde. Un preámbulo falso es una petición HTTP/1.1 con
+  un método que no existe y recibe 501 (`H2-001`). Un método que no se implementa recibe 501 en su
+  flujo (`H2-018`). `:authority` pasa a `host`, y varias `cookie` se juntan con `; `. Al cerrar, media
+  conexión y un vaciado: cerrar con octetos sin leer manda un RST que borra el GOAWAY (`H2-048`).
+  Los escritos no levantan `SIGPIPE`.
 - **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
   encuadre no comprueban nada.
 - **`CMakeLists.txt`.** CMake es a C++ lo que Maven a Java y Cargo a Rust: construye, no se enlaza.
@@ -168,6 +197,12 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
 
 ## Lo que falta
 
-Los hitos 9 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: los flujos y el control de flujo de salida, el contenedor de dependencias y
-las sesiones en tabla.
+Los hitos 10 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: el control de flujo de salida, el contenedor de dependencias y las sesiones en
+tabla.
+
+Los ocho fallos que quedan en h2spec son el `3.5.2`, que no aplica en un puerto compartido
+(`spec/README.md`), y siete que son todos control de flujo de salida (`H2-040`, `H2-041`): hoy el
+conductor lee los `WINDOW_UPDATE` y los ajustes del cliente pero no los usa para frenar lo que
+manda. El `5.1.2` cae por lo mismo: pone la ventana del cliente a cero para que las respuestas no
+puedan salir y los flujos se acumulen, y sin control de salida salen igual.

@@ -51,6 +51,8 @@ struct Peticion {
     std::string_view camino() const;
 };
 
+bool metodo_conocido(std::string_view metodo);
+
 std::expected<Peticion, Rechazo> leer(Lector& lector);
 
 }

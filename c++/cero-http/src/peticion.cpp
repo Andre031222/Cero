@@ -63,7 +63,7 @@ std::expected<void, Rechazo> partir_inicial(std::string_view l, Peticion& p) {
     p.destino = l.substr(uno + 1, dos - uno - 1);
     p.version = l.substr(dos + 1);
 
-    if (std::ranges::find(kMetodos, p.metodo) == kMetodos.end()) {
+    if (!metodo_conocido(p.metodo)) {
         return Fallo{Rechazo::NoImplementado};
     }
     if (p.version == "HTTP/1.1" || p.version == "HTTP/1.0") return {};
@@ -194,6 +194,10 @@ std::string_view Peticion::camino() const {
         return barra == std::string_view::npos ? std::string_view{"/"} : d.substr(barra);
     }
     return d;
+}
+
+bool metodo_conocido(std::string_view metodo) {
+    return std::ranges::find(kMetodos, metodo) != kMetodos.end();
 }
 
 std::expected<Peticion, Rechazo> leer(Lector& lector) {

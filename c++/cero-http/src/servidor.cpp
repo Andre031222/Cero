@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <array>
 #include <charconv>
 #include <chrono>
 #include <expected>
@@ -20,30 +19,11 @@
 #include <vector>
 
 #include "cero/formato.hpp"
+#include "cero/http2/conexion.hpp"
+#include "cero/http2/trama.hpp"
 
 namespace cero {
 namespace {
-
-class DesdeSocket final : public Lector {
-public:
-    explicit DesdeSocket(int descriptor) : descriptor_(descriptor) {}
-
-    int octeto() override {
-        if (i_ == tengo_) {
-            const auto leidos = ::read(descriptor_, buf_.data(), buf_.size());
-            if (leidos <= 0) return -1;
-            tengo_ = static_cast<std::size_t>(leidos);
-            i_ = 0;
-        }
-        return static_cast<unsigned char>(buf_[i_++]);
-    }
-
-private:
-    int descriptor_;
-    std::array<char, 8192> buf_{};
-    std::size_t i_ = 0;
-    std::size_t tengo_ = 0;
-};
 
 std::string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
     auto salida = formato("HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n", r.estado,
@@ -332,12 +312,24 @@ int Servidor::escuchar(unsigned short puerto) const {
                                  (quien.sin_addr.s_addr >> 16) & 0xff,
                                  (quien.sin_addr.s_addr >> 24) & 0xff);
         std::thread{[this, cliente, desde] {
-            DesdeSocket lector{cliente};
+            http2::DesdeSocket lector{cliente};
+            const http2::Atender atender = [this, &desde](const Peticion& p) {
+                return responder(p, desde);
+            };
+            if (lector.asomar(http2::kPreambulo)) {
+                http2::servir(lector, http2::Ajustes{}, atender);
+                ::close(cliente);
+                return;
+            }
             while (true) {
-                const auto peticion = leer(lector);
+                auto peticion = leer(lector);
                 if (!peticion) {
                     todo(cliente,
                          escribir(Respuesta::codigo(estado_de(peticion.error())), false, true));
+                    break;
+                }
+                if (http2::pide_h2c(*peticion)) {
+                    http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion));
                     break;
                 }
                 const auto conexion = peticion->cabecera("connection").value_or("");
