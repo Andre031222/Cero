@@ -25,6 +25,7 @@ class _Saneador(HTMLParser):
         self.con_marcado = con_marcado
         self.dentro = 0
         self.salida = []
+        self.abiertas = []
 
     def _abrir(self, etiqueta, atributos, cierre):
         if etiqueta in CON_CONTENIDO or self.dentro:
@@ -33,7 +34,11 @@ class _Saneador(HTMLParser):
             return
         if self.con_marcado and etiqueta in PERMITIDAS:
             partes = [etiqueta, *_atributos(etiqueta, atributos)]
-            self.salida.append("<" + " ".join(partes) + ("/>" if cierre else ">"))
+            self.salida.append("<" + " ".join(partes) + ">")
+            if etiqueta not in VACIAS:
+                self.abiertas.append(etiqueta)
+                if cierre:
+                    self.handle_endtag(etiqueta)
 
     def handle_starttag(self, etiqueta, atributos):
         self._abrir(etiqueta, atributos, False)
@@ -46,7 +51,9 @@ class _Saneador(HTMLParser):
             if etiqueta in CON_CONTENIDO:
                 self.dentro -= 1
             return
-        if self.con_marcado and etiqueta in PERMITIDAS and etiqueta not in VACIAS:
+        if etiqueta in self.abiertas:
+            while (cima := self.abiertas.pop()) != etiqueta:
+                self.salida.append(f"</{cima}>")
             self.salida.append(f"</{etiqueta}>")
 
     def handle_data(self, datos):
@@ -73,7 +80,8 @@ def _sanear(entrada, con_marcado):
     saneador = _Saneador(con_marcado)
     saneador.feed(entrada)
     saneador.close()
-    return "".join(saneador.salida)
+    cierres = [f"</{etiqueta}>" for etiqueta in reversed(saneador.abiertas)]
+    return "".join(saneador.salida + cierres)
 
 
 def sanear_html(entrada):

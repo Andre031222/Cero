@@ -130,6 +130,38 @@ class SaneadoHtml(unittest.TestCase):
         self.assertEqual(sanear_html("<a href=\"javascript:x()\" title=\"t\">y</a>"),
                          "<a title=\"t\">y</a>")
 
+    def test_lo_que_queda_abierto_se_cierra_al_final(self):
+        self.assertEqual(sanear_html("<b>sin cerrar"), "<b>sin cerrar</b>")
+        self.assertEqual(sanear_html("<div><p><a href=\"/x\">y"),
+                         "<div><p><a href=\"/x\">y</a></p></div>")
+        self.assertEqual(sanear_html("<b/>suelto"), "<b></b>suelto")
+
+    def test_un_cierre_sin_apertura_se_tira(self):
+        self.assertEqual(sanear_html("</div>hola</p>"), "hola")
+        self.assertEqual(sanear_html("<p>a</p></p></div>"), "<p>a</p>")
+        self.assertEqual(sanear_html("<b>x</i></b>"), "<b>x</b>")
+
+    def test_un_cruce_se_cierra_en_orden(self):
+        self.assertEqual(sanear_html("<b><i>x</b>y</i>"), "<b><i>x</i></b>y")
+
+    def test_la_salida_siempre_esta_equilibrada(self):
+        for entrada in ATAQUES + [a for a, _ in ABUSOS] + ["<p><b>a<i>b</p>c</b>", "</a></a><a>"]:
+            with self.subTest(entrada=entrada):
+                pila = []
+
+                class Lector(HTMLParser):
+                    def handle_starttag(self, etiqueta, atributos):
+                        if etiqueta != "br":
+                            pila.append(etiqueta)
+
+                    def handle_endtag(self, etiqueta):
+                        cima = pila.pop() if pila else None
+                        assert cima == etiqueta, (cima, etiqueta)
+                lector = Lector()
+                lector.feed(sanear_html(entrada))
+                lector.close()
+                self.assertEqual(pila, [])
+
     def test_el_texto_que_parece_marcado_sale_escapado(self):
         self.assertEqual(sanear_html("<a title='\"><script>'>x</a>"),
                          "<a title=\"&quot;&gt;&lt;script&gt;\">x</a>")
