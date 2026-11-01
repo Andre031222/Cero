@@ -7,6 +7,7 @@ pub enum Rechazo {
     NoImplementado,
     VersionNoSoportada,
     Demasiado,
+    CuerpoGrande,
 }
 
 impl Rechazo {
@@ -16,6 +17,7 @@ impl Rechazo {
             Rechazo::NoImplementado => 501,
             Rechazo::VersionNoSoportada => 505,
             Rechazo::Demasiado => 431,
+            Rechazo::CuerpoGrande => 413,
         }
     }
 }
@@ -54,12 +56,12 @@ impl Peticion {
     }
 }
 
-pub fn leer<R: BufRead>(lector: &mut R) -> Result<Peticion, Rechazo> {
+pub fn leer<R: BufRead>(lector: &mut R, max_cuerpo: usize) -> Result<Peticion, Rechazo> {
     let inicial = linea(lector)?;
     let (metodo, destino, version) = partir_linea_inicial(&inicial)?;
     let cabeceras = leer_cabeceras(lector)?;
     comprobar_host(&version, &cabeceras)?;
-    let cuerpo = leer_cuerpo(lector, &cabeceras)?;
+    let cuerpo = leer_cuerpo(lector, &cabeceras, max_cuerpo)?;
     Ok(Peticion { metodo, destino, version, cabeceras, cuerpo })
 }
 
@@ -166,6 +168,7 @@ fn comprobar_host(version: &str, cabeceras: &HashMap<String, String>) -> Result<
 fn leer_cuerpo<R: BufRead>(
     lector: &mut R,
     cabeceras: &HashMap<String, String>,
+    max_cuerpo: usize,
 ) -> Result<Vec<u8>, Rechazo> {
     if let Some(te) = cabeceras.get("transfer-encoding") {
         if cabeceras.contains_key("content-length") {
@@ -175,12 +178,15 @@ fn leer_cuerpo<R: BufRead>(
         if ultima != "chunked" {
             return Err(Rechazo::MalFormada("chunked no es la última codificación"));
         }
-        return leer_por_trozos(lector);
+        return leer_por_trozos(lector, max_cuerpo);
     }
     let Some(cl) = cabeceras.get("content-length") else {
         return Ok(Vec::new());
     };
     let largo: u64 = cl.parse().map_err(|_| Rechazo::MalFormada("content-length inválido"))?;
+    if largo > max_cuerpo as u64 {
+        return Err(Rechazo::CuerpoGrande);
+    }
     let mut cuerpo = vec![0u8; largo as usize];
     lector
         .read_exact(&mut cuerpo)
@@ -188,13 +194,16 @@ fn leer_cuerpo<R: BufRead>(
     Ok(cuerpo)
 }
 
-fn leer_por_trozos<R: BufRead>(lector: &mut R) -> Result<Vec<u8>, Rechazo> {
+fn leer_por_trozos<R: BufRead>(lector: &mut R, max_cuerpo: usize) -> Result<Vec<u8>, Rechazo> {
     let mut cuerpo = Vec::new();
     loop {
         let cabecera = linea(lector)?;
         let tamano_txt = cabecera.split(';').next().unwrap_or("").trim();
         let tamano = usize::from_str_radix(tamano_txt, 16)
             .map_err(|_| Rechazo::MalFormada("tamaño de trozo no hexadecimal"))?;
+        if tamano > max_cuerpo - cuerpo.len() {
+            return Err(Rechazo::CuerpoGrande);
+        }
         if tamano == 0 {
             while !linea(lector)?.is_empty() {}
             return Ok(cuerpo);

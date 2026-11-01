@@ -374,6 +374,10 @@ impl Sesion {
         Ok((acciones, None))
     }
 
+    pub fn desechar(&mut self, flujo: u32) {
+        self.flujos.remove(&flujo);
+    }
+
     pub fn respondido(&mut self, flujo: u32) {
         if let Some(f) = self.flujos.get(&flujo) {
             if f.estado == Estado::MitadCerradoRemoto {

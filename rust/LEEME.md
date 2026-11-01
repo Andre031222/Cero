@@ -23,10 +23,10 @@ dedicado a h2c y no aplica aquí.
 | 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
 | 11 | Ruteo, fallos, dependencias y validación | 172 de los 173 requisitos · 36 pruebas |
 | 12 | Sesiones en tabla, y `cero-data` sabe escribir | 173 de 173 · 9 pruebas |
-| 13 | Plazos y HTTP/2 Bomb | **180 de 180** · 7 de 7 en `ataques.py` · 9 pruebas |
+| 13 | Plazos, topes y HTTP/2 Bomb | **182 de 182** · 9 de 9 en `ataques.py` · 12 pruebas |
 
-**Los 180 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y los otros 157
-por una prueba que los cita; los siete de octubre, además, por `spec/banco/ataques.py`. Se cuentan así:
+**Los 182 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y los otros 159
+por una prueba que los cita; los nueve de octubre, además, por `spec/banco/ataques.py`. Se cuentan así:
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' cero-http/tests cero-data/tests \
@@ -51,19 +51,23 @@ se explica por qué.
 La implementación nació sin un solo plazo: ni de lectura, ni de escritura, ni de inactividad. Un
 cliente que abría una conexión y callaba ocupaba un hilo para siempre, y uno que dejaba de leer
 dejaba al hilo que escribía parado en `write_all` con la respuesta entera en memoria. El
-`ataques.py` lo enseñó de golpe: 0 de 7.
+`ataques.py` lo enseñó de golpe: 0 de 7, y la revisión encontró después que `Content-Length` se
+reservaba entero sin tope.
 
 - **`Plazos`** (`socket.rs`), lo mismo que en C++: `sin_avance` (30 s sin mover un octeto),
   `escritura` (60 s por cada 16 KiB) e `inactividad` (120 s). `Servidor::plazos` los cambia y
   `escuchar` se niega a arrancar con uno a cero (`HTTP-025`); uno negativo no se puede escribir,
-  porque `Duration` no lo admite. `mandar_todo` escribe en piezas de 4 KiB contra un plazo total por
+  porque `Duration` no lo admite, así que el `-1` de `ataques.py` lo rechaza el `conforme` al
+  leer el argumento y no la biblioteca. `Limites` lleva el presupuesto de respuestas en vuelo
+  (32 MiB) y el tope del cuerpo (10 MiB), con la misma regla: a cero no arranca. `mandar_todo` escribe en piezas de 4 KiB contra un plazo total por
   cada 16 KiB, porque el de `set_write_timeout` vuelve a empezar cada vez que el cliente lee algo.
 - **HTTP/1.1** espera la siguiente petición `inactividad` y cierra sin responder (`HTTP-024`).
 - **HTTP/2.** La biblioteca estándar no tiene `poll`, así que la espera ociosa es un `peek` con
   plazo, y solo `HEADERS`, `CONTINUATION` y `DATA` reinician el reloj (`H2-053`). Esperar crédito
   tiene el plazo de `escritura` por trama, y vencido sale un `RST_STREAM CANCEL` (`H2-052`). Las
   respuestas construidas y sin mandar se suman por conexión, y pasar de 32 MiB es GOAWAY
-  `ENHANCE_YOUR_CALM` (`H2-054`). HPACK corta en 256 campos (`H2-050`) y en el tope anunciado
+  `ENHANCE_YOUR_CALM` (`H2-054`), salvo que no haya nada más en vuelo. Un cuerpo de más de 10 MiB
+  recibe 413, en HTTP/1.1 sin leerlo (`HTTP-026`) y en h2 con `RST_STREAM NO_ERROR` (`H2-055`). HPACK corta en 256 campos (`H2-050`) y en el tope anunciado
   (`H2-051`), con `ENHANCE_YOUR_CALM` en los dos casos.
 
 ## El hito 12: las sesiones fuera del proceso

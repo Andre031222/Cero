@@ -21,5 +21,5 @@ pub use registro::Registro;
 pub use ruta::{Resolucion, Router};
 pub use servidor::{Servidor, Siguiente};
 pub use sesion::{Almacen, Sesion, Sesiones};
-pub use socket::Plazos;
+pub use socket::{Limites, Plazos};
 pub use validacion::{validar, Regla};

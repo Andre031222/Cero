@@ -12,9 +12,7 @@ use super::flujo::{cabeceras_de_respuesta, Accion, Sesion};
 use super::trama::*;
 use crate::contexto::Respuesta;
 use crate::peticion::Peticion;
-use crate::socket::{mandar_todo, Plazos};
-
-const PRESUPUESTO: usize = 32 * 1024 * 1024;
+use crate::socket::{mandar_todo, Limites, Plazos};
 
 struct Salida {
     socket: TcpStream,
@@ -43,6 +41,7 @@ struct Comun {
     salida: Mutex<Salida>,
     credito: Credito,
     plazos: Plazos,
+    limites: Limites,
     por_mandar: Mutex<usize>,
     ultimo: AtomicU32,
     calma: AtomicBool,
@@ -59,7 +58,7 @@ impl Comun {
 
     fn cargar(&self, octetos: usize) -> bool {
         let mut por_mandar = self.por_mandar.lock().unwrap();
-        if *por_mandar + octetos > PRESUPUESTO {
+        if *por_mandar > 0 && *por_mandar + octetos > self.limites.en_vuelo {
             return false;
         }
         *por_mandar += octetos;
@@ -155,7 +154,13 @@ fn hay_datos(socket: &mut TcpStream, cuanto: Duration) -> bool {
     !matches!(socket.peek(&mut [0u8]), Err(e) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut))
 }
 
-pub fn servir<F>(socket: TcpStream, ajustes: Ajustes, atender: Arc<F>, plazos: Plazos) -> std::io::Result<()>
+pub fn servir<F>(
+    socket: TcpStream,
+    ajustes: Ajustes,
+    atender: Arc<F>,
+    plazos: Plazos,
+    limites: Limites,
+) -> std::io::Result<()>
 where
     F: Fn(Peticion) -> Respuesta + Send + Sync + 'static,
 {
@@ -165,6 +170,7 @@ where
         salida: Mutex::new(Salida { socket, max_trama: par.max_trama as usize, plazos, rota: false }),
         credito: Credito::nuevo(par.ventana_inicial),
         plazos,
+        limites,
         por_mandar: Mutex::new(0),
         ultimo: AtomicU32::new(0),
         calma: AtomicBool::new(false),
@@ -252,9 +258,18 @@ where
                     }
                 }
                 Accion::Cuerpo { flujo, datos, fin } => {
-                    if let Some(c) = en_curso.get_mut(&flujo) {
-                        c.cuerpo.extend_from_slice(&datos);
+                    let Some(c) = en_curso.get_mut(&flujo) else { continue };
+                    if datos.len() > limites.cuerpo - c.cuerpo.len() {
+                        let cabeceras = [("content-length".to_string(), "0".to_string())];
+                        let bloque = cabeceras_de_respuesta(413, &cabeceras);
+                        comun.escribir(&Trama { tipo: HEADERS, banderas: FIN_CABECERAS | FIN_FLUJO, flujo, carga: bloque });
+                        comun.escribir(&Trama::rst(flujo, Error::Ninguno));
+                        en_curso.remove(&flujo);
+                        comun.credito.anular(flujo);
+                        sesion.desechar(flujo);
+                        continue;
                     }
+                    c.cuerpo.extend_from_slice(&datos);
                     if fin {
                         lanzar(&mut hilos, &comun, &atender, &terminados, &mut en_curso, flujo);
                     }

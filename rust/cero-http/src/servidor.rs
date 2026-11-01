@@ -8,7 +8,7 @@ use crate::registro::Registro;
 use crate::ruta::{Captura, Resolucion, Router};
 use crate::seguridad::{self, Cabeceras, Cors, Decision, Limitador};
 use crate::sesion::{self, Sesiones};
-use crate::socket::{mandar_todo, Plazos};
+use crate::socket::{mandar_todo, Limites, Plazos};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Cursor, ErrorKind, Read};
 use std::net::{TcpListener, TcpStream};
@@ -40,6 +40,7 @@ pub struct Servidor {
     csrf_activo: bool,
     seguro: bool,
     plazos: Plazos,
+    limites: Limites,
 }
 
 impl Servidor {
@@ -66,6 +67,7 @@ impl Servidor {
             csrf_activo: false,
             seguro: false,
             plazos: Plazos::default(),
+            limites: Limites::default(),
         }
     }
 
@@ -148,6 +150,11 @@ impl Servidor {
         self
     }
 
+    pub fn limites(mut self, l: Limites) -> Servidor {
+        self.limites = l;
+        self
+    }
+
     pub fn tras_tls(mut self) -> Servidor {
         self.seguro = true;
         self
@@ -162,8 +169,11 @@ impl Servidor {
     }
 
     pub fn escuchar(self, puerto: u16) -> std::io::Result<()> {
-        if !self.plazos.validos() {
-            return Err(std::io::Error::new(ErrorKind::InvalidInput, "los plazos tienen que ser mayores que cero"));
+        if !self.plazos.validos() || !self.limites.validos() {
+            return Err(std::io::Error::new(
+                ErrorKind::InvalidInput,
+                "los plazos y los topes tienen que ser mayores que cero",
+            ));
         }
         let oyente = TcpListener::bind(("0.0.0.0", puerto))?;
         let yo = Arc::new(self);
@@ -181,7 +191,7 @@ impl Servidor {
             .peer_addr()
             .map(|a| a.ip().to_string())
             .unwrap_or_else(|_| "desconocido".into());
-        let plazos = yo.plazos;
+        let (plazos, limites) = (yo.plazos, yo.limites);
         if flujo.set_read_timeout(Some(plazos.inactividad)).is_err() {
             return;
         }
@@ -192,7 +202,7 @@ impl Servidor {
                 let suyo = Arc::clone(&yo);
                 let de_quien = cliente.clone();
                 let atender = Arc::new(move |p: Peticion| suyo.responder(&p, &de_quien));
-                let _ = http2::conexion::servir(flujo, http2::Ajustes::default(), atender, plazos);
+                let _ = http2::conexion::servir(flujo, http2::Ajustes::default(), atender, plazos, limites);
                 return;
             }
             Err(_) => return,
@@ -202,7 +212,7 @@ impl Servidor {
         let mut lector = BufReader::new(Cursor::new(prefijo).chain(copia));
         let yo = &*yo;
         while lector.fill_buf().is_ok_and(|hay| !hay.is_empty()) {
-            match peticion::leer(&mut lector) {
+            match peticion::leer(&mut lector, limites.cuerpo) {
                 Ok(p) => {
                     let cerrar = p.version == "HTTP/1.0"
                         || p.cabecera("connection").is_some_and(|c| c.eq_ignore_ascii_case("close"));
@@ -425,6 +435,7 @@ fn razon(estado: u16) -> &'static str {
         404 => "Not Found",
         405 => "Method Not Allowed",
         429 => "Too Many Requests",
+        413 => "Content Too Large",
         431 => "Request Header Fields Too Large",
         500 => "Internal Server Error",
         501 => "Not Implemented",

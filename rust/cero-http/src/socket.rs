@@ -25,6 +25,24 @@ impl Plazos {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Limites {
+    pub en_vuelo: usize,
+    pub cuerpo: usize,
+}
+
+impl Default for Limites {
+    fn default() -> Limites {
+        Limites { en_vuelo: 32 << 20, cuerpo: 10 << 20 }
+    }
+}
+
+impl Limites {
+    pub fn validos(&self) -> bool {
+        self.en_vuelo > 0 && self.cuerpo > 0
+    }
+}
+
 const TROZO: usize = 16 * 1024;
 const PIEZA: usize = 4 * 1024;
 
