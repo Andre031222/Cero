@@ -116,7 +116,7 @@ texto_es() {
     e-no-responde) printf '%s' 'quedó instalado pero "cero status" no responde' ;;
     a-windows)     printf '%s' 'estás en Windows' ;;
     a-jdk)         printf '%s' 'JDK sin corrección comprobada' ;;
-    a-jdk-nota)    printf '%s' 'no se puede comprobar que %s traiga la corrección de CVE-2026-91403: actualiza a la última 25.0.x y mira https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
+    a-jdk-nota)    printf '%s' 'no se puede comprobar que %s traiga la corrección de CVE-2026-91403 (el aviso de OpenJDK no nombra todavía ninguna versión corregida): usa la build más reciente de tu proveedor y consulta https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
     a-sin-sha)     printf '%s' 'sin comprobar: no hay shasum ni sha256sum' ;;
     f-instalado)   printf '%s' 'Cero %s instalado' ;;
     f-sistema)     printf '%s' 'sistema' ;;
@@ -183,7 +183,7 @@ texto_en() {
     e-no-responde) printf '%s' 'it installed but "cero status" does not answer' ;;
     a-windows)     printf '%s' 'you are on Windows' ;;
     a-jdk)         printf '%s' 'JDK fix not confirmed' ;;
-    a-jdk-nota)    printf '%s' 'no primary source confirms that %s carries the fix for CVE-2026-91403: update to the latest 25.0.x and see https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
+    a-jdk-nota)    printf '%s' 'no primary source confirms that %s carries the fix for CVE-2026-91403 (the OpenJDK advisory names no fixed version yet): use the newest build from your vendor and see https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
     a-sin-sha)     printf '%s' 'not verified: no shasum or sha256sum available' ;;
     f-instalado)   printf '%s' 'Cero %s installed' ;;
     f-sistema)     printf '%s' 'system' ;;

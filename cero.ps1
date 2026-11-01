@@ -32,7 +32,7 @@ function Requisitos {
     if ("$linea" -match '"(\d+)') { $v = [int]$Matches[1] }
     if ($v -lt 25) { Malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v" }
     if (JdkAfectado "$linea") {
-        Write-Host "${Rojo}aviso: no se puede comprobar en una fuente primaria que el JDK $(("$linea" -split '"')[1]) traiga la corrección de CVE-2026-91403; actualiza a la última 25.0.x y mira https://openjdk.org/groups/vulnerability/advisories/2026-10-21$Fin"
+        Gris "nota: no se puede confirmar que el JDK $(("$linea" -split '"')[1]) traiga la corrección de CVE-2026-91403, porque el aviso de OpenJDK no nombra todavía ninguna versión corregida; usa la build más reciente de tu proveedor y consulta https://openjdk.org/groups/vulnerability/advisories/2026-10-21"
     }
 }
 

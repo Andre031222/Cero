@@ -23,19 +23,24 @@ funcionalidad y bastante en confianza.
 
 ## El JDK mínimo
 
-**La última 25.0.x, y en ningún caso 25.0.5 o anterior.** El 21 de octubre de 2026 OpenJDK publicó
-el aviso de [CVE-2026-91403](https://openjdk.org/groups/vulnerability/advisories/2026-10-21)
-(CVSS 9.1; el aviso lo sitúa en `security-libs/java.security`), y dice
-textualmente: *«The affected versions are 27.0.1, 25.0.5, 21.0.13, 17.0.21, 11.0.32.1, 8u504, and
-earlier.»* Ni ese aviso ni nada que se haya podido leer de Oracle nombra la versión que lo
-corrige, así que aquí no se fija un número: se fija el que no vale.
+**Java 25, en la build más reciente que publique tu proveedor.** El 21 de octubre de 2026 OpenJDK
+publicó el aviso de [CVE-2026-91403](https://openjdk.org/groups/vulnerability/advisories/2026-10-21)
+(CVSS 9.1; el aviso lo sitúa en `security-libs/java.security`), y dice textualmente: *«The
+affected versions are 27.0.1, 25.0.5, 21.0.13, 17.0.21, 11.0.32.1, 8u504, and earlier.»* Ni ese
+aviso ni nada que se haya podido leer de Oracle nombra la versión que lo corrige.
 
-`./cero`, `cero.ps1` y los dos instaladores avisan cuando no se puede comprobar en una fuente
-primaria que el JDK traiga la corrección: 25.0.5 o anterior, cualquier 26 —el aviso no habla de esa
-línea— y 27.0.1 o anterior. Una reedición con un cuarto número —la `25.0.5.0.3` de Homebrew, por
-ejemplo— también recibe el aviso, que no dice que esté afectada sino que no se puede saber, y manda
-al aviso de OpenJDK; si tu proveedor dice que trae la corrección, puedes ignorarlo. La integración
-continua instala siempre la última 25 que publica Temurin.
+Y hoy no hay una 25.0.x posterior entre la que elegir: a 1 de noviembre de 2026, lo último que
+publica Temurin es la 25.0.5+8 (`api.adoptium.net`) y lo último de Homebrew, la 25.0.5.0.3. Así que
+aquí no se fija un número que no existe. Usa la build más reciente de tu proveedor, vuelve a
+mirar el aviso de OpenJDK, y actualiza en cuanto alguien publique una versión que diga traer la
+corrección.
+
+`./cero`, `cero.ps1` y los dos instaladores lo recuerdan con una nota, sin parar nada, cuando no se
+puede confirmar que el JDK traiga la corrección: 25.0.5 o anterior, cualquier 26 —el aviso no habla
+de esa línea— y 27.0.1 o anterior. Una reedición con un cuarto número —la `25.0.5.0.3` de
+Homebrew, por ejemplo— también recibe la nota, que no dice que esté afectada sino que no se puede
+saber; si tu proveedor dice que trae la corrección, puedes ignorarla. La integración continua
+instala siempre la última 25 que publica Temurin.
 
 ## Lo que falta para poder decir que sí
 
