@@ -5,14 +5,15 @@ traducción del código de otro lenguaje: la referencia son los requisitos numer
 los mismos vectores de conformidad, que son bytes sobre un socket y no saben en qué lenguaje está
 escrito quien responde.
 
-**Estado: hito 2.** HTTP/1.1, ruteo y sesiones. **23 de 23 vectores del banco** y 100 pruebas
-propias.
+**Estado: hito 3.** HTTP/1.1, ruteo, sesiones y seguridad transversal. **23 de 23 vectores del
+banco** y 167 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
 | 1 bis | Un solo archivo | `python3 -m cero.empaquetar` · 3 pruebas |
 | 2 | Sesiones | 12 de 13, más `SES-010` a medias hasta que haya HTTP/2 · 50 pruebas |
+| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 67 pruebas |
 
 ## Usarlo
 
@@ -180,7 +181,8 @@ que caduca sola.
 
 - **Llamar a `rotar()` al iniciar sesión.** Si no, quien consiga plantar su cookie en el navegador
   de la víctima antes del login comparte la sesión con ella después (*session fixation*). Cero no
-  sabe qué acción es el login, así que no puede rotar por su cuenta.
+  sabe qué acción es el login, así que no puede rotar por su cuenta. Rotar también descarta el
+  token CSRF (ver «Seguridad transversal»).
 - **Cerrar sesión no manda una cookie caducada.** `invalidar()` borra la sesión del almacén, y la
   cookie vieja ya no recupera nada, pero el navegador la sigue enviando hasta que la cierra.
 - **`Secure` depende de `peticion.segura`, y hoy nada lo pone a cierto.** El servidor no habla TLS,
@@ -213,6 +215,141 @@ contando las llamadas: una por respuesta que tiene sesión, ninguna por la que n
 Nada. Ningún requisito de sesiones necesita algo fuera de la biblioteca estándar, y ninguno es
 imposible de escribir en Python. Lo único pendiente es probar `SES-010` sobre h2, y eso depende de
 un hito, no del lenguaje.
+
+## Seguridad transversal
+
+`spec/seguridad.md` fija qué pasa cuando nadie ha configurado nada. Aquí, sin configurar nada,
+**toda respuesta lleva las cabeceras de seguridad**, también el 404, el 405, el 500, el 429 y los
+rechazos del parser y el 503 por falta de cupo, que no pasan por `responder` y se blindan aparte.
+Lo demás se enciende al construir el servidor:
+
+```python
+from cero.seguridad import Cabeceras, Cors, Csrf, Limitador
+
+Servidor(router,
+         cabeceras=Cabeceras(enmarcado="SAMEORIGIN", csp="default-src 'self'"),
+         cors=Cors(["https://app.pe"], credenciales=True),
+         csrf=Csrf(exentas=["/webhooks"]),
+         limitador=Limitador(cupo=100, ventana=60))
+```
+
+| Pieza | Por defecto | Requisitos |
+|---|---|---|
+| `Cabeceras` | encendida; `cabeceras=None` la apaga | `SEG-001`–`SEG-007` |
+| `Cors` | apagada: ninguna cabecera CORS | `SEG-008`–`SEG-014` |
+| `Csrf` | apagada | `SEG-015`–`SEG-019` |
+| `Limitador` | apagado | `SEG-020`–`SEG-022` |
+| `sanear_html`, `sanear_texto`, `sanear_nombre` | funciones de `cero.saneado` | `SEG-023`–`SEG-026` |
+| `validado(esquema, accion)` | envoltorio de `cero.validacion` | `SEG-027`, `SEG-028` |
+
+CSRF y el limitador van apagados, como en Java y en Rust: el contrato pide que
+existan y cómo se comportan, no que estén encendidos, y un CSRF encendido por defecto rompe a todo
+cliente que no sea un navegador. Que el defecto sea ese es una decisión, y queda a la vista.
+
+**Cabeceras.** `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy:
+strict-origin-when-cross-origin` y `Permissions-Policy` con cámara, micrófono y ubicación a `()`.
+HSTS solo sale si `peticion.segura`, que hoy nada pone a cierto: por el socket no sale nunca
+(`SEG-005`). No hay CSP salvo que se declare (`SEG-006`). Si la acción pone una de estas cabeceras,
+gana la suya y no salen dos.
+
+**CORS.** Un origen ajeno no recibe permiso, pero la petición simple sigue y la acción corre
+(`SEG-010`); un preflight ajeno es 403 y la acción no corre (`SEG-013`). Es preflight un `OPTIONS`
+con `Origin` **y** `Access-Control-Request-Method`; sin la segunda es un `OPTIONS` normal y va al
+router. El comodín con credenciales no se deja construir (`ValueError`), ni como `"*"` ni dentro de
+una lista: devolver el origen que llegue con credenciales es abrir la API a cualquier sitio. Con
+CORS configurado, **toda** respuesta lleva `Vary: Origin`, también la que llega sin `Origin`: la
+respuesta depende de que la cabecera esté, y una caché que guarde la versión sin permiso se la
+serviría después al navegador que sí lo tenía (es lo que recomienda Fetch). `Vary` no es una
+cabecera CORS, así que `SEG-011` se cumple; si la acción ya trae `Vary`, se le suma `Origin`. Un 429
+lleva las cabeceras CORS, para que el navegador pueda leer el motivo.
+
+**CSRF.** Corre después del ruteo, así que un verbo no admitido sigue siendo 405 y no 403. El
+token lo pide la acción con `peticion.token_csrf()`, que abre sesión si no hay y guarda en ella 32
+bytes de `secrets.token_urlsafe` (`SEG-017`). Llega en la cabecera `X-CSRF-Token` o en el campo
+`_csrf` de un formulario `application/x-www-form-urlencoded`, nunca en la consulta: en la URL
+acabaría en los logs y en el `Referer`. Se compara con `hmac.compare_digest` (`SEG-018`); la
+cabecera repetida o el campo repetido no valen. La exención casa por segmento completo, con la
+misma función que parte los caminos del router (`SEG-019`).
+
+**`rotar()` descarta el token CSRF.** La rotación existe porque quien plantó la cookie antes del
+login la conoce; si el token sobreviviera, también conocería el token, y con la cookie nueva de
+la víctima en el navegador y el token viejo en su formulario el CSRF volvería a funcionar. El
+siguiente `token_csrf()` da uno nuevo.
+
+**Límite de peticiones.** Ventana fija por cliente, con `X-RateLimit-Limit`, `X-RateLimit-Remaining`
+y, al pasarse, 429 con `Retry-After` (`SEG-020`, `SEG-021`). El cliente es la **dirección IP** del
+otro extremo, sin el puerto: con el puerto, cada conexión nueva daría cupo nuevo. Las cuentas cuya
+ventana pasó se barren como mucho una vez por ventana, así que el mapa crece con los clientes
+distintos de una ventana y no con las peticiones ni con las rutas. El límite: **detrás de un proxy
+todos los clientes son el proxy**, porque Cero no se fía de `X-Forwarded-For` (no hay manera de
+declarar un proxy de confianza, igual que con `Secure`).
+
+**Saneado.** `sanear_html` no busca etiquetas a mano: usa `html.parser` de la biblioteca estándar,
+que tokeniza, decodifica las entidades de los atributos (`&#106;avascript:` llega como
+`javascript:`) y trata `script` y `style` como texto crudo. Sobre esos sucesos se reconstruye el
+HTML: los elementos peligrosos se quitan con su contenido, de una etiqueta inocua se quitan solo los
+atributos `on*` y los que lleven `javascript:` o `vbscript:` (ignorando espacios y controles), los
+nombres raros (`xlink:href`, `scr<script`) se descartan, y todo texto y todo atributo sale
+escapado. Una etiqueta sin cerrar al final se pierde. Es una lista de lo prohibido y no de lo
+permitido: deja pasar `style="..."` (inyección de CSS, no de script) y `data:` en un enlace.
+`sanear_texto` devuelve **texto**, con las entidades decodificadas: para meterlo en HTML hay que
+escaparlo, como cualquier texto. `sanear_nombre` se queda con lo que sigue a la última `/` o `\`,
+cambia por `_` todo lo que no sea letra ASCII, dígito, `.`, `_` o `-`, quita puntos de los
+extremos, antepone `_` a los nombres reservados de Windows (`CON`, `NUL.txt`), corta a 255 y nunca
+devuelve vacío: devuelve `archivo`.
+
+**Validación.** `validado(esquema, accion)` envuelve una acción:
+
+```python
+from cero.validacion import Campo, validado
+
+esquema = {"nombre": Campo(str, maximo=50), "edad": Campo(int, requerido=False, minimo=0)}
+router.agregar("POST", "/registro", validado(esquema, lambda p: p.datos["nombre"]))
+```
+
+Lo que no se entiende es 400: JSON roto, UTF-8 inválido, `NaN`, claves repetidas (dos parsers
+podrían quedarse cada uno con una), números de más de 4300 cifras y anidamientos que agotan la
+pila. Lo que se entiende y no vale es 422 con `{"error": ..., "campos": {"nombre": "es
+obligatorio"}}`, todos los campos a la vez (`SEG-028`). Sin `Content-Type: application/json` es
+415, que además obliga a un navegador ajeno a hacer preflight. Un campo que el esquema no nombra
+es un error, no se tira en silencio: tirarlo sería alterar el cuerpo, y aceptarlo, asignación
+masiva. `True` no es un entero aunque en Python `bool` herede de `int`. La acción recibe los datos
+en `peticion.datos` y el cuerpo intacto en `peticion.cuerpo` (`SEG-027`).
+
+### `SEG-022`: aquí sí se puede incumplir, y por eso se prueba
+
+Rust encontró que el incumplimiento de `SEG-022` **no se podía escribir**: el limitador no recibe
+la ruta, así que reintroducir el fallo no tenía dónde, y la prueba que lo citaba no podía fallar.
+Lo dejó como requisito cumplido por la forma del tipo. C++ tomó la misma forma (el limitador solo
+recibe el cliente) y no cuenta más.
+
+En Python la forma del tipo no impide nada. `Limitador.pedir(cliente)` también recibe solo una
+cadena, pero quien la construye es `Servidor._antes`, y nada impide escribir
+`pedir(peticion.cliente + peticion.camino)`: no hay tipo que distinga «la dirección del cliente» de
+«cualquier cadena». Y hay una segunda manera de incumplirlo que la firma tampoco ve: tomar como
+cliente lo que devuelve `getpeername()` entero, dirección **y puerto**, con lo que cada conexión
+nueva sería un cliente nuevo. Así que aquí `SEG-022` es de la clase de los que hay que probar, y
+tiene dos pruebas: una por `responder` cambiando de ruta (incluido un 404) y otra por el socket con
+cinco conexiones distintas. Se comprobó que fallan: con la ruta en la clave caen las dos, y con el
+puerto cae la del socket.
+
+Es el mismo patrón que `SES-011`, visto desde el otro lado: lo que en Rust es irrepresentable, en
+Python es disciplina más una prueba que la vigila.
+
+### Cómo se comprobó que las pruebas pueden fallar
+
+Para cada `SEG-0xx` se escribió un mutante del código que incumple ese requisito y se corrieron las
+pruebas que lo citan: las 28 caen. En la primera pasada sobrevivió el de `SEG-005`, y no por la
+prueba: dos mutantes seguidos tenían el mismo tamaño y la misma marca de tiempo al segundo, y
+Python reutilizó el `.pyc` del anterior. Con `python -B` cayó. Quien repita el ejercicio, que lo
+corra sin caché de bytecode.
+
+### Lo que no se pudo representar
+
+Nada. Los 28 caben en la biblioteca estándar: `secrets`, `hmac`, `html.parser`, `json` y
+`urllib.parse`. Queda fuera, como en el resto de implementaciones, que la clave del limitador tenga
+**cardinalidad acotada**, porque `spec/seguridad.md` lo deja como prueba pendiente y no como
+requisito; aquí hay una prueba de ello que no cita ningún identificador.
 
 ## Lo que trae la biblioteca estándar de Python
 
@@ -266,12 +403,13 @@ y solo en `pruebas/`:
 grep -rhoiE --include='*.py' '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u
 ```
 
-Hoy son 29: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` salvo `SES-010`, y `HTTP-017`, `HTTP-019`, `HTTP-021` y
-`HTTP-022`, que el banco ya cubre y aquí se prueban además por otro lado. Los de sesiones se
-cuentan solos:
+Hoy son 57: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` salvo `SES-010`, `SEG-001`–`SEG-028`, y
+`HTTP-017`, `HTTP-019`, `HTTP-021` y `HTTP-022`, que el banco ya cubre y aquí se prueban además por
+otro lado. Los de sesiones y los de seguridad se cuentan solos:
 
 ```bash
 grep -rhoiE --include='*.py' 'SES[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 12
+grep -rhoiE --include='*.py' 'SEG[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 28
 ```
 
 `SES-010` no sale porque ninguna prueba lo cita: sin h2 no hay prueba que pueda fallar.
