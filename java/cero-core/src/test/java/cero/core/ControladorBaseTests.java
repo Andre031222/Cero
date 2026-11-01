@@ -18,7 +18,7 @@ final class ControladorBaseTests {
     static void run() throws Exception {
         Check.group("controlador base opcional");
 
-        Server servidor = Cero.app().port(0)
+        Server servidor = Cero.app().host("127.0.0.1").port(0)
                 .controllers(ConBase.class, SinBase.class)
                 .start();
         String base = "http://127.0.0.1:" + servidor.port();

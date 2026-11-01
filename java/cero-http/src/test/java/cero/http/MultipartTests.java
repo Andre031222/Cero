@@ -37,7 +37,7 @@ final class MultipartTests {
             }
         };
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(), handler,
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(), handler,
                 ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port();
 

@@ -59,7 +59,7 @@ final class ObservabilidadTests {
         java.util.concurrent.atomic.AtomicBoolean bdEnPie =
                 new java.util.concurrent.atomic.AtomicBoolean(true);
 
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .health(Health.checks()
                         .ready("bd", bdEnPie::get)
                         .ready("disco", () -> true))
@@ -83,7 +83,7 @@ final class ObservabilidadTests {
             Check.equal("pero vivo sigue en 200: el proceso responde",
                     Cliente.get(base + "/cero/vivo").statusCode(), 200);
 
-            Server conFallo = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+            Server conFallo = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                     .health(Health.checks().ready("remoto", () -> {
                         throw new IllegalStateException("no responde el host");
                     }))
@@ -96,7 +96,7 @@ final class ObservabilidadTests {
                 conFallo.stop();
             }
 
-            Server aInternet = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+            Server aInternet = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                     .health(Health.checks().publico().ready("bd", () -> {
                         throw new IllegalStateException("jdbc:postgresql://10.0.0.7:5432/interna");
                     }))
@@ -114,7 +114,7 @@ final class ObservabilidadTests {
                 aInternet.stop();
             }
 
-            Server publicoSano = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+            Server publicoSano = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                     .health(Health.checks().publico().ready("bd", () -> true))
                     .start();
             try {
@@ -142,7 +142,7 @@ final class ObservabilidadTests {
     private static void estadoRealAunqueFalleElControlador() throws Exception {
         List<String> lineas = new ArrayList<>();
 
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(AccessLog.combined().to(lineas::add))
                 .routes(r -> r.get("/pagina", ctx -> {
                     throw new IllegalStateException("el controlador revienta");
@@ -213,7 +213,7 @@ final class ObservabilidadTests {
     private static void metricas() throws Exception {
         Metrics metricas = Metrics.enabled().ignore("/cero/");
 
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(metricas)
                 .controllers(TiendaController.class)
                 .routes(r -> r.get("/cero/metrics", metricas.endpoint())
@@ -280,7 +280,7 @@ final class ObservabilidadTests {
     private static void acceso() throws Exception {
         List<String> lineas = new ArrayList<>();
 
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(AccessLog.combined().to(lineas::add).ignore("/salud"))
                 .controllers(TiendaController.class)
                 .routes(r -> r.get("/salud", ctx -> "ok"))
@@ -316,7 +316,7 @@ final class ObservabilidadTests {
         }
 
         List<String> compactas = new ArrayList<>();
-        Server compacto = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server compacto = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(AccessLog.compact().to(compactas::add))
                 .controllers(TiendaController.class)
                 .start();

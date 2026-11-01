@@ -186,7 +186,7 @@ final class DispatcherTests {
         List<String> traza = new ArrayList<>();
 
         Server server = Cero.app()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .quiet()
                 .reporter(ErrorReporter.silent())
                 .controllers(ApiController.class, PrivadoController.class)
@@ -369,7 +369,7 @@ final class DispatcherTests {
     private static void fallback() throws Exception {
         List<String> traza = new ArrayList<>();
         Server server = Cero.app()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .quiet()
                 .reporter(ErrorReporter.silent())
                 .routes(router -> router.get("/api/ping", ctx -> "pong"))

@@ -119,6 +119,11 @@ usara 0 para tareas largas tiene que poner un número.
 Un flujo rechazado por el tope de flujos decodifica su bloque igual: la tabla dinámica de HPACK es
 de la conexión, y saltárselo descolocaba las cabeceras de las peticiones siguientes (`H2-035`).
 
+Las pruebas y el servidor del banco escuchan en `127.0.0.1` (`.host(...)`), no en el `0.0.0.0` por
+defecto: en macOS, un `ServerSocket` comodín con `SO_REUSEADDR` —que el JDK pone por defecto en
+Unix— comparte el puerto con otro proceso que ya escucha en `127.0.0.1`, y el que contesta es el
+otro. De ahí venían los fallos sueltos de la suite cuando corrían otras a la vez.
+
 El servidor del banco es `Conforme`, entre las pruebas:
 `java -cp target/classes:target/test-classes cero.http.Conforme 8777`. Con un segundo argumento,
 en milisegundos, fija `writeTimeoutMillis` y el doble en `idleTimeoutMillis`, que es como lo arranca

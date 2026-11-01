@@ -37,7 +37,7 @@ final class WebSocketTests {
 
     private static void lectorQueNoLee() throws Exception {
         CountDownLatch cerrado = new CountDownLatch(1);
-        ServerOptions opciones = ServerOptions.builder().port(0).writeTimeoutMillis(300).build();
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).writeTimeoutMillis(300).build();
         try (Server server = Server.start(opciones, (peticion, respuesta) -> WebSockets.accept(peticion,
                 respuesta, new WebSocketHandler() {
                     @Override
@@ -182,7 +182,7 @@ final class WebSocketTests {
     }
 
     private static Server servidorConOrigenes(String... admitidos) {
-        return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(300).build(),
+        return Server.start(ServerOptions.builder().host("127.0.0.1").port(0).handlerTimeoutMillis(300).build(),
                 (peticion, respuesta) -> WebSockets.accept(peticion, respuesta,
                         new WebSocketHandler() {
                         }, java.util.Set.of(admitidos)),
@@ -207,7 +207,7 @@ final class WebSocketTests {
     }
 
     private static Server servidor(WebSocketHandler handler) {
-        return Server.start(ServerOptions.builder().port(0).handlerTimeoutMillis(300).build(),
+        return Server.start(ServerOptions.builder().host("127.0.0.1").port(0).handlerTimeoutMillis(300).build(),
                 (peticion, respuesta) -> {
                     if (peticion.path().equals("/ws")) {
                         WebSockets.accept(peticion, respuesta, handler);

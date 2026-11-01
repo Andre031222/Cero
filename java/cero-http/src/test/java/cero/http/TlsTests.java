@@ -17,7 +17,7 @@ final class TlsTests {
         SSLContext context = Tls.fromKeystore(Fixture.keystore(), "cerotest".toCharArray());
 
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .host("127.0.0.1")
                 .tls(context)
                 .build();
@@ -31,7 +31,7 @@ final class TlsTests {
 
             HttpClient client = Fixture.trustingClient();
             HttpResponse<String> response = client.send(
-                    HttpRequest.newBuilder(URI.create("https://localhost:" + server.port() + "/"))
+                    HttpRequest.newBuilder(URI.create("https://127.0.0.1:" + server.port() + "/"))
                             .version(HttpClient.Version.HTTP_1_1).build(),
                     HttpResponse.BodyHandlers.ofString());
 
@@ -64,7 +64,7 @@ final class TlsTests {
 
         Tls.Certificado certificado = Tls.reloadable(keystore, "cerotest".toCharArray());
         ServerOptions options = ServerOptions.builder()
-                .port(0).host("127.0.0.1").tls(certificado.context()).build();
+                .host("127.0.0.1").port(0).host("127.0.0.1").tls(certificado.context()).build();
 
         try (Server server = Server.start(options, (req, res) -> res.text("ok"), ErrorReporter.silent())) {
             Check.equal("arranca con el primer certificado",
@@ -87,7 +87,7 @@ final class TlsTests {
 
     private static String sujetoPresentado(int puerto) throws Exception {
         HttpResponse<String> respuesta = Fixture.trustingClient().send(
-                HttpRequest.newBuilder(URI.create("https://localhost:" + puerto + "/"))
+                HttpRequest.newBuilder(URI.create("https://127.0.0.1:" + puerto + "/"))
                         .version(HttpClient.Version.HTTP_1_1).build(),
                 HttpResponse.BodyHandlers.ofString());
         java.security.cert.X509Certificate presentado =
@@ -98,7 +98,7 @@ final class TlsTests {
 
     private static String cuerpo(int puerto) throws Exception {
         return Fixture.trustingClient().send(
-                HttpRequest.newBuilder(URI.create("https://localhost:" + puerto + "/"))
+                HttpRequest.newBuilder(URI.create("https://127.0.0.1:" + puerto + "/"))
                         .version(HttpClient.Version.HTTP_1_1).build(),
                 HttpResponse.BodyHandlers.ofString()).body();
     }

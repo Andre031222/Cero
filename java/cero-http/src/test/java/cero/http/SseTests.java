@@ -28,7 +28,7 @@ final class SseTests {
                 eventos.send("hola");
             }
         };
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 handler, ErrorReporter.silent())) {
             String crudo = Fixture.raw(server.port(),
                     "GET /e HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
@@ -54,7 +54,7 @@ final class SseTests {
             }
         };
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 handler, ErrorReporter.silent());
              Socket socket = Fixture.connect(server.port())) {
 
@@ -104,7 +104,7 @@ final class SseTests {
             }
         };
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 handler, ErrorReporter.silent())) {
             Socket socket = Fixture.connect(server.port());
             socket.getOutputStream().write(

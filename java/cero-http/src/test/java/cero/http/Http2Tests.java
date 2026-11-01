@@ -16,7 +16,7 @@ final class Http2Tests {
     static void run() throws Exception {
         Check.group("HTTP/2 · h2c");
 
-        ServerOptions opciones = ServerOptions.builder().port(0).idleTimeoutMillis(10_000).build();
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).idleTimeoutMillis(10_000).build();
         servidor = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent());
         puerto = servidor.port();
         try {
@@ -51,7 +51,7 @@ final class Http2Tests {
 
     private static void rechazadoSinDescolocar() throws Exception {
         Check.group("HTTP/2 · un flujo rechazado no descoloca HPACK");
-        ServerOptions opciones = ServerOptions.builder().port(0).http2MaxFlujos(1).build();
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).http2MaxFlujos(1).build();
         Handler rutas = (peticion, respuesta) -> {
             if (peticion.path().equals("/lento")) {
                 Thread.sleep(300);
@@ -81,7 +81,7 @@ final class Http2Tests {
     }
 
     private static void apagado() throws Exception {
-        ServerOptions enClaro = ServerOptions.builder().port(0).http2(false).build();
+        ServerOptions enClaro = ServerOptions.builder().host("127.0.0.1").port(0).http2(false).build();
         try (Server s = Server.start(enClaro, Http2Tests::rutas, ErrorReporter.silent())) {
             String respuesta = Fixture.raw(s.port(),
                     new String(Http2.PREAMBULO, StandardCharsets.US_ASCII));
@@ -89,7 +89,7 @@ final class Http2Tests {
                     respuesta.startsWith("HTTP/1.1 501"));
         }
 
-        ServerOptions conTls = ServerOptions.builder().port(0).http2(false)
+        ServerOptions conTls = ServerOptions.builder().host("127.0.0.1").port(0).http2(false)
                 .tls(Tls.fromKeystore(Fixture.keystore(), "cerotest".toCharArray())).build();
         try (Server s = Server.start(conTls, Http2Tests::rutas, ErrorReporter.silent())) {
             javax.net.ssl.SSLSocketFactory fabrica = Fixture.trustEverything().getSocketFactory();
@@ -107,7 +107,7 @@ final class Http2Tests {
     }
 
     private static void porUpgrade() throws Exception {
-        ServerOptions opciones = ServerOptions.builder().port(0).build();
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).build();
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
             try (java.net.Socket socket = new java.net.Socket("127.0.0.1", s.port())) {
                 socket.setSoTimeout(10_000);
@@ -163,7 +163,7 @@ final class Http2Tests {
 
     private static void porAlpn() throws Exception {
         java.nio.file.Path almacen = Fixture.keystore();
-        ServerOptions opciones = ServerOptions.builder().port(0)
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0)
                 .tls(Tls.fromKeystore(almacen, "cerotest".toCharArray())).build();
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
             javax.net.ssl.SSLContext confiado = Fixture.trustEverything();

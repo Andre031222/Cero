@@ -17,7 +17,7 @@ final class FuzzTests {
         Check.group("ruido dirigido");
 
         ServerOptions opciones = ServerOptions.builder()
-                .port(0).idleTimeoutMillis(1_500).build();
+                .host("127.0.0.1").port(0).idleTimeoutMillis(1_500).build();
         try (Server servidor = Server.start(opciones,
                 (peticion, respuesta) -> respuesta.text("ok"), ErrorReporter.silent())) {
             int puerto = servidor.port();

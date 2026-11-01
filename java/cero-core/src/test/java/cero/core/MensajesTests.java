@@ -99,7 +99,7 @@ final class MensajesTests {
     }
 
     private static void porHttp() throws Exception {
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .messages(Messages.from("textos", "en", "qu").base("es"))
                 .controllers(SaludosController.class)
                 .start();
@@ -124,7 +124,7 @@ final class MensajesTests {
             servidor.stop();
         }
 
-        Server pelado = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server pelado = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .controllers(SaludosController.class)
                 .start();
         try {

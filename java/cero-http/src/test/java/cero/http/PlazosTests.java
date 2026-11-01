@@ -17,7 +17,7 @@ final class PlazosTests {
     static void run() throws Exception {
         Check.group("Plazos y HTTP/2 Bomb");
 
-        ServerOptions opciones = ServerOptions.builder().port(0)
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0)
                 .idleTimeoutMillis(400).writeTimeoutMillis(400).build();
         Server servidor = Server.start(opciones, PlazosTests::rutas, ErrorReporter.silent());
         try {
@@ -29,11 +29,15 @@ final class PlazosTests {
         } finally {
             servidor.close();
         }
-        ServerOptions estrechas = ServerOptions.builder().port(0)
+        ServerOptions estrechas = ServerOptions.builder().host("127.0.0.1").port(0)
                 .http2MaxEnVuelo(1 << 20).maxBodyBytes(100).build();
         try (Server estrecho = Server.start(estrechas, PlazosTests::rutas, ErrorReporter.silent())) {
             unaSolaPasaDelPresupuesto(estrecho.port());
             cuerpoDeMas(estrecho.port());
+        }
+        try (Server cortes = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).maxBodyBytes(100).build(),
+                PlazosTests::rutas, ErrorReporter.silent())) {
+            cortesNoGastanVentana(cortes.port());
         }
         plazosNoValidos();
     }
@@ -71,6 +75,46 @@ final class PlazosTests {
         }
     }
 
+    private static void cortesNoGastanVentana(int puerto) throws Exception {
+        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+            for (int i = 0; i < 3; i++) {
+                int flujo = c.pedirSinCerrar("POST", "/grande");
+                int recibidos = 0;
+                while (recibidos < 65_535) {
+                    Http2Cliente.Trama t = c.leerTrama();
+                    if (t.tipo() == Http2Cliente.DATA) {
+                        recibidos += t.carga().length;
+                    }
+                }
+                c.trama(Http2Cliente.WINDOW_UPDATE, 0, flujo, Http2Cliente.entero(1_000));
+                c.trama(Http2Cliente.WINDOW_UPDATE, 0, 0, Http2Cliente.entero(1_000));
+                c.trama(Http2Cliente.DATA, 0, flujo, new byte[120]);
+                for (Http2Cliente.Trama t = c.leerTrama(); t.tipo() != Http2Cliente.RST_STREAM; t = c.leerTrama()) {
+                    if (t.tipo() == Http2Cliente.DATA) {
+                        recibidos += t.carga().length;
+                    }
+                }
+                c.trama(Http2Cliente.WINDOW_UPDATE, 0, 0, Http2Cliente.entero(recibidos));
+            }
+            int flujo = c.pedir("GET", "/justo");
+            int recibidos = 0;
+            boolean fin = false;
+            while (!fin) {
+                Http2Cliente.Trama t = c.leerTrama();
+                if (t.tipo() == Http2Cliente.RST_STREAM && t.flujo() == flujo) {
+                    break;
+                }
+                if (t.tipo() == Http2Cliente.DATA && t.flujo() == flujo) {
+                    recibidos += t.carga().length;
+                    fin = (t.banderas() & Http2Cliente.FIN_FLUJO) != 0;
+                    c.trama(Http2Cliente.WINDOW_UPDATE, 0, flujo, Http2Cliente.entero(t.carga().length));
+                }
+            }
+            Check.equal("H2-055: cortar flujos a mitad de escritura no gasta ventana de la conexión para siempre",
+                    recibidos, 65_535 + 3 * 1_000);
+        }
+    }
+
     private static void descargaLarga(int puerto) throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
             Check.equal("H2-038: 16 MiB con un WINDOW_UPDATE por trama no son una inundación",
@@ -83,6 +127,7 @@ final class PlazosTests {
             case "/grande" -> respuesta.text("x".repeat(4 << 20));
             case "/eco" -> respuesta.send(peticion.bodyBytes());
             case "/descarga" -> respuesta.text("x".repeat(16 << 20));
+            case "/justo" -> respuesta.text("x".repeat(65_535 + 3 * 1_000));
             default -> respuesta.text("x".repeat(100));
         }
     }

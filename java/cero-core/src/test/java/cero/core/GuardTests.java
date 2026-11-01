@@ -65,7 +65,7 @@ final class GuardTests {
     }
 
     private static void cabecerasDeSeguridad() throws Exception {
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(SecurityHeaders.standard())
                 .controllers(ApiController.class)
                 .start();
@@ -90,7 +90,7 @@ final class GuardTests {
             servidor.stop();
         }
 
-        Server aMedida = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server aMedida = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(SecurityHeaders.standard()
                         .frameOptions("SAMEORIGIN")
                         .csp("default-src 'self'")
@@ -110,7 +110,7 @@ final class GuardTests {
     }
 
     private static void cors() throws Exception {
-        Server server = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server server = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Cors.allowing("https://app.pe").credentials(true))
                 .controllers(ApiController.class)
                 .start();
@@ -167,7 +167,7 @@ final class GuardTests {
             server.stop();
         }
 
-        Server abierto = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server abierto = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Cors.anyOrigin())
                 .controllers(ApiController.class)
                 .start();
@@ -194,7 +194,7 @@ final class GuardTests {
         Check.that("y una lista concreta con credenciales también",
                 Cors.allowing("https://app.pe").credentials(true) != null);
 
-        Server credenciales = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server credenciales = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Cors.allowing("https://app.pe").credentials(true))
                 .controllers(ApiController.class)
                 .start();
@@ -220,7 +220,7 @@ final class GuardTests {
     }
 
     private static void csrf() throws Exception {
-        Server server = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server server = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Csrf.enabled().exempt("/api/publico"))
                 .controllers(ApiController.class)
                 .start();
@@ -267,7 +267,7 @@ final class GuardTests {
 
     private static void rateLimit() throws Exception {
         RateLimit limite = RateLimit.of(3, Duration.ofSeconds(30));
-        Server server = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server server = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(limite)
                 .controllers(ApiController.class)
                 .start();
@@ -330,7 +330,7 @@ final class GuardTests {
     }
 
     private static void validacionEnRuta() throws Exception {
-        Server server = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server server = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .controllers(ApiController.class)
                 .start();
         try {

@@ -136,7 +136,7 @@ final class AutenticacionTests {
         jwk.put("e", URL64.encodeToString(sinSigno(publica.getPublicExponent())));
         String juegoDeClaves = Json.write(Map.of("keys", List.of(jwk)));
 
-        Server google = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server google = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .routes(r -> r
                         .get("/certs", ctx -> Result.raw(juegoDeClaves))
                         .post("/token", ctx -> {
@@ -238,7 +238,7 @@ final class AutenticacionTests {
     private static void estadoEnSesion(OAuth cliente) throws Exception {
         Check.group("OAuth · el estado ata el retorno a la sesión");
 
-        Server app = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server app = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .routes(r -> r
                         .get("/entrar", ctx -> Result.raw(cliente.autorizar(ctx).estado()))
                         .get("/volver", ctx -> {

@@ -112,7 +112,7 @@ final class TrazadoTests {
     private static void deExtremoAExtremo() throws Exception {
         ConcurrentLinkedQueue<String> vistas = new ConcurrentLinkedQueue<>();
 
-        Server dentro = Cero.app().port(0).quiet().reporter(cero.http.ErrorReporter.silent())
+        Server dentro = Cero.app().host("127.0.0.1").port(0).quiet().reporter(cero.http.ErrorReporter.silent())
                 .use(Trace.middleware())
                 .routes(r -> r.get("/dentro", ctx -> {
                     vistas.add("dentro:" + ctx.trace().traza());
@@ -120,7 +120,7 @@ final class TrazadoTests {
                 }))
                 .start();
 
-        Server fuera = Cero.app().port(0).quiet().reporter(cero.http.ErrorReporter.silent())
+        Server fuera = Cero.app().host("127.0.0.1").port(0).quiet().reporter(cero.http.ErrorReporter.silent())
                 .use(Trace.middleware())
                 .routes(r -> r.get("/fuera", ctx -> {
                     vistas.add("fuera:" + ctx.trace().traza());

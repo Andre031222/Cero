@@ -39,7 +39,7 @@ final class AsincronoTests {
         AtomicReference<String> recibido = new AtomicReference<>();
         AtomicInteger llamadas = new AtomicInteger();
 
-        Server servidor = Cero.app().port(0).quiet().reporter(ErrorReporter.silent())
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .routes(r -> r
                         .get("/eco", ctx -> Map.of("q", ctx.query("q"), "n", ctx.query("n")))
                         .post("/chat", ctx -> {

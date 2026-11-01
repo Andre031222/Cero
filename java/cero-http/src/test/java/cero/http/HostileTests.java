@@ -27,7 +27,7 @@ final class HostileTests {
 
     private static void conexionesLentas() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .idleTimeoutMillis(600)
                 .maxConnections(50)
                 .build();
@@ -76,7 +76,7 @@ final class HostileTests {
 
     private static void cuerposMentirosos() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .idleTimeoutMillis(700)
                 .maxBodyBytes(4_096)
                 .build();
@@ -116,7 +116,7 @@ final class HostileTests {
     private static void abandonos() throws Exception {
         AtomicInteger atendidas = new AtomicInteger();
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 (req, res) -> {
                     atendidas.incrementAndGet();
                     res.text("x".repeat(200_000));
@@ -146,7 +146,7 @@ final class HostileTests {
         int hilos = 40;
         int porHilo = 25;
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 (req, res) -> res.text(req.path()), ErrorReporter.silent())) {
 
             CountDownLatch listos = new CountDownLatch(hilos);
@@ -186,7 +186,7 @@ final class HostileTests {
 
     private static void fuzzDelParser() throws Exception {
         try (Server server = Server.start(
-                ServerOptions.builder().port(0).idleTimeoutMillis(500).build(),
+                ServerOptions.builder().host("127.0.0.1").port(0).idleTimeoutMillis(500).build(),
                 (req, res) -> res.text("ok"), ErrorReporter.silent())) {
 
             String[] entradas = {

@@ -19,7 +19,7 @@ final class ProtocolTests {
         Check.group("protocolo HTTP/1.1");
 
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .maxBodyBytes(4_096)
                 .idleTimeoutMillis(2_000)
                 .build();
@@ -52,7 +52,7 @@ final class ProtocolTests {
 
     private static void apagadoConKeepAliveOcioso() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0).shutdownGraceMillis(10_000).build();
+                .host("127.0.0.1").port(0).shutdownGraceMillis(10_000).build();
         Server server = Server.start(options, ProtocolTests::route, ErrorReporter.silent());
         long millis;
         try (Socket socket = new Socket("127.0.0.1", server.port())) {
@@ -71,7 +71,7 @@ final class ProtocolTests {
     private static void apagadoEsperaLoQueEstaEnVuelo() throws Exception {
         java.util.concurrent.CountDownLatch dentro = new java.util.concurrent.CountDownLatch(1);
         ServerOptions options = ServerOptions.builder()
-                .port(0).shutdownGraceMillis(5_000).build();
+                .host("127.0.0.1").port(0).shutdownGraceMillis(5_000).build();
         Server server = Server.start(options, (peticion, respuesta) -> {
             dentro.countDown();
             try {
@@ -351,14 +351,14 @@ final class ProtocolTests {
 
         Handler handler = (peticion, respuesta) -> respuesta.text(String.valueOf(peticion.secure()));
 
-        try (Server sinDeclarar = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server sinDeclarar = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 handler, ErrorReporter.silent())) {
             Check.equal("sin declarar el proxy, la cabecera se ignora",
                     conProto(sinDeclarar.port(), "https"), "false");
         }
 
         try (Server declarado = Server.start(
-                ServerOptions.builder().port(0).behindProxy(true).build(),
+                ServerOptions.builder().host("127.0.0.1").port(0).behindProxy(true).build(),
                 handler, ErrorReporter.silent())) {
 
             Check.equal("declarado, X-Forwarded-Proto: https cuenta como seguro",

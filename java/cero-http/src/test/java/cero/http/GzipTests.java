@@ -31,7 +31,7 @@ final class GzipTests {
             }
         };
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).gzipMinBytes(1_024).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).gzipMinBytes(1_024).build(),
                 handler, ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port();
 
@@ -58,7 +58,7 @@ final class GzipTests {
                     fetch(base + "/json", true).headers().firstValue("content-encoding").orElse(null), "gzip");
         }
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).gzipMinBytes(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).gzipMinBytes(0).build(),
                 handler, ErrorReporter.silent())) {
             Check.that("gzipMinBytes(0) desactiva la compresión",
                     fetch("http://127.0.0.1:" + server.port() + "/largo", true)

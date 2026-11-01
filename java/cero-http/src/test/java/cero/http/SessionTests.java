@@ -112,7 +112,7 @@ final class SessionTests {
     }
 
     private static void overHttp() throws Exception {
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 sessionHandler(), ErrorReporter.silent())) {
             int port = server.port();
 
@@ -148,7 +148,7 @@ final class SessionTests {
     }
 
     private static void sobreHttp2() throws Exception {
-        try (Server servidor = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server servidor = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 sessionHandler(), ErrorReporter.silent());
                 Http2Cliente c = new Http2Cliente(servidor.port())) {
             c.saludar();
@@ -216,7 +216,7 @@ final class SessionTests {
             }
         };
 
-        ServerOptions opciones = ServerOptions.builder().port(0).sessionStore(compartido).build();
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).sessionStore(compartido).build();
         try (Server primera = Server.start(opciones, handler, ErrorReporter.silent());
              Server segunda = Server.start(opciones, handler, ErrorReporter.silent())) {
 
@@ -233,13 +233,13 @@ final class SessionTests {
             Check.equal("y la segunda instancia ve los mismos datos", enLaOtra.body(), "ana");
         }
 
-        try (Server aislada = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server aislada = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 handler, ErrorReporter.silent())) {
             HttpResponse<String> alta = Fixture.get("http://127.0.0.1:" + aislada.port() + "/guardar");
             String cookie = alta.headers().firstValue("set-cookie").orElse("");
             int fin = cookie.indexOf(';');
 
-            try (Server otra = Server.start(ServerOptions.builder().port(0).build(),
+            try (Server otra = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                     handler, ErrorReporter.silent())) {
                 HttpResponse<String> perdida = Fixture.send(
                         HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + otra.port() + "/leer"))

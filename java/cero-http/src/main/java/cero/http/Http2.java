@@ -808,9 +808,13 @@ final class Http2 implements Watchdog.Vigilada {
                 long hasta = System.nanoTime() + escrituraMillis * 1_000_000L;
                 while (pos < finTrama) {
                     int trozo = esperarHueco(flujo, finTrama - pos, hasta);
+                    if (trozo == 0) {
+                        return;
+                    }
                     boolean ultimo = fin && pos + trozo >= cuerpo.length;
                     synchronized (candadoEscritura) {
                         if (flujo.cortado) {
+                            devolver(trozo);
                             return;
                         }
                         escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
@@ -837,6 +841,19 @@ final class Http2 implements Watchdog.Vigilada {
         flujo.finEntrada = true;
         flujos.remove(flujo.id);
         flujo.cerrarEntrada();
+        synchronized (flujo.ventana) {
+            flujo.ventana.notifyAll();
+        }
+        synchronized (ventanaSalida) {
+            ventanaSalida.notifyAll();
+        }
+    }
+
+    private void devolver(int octetos) {
+        ventanaSalida.addAndGet(octetos);
+        synchronized (ventanaSalida) {
+            ventanaSalida.notifyAll();
+        }
     }
 
     private void cargar(int octetos) throws IOException {
@@ -874,7 +891,7 @@ final class Http2 implements Watchdog.Vigilada {
     }
 
     private int esperarHueco(Flujo flujo, int deseado, long hasta) throws IOException {
-        while (vivo) {
+        while (vivo && !flujo.cortado) {
             long conexion = ventanaSalida.get();
             int delFlujo = flujo.ventana.get();
             int posible = (int) Math.min(Math.min(conexion, delFlujo), deseado);
@@ -897,6 +914,9 @@ final class Http2 implements Watchdog.Vigilada {
                 Thread.currentThread().interrupt();
                 throw new IOException("interrumpido esperando ventana");
             }
+        }
+        if (flujo.cortado) {
+            return 0;
         }
         throw new IOException("conexión cerrada");
     }

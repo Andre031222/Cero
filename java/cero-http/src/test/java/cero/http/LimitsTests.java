@@ -27,7 +27,7 @@ final class LimitsTests {
 
     private static void handlerTimeoutNoCortaLoRapido() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .handlerTimeoutMillis(150)
                 .idleTimeoutMillis(5_000)
                 .build();
@@ -52,7 +52,7 @@ final class LimitsTests {
     }
 
     private static void hostRequired() throws Exception {
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 (req, res) -> res.text("ok"), ErrorReporter.silent())) {
             int port = server.port();
             Check.that("HTTP/1.1 sin Host da 400",
@@ -64,7 +64,7 @@ final class LimitsTests {
                     Fixture.raw(port, "GET / HTTP/1.0\r\n\r\n").startsWith("HTTP/1.1 200"));
         }
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).requireHost(false).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).requireHost(false).build(),
                 (req, res) -> res.text("ok"), ErrorReporter.silent())) {
             Check.that("requireHost(false) permite omitirlo",
                     Fixture.raw(server.port(), "GET / HTTP/1.1\r\nConnection: close\r\n\r\n")
@@ -74,7 +74,7 @@ final class LimitsTests {
 
     private static void connectionCeiling() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .maxConnections(2)
                 .idleTimeoutMillis(5_000)
                 .build();
@@ -114,7 +114,7 @@ final class LimitsTests {
 
     private static void handlerTimeout() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .handlerTimeoutMillis(300)
                 .idleTimeoutMillis(5_000)
                 .build();
@@ -144,7 +144,7 @@ final class LimitsTests {
 
     private static void gracefulShutdown() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .shutdownGraceMillis(5_000)
                 .build();
 
@@ -177,7 +177,7 @@ final class LimitsTests {
 
     private static void keepAliveCeiling() throws Exception {
         ServerOptions options = ServerOptions.builder()
-                .port(0)
+                .host("127.0.0.1").port(0)
                 .maxKeepAliveRequests(2)
                 .build();
 

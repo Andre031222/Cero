@@ -26,7 +26,7 @@ final class StaticFilesTests {
         Path fuera = root.getParent().resolve("secreto-" + root.getFileName() + ".txt");
         Files.writeString(fuera, "no debe verse");
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 StaticFiles.from(root), ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port();
 
@@ -82,7 +82,7 @@ final class StaticFilesTests {
 
     private static void cacheDelClasspath() throws Exception {
         StaticFiles estaticos = StaticFiles.fromClasspath("estaticos-prueba");
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 estaticos, ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port();
 
@@ -110,7 +110,7 @@ final class StaticFilesTests {
         Files.createDirectory(raiz.resolve("assets"));
         Files.writeString(raiz.resolve("assets").resolve("app.js"), "console.log(1)");
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 StaticFiles.from(raiz).spa(), ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port();
 
@@ -130,7 +130,7 @@ final class StaticFilesTests {
                     Fixture.get(base + "/logo.png").statusCode(), 404);
         }
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 StaticFiles.from(raiz), ErrorReporter.silent())) {
             Check.equal("sin spa() activado, la ruta de cliente da 404",
                     Fixture.get("http://127.0.0.1:" + server.port() + "/nosotros").statusCode(), 404);
@@ -138,7 +138,7 @@ final class StaticFilesTests {
     }
 
     private static void prefijo(Path root) throws Exception {
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 StaticFiles.from(root, "/assets"), ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port();
             Check.equal("con prefijo sirve bajo la ruta",
@@ -152,7 +152,7 @@ final class StaticFilesTests {
         Path root = Files.createTempDirectory("cero-rangos");
         Files.writeString(root.resolve("alfabeto.txt"), "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
-        try (Server server = Server.start(ServerOptions.builder().port(0).build(),
+        try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 StaticFiles.from(root), ErrorReporter.silent())) {
             String base = "http://127.0.0.1:" + server.port() + "/alfabeto.txt";
 
@@ -220,7 +220,7 @@ final class StaticFilesTests {
         Files.createDirectory(raiz.resolve("assets"));
         Files.writeString(raiz.resolve("assets").resolve("app-a1b2c3.css"), "body{}");
 
-        ServerOptions opciones = ServerOptions.builder().port(0).build();
+        ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).build();
         try (Server servidor = Server.start(opciones,
                 StaticFiles.from(raiz).spa().cacheControl("public, max-age=31536000, immutable"),
                 ErrorReporter.silent())) {
