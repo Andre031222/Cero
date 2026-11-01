@@ -5,15 +5,16 @@ traducción del código de otro lenguaje: la referencia son los requisitos numer
 los mismos vectores de conformidad, que son bytes sobre un socket y no saben en qué lenguaje está
 escrito quien responde.
 
-**Estado: hito 3.** HTTP/1.1, ruteo, sesiones y seguridad transversal. **23 de 23 vectores del
-banco** y 177 pruebas propias.
+**Estado: hito 4.** HTTP/1.1, ruteo, sesiones, seguridad transversal y observabilidad. **23 de 23
+vectores del banco** y 220 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
 | 1 | HTTP/1.1 y ruteo | 23 de 23 vectores · `HTTP-001`–`HTTP-023`, `RUT-001`–`RUT-013` |
 | 1 bis | Un solo archivo | `python3 -m cero.empaquetar` · 3 pruebas |
 | 2 | Sesiones | 12 de 13, más `SES-010` a medias hasta que haya HTTP/2 · 50 pruebas |
-| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 77 pruebas |
+| 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 81 pruebas |
+| 4 | Observabilidad | 23 de 23 · `OBS-001`–`OBS-023` · 39 pruebas |
 
 ## Usarlo
 
@@ -61,7 +62,7 @@ Las pruebas y el banco:
 ```bash
 cd python
 python3 -I -m unittest discover -s pruebas -t .   # las pruebas propias
-python3 -m cero.conforme 8777                     # y el servidor del banco
+python3 -m cero.conforme 8777 > /dev/null         # y el servidor del banco
 python3 ../spec/banco/correr.py 127.0.0.1 8777
 ```
 
@@ -301,9 +302,18 @@ declarar un proxy de confianza, igual que con `Secure`).
 esos sucesos reconstruye el HTML dejando pasar **solo** lo que está en la lista: `p`, `b`, `i`,
 `em`, `strong`, `a`, `ul`, `ol`, `li`, `br`, `code`, `pre`, `blockquote`, `div` y `span`, y como
 atributos solo `href` y `title` en `a`. Un `href` vale si es relativo o su esquema es `http`,
-`https` o `mailto`, mirado después de quitar espacios y controles. Cualquier otra etiqueta se
+`https` o `mailto`, mirado después de quitar espacios y controles. **`//otro.pe/x` cuenta como
+relativo**: no tiene esquema, y el navegador lo resuelve con el de la página hacia otro anfitrión.
+No ejecuta nada, así que no es un agujero de `SEG-024`, pero es un enlace a otro dominio igual que
+`https://otro.pe/x`; quien solo quiera enlaces internos tiene que filtrarlo aparte. Cualquier otra etiqueta se
 quita y su texto se queda; `script`, `style`, `template`, `iframe`, `object`, `embed`, `svg`,
 `math` y parecidos se quitan **con** su contenido. Todo texto y todo atributo sale escapado.
+
+**La salida sale equilibrada.** El saneador lleva una pila de lo que abrió: lo que queda abierto al
+final se cierra, un cierre que no corresponde a nada abierto se tira, y un cierre de algo que está
+más abajo en la pila cierra antes lo de encima (`<b><i>x</b>` da `<b><i>x</i></b>`). Sin eso, un
+`<div>` sin cerrar en un comentario deformaba el resto de la página donde se pegara. `<b/>` sale como
+`<b></b>`, porque en HTML la barra no cierra una etiqueta que no es vacía.
 
 La primera versión era una lista de lo prohibido, y cumplía `SEG-023` y `SEG-024` al pie de la
 letra: quitaba `script`, `style`, `iframe`, manejadores y `javascript:`, y conservaba lo inocuo. La
@@ -382,6 +392,170 @@ Nada. Los 28 caben en la biblioteca estándar: `secrets`, `hmac`, `html.parser`,
 **cardinalidad acotada**, porque `spec/seguridad.md` lo deja como prueba pendiente y no como
 requisito; aquí hay una prueba de ello que no cita ningún identificador.
 
+## Observabilidad
+
+`spec/observabilidad.md` pide salud, un log, métricas y un log de acceso, y deja el formato libre.
+Aquí el formato no es libre: las métricas van en **texto de Prometheus 0.0.4** y el acceso en el
+**Common Log Format de NCSA**, dos normas que no escribió nadie de Cero, para que el banco ciego de
+la fase 2 las lea sin saber en qué lenguaje está el servidor. Todo está en `cero.observabilidad`:
+
+```python
+from cero.observabilidad import Acceso, Metricas, Registro, Salud
+
+salud = Salud(publico=False)
+salud.comprobacion("bd", lambda: base.ping())
+metricas = Metricas(ignoradas=["/salud", "/metricas"])
+router.agregar("GET", "/salud/vida", salud.vivo)
+router.agregar("GET", "/salud/lista", salud.listo)
+router.agregar("GET", "/metricas", metricas.exponer)
+
+Servidor(router, metricas=metricas,
+         acceso=Acceso("acceso.log", ignoradas=["/salud"], personales=True),
+         registro=Registro("app.log", nivel="AVISO"))
+```
+
+| Pieza | Por defecto | Requisitos |
+|---|---|---|
+| `Salud` | la monta la aplicación, en las rutas que quiera | `OBS-001`–`OBS-007` |
+| `Registro` | encendido: `stderr`, nivel `INFO` | `OBS-008`–`OBS-011` |
+| `Metricas` | apagadas | `OBS-013`–`OBS-018` |
+| `Acceso` | apagado; `Acceso()` sin destino escribe en `stdout` | `OBS-019`–`OBS-023` |
+| el estado que se anota | el que sale, en `Servidor._una` | `OBS-012` |
+
+`Registro` y `Acceso` reciben como destino un camino de archivo, una función que recibe la línea, o
+nada. Al archivo se escribe **una línea cada vez y se vacía el búfer en cada una**: el juez del banco
+lee el archivo mientras el proceso sigue vivo, y una línea en el búfer no existe para él.
+`cero.conforme` toma los destinos y el nivel del entorno: `CERO_CONF_ACCESO` (si no está,
+`stdout`), `CERO_CONF_LOG` (si no, `stderr`), `CERO_CONF_NIVEL` y `CERO_CONF_SALUD_PUBLICA`. Por eso
+su aviso de arranque pasó a `stderr`: `stdout` es del log de acceso.
+
+**Salud.** `vivo` no recibe las comprobaciones, así que no puede fallar por ellas (`OBS-001`,
+`OBS-003`); responde `{"estado": "vivo", "activo_ms": …}` con un reloj monótono. `listo` corre cada
+comprobación y responde 200 o 503 con `{"estado": …, "comprobaciones": {"bd": "bien", "disco":
+"mal: ConnectionError: …"}}`. En modo público el cuerpo es solo `{"estado": "listo"}` o
+`{"estado": "no listo"}` (`OBS-006`, `OBS-007`). Una comprobación que devuelve algo falso está mal;
+una que lanza también (`OBS-005`). Se atrapa `Exception`, no `BaseException`: un `KeyboardInterrupt`
+o un `SystemExit` siguen parando el proceso. Lo que no se cubre es una comprobación que **se cuelga**:
+no hay plazo, y `listo` se cuelga con ella. Ponérselo es tarea de la comprobación.
+
+**`OBS-005` en Python.** Rust encontró que «una comprobación que lanza» era vocabulario de Java,
+porque en Rust el error corriente es un valor y lanzar es `panic!`. En Python lanzar **es** el
+mecanismo normal de error, como en Java, y el requisito se lee sin traducir. Lo que sí hay que
+traducir es el otro lado: en Python una comprobación puede devolver `None` por olvidar el
+`return`, y eso aquí cuenta como «mal», no como un fallo del endpoint. La redacción neutral que
+propone Rust («una comprobación que falla de forma no prevista») cubre los tres lenguajes.
+
+**Registro.** `registro.escribir("AVISO", "conforme", "valor={} y {}", 42, excepcion=fallo)` da
+`2026-11-01T08:41:42.972+00:00 AVISO conforme valor=42 y {} | ValueError: … en app.py:12`. Los
+niveles son `TRAZA`, `DEPURA`, `INFO`, `AVISO`, `ERROR` y `NADA`, el vocabulario de
+`CERO_CONF_NIVEL`, y un nivel que no está en la lista (`WARN`) es un `ValueError` y no un silencio.
+`interpolar` parte la plantilla por `{}` antes de sustituir, así que un valor que contenga `{}` no
+se vuelve a interpolar, y un `__str__` que lanza deja `<Tipo ilegible>` en vez de llevarse la línea
+(`OBS-011`). Los saltos de línea de la línea entera se escriben como `\n`: con uno de verdad, quien
+controla un valor puede fabricar una línea `ERROR` falsa. El servidor usa el mismo registro para las
+excepciones no controladas y para la respuesta que no se puede serializar, con tipo, mensaje y el
+archivo y la línea donde saltó (`OBS-010`), en una sola línea y sin la traza entera.
+
+**`OBS-012`: el estado que sale.** En Python el fallo «después de fijar 200» es una `Respuesta(200)`
+con una cabecera que lleva un salto de línea: `serializar` la rechaza y lo que sale es un 500. Las
+métricas y el acceso se anotan **después** de serializar y con la respuesta que de verdad se va a
+mandar, así que dicen 500. El mutante que anota la respuesta de la acción cae.
+
+**Las métricas.**
+
+```
+cero_requests_total{ruta="/tienda/{id}"} 3
+cero_request_errors_total{ruta="/tienda/{id}"} 1
+cero_all_requests_total 7
+cero_all_request_errors_total 2
+cero_request_duration_ms{ruta="/tienda/{id}",quantile="0.5"} 0.41
+cero_request_duration_ms{ruta="/tienda/{id}",quantile="0.95"} 1.2
+cero_request_duration_ms{ruta="/tienda/{id}",quantile="0.99"} 1.2
+cero_request_duration_ms_sum{ruta="/tienda/{id}"} 2.03
+cero_request_duration_ms_count{ruta="/tienda/{id}"} 3
+cero_uptime_ms 1665
+```
+
+Los nombres son los de Java. La etiqueta `ruta` es el **patrón** que casó, no el camino
+(`OBS-014`): `/tienda/1`, `/tienda/2` y `/tienda/3` son una serie. Lo que no casó con ningún
+patrón —un 404, un 405, un `OPTIONS *`, un 429 o un 403 de CORS cortados antes del router, un
+rechazo del parser— va a una sola serie, `ruta="(sin ruta)"`. Así el número de series lo fija la
+aplicación al declarar sus rutas, y no quien manda peticiones. Error es todo estado 4xx o 5xx, y un
+404 cuenta (`OBS-016`).
+
+**Diferencias con Java que el banco tendrá que fijar:**
+
+- Java pone el verbo en la etiqueta (`ruta="GET /tienda"`); aquí va solo el patrón, que es lo que
+  pide el vector de `OBS-014` del diseño del banco (`ruta="/rut/a/{x}"`). `GET` y `POST` de un mismo
+  patrón comparten serie.
+- **Java usa el camino concreto cuando no hubo ruta** (`context.path()` en `Metrics.clave`): cada
+  404 a un camino distinto crea una serie nueva. Es cardinalidad sin acotar a partir de entrada
+  externa, lo mismo que `OBS-014` prohíbe, por la puerta del 404.
+- Java no expone el total en Prometheus, solo en su JSON. `OBS-018` pide el total, y sumar las
+  series por ruta en el mismo nombre contaría dos veces, así que va en su propia familia,
+  `cero_all_requests_total` y `cero_all_request_errors_total`. El nombre está por acordar.
+
+**Percentiles de verdad (`OBS-015`).** Java los estima con cubos fijos (1, 2, 5, 10, 25… ms), así que
+un cuantil sale redondeado al tope del cubo. Rust y C++ los calculan bien, pero guardan **todas** las
+duraciones de cada patrón, sin tope de memoria, y su exposición no los incluye. Aquí cada ruta guarda sus **últimas 1024 duraciones** y el cuantil es el de rango más cercano
+sobre ellas, ordenadas al exponer: con 19 peticiones de 1 ms y una de 300 ms, `0.5` da 1 ms y `0.99`
+da 300. `_sum` y `_count` son de toda la vida del proceso, como manda el tipo `summary`; los
+cuantiles, de la ventana. La memoria es 1024 flotantes por patrón, y los patrones los fija la
+aplicación. La duración va desde que se leyó la cabecera hasta que la respuesta está serializada;
+no incluye el envío.
+
+**El log de acceso.**
+
+```
+127.0.0.1 - - [01/Nov/2026:08:41:42 +0000] "GET /texto?q=1 HTTP/1.1" 200 5
+```
+
+`%h` es la IP del cliente, `%l` siempre `-`, `%u` el usuario o `-` si no hay (`OBS-021`), la fecha en
+UTC con los meses en inglés sea cual sea el *locale*, la línea de petición con su consulta
+(`OBS-020`), el estado que salió y los octetos del cuerpo, o `-` si no hubo (un `HEAD`, un 204). La
+aplicación identifica al usuario poniendo `peticion.usuario`; Cero no tiene autenticación. Las
+comillas y las barras de la línea van escapadas, y todo octeto fuera de lo imprimible, como `\xNN`,
+igual que hace Apache: una petición con `"` en el destino no parte el campo. Se anotan los errores y
+las excepciones (`OBS-022`) y también los rechazos del parser cuando la línea de petición ya se
+leyó (413, 417, 408 en el cuerpo); un rechazo de la propia línea o el 503 por falta de cupo no tienen
+petición que anotar. La línea se escribe **antes** de mandar la respuesta: cuando el cliente la
+tiene, la línea ya existe, y el juez no tiene que esperar.
+
+Las rutas ignoradas (`OBS-017`, `OBS-023`) se declaran por prefijo y casan **por segmento completo**,
+con la misma función que parte los caminos del router: ignorar `/salud` ignora `/salud/vida` y no
+`/saludable`. Ignorar la raíz no se deja construir.
+
+### Datos personales: la consulta y el usuario, detrás de una sola opción
+
+`OBS-020` pide guardar la consulta y `OBS-021` el usuario. Con la Ley 29733 del Perú y la
+minimización de datos del RGPD, las dos cosas son datos personales en un archivo que se copia, se
+rota y se manda a terceros: una consulta lleva DNI, correos y tokens con facilidad. **Se espera que
+el contrato cambie a «ocultas por defecto».** Mientras tanto se cumple lo que dice hoy, y las dos
+van detrás de una sola opción, `Acceso(personales=True)`, que es el defecto. Con
+`personales=False` la línea lleva el camino sin la consulta y `-` como usuario. Cuando el contrato
+cambie, cambia el defecto y nada más.
+
+Lo que la opción **no** cubre: `%h`, la IP del cliente, que también es dato personal. Quitarla rompe
+el formato CLF y el contrato no la menciona; queda anotado para cuando se reescriban `OBS-020` y
+`OBS-021`.
+
+### Cómo se comprobó que las pruebas pueden fallar
+
+Igual que en el hito 3: para cada `OBS-0xx` se escribió al menos un mutante que incumple el
+requisito y se corrieron, con `python -B`, solo las pruebas que citan ese identificador. Son 33
+mutantes para los 23 requisitos, y caen todos. Algunos de los que se probaron: `vivo` que corre las
+comprobaciones (`OBS-003`), `except ArithmeticError` en vez de `Exception` (`OBS-005`, que entonces
+da 500), el camino en vez del patrón y el camino solo para el 404 (`OBS-014`), la media en lugar del
+cuantil (`OBS-015`), el estado de la acción en vez del enviado (`OBS-012`), el destino sin consulta
+(`OBS-020`), el usuario vacío en vez de `-` (`OBS-021`), y un servidor que no anota los 5xx (`OBS-022`).
+
+### Lo que no se pudo representar
+
+Nada. Los 23 caben en la biblioteca estándar. El único matiz es `OBS-011`: «no lanza nunca» se
+prueba con un valor, una plantilla y una excepción cuyo `__str__` y `__repr__` lanzan, pero una
+prueba no puede recorrer todo lo que no lanza; un `MemoryError` sigue pudiendo salir de cualquier
+línea de Python.
+
 ## Lo que trae la biblioteca estándar de Python
 
 `socket` y `threading` los trae también Rust. `unittest` ahorra el corredor de pruebas propio que
@@ -434,13 +608,15 @@ y solo en `pruebas/`:
 grep -rhoiE --include='*.py' '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u
 ```
 
-Hoy son 57: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` salvo `SES-010`, `SEG-001`–`SEG-028`, y
+Hoy son 80: `RUT-001`–`RUT-013`, `SES-001`–`SES-013` salvo `SES-010`, `SEG-001`–`SEG-028`,
+`OBS-001`–`OBS-023`, y
 `HTTP-017`, `HTTP-019`, `HTTP-021` y `HTTP-022`, que el banco ya cubre y aquí se prueban además por
 otro lado. Los de sesiones y los de seguridad se cuentan solos:
 
 ```bash
 grep -rhoiE --include='*.py' 'SES[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 12
 grep -rhoiE --include='*.py' 'SEG[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 28
+grep -rhoiE --include='*.py' 'OBS[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l   # 23
 ```
 
 `SES-010` no sale porque ninguna prueba lo cita: sin h2 no hay prueba que pueda fallar.
