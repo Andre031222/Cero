@@ -3,15 +3,15 @@
 **Cero no es un framework; es el contrato de un framework de backend, con implementaciones en varios
 lenguajes que lo cumplen y un juez que no conoce el lenguaje.**
 
-El contrato son los 180 requisitos numerados de [`spec/`](spec/). El juez es el banco de
+El contrato son los 182 requisitos numerados de [`spec/`](spec/). El juez es el banco de
 [`spec/banco/`](spec/banco/): bytes sobre un socket, que no saben en qué lenguaje está escrito
 quien responde. Sin dependencias de terceros en ejecución, en ninguna implementación.
 
 | Implementación | Estado | Banco | Ataques | h2spec | Requisitos |
 |---|---|---|---|---|---|
-| [Java](java/) | completa | 23 de 23 | 7 de 7 | 145 de 146 | 180 de 180 |
-| [Rust](rust/) | completa | 23 de 23 | 7 de 7 | 145 de 146 | 180 de 180 |
-| [C++](c++/) | en marcha, hito 11 | 23 de 23 | 7 de 7 | 145 de 146 | 155 citados en pruebas, de 180 |
+| [Java](java/) | completa | 23 de 23 | 9 de 9 | 145 de 146 | 182 de 182 |
+| [Rust](rust/) | completa | 23 de 23 | 9 de 9 | 145 de 146 | 182 de 182 |
+| [C++](c++/) | en marcha, hito 11 | 23 de 23 | 9 de 9 | 145 de 146 | 157 citados en pruebas, de 182 |
 | Python | planeada | por empezar | por empezar | por empezar | por empezar |
 | PHP | planeada | por empezar | por empezar | por empezar | por empezar |
 
@@ -265,7 +265,7 @@ versión, en [docs/publicar.md](docs/publicar.md).
 
 ### Las otras implementaciones
 
-El contrato de [`spec/`](spec/) tiene **180 requisitos numerados** y **dos implementaciones los
+El contrato de [`spec/`](spec/) tiene **182 requisitos numerados** y **dos implementaciones los
 pasan todos**: `java/` y [`rust/`](rust/). Las dos dan 23 de 23 en el banco de conformidad y 145 de
 146 en h2spec, con el mismo único fallo, que asume un puerto dedicado a h2c.
 
@@ -273,16 +273,16 @@ Lo que dice que el contrato no es una transcripción de Java: diez de esos requi
 `H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
 cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el contrato y no `java/`.
 
-[`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 7 de 7 en los ataques, 145 de 146 en h2spec
-y 155 requisitos citados en sus pruebas; le faltan el contenedor de dependencias y las sesiones en
+[`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 9 de 9 en los ataques, 145 de 146 en h2spec
+y 157 requisitos citados en sus pruebas; le faltan el contenedor de dependencias y las sesiones en
 tabla. Después vienen Python y PHP, en ese orden, cada uno escrito contra
 los requisitos y no contra el código de otro lenguaje.
 
 ## Estructura
 
 ```text
-java/         Primera implementación: los siete módulos — 180 de 180
-rust/         Segunda implementación del contrato — 180 de 180
+java/         Primera implementación: los siete módulos — 182 de 182
+rust/         Segunda implementación del contrato — 182 de 182
 c++/          Tercera implementación, en marcha
 spec/         El contrato y su banco, neutrales respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida

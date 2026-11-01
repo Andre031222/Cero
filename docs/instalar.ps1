@@ -63,6 +63,7 @@ function JdkAfectado {
     $parche = if ($Matches[2]) { [int]$Matches[2] } else { 0 }
     switch ([int]$Matches[1]) {
         25 { return $parche -le 5 }
+        26 { return $true }
         27 { return $parche -le 1 }
         default { return $false }
     }
@@ -115,8 +116,8 @@ $TextosEs = @{
     'p-instalando'  = 'instalando la orden cero'
     'p-comprobando' = 'comprobando la instalacion'
     'b-entorno'     = 'entorno'
-    'a-jdk'         = 'JDK con CVE-2026-91403'
-    'a-jdk-nota'    = 'entre los afectados según el aviso de OpenJDK del 2026-10-21: instala la última 25.0.x'
+    'a-jdk'         = 'JDK sin corrección comprobada'
+    'a-jdk-nota'    = 'no se puede comprobar que traiga la corrección de CVE-2026-91403: actualiza a la última 25.0.x y mira https://openjdk.org/groups/vulnerability/advisories/2026-10-21'
     'b-version'     = 'version'
     'b-descargado'  = 'descargado'
     'b-huella'      = 'huella'
@@ -178,8 +179,8 @@ $TextosEn = @{
     'p-instalando'  = 'installing the cero command'
     'p-comprobando' = 'checking the installation'
     'b-entorno'     = 'environment'
-    'a-jdk'         = 'JDK with CVE-2026-91403'
-    'a-jdk-nota'    = 'among those affected per the OpenJDK advisory of 2026-10-21: install the latest 25.0.x'
+    'a-jdk'         = 'JDK fix not confirmed'
+    'a-jdk-nota'    = 'no primary source confirms it carries the fix for CVE-2026-91403: update to the latest 25.0.x and see https://openjdk.org/groups/vulnerability/advisories/2026-10-21'
     'b-version'     = 'version'
     'b-descargado'  = 'downloaded'
     'b-huella'      = 'checksum'

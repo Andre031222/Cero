@@ -29,7 +29,7 @@ texto_es() {
     falta-maven)      printf '%s' 'falta Maven' ;;
     falta-jdk)        printf '%s' 'falta un JDK' ;;
     java-viejo)       printf '%s' 'Cero necesita Java 25 o superior (hilos virtuales); tienes %s' ;;
-    jdk-afectado)     printf '%s' 'aviso: el JDK %s está entre los afectados por CVE-2026-91403 (aviso de OpenJDK del 2026-10-21); instala la última 25.0.x' ;;
+    jdk-afectado)     printf '%s' 'aviso: no se puede comprobar en una fuente primaria que el JDK %s traiga la corrección de CVE-2026-91403; actualiza a la última 25.0.x y mira https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
     creando)          printf '%s' 'creando %s…' ;;
     dime-nombre)      printf '%s' 'dime el nombre:  cero new mi-app [grupo] [motor]' ;;
     compilando-ej)    printf '%s' 'compilando la aplicación de ejemplo…' ;;
@@ -67,7 +67,7 @@ texto_en() {
     falta-maven)      printf '%s' 'Maven is missing' ;;
     falta-jdk)        printf '%s' 'a JDK is missing' ;;
     java-viejo)       printf '%s' 'Cero needs Java 25 or newer (virtual threads); you have %s' ;;
-    jdk-afectado)     printf '%s' 'warning: JDK %s is among those affected by CVE-2026-91403 (OpenJDK advisory of 2026-10-21); install the latest 25.0.x' ;;
+    jdk-afectado)     printf '%s' 'warning: no primary source confirms that JDK %s carries the fix for CVE-2026-91403; update to the latest 25.0.x and see https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
     creando)          printf '%s' 'creating %s…' ;;
     dime-nombre)      printf '%s' 'give it a name:  cero new my-app [group] [engine]' ;;
     compilando-ej)    printf '%s' 'building the example application…' ;;
@@ -121,6 +121,7 @@ jdk_afectado() {
   parche=$(printf '%s' "$1" | cut -s -d. -f3 | sed 's/[^0-9].*//')
   case "$mayor" in
     25) [ "${parche:-0}" -le 5 ] ;;
+    26) return 0 ;;
     27) [ "${parche:-0}" -le 1 ] ;;
     *) return 1 ;;
   esac

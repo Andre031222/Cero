@@ -30,11 +30,12 @@ textualmente: *«The affected versions are 27.0.1, 25.0.5, 21.0.13, 17.0.21, 11.
 earlier.»* Ni ese aviso ni nada que se haya podido leer de Oracle nombra la versión que lo
 corrige, así que aquí no se fija un número: se fija el que no vale.
 
-`./cero`, `cero.ps1` y los dos instaladores avisan si `java -version` dice 25.0.5 o anterior. Una
-reedición con un cuarto número —la `25.0.5.0.3` de Homebrew, por ejemplo— también recibe el aviso,
-porque desde fuera no se puede saber si trae la corrección; si tu proveedor dice que sí, el aviso
-sobra y lo puedes ignorar. La integración continua instala siempre la última 25 que publica
-Temurin.
+`./cero`, `cero.ps1` y los dos instaladores avisan cuando no se puede comprobar en una fuente
+primaria que el JDK traiga la corrección: 25.0.5 o anterior, cualquier 26 —el aviso no habla de esa
+línea— y 27.0.1 o anterior. Una reedición con un cuarto número —la `25.0.5.0.3` de Homebrew, por
+ejemplo— también recibe el aviso, que no dice que esté afectada sino que no se puede saber, y manda
+al aviso de OpenJDK; si tu proveedor dice que trae la corrección, puedes ignorarlo. La integración
+continua instala siempre la última 25 que publica Temurin.
 
 ## Lo que falta para poder decir que sí
 
@@ -62,7 +63,7 @@ Están la capa de tramas, HPACK completo, multiplexación de verdad —24 petici
 saliendo en tramas según se escriben, CONTINUATION, trailers, SETTINGS negociados, PING,
 RST_STREAM y GOAWAY con el código exacto que pide el RFC en cada caso.
 
-Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **54 requisitos
+Se verifica con **32 vectores del apéndice C del RFC 7541** para HPACK y **55 requisitos
 numerados** en [spec/http2.md](../spec/http2.md), separando los que rompen la conexión de los que
 solo cortan un flujo — confundirlos convierte una petición mal formada en una caída de todo lo que
 ese cliente tuviera en vuelo.
@@ -73,11 +74,13 @@ expansión en HPACK. Ninguna es una entrada malformada —cada trama es válida 
 no las caza ningún control de sintaxis: hacen falta topes explícitos, y aquí están puestos y
 probados.
 
-Y desde octubre, **HTTP/2 Bomb** (CVE-2026-49975): tope de 256 campos por bloque, el tope de
-lista que se anuncia es el que se aplica, plazo para el crédito de cada trama que el goteo de
-`WINDOW_UPDATE` no reinicia, una inactividad que `PING` no reinicia y un presupuesto de 32 MiB de
-respuestas en vuelo por conexión (`http2MaxEnVuelo`). Son `H2-050` a `H2-054`, y
-[`spec/banco/ataques.py`](../spec/banco/ataques.py) los comprueba desde fuera.
+Y desde octubre, lo aprendido de **HTTP/2 Bomb**, la familia de ataques publicada en junio de 2026
+([HAProxy](https://www.haproxy.com/blog/haproxy-cve-2026-49975-http2-bomb)): tope de 256 campos
+por bloque, el tope de lista que se anuncia es el que se aplica, plazo para el crédito de cada
+trama que el goteo de `WINDOW_UPDATE` no reinicia, una inactividad que `PING` no reinicia, un
+presupuesto de 32 MiB de respuestas en vuelo por conexión (`http2MaxEnVuelo`), que deja pasar
+siempre una respuesta sola, y un tope de 10 MiB al cuerpo de la petición. Son `H2-050` a `H2-055`,
+y [`spec/banco/ataques.py`](../spec/banco/ataques.py) los comprueba desde fuera.
 
 **Lo que sigue faltando** está escrito allí: prioridad de escritura entre flujos. No impide usarlo.
 

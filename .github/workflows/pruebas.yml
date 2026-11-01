@@ -153,8 +153,8 @@ jobs:
           N=$(grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' cero-http/tests cero-data/tests \
               | tr a-z_ A-Z- | sort -u | wc -l)
           echo "$N requisitos distintos"
-          if [ "$N" -lt 157 ]; then
-            echo "::error::Las pruebas de Rust citan $N requisitos; eran 157."
+          if [ "$N" -lt 159 ]; then
+            echo "::error::Las pruebas de Rust citan $N requisitos; eran 159."
             exit 1
           fi
 
@@ -201,8 +201,8 @@ jobs:
           N=$(grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas \
               | tr a-z_ A-Z- | sort -u | wc -l)
           echo "$N requisitos distintos"
-          if [ "$N" -lt 155 ]; then
-            echo "::error::Las pruebas de C++ citan $N requisitos; eran 155."
+          if [ "$N" -lt 157 ]; then
+            echo "::error::Las pruebas de C++ citan $N requisitos; eran 157."
             exit 1
           fi
 

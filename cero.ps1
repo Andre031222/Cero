@@ -32,7 +32,7 @@ function Requisitos {
     if ("$linea" -match '"(\d+)') { $v = [int]$Matches[1] }
     if ($v -lt 25) { Malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v" }
     if (JdkAfectado "$linea") {
-        Write-Host "${Rojo}aviso: el JDK $(("$linea" -split '"')[1]) está entre los afectados por CVE-2026-91403 (aviso de OpenJDK del 2026-10-21); instala la última 25.0.x$Fin"
+        Write-Host "${Rojo}aviso: no se puede comprobar en una fuente primaria que el JDK $(("$linea" -split '"')[1]) traiga la corrección de CVE-2026-91403; actualiza a la última 25.0.x y mira https://openjdk.org/groups/vulnerability/advisories/2026-10-21$Fin"
     }
 }
 
@@ -41,6 +41,7 @@ function JdkAfectado([string] $linea) {
     $parche = if ($Matches[2]) { [int]$Matches[2] } else { 0 }
     switch ([int]$Matches[1]) {
         25 { return $parche -le 5 }
+        26 { return $true }
         27 { return $parche -le 1 }
         default { return $false }
     }
