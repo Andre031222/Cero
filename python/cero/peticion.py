@@ -38,6 +38,7 @@ class Peticion:
     variables: dict = field(default_factory=dict)
     segura: bool = False
     cliente: str = ""
+    datos: object = None
     almacen: object = field(default=None, repr=False)
     abierta: object = field(default=None, repr=False)
     buscada: bool = field(default=False, repr=False)
