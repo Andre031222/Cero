@@ -10,6 +10,7 @@ from cero.peticion import (LIMITE_CUERPO, METODOS, Rechazo, encuadre, leer_cabec
                            leer_cuerpo)
 from cero.respuesta import Respuesta, como_respuesta, serializar, texto
 from cero.ruta import NoEncontrado, NoPermitido, Router
+from cero.seguridad import Cabeceras, anadir
 from cero.sesion import Memoria, cabecera_cookie
 
 SIN_RECURSOS = {errno.EMFILE, errno.ENFILE, errno.ENOBUFS, errno.ENOMEM}
@@ -36,9 +37,11 @@ class _Plazo(io.RawIOBase):
 class Servidor:
 
     def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
-                 plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None):
+                 plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO, sesiones=None,
+                 cabeceras=Cabeceras()):
         self.router = router or Router()
         self.sesiones = Memoria() if sesiones is None else sesiones
+        self.cabeceras = cabeceras
         self.espera = espera
         self.plazo_cabecera = plazo_cabecera
         self.plazo_cuerpo = plazo_cuerpo
@@ -49,6 +52,14 @@ class Servidor:
         self.cupo = threading.BoundedSemaphore(maximo_conexiones)
 
     def responder(self, peticion):
+        return self._blindar(self._con_sesion(peticion), peticion.segura)
+
+    def _blindar(self, respuesta, segura=False):
+        if self.cabeceras is None:
+            return respuesta
+        return anadir(respuesta, self.cabeceras.para(segura))
+
+    def _con_sesion(self, peticion):
         peticion.almacen = self.sesiones
         try:
             respuesta = self._despachar(peticion)
@@ -108,7 +119,7 @@ class Servidor:
 
     def _repartir(self, conexion):
         if not self.cupo.acquire(blocking=False):
-            _rechazar(conexion, texto(503, "demasiadas conexiones"), 0.05)
+            _rechazar(conexion, self._blindar(texto(503, "demasiadas conexiones")), 0.05)
             return
         try:
             threading.Thread(target=self._atender, args=(conexion,), daemon=True).start()
@@ -145,10 +156,10 @@ class Servidor:
                     conexion.sendall(b"HTTP/1.1 100 Continue\r\n\r\n")
             leer_cuerpo(entrada, peticion, forma, self.limite_cuerpo)
         except Rechazo as rechazo:
-            _rechazar(conexion, texto(rechazo.estado, rechazo.motivo))
+            _rechazar(conexion, self._blindar(texto(rechazo.estado, rechazo.motivo)))
             return False
         except TimeoutError:
-            _rechazar(conexion, texto(408, "la petición tardó demasiado"))
+            _rechazar(conexion, self._blindar(texto(408, "la petición tardó demasiado")))
             return False
         seguir = peticion.persistente()
         modo = "close" if not seguir else "keep-alive" if peticion.version == "HTTP/1.0" else None
@@ -156,7 +167,8 @@ class Servidor:
             datos = serializar(self.responder(peticion), peticion.verbo == "HEAD", modo)
         except ValueError:
             traceback.print_exc(file=sys.stderr)
-            datos, seguir = serializar(texto(500, "error interno"), conexion="close"), False
+            datos = serializar(self._blindar(texto(500, "error interno")), conexion="close")
+            seguir = False
         conexion.settimeout(self.espera)
         conexion.sendall(datos)
         return seguir

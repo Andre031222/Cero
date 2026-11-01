@@ -36,6 +36,7 @@ class Peticion:
     cuerpo: bytearray = field(default_factory=bytearray)
     variables: dict = field(default_factory=dict)
     segura: bool = False
+    cliente: str = ""
     almacen: object = field(default=None, repr=False)
     abierta: object = field(default=None, repr=False)
     buscada: bool = field(default=False, repr=False)
