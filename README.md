@@ -189,6 +189,26 @@ docker run -d --name cero-my -e MYSQL_ROOT_PASSWORD=cero -e MYSQL_DATABASE=cerop
 En [integración continua](.github/workflows/pruebas.yml) se levantan siempre, y la corrida **falla
 si algún motor quedó sin probar** — para que la suite no pueda mentir por omisión.
 
+### Saber si todo está bien, en una orden
+
+```bash
+./cero verificar          # cero verificar en Windows
+```
+
+Corre lo mismo que integración continua, sin parar en el primer fallo: el orden y los comentarios,
+las pruebas de Java, Rust y C++ (esta última en un directorio de compilación nuevo), el banco y los
+ataques contra las tres, h2spec contra las tres y la cuenta de requisitos. Termina con una línea por
+comprobación, con su cifra y un ✓ o un ✗, y sale con 1 si alguna falla. Hacen falta Maven y JDK 25,
+cargo, cmake, h2spec y Python 3.12 o superior (busca `python3.14`, `python3.13`, `python3.12` y
+`python3`, y dice cuál usó). Una herramienta que falta marca su línea con ✗ y la razón: nada se
+omite en silencio. Sin PostgreSQL ni MySQL escuchando, las pruebas de Java pasan pero la línea lo
+avisa, porque en integración continua eso sí es un fallo.
+
+Para sumar una implementación nueva basta una línea en `IMPLEMENTACIONES`, al principio de la
+función en `cero` (y en `$Implementaciones` en `cero.ps1`): nombre, carpeta, herramientas, orden de
+pruebas, preparación del servidor, cómo arrancarlo, dónde están los requisitos y su mínimo. El
+puerto es el 8777 y se cambia con `CERO_PUERTO`.
+
 ## Un vistazo
 
 ```java

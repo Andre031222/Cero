@@ -57,6 +57,28 @@ texto_es() {
     git-commitea)     printf '%s' 'commitea o guarda antes: la migración usa git como red de seguridad.' ;;
     uso-migrar)       printf '%s' 'uso: ./cero migrar <ruta-de-la-app> [--probar]' ;;
     uso-migraciones)  printf '%s' 'uso: ./cero migraciones --verificar [directorio] [url-jdbc]' ;;
+    ver-comprobando)  printf '%s' 'comprobando %s…' ;;
+    ver-falta)        printf '%s' 'falta %s' ;;
+    ver-sin-python)   printf '%s' 'falta Python 3.12 o superior (python3.14, python3.12 o python3): lo que lo necesita sale ✗' ;;
+    ver-python)       printf '%s' 'python: %s (%s)' ;;
+    ver-ocupado)      printf '%s' 'el puerto %s ya está ocupado' ;;
+    ver-no-arranca)   printf '%s' 'el servidor no llegó a escuchar' ;;
+    ver-sin-hallazgos) printf '%s' 'sin hallazgos' ;;
+    ver-hallazgos)    printf '%s' '%s líneas de hallazgos' ;;
+    ver-ninguno)      printf '%s' 'ningún comentario' ;;
+    ver-comentarios)  printf '%s' '%s comentarios' ;;
+    ver-pruebas)      printf '%s' 'pruebas' ;;
+    ver-n-pruebas)    printf '%s' '%s pruebas' ;;
+    ver-sin-motores)  printf '%s' 'motores reales sin probar' ;;
+    ver-n-vectores)   printf '%s' '%s vectores' ;;
+    ver-banco)        printf '%s' 'banco' ;;
+    ver-ataques)      printf '%s' 'ataques' ;;
+    ver-requisitos)   printf '%s' 'requisitos' ;;
+    ver-de-minimo)    printf '%s' '%s (mínimo %s)' ;;
+    ver-sin-resumen)  printf '%s' 'h2spec no dio resumen' ;;
+    ver-detalle)      printf '%s' 'lo último que dijo «%s»:' ;;
+    ver-todo-bien)    printf '%s' 'todo está bien' ;;
+    ver-fallan)       printf '%s' '%s comprobaciones fallan' ;;
     ayuda-titulo)     printf '%s' 'cero — órdenes de Cero' ;;
     *)                printf '%s' '' ;;
   esac
@@ -95,6 +117,28 @@ texto_en() {
     git-commitea)     printf '%s' 'commit or stash first: the migration uses git as its safety net.' ;;
     uso-migrar)       printf '%s' 'usage: ./cero migrar <app-path> [--probar]' ;;
     uso-migraciones)  printf '%s' 'usage: ./cero migraciones --verificar [directory] [jdbc-url]' ;;
+    ver-comprobando)  printf '%s' 'checking %s…' ;;
+    ver-falta)        printf '%s' 'missing: %s' ;;
+    ver-sin-python)   printf '%s' 'Python 3.12 or newer is missing (python3.14, python3.12 or python3): whatever needs it shows ✗' ;;
+    ver-python)       printf '%s' 'python: %s (%s)' ;;
+    ver-ocupado)      printf '%s' 'port %s is already in use' ;;
+    ver-no-arranca)   printf '%s' 'the server never started listening' ;;
+    ver-sin-hallazgos) printf '%s' 'no findings' ;;
+    ver-hallazgos)    printf '%s' '%s lines of findings' ;;
+    ver-ninguno)      printf '%s' 'no comments' ;;
+    ver-comentarios)  printf '%s' '%s comments' ;;
+    ver-pruebas)      printf '%s' 'tests' ;;
+    ver-n-pruebas)    printf '%s' '%s tests' ;;
+    ver-sin-motores)  printf '%s' 'real engines untested' ;;
+    ver-n-vectores)   printf '%s' '%s vectors' ;;
+    ver-banco)        printf '%s' 'bench' ;;
+    ver-ataques)      printf '%s' 'attacks' ;;
+    ver-requisitos)   printf '%s' 'requirements' ;;
+    ver-de-minimo)    printf '%s' '%s (minimum %s)' ;;
+    ver-sin-resumen)  printf '%s' 'h2spec gave no summary' ;;
+    ver-detalle)      printf '%s' 'the last thing «%s» said:' ;;
+    ver-todo-bien)    printf '%s' 'everything is fine' ;;
+    ver-fallan)       printf '%s' '%s checks fail' ;;
     ayuda-titulo)     printf '%s' 'cero — Cero commands' ;;
     *)                printf '%s' '' ;;
   esac
@@ -139,6 +183,291 @@ classpath_ejemplo() {
 }
 
 version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<.*/\1/'; }
+
+IMPLEMENTACIONES='
+java|java|mvn java|mvn -B install||java -cp cero-http/target/classes:cero-http/target/test-classes cero.http.Conforme||
+rust|rust|cargo|cargo test --all && cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|./target/release/conforme|cero-http/tests cero-data/tests|159
+c++|c++|cmake ctest|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release && cmake --build "$OBJ" -j && ctest --test-dir "$OBJ" --output-on-failure||"$OBJ/conforme"|pruebas|157
+'
+
+V_PUERTO="${CERO_PUERTO:-8777}"
+V_PID=""
+V_TMP=""
+V_PY=""
+V_NOMBRES=()
+V_CIFRAS=()
+V_ESTADOS=()
+V_REGISTROS=()
+
+buscar_python() {
+  local p
+  for p in python3.14 python3.13 python3.12 python3; do
+    if command -v "$p" >/dev/null 2>&1 && "$p" -c 'import sys; sys.exit(sys.version_info < (3, 12))' 2>/dev/null; then
+      command -v "$p"
+      return 0
+    fi
+  done
+  return 1
+}
+
+faltan() {
+  local h salida=""
+  for h in "$@"; do
+    if [ "$h" = python3 ]; then
+      [ -n "$V_PY" ] || salida="$salida python3.12"
+    else
+      command -v "$h" >/dev/null 2>&1 || salida="$salida $h"
+    fi
+  done
+  printf '%s' "${salida# }"
+}
+
+anotar() {
+  V_NOMBRES+=("$1")
+  V_CIFRAS+=("$2")
+  V_ESTADOS+=("$3")
+  V_REGISTROS+=("${4:-}")
+}
+
+anotar_falta() {
+  anotar "$1" "$(t ver-falta "$2")" mal
+}
+
+ejecutar() {
+  local rc=0
+  (cd "$1" && eval "$2") </dev/null >>"$3" 2>&1 || rc=$?
+  return $rc
+}
+
+contar_pruebas() {
+  awk '
+    /^  OK / { n++ }
+    /^test result: / { for (i = 1; i <= NF; i++) if ($i == "passed;") n += $(i - 1) }
+    /tests passed, .* out of/ { n += $NF }
+    END { print n + 0 }' "$1"
+}
+
+cifra_vectores() {
+  t ver-n-vectores "$(grep -E ' vectores ·' "$1" | tail -n 1 | sed -E 's/^ *([0-9]+) vectores · ([0-9]+) pasan.*/\2\/\1/')"
+}
+
+arrancar_servidor() {
+  local i
+  (cd "$1" && eval "exec $2 $V_PUERTO") </dev/null >"$3" 2>&1 &
+  V_PID=$!
+  for i in $(seq 30); do
+    if curl -fsS -o /dev/null "http://127.0.0.1:$V_PUERTO/" 2>/dev/null; then return 0; fi
+    kill -0 "$V_PID" 2>/dev/null || return 1
+    sleep 1
+  done
+  return 1
+}
+
+parar_servidor() {
+  if [ -n "$V_PID" ]; then
+    kill "$V_PID" 2>/dev/null || true
+    wait "$V_PID" 2>/dev/null || true
+  fi
+  V_PID=""
+}
+
+limpiar_verificar() {
+  parar_servidor
+  [ -z "$V_TMP" ] || rm -rf "$V_TMP"
+}
+
+con_servidor() {
+  if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$V_PUERTO/" 2>/dev/null; then
+    anotar "$1" "$(t ver-ocupado "$V_PUERTO")" mal
+    return 1
+  fi
+  if ! arrancar_servidor "$2" "$3" "$4"; then
+    parar_servidor
+    anotar "$1" "$(t ver-no-arranca)" mal "$4"
+    return 1
+  fi
+}
+
+paso_orden() {
+  local f
+  azul "$(t ver-comprobando orden)"
+  f=$(faltan git python3)
+  if [ -n "$f" ]; then
+    anotar_falta orden "$f"
+  else
+    : >"$V_TMP/orden.log"
+    if ejecutar "$AQUI" ./herramientas/verificar-orden.sh "$V_TMP/orden.log"; then
+      anotar orden "$(t ver-sin-hallazgos)" ok
+    else
+      anotar orden "$(t ver-hallazgos "$(grep -c . "$V_TMP/orden.log")")" mal "$V_TMP/orden.log"
+    fi
+  fi
+
+  azul "$(t ver-comprobando comentarios)"
+  f=$(faltan python3)
+  if [ -n "$f" ]; then
+    anotar_falta comentarios "$f"
+    return
+  fi
+  : >"$V_TMP/comentarios.log"
+  if ejecutar "$AQUI" 'python3 herramientas/comentarios.py --verificar java rust c++ herramientas && python3 -I herramientas/pruebas_comentarios.py' "$V_TMP/comentarios.log"; then
+    anotar comentarios "$(t ver-ninguno)" ok
+  else
+    anotar comentarios "$(t ver-comentarios "$(grep -cE '^[^ ]+:[0-9]+' "$V_TMP/comentarios.log" || true)")" mal "$V_TMP/comentarios.log"
+  fi
+}
+
+paso_pruebas() {
+  local nombre dir herr probar preparar servidor req minimo f registro cifra rc
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+    [ -n "$nombre" ] || continue
+    azul "$(t ver-comprobando "$nombre")"
+    f=$(faltan $herr)
+    if [ -n "$f" ]; then anotar_falta "$nombre · $(t ver-pruebas)" "$f"; continue; fi
+    registro="$V_TMP/$nombre-pruebas.log"
+    : >"$registro"
+    export OBJ="$V_TMP/obj-$nombre"
+    rc=0
+    ejecutar "$AQUI/$dir" "$probar" "$registro" || rc=1
+    if [ -n "$preparar" ]; then ejecutar "$AQUI/$dir" "$preparar" "$registro" || rc=1; fi
+    cifra=$(t ver-n-pruebas "$(contar_pruebas "$registro")")
+    if grep -q 'no está accesible' "$registro"; then cifra="$cifra · $(t ver-sin-motores)"; fi
+    if [ "$rc" = 0 ]; then anotar "$nombre · $(t ver-pruebas)" "$cifra" ok
+    else anotar "$nombre · $(t ver-pruebas)" "$cifra" mal "$registro"; fi
+  done 3<<<"$IMPLEMENTACIONES"
+}
+
+paso_banco() {
+  local nombre dir herr probar preparar servidor req minimo f registro etiqueta
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+    [ -n "$nombre" ] || continue
+    export OBJ="$V_TMP/obj-$nombre"
+
+    etiqueta="$(t ver-banco) · $nombre"
+    azul "$(t ver-comprobando "$etiqueta")"
+    f=$(faltan python3 curl)
+    if [ -n "$f" ]; then
+      anotar_falta "$etiqueta" "$f"
+    else
+      registro="$V_TMP/$nombre-banco.log"
+      if con_servidor "$etiqueta" "$AQUI/$dir" "$servidor" "$V_TMP/$nombre-servidor.log"; then
+        if python3 "$AQUI/spec/banco/correr.py" 127.0.0.1 "$V_PUERTO" </dev/null >"$registro" 2>&1; then
+          anotar "$etiqueta" "$(cifra_vectores "$registro")" ok
+        else
+          anotar "$etiqueta" "$(cifra_vectores "$registro")" mal "$registro"
+        fi
+        parar_servidor
+      fi
+    fi
+
+    etiqueta="$(t ver-ataques) · $nombre"
+    azul "$(t ver-comprobando "$etiqueta")"
+    f=$(faltan python3)
+    if [ -n "$f" ]; then
+      anotar_falta "$etiqueta" "$f"
+    else
+      registro="$V_TMP/$nombre-ataques.log"
+      if (cd "$AQUI/$dir" && eval "python3 \"$AQUI/spec/banco/ataques.py\" $servidor") </dev/null >"$registro" 2>&1; then
+        anotar "$etiqueta" "$(cifra_vectores "$registro")" ok
+      else
+        anotar "$etiqueta" "$(cifra_vectores "$registro")" mal "$registro"
+      fi
+    fi
+  done 3<<<"$IMPLEMENTACIONES"
+}
+
+paso_h2spec() {
+  local nombre dir herr probar preparar servidor req minimo f registro resumen fallos etiqueta
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+    [ -n "$nombre" ] || continue
+    etiqueta="h2spec · $nombre"
+    azul "$(t ver-comprobando "$etiqueta")"
+    f=$(faltan h2spec curl)
+    if [ -n "$f" ]; then anotar_falta "$etiqueta" "$f"; continue; fi
+    export OBJ="$V_TMP/obj-$nombre"
+    registro="$V_TMP/$nombre-h2spec.log"
+    if con_servidor "$etiqueta" "$AQUI/$dir" "$servidor" "$V_TMP/$nombre-servidor-h2.log"; then
+      h2spec -h 127.0.0.1 -p "$V_PUERTO" --timeout 5 </dev/null >"$registro" 2>&1 || true
+      parar_servidor
+      resumen=$(grep -E '^[0-9]+ tests,' "$registro" | tail -n 1 || true)
+      fallos=$(printf '%s' "$resumen" | sed -E 's/.*, ([0-9]+) failed.*/\1/')
+      case "$fallos" in ''|*[!0-9]*) fallos=99 ;; esac
+      if [ "$fallos" -le 1 ]; then anotar "$etiqueta" "$resumen" ok
+      else anotar "$etiqueta" "${resumen:-$(t ver-sin-resumen)}" mal "$registro"; fi
+    fi
+  done 3<<<"$IMPLEMENTACIONES"
+}
+
+paso_requisitos() {
+  local nombre dir herr probar preparar servidor req minimo n
+  while IFS='|' read -u 3 -r nombre dir herr probar preparar servidor req minimo; do
+    [ -n "$nombre" ] && [ -n "$minimo" ] || continue
+    azul "$(t ver-comprobando "$(t ver-requisitos) $nombre")"
+    n=$(cd "$AQUI/$dir" && grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' $req | tr a-z_ A-Z- | sort -u | wc -l | tr -d ' ')
+    if [ "$n" -ge "$minimo" ]; then anotar "$(t ver-requisitos) · $nombre" "$(t ver-de-minimo "$n" "$minimo")" ok
+    else anotar "$(t ver-requisitos) · $nombre" "$(t ver-de-minimo "$n" "$minimo")" mal; fi
+  done 3<<<"$IMPLEMENTACIONES"
+}
+
+rellenar() {
+  local n=${#1}
+  printf '%s' "$1"
+  while [ "$n" -lt "$2" ]; do printf ' '; n=$((n + 1)); done
+}
+
+tabla_verificar() {
+  local i fallos=0 verde='' rojo='' fin=''
+  if [ -t 1 ]; then verde='\033[38;5;71m'; rojo='\033[38;5;167m'; fin='\033[0m'; fi
+  echo
+  for i in "${!V_NOMBRES[@]}"; do
+    printf '  '
+    rellenar "${V_NOMBRES[$i]}" 26
+    printf '  '
+    rellenar "${V_CIFRAS[$i]}" 46
+    if [ "${V_ESTADOS[$i]}" = ok ]; then
+      printf "  ${verde}✓${fin}\n"
+    else
+      printf "  ${rojo}✗${fin}\n"
+      fallos=$((fallos + 1))
+    fi
+  done
+  echo
+  for i in "${!V_NOMBRES[@]}"; do
+    if [ "${V_ESTADOS[$i]}" = mal ] && [ -n "${V_REGISTROS[$i]}" ]; then
+      malo "$(t ver-detalle "${V_NOMBRES[$i]}")"
+      { grep -E 'XX |FALLA|FAILED|panicked' "${V_REGISTROS[$i]}" | head -n 10 || true; tail -n 8 "${V_REGISTROS[$i]}"; } | sed 's/^/    /' >&2
+    fi
+  done
+  if [ "$fallos" = 0 ]; then
+    azul "$(t ver-todo-bien)"
+    return 0
+  fi
+  malo "$(t ver-fallan "$fallos")"
+  return 1
+}
+
+verificar() {
+  local rc=0
+  if [ -n "${JAVA_HOME:-}" ] && [ ! -x "$JAVA_HOME/bin/java" ]; then unset JAVA_HOME; fi
+  V_TMP=$(mktemp -d)
+  trap limpiar_verificar EXIT
+  mkdir "$V_TMP/bin"
+  if V_PY=$(buscar_python); then
+    ln -s "$V_PY" "$V_TMP/bin/python3"
+    export PATH="$V_TMP/bin:$PATH"
+    gris "$(t ver-python "$V_PY" "$(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')")"
+  else
+    V_PY=""
+    malo "$(t ver-sin-python)"
+  fi
+  paso_orden
+  paso_pruebas
+  paso_banco
+  paso_h2spec
+  paso_requisitos
+  tabla_verificar || rc=1
+  return $rc
+}
 
 case "${1:-ayuda}" in
 
@@ -332,6 +661,10 @@ case "${1:-ayuda}" in
     python3 "$AQUI/java/cero-launcher/src/main/resources/migrar.py" "$destino" ${ensayo:+--probar}
     ;;
 
+  verificar|verify)
+    verificar
+    ;;
+
   *)
     azul "$(t ayuda-titulo)"
     echo
@@ -342,7 +675,8 @@ case "${1:-ayuda}" in
              "arma el .tar.gz y el .zip del instalador" "borra lo generado" \
              "qué ocupa la caché, o vaciarla" "resumen del proyecto" \
              "con --verificar, prueba las migraciones en una base desechable" \
-             "migra una aplicación anterior a Cero 0.6.0"
+             "migra una aplicación anterior a Cero 0.6.0" \
+             "lo mismo que CI, en una orden: ✓ o ✗ por comprobación"
     else
       set -- "create a new project, ready to run" "start the example application" \
              "run the tests" "build the JARs and show their sizes" \
@@ -350,7 +684,8 @@ case "${1:-ayuda}" in
              "build the .tar.gz and .zip the installer serves" "remove build output" \
              "what the cache holds, or empty it" "a summary of the project" \
              "with --verificar, tries the migrations against a throwaway database" \
-             "migrate an application from an earlier Cero"
+             "migrate an application from an earlier Cero" \
+             "what CI runs, in one command: ✓ or ✗ per check"
     fi
     if [ "$IDIOMA" = es ]; then
       NOMBRE=nombre; PUERTO=puerto; MODULO=modulo; RUTA=ruta
@@ -375,5 +710,6 @@ case "${1:-ayuda}" in
     fila "./cero status"              "${10}"
     fila "./cero migraciones"         "${11}"
     fila "./cero migrar <$RUTA>"      "${12}"
+    fila "./cero verificar"           "${13}"
     ;;
 esac
