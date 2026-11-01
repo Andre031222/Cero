@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -21,6 +22,7 @@
 #include "cero/formato.hpp"
 #include "cero/http2/conexion.hpp"
 #include "cero/http2/trama.hpp"
+#include "cero/socket.hpp"
 
 namespace cero {
 namespace {
@@ -32,15 +34,6 @@ std::string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
     salida += cerrar ? "Connection: close\r\n\r\n" : "\r\n";
     if (!solo_cabeceras) salida += r.cuerpo;
     return salida;
-}
-
-bool todo(int descriptor, std::string_view datos) {
-    while (!datos.empty()) {
-        const auto escritos = ::write(descriptor, datos.data(), datos.size());
-        if (escritos <= 0) return false;
-        datos.remove_prefix(static_cast<std::size_t>(escritos));
-    }
-    return true;
 }
 
 std::string desescapar(std::string_view s) {
@@ -311,35 +304,42 @@ int Servidor::escuchar(unsigned short puerto) const {
                                  (quien.sin_addr.s_addr >> 8) & 0xff,
                                  (quien.sin_addr.s_addr >> 16) & 0xff,
                                  (quien.sin_addr.s_addr >> 24) & 0xff);
-        std::thread{[this, cliente, desde] {
-            http2::DesdeSocket lector{cliente};
-            const http2::Atender atender = [this, &desde](const Peticion& p) {
-                return responder(p, desde);
-            };
-            if (lector.asomar(http2::kPreambulo)) {
-                http2::servir(lector, http2::Ajustes{}, atender);
+        sin_sigpipe(cliente);
+        plazo_de_escritura(cliente, kPlazoDeEscritura);
+        try {
+            std::thread{[this, cliente, desde] {
+                http2::DesdeSocket lector{cliente};
+                const http2::Atender atender = [this, &desde](const Peticion& p) {
+                    return responder(p, desde);
+                };
+                if (lector.asomar(http2::kPreambulo)) {
+                    http2::servir(lector, http2::Ajustes{}, atender);
+                    ::close(cliente);
+                    return;
+                }
+                while (true) {
+                    auto peticion = leer(lector);
+                    if (!peticion) {
+                        const auto fallo = Respuesta::codigo(estado_de(peticion.error()));
+                        mandar_todo(cliente, escribir(fallo, false, true));
+                        break;
+                    }
+                    if (http2::pide_h2c(*peticion)) {
+                        http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion));
+                        break;
+                    }
+                    const auto conexion = peticion->cabecera("connection").value_or("");
+                    const bool cerrar = peticion->version == "HTTP/1.0" || conexion == "close";
+                    const auto respuesta = responder(*peticion, desde);
+                    const bool cabeza = peticion->metodo == "HEAD";
+                    if (!mandar_todo(cliente, escribir(respuesta, cabeza, cerrar))) break;
+                    if (cerrar) break;
+                }
                 ::close(cliente);
-                return;
-            }
-            while (true) {
-                auto peticion = leer(lector);
-                if (!peticion) {
-                    todo(cliente,
-                         escribir(Respuesta::codigo(estado_de(peticion.error())), false, true));
-                    break;
-                }
-                if (http2::pide_h2c(*peticion)) {
-                    http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion));
-                    break;
-                }
-                const auto conexion = peticion->cabecera("connection").value_or("");
-                const bool cerrar = peticion->version == "HTTP/1.0" || conexion == "close";
-                const auto respuesta = responder(*peticion, desde);
-                if (!todo(cliente, escribir(respuesta, peticion->metodo == "HEAD", cerrar))) break;
-                if (cerrar) break;
-            }
+            }}.detach();
+        } catch (const std::system_error&) {
             ::close(cliente);
-        }}.detach();
+        }
     }
 }
 

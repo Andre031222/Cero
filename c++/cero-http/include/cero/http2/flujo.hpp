@@ -60,6 +60,7 @@ public:
     Resultado<Digerido> recibir(const Trama& t);
 
     void respondido(std::uint32_t flujo);
+    void desechar(std::uint32_t flujo);
 
     Resultado<void> ascender(std::string_view ajustes_del_cliente);
 

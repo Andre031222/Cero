@@ -159,6 +159,8 @@ void Sesion::respondido(std::uint32_t flujo) {
     if (i != flujos_.end() && i->second.estado == Estado::MitadCerradoRemoto) flujos_.erase(i);
 }
 
+void Sesion::desechar(std::uint32_t flujo) { flujos_.erase(flujo); }
+
 Resultado<void> Sesion::ascender(std::string_view ajustes_del_cliente) {
     if (ajustes_del_cliente.size() % 6 != 0) {
         return conexion(Error::TamanoDeTrama, "HTTP2-Settings no múltiplo de seis");
@@ -225,7 +227,9 @@ Resultado<Digerido> Sesion::ping(const Trama& t) {
 Resultado<Digerido> Sesion::window_update(const Trama& t) {
     const auto cuanto = static_cast<std::int64_t>(entero32(t.carga, 0) & 0x7fff'ffff);
     if (t.flujo == 0) {
-        if (auto r = control(); !r) return Fallo{r.error()};
+        if (activos() == 0) {
+            if (auto r = control(); !r) return Fallo{r.error()};
+        }
         return Digerido{{Credito{0, cuanto}}, std::nullopt};
     }
     if (t.flujo > ultimo_) return conexion(Error::Protocolo, "WINDOW_UPDATE sobre un flujo ocioso");
@@ -312,7 +316,9 @@ Resultado<Digerido> Sesion::continuation(const Trama& t) {
 
 Resultado<Digerido> Sesion::cortar(std::uint32_t flujo, std::string_view porque, Error por) {
     flujos_.erase(flujo);
-    if (++cortes_ > topes.cortes) return conexion(Error::Calma, "demasiados flujos cortados");
+    if (por != Error::Rechazado && ++cortes_ > topes.cortes) {
+        return conexion(Error::Calma, "demasiados flujos cortados");
+    }
     if (atendidos_.contains(flujo) && ++anulados_ > topes.anulados) {
         return conexion(Error::Calma, "demasiados flujos cortados con trabajo en marcha");
     }

@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <condition_variable>
 #include <cstddef>
@@ -25,31 +26,11 @@
 
 #include "cero/formato.hpp"
 #include "cero/http2/flujo.hpp"
+#include "cero/http2/ventanas.hpp"
+#include "cero/socket.hpp"
 
 namespace cero::http2 {
 namespace {
-
-#ifdef MSG_NOSIGNAL
-constexpr int kSinSenal = MSG_NOSIGNAL;
-#else
-constexpr int kSinSenal = 0;
-#endif
-
-void sin_sigpipe([[maybe_unused]] int descriptor) {
-#ifdef SO_NOSIGPIPE
-    const int si = 1;
-    ::setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &si, sizeof si);
-#endif
-}
-
-bool todo(int descriptor, std::string_view datos) {
-    while (!datos.empty()) {
-        const auto escritos = ::send(descriptor, datos.data(), datos.size(), kSinSenal);
-        if (escritos <= 0) return false;
-        datos.remove_prefix(static_cast<std::size_t>(escritos));
-    }
-    return true;
-}
 
 std::string minuscula(std::string_view s) {
     std::string r{s};
@@ -77,18 +58,16 @@ public:
 
     bool crudo(std::string_view octetos) {
         const std::lock_guard tomado{candado_};
-        return !rota_ && (todo(descriptor_, octetos) || (rota_ = true, false));
+        return escribir(octetos);
     }
 
-    bool mandar(const std::vector<Trama>& tramas, std::uint32_t flujo = 0) {
+    bool mandar(const std::vector<Trama>& tramas, std::uint32_t flujo = 0, bool ultima = false) {
         std::string junto;
         for (const auto& t : tramas) junto += t.octetos();
         const std::lock_guard tomado{candado_};
-        if (rota_ || (flujo != 0 && anulados_.contains(flujo))) return false;
-        if (!todo(descriptor_, junto)) {
-            rota_ = true;
-            return false;
-        }
+        if (flujo != 0 && anulados_.contains(flujo)) return false;
+        if (!escribir(junto)) return false;
+        if (ultima) despachar(flujo);
         return true;
     }
 
@@ -99,13 +78,17 @@ public:
 
     void terminar(std::uint32_t flujo) {
         const std::lock_guard tomado{candado_};
-        en_marcha_.erase(flujo);
-        anulados_.erase(flujo);
+        despachar(flujo);
     }
 
     void anular(std::uint32_t flujo) {
         const std::lock_guard tomado{candado_};
         if (en_marcha_.contains(flujo)) anulados_.insert(flujo);
+    }
+
+    std::vector<std::uint32_t> recoger() {
+        const std::lock_guard tomado{candado_};
+        return std::exchange(terminados_, {});
     }
 
     std::size_t max_trama() {
@@ -119,11 +102,26 @@ public:
     }
 
 private:
+    bool escribir(std::string_view octetos) {
+        if (rota_) return false;
+        if (mandar_todo(descriptor_, octetos)) return true;
+        rota_ = true;
+        ::shutdown(descriptor_, SHUT_RDWR);
+        return false;
+    }
+
+    void despachar(std::uint32_t flujo) {
+        en_marcha_.erase(flujo);
+        anulados_.erase(flujo);
+        terminados_.push_back(flujo);
+    }
+
     int descriptor_;
     std::mutex candado_;
     std::size_t max_trama_ = 16'384;
     std::set<std::uint32_t> en_marcha_;
     std::set<std::uint32_t> anulados_;
+    std::vector<std::uint32_t> terminados_;
     bool rota_ = false;
 };
 
@@ -131,41 +129,43 @@ struct Comun {
     explicit Comun(int descriptor) : salida(descriptor) {}
 
     Salida salida;
+    Ventanas ventanas;
     std::mutex candado;
     std::condition_variable avisa;
-    std::vector<std::uint32_t> terminados;
     std::size_t en_vuelo = 0;
 };
 
-void responder(Salida& salida, std::uint32_t flujo, const cero::Respuesta& r, bool solo_cabeceras) {
+bool responder(Comun& comun, std::uint32_t flujo, const cero::Respuesta& r, bool solo_cabeceras) {
+    auto& salida = comun.salida;
     std::vector<Cabecera> cabeceras{{"content-length", formato("{}", r.cuerpo.size())}};
     if (!r.tipo.empty()) cabeceras.emplace_back("content-type", r.tipo);
     cabeceras.insert(cabeceras.end(), r.extra.begin(), r.extra.end());
     const auto bloque = cabeceras_de_respuesta(r.estado, cabeceras);
 
     const bool vacio = solo_cabeceras || r.cuerpo.empty();
-    if (!salida.mandar(tramas_de_cabeceras(flujo, bloque, salida.max_trama(), vacio), flujo) ||
-        vacio) {
-        return;
+    if (!salida.mandar(tramas_de_cabeceras(flujo, bloque, salida.max_trama(), vacio), flujo, vacio)) {
+        return false;
     }
-    std::string_view resto = r.cuerpo;
+    std::string_view resto = vacio ? std::string_view{} : std::string_view{r.cuerpo};
     while (!resto.empty()) {
-        const auto cabe = std::min(resto.size(), salida.max_trama());
-        const std::uint8_t banderas = cabe == resto.size() ? kFinFlujo : 0;
-        if (!salida.mandar({Trama{kData, banderas, flujo, std::string{resto.substr(0, cabe)}}},
-                           flujo)) {
-            return;
+        const auto cabe = comun.ventanas.reservar(flujo, std::min(resto.size(), salida.max_trama()));
+        if (!cabe) return false;
+        const bool fin = *cabe == resto.size();
+        const std::uint8_t banderas = fin ? kFinFlujo : 0;
+        if (!salida.mandar({Trama{kData, banderas, flujo, std::string{resto.substr(0, *cabe)}}},
+                           flujo, fin)) {
+            return false;
         }
-        resto.remove_prefix(cabe);
+        resto.remove_prefix(*cabe);
     }
+    return true;
 }
 
 void lanzar(const std::shared_ptr<Comun>& comun, const Atender& atender, std::uint32_t flujo,
             cero::Peticion p) {
-    const auto acabar = [comun, flujo] {
-        comun->salida.terminar(flujo);
+    const auto acabar = [comun, flujo](bool despachado) {
+        if (!despachado) comun->salida.terminar(flujo);
         const std::lock_guard tomado{comun->candado};
-        comun->terminados.push_back(flujo);
         --comun->en_vuelo;
         comun->avisa.notify_all();
     };
@@ -179,12 +179,11 @@ void lanzar(const std::shared_ptr<Comun>& comun, const Atender& atender, std::ui
             const auto r = cero::metodo_conocido(p.metodo)
                                ? atender(p)
                                : cero::Respuesta::codigo(501, "método no implementado");
-            responder(comun->salida, flujo, r, p.metodo == "HEAD");
-            acabar();
+            acabar(responder(*comun, flujo, r, p.metodo == "HEAD"));
         }}.detach();
     } catch (const std::system_error&) {
         comun->salida.mandar({Trama::rst(flujo, Error::Rechazado)});
-        acabar();
+        acabar(false);
     }
 }
 
@@ -193,8 +192,9 @@ void despedirse(int descriptor) {
     timeval espera{};
     espera.tv_usec = 250'000;
     ::setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
+    const auto hasta = std::chrono::steady_clock::now() + std::chrono::seconds{1};
     char tirar[4096];
-    while (::read(descriptor, tirar, sizeof tirar) > 0) {
+    while (std::chrono::steady_clock::now() < hasta && ::read(descriptor, tirar, sizeof tirar) > 0) {
     }
 }
 
@@ -331,6 +331,7 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
     sin_sigpipe(descriptor);
     auto comun = std::make_shared<Comun>(descriptor);
     auto& salida = comun->salida;
+    auto& ventanas = comun->ventanas;
 
     if (primera && !salida.crudo(kAscenso)) return;
     salida.mandar({mios.trama()});
@@ -354,6 +355,8 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
             return;
         }
         salida.max_trama(sesion.par().max_trama);
+        ventanas.reajustar(static_cast<std::int64_t>(sesion.par().ventana_inicial) - 65'535);
+        ventanas.abrir(1);
         primera->version = "HTTP/2";
         for (const auto* de_http11 : {"connection", "upgrade", "http2-settings", "keep-alive"}) {
             primera->cabeceras.erase(de_http11);
@@ -361,7 +364,14 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
         lanzar(comun, atender, 1, std::move(*primera));
     }
 
-    while (true) {
+    const auto olvidar = [&](std::uint32_t flujo) {
+        en_curso.erase(flujo);
+        salida.anular(flujo);
+        ventanas.soltar(flujo);
+    };
+
+    bool seguir = true;
+    while (seguir) {
         const auto t = leer_trama(entrada, sesion.mios().max_trama);
         if (!t) {
             if (t.error().codigo != Error::Ninguno) {
@@ -370,10 +380,9 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
             break;
         }
 
-        {
-            const std::lock_guard tomado{comun->candado};
-            for (const auto flujo : comun->terminados) sesion.respondido(flujo);
-            comun->terminados.clear();
+        for (const auto flujo : salida.recoger()) {
+            sesion.respondido(flujo);
+            ventanas.soltar(flujo);
         }
 
         auto d = sesion.recibir(*t);
@@ -382,21 +391,32 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
             break;
         }
         if (t->tipo == kSettings) salida.max_trama(sesion.par().max_trama);
-        if (d->cortado) {
-            en_curso.erase(d->cortado->flujo);
-            salida.anular(d->cortado->flujo);
-        }
+        if (d->cortado) olvidar(d->cortado->flujo);
+
+        const auto desbordada = [&] {
+            salida.mandar({Trama::goaway(sesion.ultimo(), Error::ControlDeFlujo)});
+            seguir = false;
+        };
 
         for (auto& accion : d->acciones) {
+            if (!seguir) break;
             std::visit(
                 [&](auto& a) {
                     using A = std::decay_t<decltype(a)>;
                     if constexpr (std::is_same_v<A, Escribir>) {
                         salida.mandar({a.trama});
                     } else if constexpr (std::is_same_v<A, Anulado>) {
-                        en_curso.erase(a.flujo);
-                        salida.anular(a.flujo);
+                        olvidar(a.flujo);
+                    } else if constexpr (std::is_same_v<A, Credito>) {
+                        if (ventanas.ampliar(a.flujo, a.cuanto)) return;
+                        if (a.flujo == 0) return desbordada();
+                        salida.mandar({Trama::rst(a.flujo, Error::ControlDeFlujo)});
+                        olvidar(a.flujo);
+                        sesion.desechar(a.flujo);
+                    } else if constexpr (std::is_same_v<A, Reajustar>) {
+                        if (!ventanas.reajustar(a.delta)) desbordada();
                     } else if constexpr (std::is_same_v<A, Peticion>) {
+                        ventanas.abrir(a.flujo);
                         en_curso[a.flujo] = EnCurso{std::move(a.cabeceras), {}};
                     } else if constexpr (std::is_same_v<A, Cuerpo>) {
                         if (const auto i = en_curso.find(a.flujo); i != en_curso.end()) {
@@ -420,6 +440,7 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
         }
     }
 
+    ventanas.cerrar();
     {
         std::unique_lock tomado{comun->candado};
         comun->avisa.wait(tomado, [&] { return comun->en_vuelo == 0; });

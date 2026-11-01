@@ -4,9 +4,10 @@ Tercera implementación del contrato de [`spec/`](../spec). Como la de Rust, no 
 del código Java: la referencia son los requisitos numerados, y el juez son los mismos vectores de
 conformidad, que son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 9.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
-`Upgrade: h2c` en el mismo puerto. **23 de 23 vectores del banco**, **los 32 del apéndice C del RFC
-7541**, **138 de 146 en h2spec** y 173 pruebas propias.
+**Estado: hito 10.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
+`Upgrade: h2c` en el mismo puerto, con control de flujo de salida. **23 de 23 vectores del banco**,
+**los 32 del apéndice C del RFC 7541**, **145 de 146 en h2spec** —el que falta es el mismo que en
+Java y en Rust— y 189 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -19,10 +20,11 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 | 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
+| 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 3 de robustez |
 
 ## Cuántos requisitos citan las pruebas
 
-La cuenta que hace la integración continua, desde `c++/`: **146** requisitos distintos.
+La cuenta que hace la integración continua, desde `c++/`: **148** requisitos distintos.
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u | wc -l
@@ -195,6 +197,22 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   flujo (`H2-018`). `:authority` pasa a `host`, y varias `cookie` se juntan con `; `. Al cerrar, media
   conexión y un vaciado: cerrar con octetos sin leer manda un RST que borra el GOAWAY (`H2-048`).
   Los escritos no levantan `SIGPIPE`.
+  Cada DATA pide antes su sitio a `Ventanas`, que lleva la ventana de la conexión y la de cada flujo
+  (`H2-040`). Quien espera sitio espera ahí y no con la salida tomada, así que un flujo parado no tapa
+  a los demás ni al hilo que lee. Un `WINDOW_UPDATE` que sube una ventana por encima de 2^31-1 corta
+  el flujo, o la conexión si es la de la conexión, y unos ajustes que lo hacen cortan la conexión
+  (`H2-041`). Cambiar la ventana inicial mueve la de los flujos abiertos, aunque quede en negativo.
+  El hueco de un flujo se suelta bajo el mismo candado con que sale su última trama: si se soltara
+  después, un cliente que abre otro en cuanto ve el `END_STREAM` choca con el tope sin haberlo
+  pasado. El `REFUSED_STREAM` que mandamos nosotros no cuenta contra el cliente, y los
+  `WINDOW_UPDATE` de la conexión solo cuentan como control sin flujo cuando no hay ninguno vivo: si
+  no, una descarga larga acabaría en `ENHANCE_YOUR_CALM`. Una escritura que no avanza tiene plazo;
+  al vencer, la salida se da por rota y el socket se cierra en los dos sentidos, para que el hilo que
+  lee también se entere.
+- **`socket.hpp`.** Lo que comparten HTTP/1.1 y h2 al escribir: sin `SIGPIPE` —un cliente que corta
+  a mitad de respuesta mataba el proceso entero— y con plazo, 30 segundos, para que un cliente que no
+  lee no retenga la conexión. Si no se puede crear el hilo de una conexión, se cierra esa conexión y
+  el servidor sigue.
 - **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
   encuadre no comprueban nada.
 - **`CMakeLists.txt`.** CMake es a C++ lo que Maven a Java y Cargo a Rust: construye, no se enlaza.
@@ -204,12 +222,8 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
 
 ## Lo que falta
 
-Los hitos 10 a 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
-se puede comprobar: el control de flujo de salida, el contenedor de dependencias y las sesiones en
-tabla.
+Los hitos 11 y 12, en el mismo orden en que se hicieron en Rust, que es el orden en que el contrato
+se puede comprobar: el contenedor de dependencias y las sesiones en tabla.
 
-Los ocho fallos que quedan en h2spec son el `3.5.2`, que no aplica en un puerto compartido
-(`spec/README.md`), y siete que son todos control de flujo de salida (`H2-040`, `H2-041`): hoy el
-conductor lee los `WINDOW_UPDATE` y los ajustes del cliente pero no los usa para frenar lo que
-manda. El `5.1.2` cae por lo mismo: pone la ventana del cliente a cero para que las respuestas no
-puedan salir y los flujos se acumulen, y sin control de salida salen igual.
+El único fallo que queda en h2spec es el `3.5.2`, que no aplica en un puerto compartido
+(`spec/README.md`), igual que en Java y en Rust.

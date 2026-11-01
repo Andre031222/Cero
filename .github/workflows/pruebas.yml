@@ -204,8 +204,8 @@ jobs:
           N=$(grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas \
               | tr a-z_ A-Z- | sort -u | wc -l)
           echo "$N requisitos distintos"
-          if [ "$N" -lt 146 ]; then
-            echo "::error::Las pruebas de C++ citan $N requisitos; eran 146."
+          if [ "$N" -lt 148 ]; then
+            echo "::error::Las pruebas de C++ citan $N requisitos; eran 148."
             exit 1
           fi
 

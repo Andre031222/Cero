@@ -21,19 +21,20 @@
 #include "cero/http2/hpack.hpp"
 #include "cero/http2/trama.hpp"
 #include "cero/servidor.hpp"
+#include "cliente_h2.hpp"
 #include "prueba.hpp"
 
 namespace {
 
 using namespace cero::http2;
 using namespace std::chrono_literals;
+using prueba::Cliente;
+using prueba::conductor;
+using prueba::estado;
+using prueba::get;
 
 Trama t(std::uint8_t tipo, std::uint8_t banderas, std::uint32_t flujo, std::string carga) {
     return {tipo, banderas, flujo, std::move(carga)};
-}
-
-std::vector<Cabecera> get() {
-    return {{":method", "GET"}, {":scheme", "https"}, {":path", "/"}, {":authority", "a"}};
 }
 
 std::string crudo(const std::vector<Cabecera>& cabeceras) {
@@ -541,75 +542,6 @@ PRUEBA(h2c_lee_el_ascenso) {
     COMPRUEBA(!base64url("A*").has_value(), "h2c: base64url inválido");
     p.cabeceras.erase("http2-settings");
     COMPRUEBA(!pide_h2c(p), "h2c: sin HTTP2-Settings no hay ascenso");
-}
-
-class Cliente {
-public:
-    explicit Cliente(int descriptor) : d_(descriptor), entrada_(descriptor) {}
-    ~Cliente() { ::close(d_); }
-
-    bool mandar(std::string_view octetos) {
-        while (!octetos.empty()) {
-            const auto n = ::write(d_, octetos.data(), octetos.size());
-            if (n <= 0) return false;
-            octetos.remove_prefix(static_cast<std::size_t>(n));
-        }
-        return true;
-    }
-    bool mandar(const Trama& x) { return mandar(x.octetos()); }
-
-    std::optional<Trama> trama() {
-        auto r = leer_trama(entrada_, 1 << 24);
-        if (!r) return std::nullopt;
-        return std::move(*r);
-    }
-
-    std::optional<Trama> hasta(std::uint8_t tipo) {
-        for (auto x = trama(); x; x = trama()) {
-            if (x->tipo == tipo) return x;
-        }
-        return std::nullopt;
-    }
-
-    std::string linea() {
-        std::string s;
-        for (int c = entrada_.octeto(); c >= 0 && c != '\n'; c = entrada_.octeto()) s += static_cast<char>(c);
-        return s;
-    }
-
-    void abrir_h2() {
-        mandar(kPreambulo);
-        mandar(Trama{kSettings, 0, 0, {}});
-    }
-
-    int descriptor() const { return d_; }
-
-private:
-    int d_;
-    DesdeSocket entrada_;
-};
-
-std::string estado(const Trama& cabeceras) {
-    Decodificador d{4096, 1 << 20};
-    const auto c = d.decodificar(cabeceras.carga);
-    if (!c || c->empty()) return {};
-    return c->front().second;
-}
-
-struct Par {
-    int cliente;
-    std::thread servidor;
-};
-
-Par conductor(Atender atender, Ajustes ajustes = {}) {
-    int fd[2];
-    ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
-    std::thread hilo{[d = fd[0], atender = std::move(atender), ajustes] {
-        DesdeSocket entrada{d};
-        servir(entrada, ajustes, atender);
-        ::close(d);
-    }};
-    return {fd[1], std::move(hilo)};
 }
 
 PRUEBA(h2_027_el_conductor_manda_sus_settings_primero) {

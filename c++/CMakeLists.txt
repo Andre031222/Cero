@@ -8,6 +8,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 add_library(cero-http
     cero-http/src/http2/conexion.cpp
+    cero-http/src/http2/ventanas.cpp
     cero-http/src/http2/flujo.cpp
     cero-http/src/http2/hpack.cpp
     cero-http/src/http2/trama.cpp
@@ -19,7 +20,8 @@ add_library(cero-http
     cero-http/src/peticion.cpp
     cero-http/src/respuesta.cpp
     cero-http/src/ruta.cpp
-    cero-http/src/servidor.cpp)
+    cero-http/src/servidor.cpp
+    cero-http/src/socket.cpp)
 target_include_directories(cero-http PUBLIC cero-http/include)
 find_package(Threads REQUIRED)
 target_link_libraries(cero-http PUBLIC Threads::Threads)
@@ -28,7 +30,7 @@ add_executable(conforme cero-http/src/conforme.cpp)
 target_link_libraries(conforme PRIVATE cero-http)
 
 enable_testing()
-foreach(suite conformidad estaticos http2_flujos http2_hpack http2_tramas json observabilidad pipeline ruteo seguridad sesiones)
+foreach(suite conformidad estaticos http2_control_flujo http2_flujos http2_hpack http2_tramas json observabilidad pipeline robustez ruteo seguridad sesiones)
     add_executable(pruebas-${suite} pruebas/${suite}.cpp)
     target_include_directories(pruebas-${suite} PRIVATE pruebas)
     target_link_libraries(pruebas-${suite} PRIVATE cero-http)
