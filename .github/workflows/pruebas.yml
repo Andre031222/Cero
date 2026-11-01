@@ -252,6 +252,45 @@ jobs:
       - name: En orden
         run: sh herramientas/verificar-orden.sh
 
+  python:
+    name: python/ · pruebas y banco
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Requisitos citados por las pruebas
+        working-directory: python
+        run: |
+          N=$(grep -rhoiE --include='*.py' '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas \
+              | tr a-z_ A-Z- | sort -u | wc -l)
+          echo "$N requisitos distintos"
+          if [ "$N" -lt 14 ]; then
+            echo "::error::Las pruebas de Python citan $N requisitos; eran 14."
+            exit 1
+          fi
+          for i in $(seq -w 1 13); do
+            grep -rqiE --include="*.py" "RUT[-_]0$i" pruebas || { echo "::error::Falta RUT-0$i"; exit 1; }
+          done
+
+      - name: Sin comentarios
+        run: python3 herramientas/comentarios.py --verificar python
+
+      - name: Pruebas
+        working-directory: python
+        run: python3 -I -m unittest discover -s pruebas -t . -v
+
+      - name: El banco de conformidad
+        working-directory: python
+        run: |
+          python3 -m cero.conforme 8777 &
+          for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:8777/ && break || sleep 1; done
+          python3 ../spec/banco/correr.py 127.0.0.1 8777
+
   dependencias:
     name: dependencias con CVE conocido
     runs-on: ubuntu-latest

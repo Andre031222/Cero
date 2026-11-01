@@ -90,7 +90,7 @@ Los 23 de HTTP/1.1, por los vectores del banco. El resto, por una prueba que los
 y solo en `pruebas/`:
 
 ```bash
-grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u
+grep -rhoiE --include='*.py' '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' pruebas | tr a-z_ A-Z- | sort -u
 ```
 
 Hoy son `RUT-001`–`RUT-013` y `HTTP-022`, que el banco ya cubre y aquí se prueba además con
