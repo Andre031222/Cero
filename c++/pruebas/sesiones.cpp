@@ -88,12 +88,12 @@ PRUEBA(ses_007_dos_peticiones_simultaneas_no_se_pisan) {
     COMPRUEBA(g.sesion->atributos().size() == kHilos * kVueltas, "SES-007");
 }
 
-PRUEBA(ses_008_y_011_la_cookie_se_emite_una_vez) {
+PRUEBA(ses_008_la_cookie_se_emite_una_vez) {
     auto a = almacen();
     const auto g = *a.crear();
     COMPRUEBA(g.sesion->cookie_pendiente() == g.sesion->id(), "SES-008: la que la crea la lleva");
     COMPRUEBA(!g.sesion->cookie_pendiente().has_value(), "SES-008: las siguientes no");
-    COMPRUEBA(!g.sesion->cookie_pendiente().has_value(), "SES-011");
+    COMPRUEBA(!g.sesion->cookie_pendiente().has_value(), "SES-008: ni la tercera");
 }
 
 PRUEBA(ses_009_los_atributos_de_la_cookie) {

@@ -9,7 +9,9 @@
 #include <cerrno>
 #include <charconv>
 #include <chrono>
+#include <cstddef>
 #include <cstring>
+#include <exception>
 #include <expected>
 #include <functional>
 #include <memory>
@@ -27,10 +29,12 @@
 #include "cero/http2/trama.hpp"
 #include "cero/socket.hpp"
 
+using namespace std;
+
 namespace cero {
 namespace {
 
-std::string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
+string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
     auto salida = formato("HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n", r.estado,
                         razon(r.estado), r.cuerpo.size(), r.tipo);
     for (const auto& [nombre, valor] : r.extra) salida += formato("{}: {}\r\n", nombre, valor);
@@ -39,15 +43,15 @@ std::string escribir(const Respuesta& r, bool solo_cabeceras, bool cerrar) {
     return salida;
 }
 
-std::string desescapar(std::string_view s) {
-    std::string r;
-    for (std::size_t i = 0; i < s.size(); ++i) {
+string desescapar(string_view s) {
+    string r;
+    for (size_t i = 0; i < s.size(); ++i) {
         if (s[i] == '+') {
             r += ' ';
         } else if (s[i] == '%' && i + 2 < s.size()) {
             unsigned valor = 0;
             const auto desde = s.data() + i + 1;
-            if (std::from_chars(desde, desde + 2, valor, 16).ec == std::errc{}) {
+            if (from_chars(desde, desde + 2, valor, 16).ec == errc{}) {
                 r += static_cast<char>(valor);
                 i += 2;
                 continue;
@@ -60,68 +64,93 @@ std::string desescapar(std::string_view s) {
     return r;
 }
 
-std::optional<std::string> de_pares(std::string_view cadena, std::string_view nombre) {
+optional<string> de_pares(string_view cadena, string_view nombre) {
     while (!cadena.empty()) {
         const auto fin = cadena.find('&');
         const auto par = cadena.substr(0, fin);
-        if (const auto igual = par.find('='); igual != std::string_view::npos) {
+        if (const auto igual = par.find('='); igual != string_view::npos) {
             if (par.substr(0, igual) == nombre) return desescapar(par.substr(igual + 1));
         }
-        if (fin == std::string_view::npos) break;
+        if (fin == string_view::npos) break;
         cadena.remove_prefix(fin + 1);
     }
-    return std::nullopt;
+    return nullopt;
+}
+
+Fallo en_curso() {
+    try {
+        throw;
+    } catch (const Fallo& f) {
+        return f;
+    } catch (const exception& e) {
+        return Fallo::interno(e.what());
+    } catch (...) {
+        return Fallo::interno("excepción que no es estándar");
+    }
 }
 
 }
 
-std::optional<std::string_view> Contexto::variable(std::string_view nombre) const {
+optional<string_view> Contexto::variable(string_view nombre) const {
     const auto i = variables.find(nombre);
-    if (i == variables.end()) return std::nullopt;
+    if (i == variables.end()) return nullopt;
     return i->second;
 }
 
-std::optional<std::string_view> Contexto::cabecera(std::string_view nombre) const {
+optional<string_view> Contexto::cabecera(string_view nombre) const {
     return peticion.cabecera(nombre);
 }
 
-std::optional<std::string> Contexto::consulta(std::string_view nombre) const {
+optional<string> Contexto::consulta(string_view nombre) const {
     const auto interrogante = peticion.destino.find('?');
-    if (interrogante == std::string::npos) return std::nullopt;
-    return de_pares(std::string_view{peticion.destino}.substr(interrogante + 1), nombre);
+    if (interrogante == string::npos) return nullopt;
+    return de_pares(string_view{peticion.destino}.substr(interrogante + 1), nombre);
 }
 
-std::string Contexto::consulta_o(std::string_view nombre, std::string_view defecto) const {
-    return consulta(nombre).value_or(std::string{defecto});
+string Contexto::consulta_o(string_view nombre, string_view defecto) const {
+    return consulta(nombre).value_or(string{defecto});
 }
 
-std::optional<std::string> Contexto::campo(std::string_view nombre) const {
+optional<string> Contexto::campo(string_view nombre) const {
     return de_pares(peticion.cuerpo, nombre);
 }
 
-std::expected<Json, FalloJson> Contexto::cuerpo_json() const { return leer(peticion.cuerpo); }
+Json Contexto::cuerpo_json() const {
+    auto leido = leer(peticion.cuerpo);
+    if (!leido) throw Fallo{400, "el cuerpo no es JSON válido: " + leido.error().porque};
+    return std::move(*leido);
+}
 
-std::optional<Guardada> Contexto::abrir_sesion() const {
+optional<Guardada> Contexto::abrir_sesion() const {
     if (abierta_) return abierta_;
     if (llegada_) return llegada_;
     abierta_ = fuente_.crear();
     return abierta_;
 }
 
-std::optional<std::string> Contexto::token_csrf() const {
+optional<string> Contexto::token_csrf() const {
     const auto g = abrir_sesion();
-    if (!g) return std::nullopt;
+    if (!g) return nullopt;
     const auto tomado = g->tomar();
-    if (const auto ya = g->sesion->leer(kClaveCsrf)) return std::string{*ya};
+    if (const auto ya = g->sesion->leer(kClaveCsrf)) return string{*ya};
     const auto nuevo = identificador();
-    if (!nuevo) return std::nullopt;
+    if (!nuevo) return nullopt;
     g->sesion->poner(kClaveCsrf, *nuevo);
     return nuevo;
 }
 
-Servidor&& Servidor::accion(std::string_view nombre,
-                            std::function<Respuesta(const Contexto&)> f) && {
-    acciones_.emplace(nombre, std::move(f));
+Servidor&& Servidor::usar(Medio m) && {
+    medios_.push_back(std::move(m));
+    return std::move(*this);
+}
+
+Servidor&& Servidor::al_fallar(AlFallar f) && {
+    al_fallar_ = std::move(f);
+    return std::move(*this);
+}
+
+Servidor&& Servidor::por_defecto(Accion f) && {
+    por_defecto_ = std::move(f);
     return std::move(*this);
 }
 
@@ -135,28 +164,28 @@ Servidor&& Servidor::cors(Cors c) && {
     return std::move(*this);
 }
 
-Servidor&& Servidor::limite(unsigned cupo, std::chrono::seconds ventana) && {
-    limitador_ = std::make_shared<Limitador>(cupo, ventana);
+Servidor&& Servidor::limite(unsigned cupo, chrono::seconds ventana) && {
+    limitador_ = make_shared<Limitador>(cupo, ventana);
     return std::move(*this);
 }
 
-Servidor&& Servidor::csrf(std::vector<std::string> exenciones) && {
+Servidor&& Servidor::csrf(vector<string> exenciones) && {
     csrf_activo_ = true;
     csrf_exento_ = std::move(exenciones);
     return std::move(*this);
 }
 
-Servidor&& Servidor::salud(std::shared_ptr<Salud> s) && {
+Servidor&& Servidor::salud(shared_ptr<Salud> s) && {
     salud_ = std::move(s);
     return std::move(*this);
 }
 
-Servidor&& Servidor::sesiones(std::shared_ptr<Sesiones> s) && {
+Servidor&& Servidor::sesiones(shared_ptr<Sesiones> s) && {
     sesiones_ = std::move(s);
     return std::move(*this);
 }
 
-Servidor&& Servidor::sin_registrar(std::vector<std::string> caminos) && {
+Servidor&& Servidor::sin_registrar(vector<string> caminos) && {
     sin_registrar_ = std::move(caminos);
     for (const auto& c : sin_registrar_) metricas_->ignorar(c);
     return std::move(*this);
@@ -172,7 +201,7 @@ Servidor&& Servidor::limites(Limites l) && {
     return std::move(*this);
 }
 
-Servidor&& Servidor::direccion(std::string d) && {
+Servidor&& Servidor::direccion(string d) && {
     direccion_ = std::move(d);
     return std::move(*this);
 }
@@ -182,18 +211,18 @@ Servidor&& Servidor::tras_tls() && {
     return std::move(*this);
 }
 
-Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const {
-    const auto empezo = std::chrono::steady_clock::now();
-    const std::string camino{p.camino()};
+Respuesta Servidor::responder(const Peticion& p, string_view cliente) const {
+    const auto empezo = chrono::steady_clock::now();
+    const string camino{p.camino()};
 
     if (salud_) {
-        const auto informe = camino == "/cero/vivo"  ? std::optional{salud_->vivo()}
-                             : camino == "/cero/listo" ? std::optional{salud_->listo()}
-                                                       : std::nullopt;
+        const auto informe = camino == "/cero/vivo"  ? optional{salud_->vivo()}
+                             : camino == "/cero/listo" ? optional{salud_->listo()}
+                                                       : nullopt;
         if (informe) {
             Respuesta r = Respuesta::json(informe->cuerpo);
             r.estado = informe->estado;
-            return rematar(std::move(r), p, camino, empezo, std::nullopt);
+            return rematar(std::move(r), p, camino, empezo, nullopt);
         }
     }
 
@@ -203,78 +232,125 @@ Respuesta Servidor::responder(const Peticion& p, std::string_view cliente) const
         if (!v.permitida) {
             auto r = Respuesta::codigo(429, "demasiadas peticiones");
             r.extra.insert(r.extra.end(), cabeceras.begin(), cabeceras.end());
-            return rematar(std::move(r), p, camino, empezo, std::nullopt);
+            return rematar(std::move(r), p, camino, empezo, nullopt);
         }
     }
 
     Pares de_cors;
     if (cors_) {
         const auto decision = cors_->decidir(p.metodo, p.cabecera("origin"));
-        if (const auto* corta = std::get_if<Cors::Corta>(&decision)) {
+        if (const auto* corta = get_if<Cors::Corta>(&decision)) {
             auto r = Respuesta::codigo(corta->estado);
             r.extra = corta->cabeceras;
-            return rematar(std::move(r), p, camino, empezo, std::nullopt);
+            return rematar(std::move(r), p, camino, empezo, nullopt);
         }
-        de_cors = std::get<Cors::Sigue>(decision).cabeceras;
+        de_cors = get<Cors::Sigue>(decision).cabeceras;
     }
 
     auto llegada = sesiones_->recuperar(id_de_cookie(p.cabecera("cookie")));
 
     const auto resolucion = router_.resolver(p.metodo, camino);
-    const auto* hay = std::get_if<Encontrada>(&resolucion);
+    const auto* hay = get_if<Encontrada>(&resolucion);
     static const Captura kSinVariables;
     const Contexto ctx{p, hay != nullptr ? hay->variables : kSinVariables, std::move(llegada),
                        *sesiones_};
 
-    auto r = atender_ruta(ctx, camino);
+    Respuesta r;
+    try {
+        r = cadena(0, ctx, camino, resolucion);
+    } catch (...) {
+        r = del_fallo(ctx, patron(p, camino), en_curso());
+    }
     r.extra.insert(r.extra.end(), de_cors.begin(), de_cors.end());
     return rematar(std::move(r), p, camino, empezo, ctx.final());
 }
 
-Respuesta Servidor::atender_ruta(const Contexto& ctx, std::string_view camino) const {
+Respuesta Servidor::cadena(size_t i, const Contexto& ctx, string_view camino,
+                           const Resolucion& resolucion) const {
+    if (i == medios_.size()) return atender_ruta(ctx, camino, resolucion);
+    return medios_[i](ctx, [this, i, camino, &resolucion](const Contexto& c) {
+        return cadena(i + 1, c, camino, resolucion);
+    });
+}
+
+Respuesta Servidor::atender_ruta(const Contexto& ctx, string_view camino,
+                                 const Resolucion& resolucion) const {
     const auto& p = ctx.peticion;
     if (p.destino == "*") {
         return Respuesta::codigo(p.metodo == "OPTIONS" ? 200 : 400);
     }
 
-    const auto resolucion = router_.resolver(p.metodo, camino);
-    if (const auto* mal = std::get_if<VerboNoPermitido>(&resolucion)) {
-        std::string lista;
+    if (const auto* mal = get_if<VerboNoPermitido>(&resolucion)) {
+        string lista;
         for (const auto& v : mal->verbos) lista += (lista.empty() ? "" : ", ") + v;
         return Respuesta::codigo(405).cabecera("Allow", lista);
     }
-    const auto* hay = std::get_if<Encontrada>(&resolucion);
-    if (hay == nullptr) return Respuesta::codigo(404, "no encontrado");
+    const auto* hay = get_if<Encontrada>(&resolucion);
+    if (hay == nullptr) {
+        return por_defecto_ ? por_defecto_(ctx) : Respuesta::codigo(404, "no encontrado");
+    }
 
     if (csrf_activo_) {
-        std::optional<std::string> en_sesion;
+        optional<string> en_sesion;
         if (const auto& g = ctx.sesion()) {
             const auto tomado = g->tomar();
-            if (const auto t = g->sesion->leer(kClaveCsrf)) en_sesion = std::string{*t};
+            if (const auto t = g->sesion->leer(kClaveCsrf)) en_sesion = string{*t};
         }
-        auto presentado = ctx.cabecera("x-csrf-token").transform([](auto v) { return std::string{v}; });
+        auto presentado = ctx.cabecera("x-csrf-token").transform([](auto v) { return string{v}; });
         if (!presentado) presentado = ctx.campo(kCampoCsrf);
         if (!presentado) presentado = ctx.consulta(kCampoCsrf);
 
-        const auto vista = [](const std::optional<std::string>& o) {
-            return o ? std::optional<std::string_view>{*o} : std::nullopt;
+        const auto vista = [](const optional<string>& o) {
+            return o ? optional<string_view>{*o} : nullopt;
         };
         if (!csrf_valido(p.metodo, camino, csrf_exento_, vista(en_sesion), vista(presentado))) {
             return Respuesta::codigo(403, "token CSRF ausente o inválido");
         }
     }
 
-    const auto accion = acciones_.find(hay->nombre);
-    if (accion == acciones_.end()) {
-        log_->escribir(Nivel::Error, "la ruta {} no tiene acción registrada", {hay->nombre});
-        return Respuesta::codigo(500, "error interno");
-    }
-    return accion->second(ctx);
+    return actuar(ctx, hay->nombre, patron(p, camino));
 }
 
-Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view camino,
-                            std::chrono::steady_clock::time_point empezo,
-                            const std::optional<Guardada>& sesion) const {
+Respuesta Servidor::actuar(const Contexto& ctx, string_view nombre, string_view ruta) const {
+    const auto accion = acciones_.find(nombre);
+    if (accion == acciones_.end()) {
+        const auto huerfana = formato("la ruta {} no tiene acción registrada", nombre);
+        return del_fallo(ctx, ruta, Fallo::interno(huerfana));
+    }
+    try {
+        return accion->second(ctx);
+    } catch (...) {
+        return del_fallo(ctx, ruta, en_curso());
+    }
+}
+
+Respuesta Servidor::del_fallo(const Contexto& ctx, string_view ruta, const Fallo& fallo) const {
+    if (al_fallar_) {
+        try {
+            return al_fallar_(ctx, fallo);
+        } catch (...) {
+            log_->escribir(Nivel::Error, "el manejador de fallos de {} también falló", {ruta});
+        }
+    }
+    if (fallo.contable()) {
+        if (!fallo.detalle) return Respuesta::codigo(fallo.estado, fallo.mensaje);
+        auto r = Respuesta::json(fallo.detalle->escribir());
+        r.estado = fallo.estado;
+        return r;
+    }
+    log_->escribir(Nivel::Error, "{} falló: {}", {ruta, fallo.mensaje});
+    auto r = Respuesta::json(Json::objeto({{"error", "error interno"}, {"ruta", ruta}}).escribir());
+    r.estado = fallo.estado;
+    return r;
+}
+
+string Servidor::patron(const Peticion& p, string_view camino) const {
+    return router_.patron_de(p.metodo, camino).value_or(string{camino});
+}
+
+Respuesta Servidor::rematar(Respuesta r, const Peticion& p, string_view camino,
+                            chrono::steady_clock::time_point empezo,
+                            const optional<Guardada>& sesion) const {
     const auto proteccion = proteccion_.aplicar(seguro_);
     r.extra.insert(r.extra.end(), proteccion.begin(), proteccion.end());
 
@@ -288,26 +364,25 @@ Respuesta Servidor::rematar(Respuesta r, const Peticion& p, std::string_view cam
         sesiones_->guardar(*sesion);
     }
 
-    const auto tardo = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now() - empezo);
-    const auto patron = router_.patron_de(p.metodo, camino).value_or(std::string{camino});
-    metricas_->anotar(patron, r.estado, tardo);
-    if (std::ranges::find(sin_registrar_, camino) == sin_registrar_.end()) {
+    const auto tardo = chrono::duration_cast<chrono::microseconds>(
+        chrono::steady_clock::now() - empezo);
+    metricas_->anotar(patron(p, camino), r.estado, tardo);
+    if (ranges::find(sin_registrar_, camino) == sin_registrar_.end()) {
         log_->escribir(Nivel::Info, "{}",
-                       {linea_acceso(p.metodo, p.destino, r.estado, std::nullopt, tardo)});
+                       {linea_acceso(p.metodo, p.destino, r.estado, nullopt, tardo)});
     }
     return r;
 }
 
 namespace {
 
-int abrir_oyente(const std::string& direccion, unsigned short puerto) {
+int abrir_oyente(const string& direccion, unsigned short puerto) {
     addrinfo pista{};
     pista.ai_family = AF_UNSPEC;
     pista.ai_socktype = SOCK_STREAM;
     pista.ai_flags = AI_PASSIVE;
     addrinfo* lista = nullptr;
-    const auto servicio = std::to_string(puerto);
+    const auto servicio = to_string(puerto);
     if (const int fallo = ::getaddrinfo(direccion.c_str(), servicio.c_str(), &pista, &lista);
         fallo != 0) {
         aviso("cero · dirección no válida: {} ({})", direccion, ::gai_strerror(fallo));
@@ -330,12 +405,12 @@ int abrir_oyente(const std::string& direccion, unsigned short puerto) {
     }
     ::freeaddrinfo(lista);
     if (oyente < 0) {
-        aviso("cero · no se puede escuchar en {}:{}: {}", direccion, puerto, std::strerror(error));
+        aviso("cero · no se puede escuchar en {}:{}: {}", direccion, puerto, strerror(error));
     }
     return oyente;
 }
 
-std::string quien_es(const sockaddr_storage& quien, socklen_t cuanto) {
+string quien_es(const sockaddr_storage& quien, socklen_t cuanto) {
     char texto[NI_MAXHOST] = {};
     if (::getnameinfo(reinterpret_cast<const sockaddr*>(&quien), cuanto, texto, sizeof texto,
                       nullptr, 0, NI_NUMERICHOST) != 0) {
@@ -363,14 +438,14 @@ int Servidor::escuchar(unsigned short puerto) const {
         const auto desde = quien_es(quien, cuanto);
         sin_sigpipe(cliente);
         try {
-            std::thread{[this, cliente, desde, plazos = plazos_, limites = limites_] {
+            thread{[this, cliente, desde, plazos = plazos_, limites = limites_] {
                 plazo_de_lectura(cliente, plazos.inactividad);
                 http2::DesdeSocket lector{cliente};
                 const http2::Atender atender = [this, &desde](const Peticion& p) {
                     return responder(p, desde);
                 };
                 if (lector.asomar(http2::kPreambulo)) {
-                    http2::servir(lector, http2::Ajustes{}, atender, std::nullopt, plazos, limites);
+                    http2::servir(lector, http2::Ajustes{}, atender, nullopt, plazos, limites);
                     ::close(cliente);
                     return;
                 }
@@ -395,7 +470,7 @@ int Servidor::escuchar(unsigned short puerto) const {
                 }
                 ::close(cliente);
             }}.detach();
-        } catch (const std::system_error&) {
+        } catch (const system_error&) {
             ::close(cliente);
         }
     }

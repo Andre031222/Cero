@@ -71,6 +71,12 @@ PRUEBA(un_entero_grande_no_se_declara_entero_si_no_lo_es) {
     COMPRUEBA(cero::Json{"7"}.entero() == std::nullopt, "y una cadena no se convierte sola");
 }
 
+PRUEBA(un_numero_que_no_cabe_en_un_entero_no_lo_es) {
+    COMPRUEBA(cero::Json{0x1p63}.entero() == std::nullopt, "2^63 se sale del entero con signo");
+    COMPRUEBA(cero::Json{1e300}.entero() == std::nullopt, "y 1e300 con más razón");
+    COMPRUEBA(cero::Json{-0x1p63}.entero() == -0x7fffffffffffffffLL - 1, "-2^63 sí cabe");
+}
+
 }
 
 PRUEBAS_MAIN

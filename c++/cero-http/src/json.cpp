@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <charconv>
+#include <cmath>
 #include <expected>
 #include <optional>
 #include <string>
@@ -13,15 +14,17 @@
 
 #include "cero/formato.hpp"
 
+using namespace std;
+
 namespace cero {
 namespace {
 
 constexpr int kMaxHondura = 200;
 
-using Fallo = std::unexpected<FalloJson>;
+using Fallo = unexpected<FalloJson>;
 
-std::string escapar(std::string_view s) {
-    std::string r;
+string escapar(string_view s) {
+    string r;
     r.reserve(s.size() + 2);
     for (char c : s) {
         switch (c) {
@@ -44,7 +47,7 @@ std::string escapar(std::string_view s) {
     return r;
 }
 
-std::string numero_a_texto(double v) {
+string numero_a_texto(double v) {
     if (v == static_cast<double>(static_cast<long long>(v))) {
         return formato("{}", static_cast<long long>(v));
     }
@@ -53,9 +56,9 @@ std::string numero_a_texto(double v) {
 
 class Lector {
 public:
-    explicit Lector(std::string_view entrada) : s_(entrada) {}
+    explicit Lector(string_view entrada) : s_(entrada) {}
 
-    std::expected<Json, FalloJson> todo() {
+    expected<Json, FalloJson> todo() {
         auto v = valor(0);
         if (!v) return v;
         blancos();
@@ -79,7 +82,7 @@ private:
         return false;
     }
 
-    std::expected<Json, FalloJson> valor(int hondura) {
+    expected<Json, FalloJson> valor(int hondura) {
         if (hondura > kMaxHondura) return Fallo{{"demasiado anidamiento"}};
         blancos();
         if (i_ >= s_.size()) return Fallo{{"se acabó la entrada"}};
@@ -113,9 +116,9 @@ private:
         }
     }
 
-    std::expected<std::string, FalloJson> cadena() {
+    expected<string, FalloJson> cadena() {
         if (!consume('"')) return Fallo{{"se esperaba una cadena"}};
-        std::string r;
+        string r;
         while (i_ < s_.size() && s_[i_] != '"') {
             if (s_[i_] != '\\') {
                 r += s_[i_++];
@@ -135,7 +138,7 @@ private:
                     if (i_ + 4 > s_.size()) return Fallo{{"\\u incompleto"}};
                     unsigned punto = 0;
                     const auto desde = s_.data() + i_;
-                    if (std::from_chars(desde, desde + 4, punto, 16).ec != std::errc{}) {
+                    if (from_chars(desde, desde + 4, punto, 16).ec != errc{}) {
                         return Fallo{{"\\u no hexadecimal"}};
                     }
                     i_ += 4;
@@ -159,10 +162,10 @@ private:
         return r;
     }
 
-    std::expected<Json, FalloJson> numero() {
+    expected<Json, FalloJson> numero() {
         const auto desde = i_;
         if (i_ < s_.size() && (s_[i_] == '-' || s_[i_] == '+')) ++i_;
-        while (i_ < s_.size() && (std::isdigit(static_cast<unsigned char>(s_[i_])) != 0 ||
+        while (i_ < s_.size() && (isdigit(static_cast<unsigned char>(s_[i_])) != 0 ||
                                   s_[i_] == '.' || s_[i_] == 'e' || s_[i_] == 'E' ||
                                   s_[i_] == '-' || s_[i_] == '+')) {
             ++i_;
@@ -171,12 +174,12 @@ private:
         if (trozo.empty()) return Fallo{{"no es un valor"}};
         double v = 0;
         const auto fin = trozo.data() + trozo.size();
-        const auto leido = std::from_chars(trozo.data(), fin, v);
-        if (leido.ec != std::errc{} || leido.ptr != fin) return Fallo{{"número mal formado"}};
+        const auto leido = from_chars(trozo.data(), fin, v);
+        if (leido.ec != errc{} || leido.ptr != fin) return Fallo{{"número mal formado"}};
         return Json{v};
     }
 
-    std::expected<Json, FalloJson> lista(int hondura) {
+    expected<Json, FalloJson> lista(int hondura) {
         consume('[');
         Json::Lista items;
         if (consume(']')) return Json{std::move(items)};
@@ -189,7 +192,7 @@ private:
         }
     }
 
-    std::expected<Json, FalloJson> objeto(int hondura) {
+    expected<Json, FalloJson> objeto(int hondura) {
         consume('{');
         Json::Objeto pares;
         if (consume('}')) return Json{std::move(pares)};
@@ -206,67 +209,67 @@ private:
         }
     }
 
-    std::string_view s_;
-    std::size_t i_ = 0;
+    string_view s_;
+    size_t i_ = 0;
 };
 
 }
 
-Json Json::objeto(std::vector<std::pair<std::string, Json>> pares) {
+Json Json::objeto(vector<pair<string, Json>> pares) {
     Objeto m;
     for (auto& [clave, v] : pares) m.insert_or_assign(std::move(clave), std::move(v));
     return Json{std::move(m)};
 }
 
-const Json* Json::get(std::string_view clave) const {
-    const auto* m = std::get_if<Objeto>(&valor_);
+const Json* Json::get(string_view clave) const {
+    const auto* m = get_if<Objeto>(&valor_);
     if (m == nullptr) return nullptr;
     const auto i = m->find(clave);
     return i == m->end() ? nullptr : &i->second;
 }
 
-std::optional<std::string_view> Json::cadena() const {
-    if (const auto* v = std::get_if<std::string>(&valor_)) return *v;
-    return std::nullopt;
+optional<string_view> Json::cadena() const {
+    if (const auto* v = get_if<string>(&valor_)) return *v;
+    return nullopt;
 }
 
-std::optional<double> Json::numero() const {
-    if (const auto* v = std::get_if<double>(&valor_)) return *v;
-    return std::nullopt;
+optional<double> Json::numero() const {
+    if (const auto* v = get_if<double>(&valor_)) return *v;
+    return nullopt;
 }
 
-std::optional<long long> Json::entero() const {
-    const auto* v = std::get_if<double>(&valor_);
-    if (v == nullptr || *v != static_cast<double>(static_cast<long long>(*v))) return std::nullopt;
+optional<long long> Json::entero() const {
+    const auto* v = get_if<double>(&valor_);
+    if (v == nullptr || !(*v >= -0x1p63 && *v < 0x1p63) || *v != trunc(*v)) return nullopt;
     return static_cast<long long>(*v);
 }
 
-std::optional<bool> Json::booleano() const {
-    if (const auto* v = std::get_if<bool>(&valor_)) return *v;
-    return std::nullopt;
+optional<bool> Json::booleano() const {
+    if (const auto* v = get_if<bool>(&valor_)) return *v;
+    return nullopt;
 }
 
-const Json::Lista* Json::lista() const { return std::get_if<Lista>(&valor_); }
-const Json::Objeto* Json::como_objeto() const { return std::get_if<Objeto>(&valor_); }
+const Json::Lista* Json::lista() const { return get_if<Lista>(&valor_); }
+const Json::Objeto* Json::como_objeto() const { return get_if<Objeto>(&valor_); }
 
-std::string Json::escribir() const {
-    return std::visit(
-        [](const auto& v) -> std::string {
-            using T = std::decay_t<decltype(v)>;
-            if constexpr (std::is_same_v<T, Nulo>) {
+string Json::escribir() const {
+    return visit(
+        [](const auto& v) -> string {
+            using T = decay_t<decltype(v)>;
+            if constexpr (is_same_v<T, Nulo>) {
                 return "null";
-            } else if constexpr (std::is_same_v<T, bool>) {
+            } else if constexpr (is_same_v<T, bool>) {
                 return v ? "true" : "false";
-            } else if constexpr (std::is_same_v<T, double>) {
+            } else if constexpr (is_same_v<T, double>) {
                 return numero_a_texto(v);
-            } else if constexpr (std::is_same_v<T, std::string>) {
+            } else if constexpr (is_same_v<T, string>) {
                 return formato("\"{}\"", escapar(v));
-            } else if constexpr (std::is_same_v<T, Lista>) {
-                std::string r = "[";
+            } else if constexpr (is_same_v<T, Lista>) {
+                string r = "[";
                 for (const auto& x : v) r += (r.size() == 1 ? "" : ",") + x.escribir();
                 return r + "]";
             } else {
-                std::string r = "{";
+                string r = "{";
                 for (const auto& [clave, x] : v) {
                     r += (r.size() == 1 ? "" : ",") + formato("\"{}\":{}", escapar(clave), x.escribir());
                 }
@@ -276,7 +279,7 @@ std::string Json::escribir() const {
         valor_);
 }
 
-std::expected<Json, FalloJson> leer(std::string_view entrada) {
+expected<Json, FalloJson> leer(string_view entrada) {
     return Lector{entrada}.todo();
 }
 

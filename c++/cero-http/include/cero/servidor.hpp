@@ -1,16 +1,21 @@
 #pragma once
 
+#include <charconv>
 #include <chrono>
-#include <expected>
+#include <concepts>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "cero/fallo.hpp"
 #include "cero/json.hpp"
 #include "cero/observabilidad.hpp"
 #include "cero/peticion.hpp"
@@ -24,6 +29,11 @@ namespace cero {
 
 class Servidor;
 
+template <class T>
+concept DesdeJson = requires(const Json& j) {
+    { T::de_json(j) } -> std::same_as<std::optional<T>>;
+};
+
 class Contexto {
 public:
     const Peticion& peticion;
@@ -34,7 +44,26 @@ public:
     std::optional<std::string> consulta(std::string_view nombre) const;
     std::string consulta_o(std::string_view nombre, std::string_view defecto) const;
     std::optional<std::string> campo(std::string_view nombre) const;
-    std::expected<Json, FalloJson> cuerpo_json() const;
+    Json cuerpo_json() const;
+
+    template <std::integral T>
+    T variable_como(std::string_view nombre) const {
+        const auto texto = variable(nombre).value_or("");
+        const auto fin = texto.data() + texto.size();
+        T valor{};
+        const auto [resto, error] = std::from_chars(texto.data(), fin, valor);
+        if (texto.empty() || error != std::errc{} || resto != fin) {
+            throw Fallo{400, "la variable " + std::string{nombre} + " no tiene el tipo esperado"};
+        }
+        return valor;
+    }
+
+    template <DesdeJson T>
+    T cuerpo_como() const {
+        auto valor = T::de_json(cuerpo_json());
+        if (!valor) throw Fallo{422, "el cuerpo no tiene la forma esperada"};
+        return std::move(*valor);
+    }
 
     const std::optional<Guardada>& sesion() const { return llegada_; }
     std::optional<Guardada> abrir_sesion() const;
@@ -52,11 +81,39 @@ private:
     Sesiones& fuente_;
 };
 
+using Accion = std::function<Respuesta(const Contexto&)>;
+using Medio = std::function<Respuesta(const Contexto&, const Accion&)>;
+using AlFallar = std::function<Respuesta(const Contexto&, const Fallo&)>;
+
+template <class F>
+Respuesta en_respuesta(const F& f, const Contexto& c) {
+    using Devuelto = std::invoke_result_t<const F&, const Contexto&>;
+    if constexpr (std::is_void_v<Devuelto>) {
+        f(c);
+        return Respuesta::nada();
+    } else if constexpr (std::same_as<Devuelto, Json>) {
+        return Respuesta::json(f(c).escribir());
+    } else if constexpr (std::convertible_to<Devuelto, std::string_view>) {
+        return Respuesta::texto(f(c));
+    } else {
+        return f(c);
+    }
+}
+
 class Servidor {
 public:
     explicit Servidor(Router router) : router_(std::move(router)) {}
 
-    Servidor&& accion(std::string_view nombre, std::function<Respuesta(const Contexto&)> f) &&;
+    template <class F>
+    Servidor&& accion(std::string_view nombre, F f) && {
+        acciones_.emplace(nombre,
+                          [f = std::move(f)](const Contexto& c) { return en_respuesta(f, c); });
+        return std::move(*this);
+    }
+
+    Servidor&& usar(Medio m) &&;
+    Servidor&& al_fallar(AlFallar f) &&;
+    Servidor&& por_defecto(Accion f) &&;
     Servidor&& proteccion(Proteccion p) &&;
     Servidor&& cors(Cors c) &&;
     Servidor&& limite(unsigned cupo, std::chrono::seconds ventana) &&;
@@ -77,13 +134,22 @@ public:
     Log& log() const { return *log_; }
 
 private:
-    Respuesta atender_ruta(const Contexto& ctx, std::string_view camino) const;
+    Respuesta cadena(std::size_t i, const Contexto& ctx, std::string_view camino,
+                     const Resolucion& resolucion) const;
+    Respuesta atender_ruta(const Contexto& ctx, std::string_view camino,
+                           const Resolucion& resolucion) const;
+    Respuesta actuar(const Contexto& ctx, std::string_view nombre, std::string_view ruta) const;
+    Respuesta del_fallo(const Contexto& ctx, std::string_view ruta, const Fallo& fallo) const;
+    std::string patron(const Peticion& p, std::string_view camino) const;
     Respuesta rematar(Respuesta r, const Peticion& p, std::string_view camino,
                       std::chrono::steady_clock::time_point empezo,
                       const std::optional<Guardada>& sesion) const;
 
     Router router_;
-    std::map<std::string, std::function<Respuesta(const Contexto&)>, std::less<>> acciones_;
+    std::map<std::string, Accion, std::less<>> acciones_;
+    std::vector<Medio> medios_;
+    AlFallar al_fallar_;
+    Accion por_defecto_;
     std::shared_ptr<Sesiones> sesiones_ =
         std::make_shared<Almacen>(std::chrono::minutes{30}, std::chrono::hours{8});
     Proteccion proteccion_;
