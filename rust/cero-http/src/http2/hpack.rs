@@ -2,6 +2,11 @@ use super::hpack_tablas::{CODIGO, EOS, ESTATICA, LARGO};
 use super::trama::{Error, FalloConexion};
 
 const COSTE_FIJO: usize = 32;
+pub const MAX_CAMPOS: usize = 256;
+
+fn calma(porque: &'static str) -> FalloConexion {
+    FalloConexion { codigo: Error::Calma, porque }
+}
 
 fn mal(porque: &'static str) -> FalloConexion {
     FalloConexion { codigo: Error::Compresion, porque }
@@ -115,7 +120,10 @@ impl Decodificador {
                 salida.push((n, v));
             }
             if tamano > self.max_lista {
-                return Err(mal("la lista de cabeceras se pasa del máximo al expandirse"));
+                return Err(calma("la lista de cabeceras se pasa del máximo al expandirse"));
+            }
+            if salida.len() > MAX_CAMPOS {
+                return Err(calma("más campos de los que se admiten"));
             }
         }
         Ok(salida)

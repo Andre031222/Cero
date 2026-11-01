@@ -1,4 +1,4 @@
-use cero_http::http2::hpack::{Codificador, Decodificador};
+use cero_http::http2::hpack::{Codificador, Decodificador, MAX_CAMPOS};
 use cero_http::http2::hpack_tablas::{CODIGO, ESTATICA, LARGO};
 
 fn hex(s: &str) -> Vec<u8> {
@@ -193,7 +193,30 @@ fn h2_039_la_lista_que_se_expande_al_descomprimirse() {
     bloque.extend(std::iter::repeat_n(b'a', 1000));
     bloque.extend(std::iter::repeat_n(0x80 | 62, 100));
     let fallo = dec.decodificar(&bloque).unwrap_err();
-    assert_eq!(fallo.codigo, cero_http::http2::Error::Compresion, "H2-039");
+    assert_eq!(fallo.codigo, cero_http::http2::Error::Calma, "H2-039");
+}
+
+#[test]
+fn h2_050_mas_de_256_campos_con_cookies_partidas() {
+    let bloque = |campos: usize| {
+        let mut b = vec![0x40, 0x06];
+        b.extend_from_slice(b"cookie\x03a=1");
+        b.extend(std::iter::repeat_n(0x80 | 62, campos - 1));
+        b
+    };
+    assert!(d().decodificar(&bloque(MAX_CAMPOS)).is_ok(), "H2-050: 256 trozos de cookie sí");
+    let fallo = d().decodificar(&bloque(MAX_CAMPOS + 1)).unwrap_err();
+    assert_eq!(fallo.codigo, cero_http::http2::Error::Calma, "H2-050: 257 no");
+}
+
+#[test]
+fn h2_051_el_tope_de_lista_es_el_que_se_anuncia() {
+    let mut dec = Decodificador::nuevo(4096, 3 * 34);
+    let una = [0x40, 0x01, b'a', 0x01, b'b'];
+    let otra = 0x80 | 62;
+    assert!(dec.decodificar(&[&una[..], &[otra, otra]].concat()).is_ok(), "H2-051: lo anunciado cabe");
+    let fallo = dec.decodificar(&[otra; 4]).unwrap_err();
+    assert_eq!(fallo.codigo, cero_http::http2::Error::Calma, "H2-051: un octeto más no");
 }
 
 #[test]

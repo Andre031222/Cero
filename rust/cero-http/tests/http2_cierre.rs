@@ -3,7 +3,7 @@ use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 
 use cero_http::http2::{self, Ajustes, Trama, PREAMBULO};
-use cero_http::{Respuesta, Peticion};
+use cero_http::{Peticion, Plazos, Respuesta};
 
 fn conexion() -> TcpStream {
     let oyente = TcpListener::bind("127.0.0.1:0").expect("puerto");
@@ -11,7 +11,7 @@ fn conexion() -> TcpStream {
     std::thread::spawn(move || {
         let (socket, _) = oyente.accept().expect("conexión");
         let atender = std::sync::Arc::new(|_: Peticion| Respuesta::texto("ok"));
-        let _ = http2::conexion::servir(socket, Ajustes::default(), atender);
+        let _ = http2::conexion::servir(socket, Ajustes::default(), atender, Plazos::default());
     });
     let cliente = TcpStream::connect(("127.0.0.1", puerto)).expect("conectar");
     cliente.set_read_timeout(Some(Duration::from_secs(2))).unwrap();

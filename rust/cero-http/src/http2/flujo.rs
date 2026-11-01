@@ -86,6 +86,10 @@ impl Sesion {
         octetos.len() >= PREAMBULO.len() && &octetos[..PREAMBULO.len()] == PREAMBULO
     }
 
+    pub fn ultimo(&self) -> u32 {
+        self.ultimo
+    }
+
     pub fn activos(&self) -> usize {
         self.flujos.len()
     }

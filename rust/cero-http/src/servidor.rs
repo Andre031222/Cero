@@ -8,8 +8,9 @@ use crate::registro::Registro;
 use crate::ruta::{Captura, Resolucion, Router};
 use crate::seguridad::{self, Cabeceras, Cors, Decision, Limitador};
 use crate::sesion::{self, Sesiones};
+use crate::socket::{mandar_todo, Plazos};
 use std::collections::HashMap;
-use std::io::{BufReader, Cursor, Read, Write};
+use std::io::{BufRead, BufReader, Cursor, ErrorKind, Read};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -38,6 +39,7 @@ pub struct Servidor {
     csrf_exento: Vec<String>,
     csrf_activo: bool,
     seguro: bool,
+    plazos: Plazos,
 }
 
 impl Servidor {
@@ -63,6 +65,7 @@ impl Servidor {
             csrf_exento: Vec::new(),
             csrf_activo: false,
             seguro: false,
+            plazos: Plazos::default(),
         }
     }
 
@@ -140,6 +143,11 @@ impl Servidor {
         self
     }
 
+    pub fn plazos(mut self, p: Plazos) -> Servidor {
+        self.plazos = p;
+        self
+    }
+
     pub fn tras_tls(mut self) -> Servidor {
         self.seguro = true;
         self
@@ -154,6 +162,9 @@ impl Servidor {
     }
 
     pub fn escuchar(self, puerto: u16) -> std::io::Result<()> {
+        if !self.plazos.validos() {
+            return Err(std::io::Error::new(ErrorKind::InvalidInput, "los plazos tienen que ser mayores que cero"));
+        }
         let oyente = TcpListener::bind(("0.0.0.0", puerto))?;
         let yo = Arc::new(self);
         yo.log.escribir(Nivel::Info, "cero · escuchando en :{}", &[&puerto.to_string()]);
@@ -170,6 +181,10 @@ impl Servidor {
             .peer_addr()
             .map(|a| a.ip().to_string())
             .unwrap_or_else(|_| "desconocido".into());
+        let plazos = yo.plazos;
+        if flujo.set_read_timeout(Some(plazos.inactividad)).is_err() {
+            return;
+        }
 
         let prefijo = match http2::conexion::asomar_preambulo(&mut flujo) {
             Ok(Some(visto)) => visto,
@@ -177,7 +192,7 @@ impl Servidor {
                 let suyo = Arc::clone(&yo);
                 let de_quien = cliente.clone();
                 let atender = Arc::new(move |p: Peticion| suyo.responder(&p, &de_quien));
-                let _ = http2::conexion::servir(flujo, http2::Ajustes::default(), atender);
+                let _ = http2::conexion::servir(flujo, http2::Ajustes::default(), atender, plazos);
                 return;
             }
             Err(_) => return,
@@ -186,19 +201,19 @@ impl Servidor {
         let Ok(copia) = flujo.try_clone() else { return };
         let mut lector = BufReader::new(Cursor::new(prefijo).chain(copia));
         let yo = &*yo;
-        loop {
+        while lector.fill_buf().is_ok_and(|hay| !hay.is_empty()) {
             match peticion::leer(&mut lector) {
                 Ok(p) => {
                     let cerrar = p.version == "HTTP/1.0"
                         || p.cabecera("connection").is_some_and(|c| c.eq_ignore_ascii_case("close"));
                     let solo_cabeceras = p.metodo == "HEAD";
                     let r = yo.responder(&p, &cliente);
-                    if escribir(&mut flujo, r, solo_cabeceras, cerrar).is_err() || cerrar {
+                    if escribir(&mut flujo, r, solo_cabeceras, cerrar, &plazos).is_err() || cerrar {
                         return;
                     }
                 }
                 Err(motivo) => {
-                    let _ = escribir(&mut flujo, Respuesta::estado(motivo.estado(), ""), false, true);
+                    let _ = escribir(&mut flujo, Respuesta::estado(motivo.estado(), ""), false, true, &plazos);
                     return;
                 }
             }
@@ -380,6 +395,7 @@ fn escribir(
     r: Respuesta,
     solo_cabeceras: bool,
     cerrar: bool,
+    plazos: &Plazos,
 ) -> std::io::Result<()> {
     let mut salida = format!(
         "HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n",
@@ -392,11 +408,11 @@ fn escribir(
         salida.push_str(&format!("{n}: {v}\r\n"));
     }
     salida.push_str(if cerrar { "Connection: close\r\n\r\n" } else { "\r\n" });
-    flujo.write_all(salida.as_bytes())?;
+    let mut octetos = salida.into_bytes();
     if !solo_cabeceras {
-        flujo.write_all(&r.cuerpo)?;
+        octetos.extend_from_slice(&r.cuerpo);
     }
-    flujo.flush()
+    mandar_todo(flujo, &octetos, plazos)
 }
 
 fn razon(estado: u16) -> &'static str {

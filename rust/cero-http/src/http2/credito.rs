@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Condvar, Mutex};
+use std::time::Instant;
 
 const TOPE: i64 = 0x7fff_ffff;
 
@@ -64,7 +65,7 @@ impl Credito {
         true
     }
 
-    pub fn reservar(&self, flujo: u32, quiero: usize) -> Option<usize> {
+    pub fn reservar(&self, flujo: u32, quiero: usize, hasta: Instant) -> Option<usize> {
         let mut v = self.ventanas.lock().ok()?;
         loop {
             if !v.abierto {
@@ -77,7 +78,8 @@ impl Credito {
                 v.flujos.insert(flujo, suyo - hueco);
                 return Some(hueco as usize);
             }
-            v = self.hay.wait(v).ok()?;
+            let queda = hasta.checked_duration_since(Instant::now())?;
+            v = self.hay.wait_timeout(v, queda).ok()?.0;
         }
     }
 

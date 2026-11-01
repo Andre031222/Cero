@@ -10,6 +10,7 @@ pub mod ruta;
 pub mod seguridad;
 pub mod servidor;
 pub mod sesion;
+pub mod socket;
 pub mod validacion;
 
 pub use contexto::{Contexto, Respuesta};
@@ -20,4 +21,5 @@ pub use registro::Registro;
 pub use ruta::{Resolucion, Router};
 pub use servidor::{Servidor, Siguiente};
 pub use sesion::{Almacen, Sesion, Sesiones};
+pub use socket::Plazos;
 pub use validacion::{validar, Regla};

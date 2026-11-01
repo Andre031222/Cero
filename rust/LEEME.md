@@ -4,7 +4,7 @@ Segunda implementación del contrato de [`spec/`](../spec). No es una traducció
 la referencia son los requisitos numerados, y el juez son los mismos vectores de conformidad, que
 son bytes sobre un socket y no saben en qué lenguaje está escrito quien responde.
 
-**Estado: hito 12, y el contrato está cubierto entero.** HTTP/2 salvo TLS, ruteo con middleware,
+**Estado: hito 13, y el contrato está cubierto entero.** HTTP/2 salvo TLS, ruteo con middleware,
 manejo de fallos, contenedor de dependencias, validación y sesiones en tabla. **h2spec da 145 de
 146**, el mismo número que Java y con el mismo único fallo, el `3.5.2`, que asume un puerto
 dedicado a h2c y no aplica aquí.
@@ -22,10 +22,11 @@ dedicado a h2c y no aplica aquí.
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · 25 pruebas |
 | 10 | HTTP/2 · control de flujo de salida | h2spec de 130 a 145 · 18 pruebas |
 | 11 | Ruteo, fallos, dependencias y validación | 172 de los 173 requisitos · 36 pruebas |
-| 12 | Sesiones en tabla, y `cero-data` sabe escribir | **173 de 173** · 9 pruebas |
+| 12 | Sesiones en tabla, y `cero-data` sabe escribir | 173 de 173 · 9 pruebas |
+| 13 | Plazos y HTTP/2 Bomb | **180 de 180** · 7 de 7 en `ataques.py` · 9 pruebas |
 
-**Los 173 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y el resto por
-una prueba que los cita. Se cuentan así:
+**Los 180 requisitos del contrato**: los 23 de HTTP/1.1 por los vectores del banco y los otros 157
+por una prueba que los cita; los siete de octubre, además, por `spec/banco/ataques.py`. Se cuentan así:
 
 ```bash
 grep -rhoiE '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' cero-http/tests cero-data/tests \
@@ -44,6 +45,26 @@ nada. Al mirar solo `tests/` la cifra honesta era 120, no 155.
 
 Queda fuera **ALPN sobre TLS**, que no es un requisito del contrato y no se va a hacer: más abajo
 se explica por qué.
+
+## El hito 13: plazos, que no había
+
+La implementación nació sin un solo plazo: ni de lectura, ni de escritura, ni de inactividad. Un
+cliente que abría una conexión y callaba ocupaba un hilo para siempre, y uno que dejaba de leer
+dejaba al hilo que escribía parado en `write_all` con la respuesta entera en memoria. El
+`ataques.py` lo enseñó de golpe: 0 de 7.
+
+- **`Plazos`** (`socket.rs`), lo mismo que en C++: `sin_avance` (30 s sin mover un octeto),
+  `escritura` (60 s por cada 16 KiB) e `inactividad` (120 s). `Servidor::plazos` los cambia y
+  `escuchar` se niega a arrancar con uno a cero (`HTTP-025`); uno negativo no se puede escribir,
+  porque `Duration` no lo admite. `mandar_todo` escribe en piezas de 4 KiB contra un plazo total por
+  cada 16 KiB, porque el de `set_write_timeout` vuelve a empezar cada vez que el cliente lee algo.
+- **HTTP/1.1** espera la siguiente petición `inactividad` y cierra sin responder (`HTTP-024`).
+- **HTTP/2.** La biblioteca estándar no tiene `poll`, así que la espera ociosa es un `peek` con
+  plazo, y solo `HEADERS`, `CONTINUATION` y `DATA` reinician el reloj (`H2-053`). Esperar crédito
+  tiene el plazo de `escritura` por trama, y vencido sale un `RST_STREAM CANCEL` (`H2-052`). Las
+  respuestas construidas y sin mandar se suman por conexión, y pasar de 32 MiB es GOAWAY
+  `ENHANCE_YOUR_CALM` (`H2-054`). HPACK corta en 256 campos (`H2-050`) y en el tope anunciado
+  (`H2-051`), con `ENHANCE_YOUR_CALM` en los dos casos.
 
 ## El hito 12: las sesiones fuera del proceso
 
@@ -230,6 +251,7 @@ en vez de fallarla. El ejemplo usa todo el pipeline.
 ```bash
 cargo run --release --bin ejemplo 8080   # una aplicación de punta a punta
 cargo run --release --bin conforme 8777  # y el servidor del banco de conformidad
+python3 ../spec/banco/ataques.py ./target/release/conforme   # los ataques, con plazos de un segundo
 ```
 
 El ejemplo levanta el pipeline entero: cabeceras de seguridad en toda respuesta —incluidos los
