@@ -70,8 +70,8 @@ Decisiones de dentro:
   cabeceras siguientes, así que cualquier error de HPACK es de conexión. El codificador **no usa
   tabla dinámica**: a cambio de unos bytes por respuesta, no existe la clase de fallo en que las
   dos tablas se desalinean.
-- **Las tablas fijas de HPACK (`HpackTablas`) se generaron de los apéndices A y B del RFC**, no se
-  copiaron. Las respalda que la estática tenga 61 entradas exactas y que la suma de Kraft del
+- **Las tablas fijas de HPACK (`HpackTablas`) son tablas estáticas tomadas de los apéndices A y B del RFC**;
+  ningún guion las genera. Las respalda que la estática tenga 61 entradas exactas y que la suma de Kraft del
   código de Huffman valga 1. Una tabla de 257 filas copiada a mano no revienta: decodifica mal.
 - **La respuesta (`Http2Respuesta`)** traduce lo que en HTTP/2 no existe: el estado va como
   `:status` y primero; `Connection`, `Keep-Alive` y `Transfer-Encoding` se filtran; los nombres van

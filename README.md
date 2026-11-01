@@ -1,20 +1,36 @@
 # Cero
 
-Framework web para Java que arranca solo, sin contenedor de servlets y sin una sola dependencia
-externa. Pensado desde el principio para vivir en más de un lenguaje.
+**Cero no es un framework; es el contrato de un framework de backend, con implementaciones en varios
+lenguajes que lo cumplen y un juez que no conoce el lenguaje.**
+
+El contrato son los 173 requisitos numerados de [`spec/`](spec/). El juez es el banco de
+[`spec/banco/`](spec/banco/): bytes sobre un socket, que no saben en qué lenguaje está escrito
+quien responde. Sin dependencias de terceros en ejecución, en ninguna implementación.
+
+| Implementación | Estado | Banco | h2spec | Requisitos |
+|---|---|---|---|---|
+| [Java](java/) | completa | 23 de 23 | 145 de 146 | 173 de 173 |
+| [Rust](rust/) | completa | 23 de 23 | 145 de 146 | 173 de 173 |
+| [C++](c++/) | en marcha, hito 8 | 23 de 23 | por llegar | 116 citados en pruebas, de 173 |
+| Python | planeada | por empezar | por empezar | por empezar |
+| PHP | planeada | por empezar | por empezar | por empezar |
+
+El único fallo de h2spec es el mismo en Java y en Rust: asume un puerto dedicado a h2c.
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=0b1220&color=38bdf8)](https://central.sonatype.com/namespace/dev.ginit.cero)
 [![Java 25+](https://img.shields.io/badge/java-25%2B-38bdf8?style=flat-square&labelColor=0b1220&logo=openjdk&logoColor=38bdf8)](https://openjdk.org/)
 [![Dependencias: 0](https://img.shields.io/badge/dependencias-0-38bdf8?style=flat-square&labelColor=0b1220)](#principios)
-[![Pruebas: 1764](https://img.shields.io/badge/pruebas-1%E2%80%AF764-38bdf8?style=flat-square&labelColor=0b1220)](#estado)
+[![Pruebas: 1600](https://img.shields.io/badge/pruebas-1%E2%80%AF600-38bdf8?style=flat-square&labelColor=0b1220)](#estado)
 [![Licencia: Apache 2.0](https://img.shields.io/badge/licencia-Apache_2.0-38bdf8?style=flat-square&labelColor=0b1220)](LICENSE)
 [![En vivo: cero.ginit.dev](https://img.shields.io/badge/en_vivo-cero.ginit.dev-38bdf8?style=flat-square&labelColor=0b1220&logo=googlechrome&logoColor=38bdf8)](https://cero.ginit.dev)
 
 > [!NOTE]
-> **English** — Cero is a web framework for Java 25 with its own HTTP server, one virtual
-> thread per connection and zero runtime dependencies. The full documentation is available in
-> English at **[cero.ginit.dev/en](https://cero.ginit.dev/en)**; this repository, its commit
-> history and the javadoc are written in Spanish, which is deliberate.
+> **English** — Cero is not a framework; it is the contract of a backend framework, with
+> implementations in several languages that satisfy it and a judge that does not know the
+> language. The Java implementation has its own HTTP server, one virtual thread per connection and
+> zero runtime dependencies. Documentation is available in English at
+> **[cero.ginit.dev/en](https://cero.ginit.dev/en)**; this repository and its commit history are
+> written in Spanish, which is deliberate.
 
 **En producción:** [cero.ginit.dev](https://cero.ginit.dev) — el sitio de este proyecto,
 servido por el propio framework, sin Tomcat detrás. Su código está abierto en
@@ -32,14 +48,15 @@ Cero sale de una molestia concreta: desplegar una aplicación Java suponía mont
 servlets, empaquetar un WAR, copiarlo a Tomcat y confiar en que la configuración del servidor
 fuera la que uno creía. Nada de eso es el programa que uno escribió.
 
-De ahí las dos decisiones que definen el proyecto:
+De ahí las tres decisiones que definen el proyecto:
 
 1. **Arranca solo.** Servidor HTTP/1.1 y HTTP/2 propio, con un hilo virtual por conexión. `java -jar app.jar`
    y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
-2. **No es solo Java.** El objetivo final es un *contrato* de framework —rutas, pipeline,
-   request/response, inyección, configuración— definido de forma neutral e implementado en
-   **Java, Rust y C++**, con un mismo banco de conformidad para los tres. Es lo que decide la
-   arquitectura: por eso existe [`spec/`](spec/) en vez de tomar el código Java como referencia.
+2. **No es solo Java.** Lo que define a Cero es un *contrato* —rutas, pipeline,
+   request/response, inyección, configuración— escrito de forma neutral e implementado en
+   **Java, Rust y C++**, con Python y PHP por venir y un mismo banco de conformidad para todos. Por
+   eso existe [`spec/`](spec/) en vez de tomar el código Java como referencia.
+3. **Solo backend.** Cero responde JSON y bytes; no pinta HTML.
 
 ## Principios
 
@@ -48,16 +65,25 @@ De ahí las dos decisiones que definen el proyecto:
 - **Legible antes que ingenioso.** Si una clase no se puede leer de corrido, se parte.
 - **Medido, no proclamado.** Toda afirmación de rendimiento sale de [`benchmarks/`](benchmarks/),
   con el mismo harness para todos los contendientes.
-- **El contrato manda.** Desde la fase 3 ninguna implementación es la de referencia: la referencia
-  es `spec/`, y las tres pasan las mismas pruebas.
+- **El contrato manda.** Ninguna implementación es la de referencia: la referencia
+  es `spec/`, y todas pasan las mismas pruebas.
 
 ## Rendimiento
 
 *Ocho frameworks, contenedores idénticos, 120 mediciones sin un solo error ni una sola respuesta
-no-2xx. **Corrida del 25 de septiembre de 2026 sobre Cero 0.8.0**, en Linux sin virtualizar: 16
-núcleos, el contenedor y el generador de carga en núcleos distintos, gobernador en `performance`,
-cero suspensiones.
-[Cómo se rehace](benchmarks/results/LEEME.md) · [tabla completa](benchmarks/results/RESULTS-docker.md).*
+no-2xx, sobre Cero 0.8.0. La tabla completa y sus parámetros están en
+[`RESULTS-docker.md`](benchmarks/results/RESULTS-docker.md), con su CSV al lado
+([`raw-docker.csv`](benchmarks/results/raw-docker.csv)). [Cómo se rehace](benchmarks/results/LEEME.md).*
+
+> [!WARNING]
+> **Qué entorno describe `ENV.md` y qué no.** El único
+> [`ENV.md`](benchmarks/results/ENV.md) del repositorio describe un portátil con macOS y Docker
+> Desktop: el motor corre dentro de una máquina virtual, el cliente de carga comparte máquina con el
+> servidor y había otros servicios en marcha. Dice de sí mismo que no cumple el protocolo y que los
+> números absolutos no son publicables. La tabla de abajo es la de `RESULTS-docker.md`, cuya
+> cabecera anota otro anfitrión (Linux x86_64, cliente fijado a núcleos aparte), pero esa corrida
+> no tiene un `ENV.md` propio. Por eso **este README no afirma nada sobre la virtualización de esa corrida**:
+> valen las comparaciones dentro de la misma corrida, no los absolutos.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/imagenes/banco.png">
@@ -87,10 +113,9 @@ las diferencias caben dentro de la variación de cada uno.
 —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico algo más rápido en 176 MB—, es que
 asigna más por petición y llena el montón que se le da. Es lo siguiente que hay que arreglar.
 
-> [!WARNING]
-> Aunque esta corrida es bare-metal, el generador de carga sigue compartiendo máquina con el
-> servidor: ni uno ni otro saturan su CPU, así que los rps son una **cota inferior** limitada por
-> el camino de red del contenedor, idéntico para todos.
+> [!NOTE]
+> El generador de carga comparte máquina con el servidor, así que los rps son una **cota
+> inferior** limitada por el camino de red del contenedor, idéntico para todos.
 
 ## Instalar
 
@@ -106,7 +131,7 @@ Está en Maven Central. Tres líneas y ya está:
 </dependency>
 ```
 
-`cero-view`, `cero-data`, `cero-test`, `cero-adapter-servlet` y `cero-launcher` van aparte, y se toman solo si
+`cero-data`, `cero-test`, `cero-adapter-servlet` y `cero-launcher` van aparte, y se toman solo si
 se usan. Ninguno arrastra nada de fuera.
 
 ### El instalador
@@ -139,7 +164,7 @@ Y desde el código fuente, que es lo mismo paso a paso:
 
 ```bash
 git clone https://github.com/Andre031222/Cero.git && cd Cero
-cd java && mvn install     # 1 764 pruebas, runner propio (sin JUnit)
+cd java && mvn install     # 1 600 pruebas, runner propio (sin JUnit)
 ./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
 ```
 
@@ -189,16 +214,16 @@ la reflexión.
 | Módulo | Pruebas | Qué trae |
 |---|---|---|
 | [`cero-http`](java/cero-http) | 434 | Servidor HTTP/1.1 y HTTP/2 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE), **HTTP/2** —h2c y h2 sobre TLS por ALPN— y confianza en proxy configurable |
-| [`cero-core`](java/cero-core) | 834 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP**, **trazado W3C** y OpenAPI |
-| [`cero-view`](java/cero-view) | 93 | Motor de plantillas propio: `{{ expr }}` escapado por defecto, `{% if %}`, `{% for %}`, herencia con `{% extends %}` y `{% block %}` |
+| [`cero-core`](java/cero-core) | 781 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP**, **trazado W3C** y OpenAPI |
 | [`cero-data`](java/cero-data) | 250 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
 | [`cero-test`](java/cero-test) | 29 | Pruebas de punta a punta para quien usa Cero: levanta la aplicación en un puerto libre, cliente HTTP que mantiene las cookies y deja fijar la versión del protocolo, y aserciones legibles sobre la respuesta |
 | [`cero-adapter-servlet`](java/cero-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
-| [`cero-launcher`](java/cero-launcher) | 10 | La línea de órdenes: el generador de `cero new`, el empaquetado en un jar ejecutable con `java.util.jar` y sin plugins de terceros, y las migraciones |
-| [`ejemplo`](java/ejemplo) | 79 | Aplicación pequeña de punta a punta: vistas, formularios con CSRF, validación, base de datos y API REST paginada |
+| [`cero-launcher`](java/cero-launcher) | 12 | La línea de órdenes: el generador de `cero new`, el empaquetado en un jar ejecutable con `java.util.jar` y sin plugins de terceros, y las migraciones |
+| [`ejemplo`](java/ejemplo) | 59 | Aplicación pequeña de punta a punta: API REST paginada con validación, base de datos, sesiones y CSRF |
 
-Los cuatro del núcleo —`cero-http`, `cero-core`, `cero-view` y `cero-data`— suman **416 KB** y no
-declaran ninguna dependencia externa. La única referencia a `jakarta.*` en todo el proyecto está en
+El núcleo son tres módulos —`cero-http`, `cero-core` y `cero-data`—, no declaran ninguna dependencia
+externa y pesan **378 796 bytes** (`ls -l` de los tres jars de `0.8.0` tras `mvn install`: 137 857 +
+187 306 + 53 633). La única referencia a `jakarta.*` en todo el proyecto está en
 `cero-adapter-servlet`, en *scope* `provided`.
 
 ## Estado
@@ -221,7 +246,7 @@ entero sin ejercitar. Ver [versiones.md](docs/versiones.md).
 
 Lo verificado, y cómo:
 
-- **1 764 pruebas** con runner propio, en macOS y en Linux, sobre JDK 25.
+- **1 600 pruebas** con runner propio, en macOS y en Linux, sobre JDK 25.
 - **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
 - **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
   24 entradas malformadas.
@@ -237,7 +262,7 @@ versión, en [docs/publicar.md](docs/publicar.md).
 > programando. El parser HTTP es la superficie que da a internet y la que más castigo recibe:
 > hasta que no acumule kilómetros, no es honesto llamarlo maduro.
 
-### La fase 3, en marcha
+### Las otras implementaciones
 
 El contrato de [`spec/`](spec/) tiene **173 requisitos numerados** y **dos implementaciones los
 pasan todos**: `java/` y [`rust/`](rust/). Las dos dan 23 de 23 en el banco de conformidad y 145 de
@@ -245,20 +270,22 @@ pasan todos**: `java/` y [`rust/`](rust/). Las dos dan 23 de 23 en el banco de c
 
 Lo que dice que el contrato no es una transcripción de Java: diez de esos requisitos —`H2-040` a
 `H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
-cumple, pero nadie los había escrito. Desde la 0.2 del contrato, en lo que éste cubre manda el
-contrato y no `java/`.
+cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el contrato y no `java/`.
 
-Queda la tercera implementación, en **C++**.
+[`c++/`](c++/) va por el hito 8: 23 de 23 en el banco y 116 requisitos citados en sus pruebas, con
+los flujos de HTTP/2 en curso. Después vienen Python y PHP, en ese orden, cada uno escrito contra
+los requisitos y no contra el código de otro lenguaje.
 
 ## Estructura
 
 ```text
-java/         Los ocho módulos
+java/         Primera implementación: los siete módulos — 173 de 173
 rust/         Segunda implementación del contrato — 173 de 173
-spec/         El contrato, neutral respecto al lenguaje
+c++/          Tercera implementación, en marcha
+spec/         El contrato y su banco, neutrales respecto al lenguaje
 benchmarks/   Harness comparativo y prueba de carga sostenida
 docs/         Documentación
-papers/       Los manuscritos, uno por carpeta
+papers/       Los manuscritos; el principal es el 06, contrato poliglota
 cero         Órdenes del proyecto: ./cero test, new, fatjar…
 ```
 
@@ -270,7 +297,8 @@ cero         Órdenes del proyecto: ./cero test, new, fatjar…
 | [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
 | [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Auditoría interna del núcleo, capa por capa |
 | [versiones.md](docs/versiones.md) | Qué cambió en cada versión, y por qué una publicada no se toca |
-| [papers.md](docs/papers.md) | Plan de publicación: los tres artículos y qué bloquea cada uno |
+| [papers.md](docs/papers.md) | Plan de publicación: el paper principal y los aparcados |
+| [guiones.md](docs/guiones.md) | La orden `cero` y la integración continua |
 | [autores.md](docs/autores.md) | Autoría y atribución |
 
 ## Licencia

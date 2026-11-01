@@ -12,9 +12,9 @@ eso.
 
 ## Para qué es
 
-Cero quiere ser el mismo framework en Java, Rust y C++. Eso solo funciona si «el mismo» está
-escrito en algún sitio que no sea código de uno de los tres. Si la referencia es la
-implementación en Java, las otras dos no son implementaciones: son traducciones, y heredan hasta
+Cero quiere ser el mismo framework en Java, Rust, C++, Python y PHP. Eso solo funciona si «el
+mismo» está escrito en algún sitio que no sea código de uno de los cinco. Si la referencia es la
+implementación en Java, las otras no son implementaciones: son traducciones, y heredan hasta
 sus accidentes.
 
 El contrato describe **lo que se observa desde fuera**: qué entra por el socket, qué sale, qué
@@ -75,6 +75,8 @@ spec/                 el contrato — manda en lo que cubre
 spec/banco/           el juez: bytes sobre un socket, sin lenguaje
 java/                 primera implementación · referencia en lo que el contrato aún no cubre
 rust/                 segunda implementación · 173 de 173
+c++/                  tercera implementación · en marcha, hito 8
+python/ y php/        planeadas, en ese orden
 benchmarks/           mide, no especifica
 ```
 
@@ -87,6 +89,9 @@ en el lenguaje que sea. Y h2spec, que lo escribió otra gente, juzga HTTP/2 igua
 |---|---|---|---|
 | `java/` | 23 de 23 | 145 de 146 | los 173 |
 | `rust/` | 23 de 23 | 145 de 146 | los 173 |
+| `c++/` | 23 de 23 | por llegar | 116 citados en pruebas |
+| `python/` | por empezar | por empezar | por empezar |
+| `php/` | por empezar | por empezar | por empezar |
 
 El fallo que les queda a las dos es el mismo, el `3.5.2`, y no se va a arreglar: asume un puerto
 dedicado a h2c, y en uno compartido con HTTP/1.1 pide la respuesta equivocada.

@@ -1,45 +1,21 @@
 #!/usr/bin/env bash
-# cero — órdenes de Cero. Sin dependencias más allá de Maven y un JDK 25.
-#
-# Las órdenes van en inglés, que es lo que espera quien llega de fuera. Las de antes
-# —correr, probar, instalar…— siguen valiendo como alias y no se anuncian.
-#
-#   ./cero new <nombre>  crea un proyecto nuevo, listo para arrancar
-#   ./cero run           arranca la aplicación de ejemplo
-#   ./cero test          corre las pruebas
-#   ./cero package       genera los JAR
-#   ./cero fatjar        empaqueta un módulo en un jar ejecutable
-#   ./cero install       compila e instala en el repositorio local
-#   ./cero dist          arma el .tar.gz y el .zip que baja el instalador
-#   ./cero clean         borra lo generado
-#   ./cero cache         muestra qué ocupa la caché, y con --purge la vacía
-#   ./cero status        resumen del proyecto
-#   ./cero migrar <ruta> migra una aplicación anterior a Cero 0.6.0
 set -euo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JAVA_DIR="$AQUI/java"
 MVN=(mvn -B -q)
 
-# El azul de la marca (#38bdf8): exacto con truecolor, el 256 más cercano si no.
 case "${COLORTERM:-}" in
   truecolor|24bit) MARCA='\033[38;2;56;189;248m' ;;
   *)               MARCA='\033[38;5;75m' ;;
 esac
 azul()  { printf "$MARCA%s\033[0m\n" "$*"; }
 
-# ── Idioma ──────────────────────────────────────────────────────────────────────────────────
-#
-# El sitio es bilingüe desde el principio y la herramienta no lo era: quien llega de fuera se
-# encontraba un framework que le habla en un idioma que no lee. `CERO_LANG` manda sobre el
-# entorno, para poder forzarlo en un guion o en integración continua.
 case "${CERO_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}" in
   es*|ES*) IDIOMA=es ;;
   *)       IDIOMA=en ;;
 esac
 
-# Cada texto lleva su clave. Sin traducción cae al castellano, que es el idioma base: un hueco
-# tiene que verse raro, no quedarse en blanco.
 t() {
   local k=$1; shift
   local v
@@ -130,8 +106,6 @@ requisitos() {
   local v
   v=$(java -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
   if [ "${v:-0}" -lt 25 ] 2>/dev/null; then
-    # 25 y no 21: el pom compila con `release 25`, así que dejar pasar un 21 solo cambia este
-    # mensaje por el de javac, que no dice qué hacer. Los instaladores de docs/ ya piden 25.
     malo "$(t java-viejo "$v")"
     exit 1
   fi
@@ -165,13 +139,6 @@ case "${1:-ayuda}" in
     ;;
 
   dist|paquete)
-    # Arma lo que se baja el instalador: el código fuente, sin target/ y sin la web.
-    # Sale a dist/, que es lo que se sube a la página de la versión y lo que recoge el
-    # repositorio del sitio; no viaja dentro de ningún jar del framework.
-    #
-    # Primero se compila DESDE CERO. Sin esto se publicó un paquete que no compilaba en una
-    # instalación limpia: la compilación incremental reutilizaba clases viejas que todavía
-    # cumplían la interfaz anterior, y aquí nadie lo notaba. Quien lo instalaba, sí.
     requisitos
     azul "$(t dist-limpio)"
     (cd "$JAVA_DIR" && "${MVN[@]}" clean install -DskipTests) || {
@@ -181,19 +148,16 @@ case "${1:-ayuda}" in
     destino="$AQUI/dist"
     mkdir -p "$destino"
 
-    # Los paquetes de la vez anterior estorban: se rehacen enteros en cada pasada.
     rm -f "$destino"/cero-*.tar.gz "$destino"/cero-*.zip "$destino"/cero-*.sha256
 
     tmp=$(mktemp -d)
     mkdir -p "$tmp/cero-$v"
-    # COPYFILE_DISABLE evita que el tar de macOS meta un ._archivo por cada archivo.
     COPYFILE_DISABLE=1 tar -cf - \
         --exclude target --exclude '*.class' --exclude .DS_Store --exclude classpath.txt \
         -C "$AQUI" java cero cero.cmd cero.ps1 LICENSE NOTICE README.md \
                   docs/instalar.sh docs/instalar.ps1 \
       | tar -xf - -C "$tmp/cero-$v"
     COPYFILE_DISABLE=1 tar -czf "$destino/cero-$v.tar.gz" -C "$tmp" "cero-$v"
-    # jar en vez de zip: el JDK ya está, y `zip` no siempre.
     (cd "$tmp" && jar --create --file "$destino/cero-$v.zip" "cero-$v")
     rm -rf "$tmp"
 
@@ -202,10 +166,6 @@ case "${1:-ayuda}" in
         | sed "s| .*| $(basename "$f")|" > "$f.sha256"
       printf '  %-26s %6s KB\n' "$(basename "$f")" "$(( $(wc -c < "$f") / 1024 ))"
     done
-    # Y ahora la comprobación que faltaba: se desempaqueta lo que se acaba de armar y se
-    # corren SUS pruebas. Compilar el repositorio no dice nada del paquete — el repositorio
-    # tiene archivos que el paquete no lleva, y así se publicó uno cuyas pruebas de /instalar
-    # fallaban porque docs/ no viajaba dentro. Se prueba lo que se entrega, no lo que se tiene.
     if [ "${2:-}" != "--sin-probar" ]; then
       azul "$(t dist-probando)"
       prueba=$(mktemp -d)
@@ -326,30 +286,19 @@ case "${1:-ayuda}" in
     ;;
 
   migraciones)
-    # Aplica el lote entero sobre una base vacía y desechable y dice qué pasó: nada toca la
-    # base de verdad, así que vale en integración continua.
     requisitos
     [ "${2:-}" = "--verificar" ] || {
       malo "$(t uso-migraciones)"; exit 1; }
     dir="${3:-db/migraciones}"
     [ -d "$dir" ] || { malo "$(t no-migraciones "$dir")"; exit 1; }
     (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests -pl cero-launcher -am install)
-    # Las clases recién compiladas, no los jar de target/: ahí conviven versiones viejas y
-    # la primera del listado gana.
     cp="$JAVA_DIR/cero-launcher/target/classes:$JAVA_DIR/cero-data/target/classes:$JAVA_DIR/cero-core/target/classes"
-    # El driver lo pone quien llama; si no dice nada, se usa el H2 de ~/.m2, que es el motor
-    # de la base desechable por omisión.
     driver="${CERO_JDBC_JAR:-$(ls "$HOME"/.m2/repository/com/h2database/h2/*/h2-*.jar 2>/dev/null | head -1)}"
     [ -n "$driver" ] || { malo "$(t falta-driver)"; exit 1; }
     java -cp "$cp:$driver" cero.launcher.Migraciones "$dir" ${4:+"$4"}
     ;;
 
   migrar|migrate)
-    # Migra una aplicación de una versión anterior del framework a Cero 0.6.0.
-    #
-    # Exige que el árbol de git de la aplicación esté limpio: así el propio git es la copia
-    # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
-    # carpetas .bak por ahí.
     destino="${2:-}"
     [ -n "$destino" ] || { malo "$(t uso-migrar)"; exit 1; }
     [ -d "$destino" ] || { malo "$(t no-carpeta "$destino")"; exit 1; }
@@ -370,7 +319,6 @@ case "${1:-ayuda}" in
   *)
     azul "$(t ayuda-titulo)"
     echo
-    # Las órdenes no se traducen —son la interfaz— pero lo que hacen sí.
     if [ "$IDIOMA" = es ]; then
       set -- "crea un proyecto nuevo y listo para arrancar" "arranca la aplicación de ejemplo" \
              "corre las pruebas" "genera los JAR y muestra sus tamaños" \
@@ -388,14 +336,11 @@ case "${1:-ayuda}" in
              "with --verificar, tries the migrations against a throwaway database" \
              "migrate an application from an earlier Cero"
     fi
-    # Los marcadores sí se traducen: no son la orden, son la pista de qué escribir.
     if [ "$IDIOMA" = es ]; then
       NOMBRE=nombre; PUERTO=puerto; MODULO=modulo; RUTA=ruta
     else
       NOMBRE=name; PUERTO=port; MODULO=module; RUTA=path
     fi
-    # `%-24s` cuenta octetos, así que un acento corría la columna. Se rellena a mano contando
-    # caracteres, que es el mismo arreglo que ya lleva el instalador.
     fila() {
       local n=${#1}
       printf '  %s' "$1"

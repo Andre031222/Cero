@@ -1,7 +1,3 @@
-<#
-    cero — órdenes de Cero en Windows. La misma lista que el guion `cero` de macOS y Linux.
-    Sin dependencias más allá de Maven y un JDK 25.
-#>
 param(
     [Parameter(Position = 0)] [string] $Orden = 'ayuda',
     [Parameter(Position = 1, ValueFromRemainingArguments = $true)] [string[]] $Resto = @()
@@ -14,7 +10,6 @@ $JavaDir = Join-Path $Aqui 'java'
 $e = [char]27
 $Vivo = $Host.UI.RawUI -and -not [Console]::IsOutputRedirected
 if ($Vivo) {
-    # El azul de la marca (#38bdf8). Windows Terminal habla truecolor; la consola vieja no.
     $Laton = if ($env:WT_SESSION -or $env:COLORTERM -in 'truecolor','24bit') { "$e[38;2;56;189;248m" } else { "$e[38;5;75m" }
     $Tenue = "$e[38;5;245m"; $Rojo = "$e[38;5;167m"; $Fin = "$e[0m"
 }
@@ -35,13 +30,9 @@ function Requisitos {
     $v = 0
     $linea = (& java -version 2>&1 | Select-Object -First 1)
     if ("$linea" -match '"(\d+)') { $v = [int]$Matches[1] }
-    # 25 y no 21: el pom compila con `release 25`, así que dejar pasar un 21 solo cambia este
-    # mensaje por el de javac, que no dice qué hacer. Los instaladores de docs/ ya piden 25.
     if ($v -lt 25) { Malo "Cero necesita Java 25 o superior (hilos virtuales); tienes $v" }
 }
 
-# Python solo lo pide `migrar`; el resto de órdenes no lo necesita, así que no entra en
-# Requisitos.
 function Python {
     foreach ($nombre in 'python3', 'python', 'py') {
         if (Get-Command $nombre -ErrorAction SilentlyContinue) { return $nombre }
@@ -49,7 +40,6 @@ function Python {
     Malo 'falta Python 3: lo necesita `cero migrar`'
 }
 
-# El classpath de un módulo ya compilado: sus clases más las de los cero-*.
 function Classpath([string] $modulo) {
     $jars = Get-ChildItem (Join-Path $JavaDir 'cero-*\target\cero-*.jar') -ErrorAction SilentlyContinue
     $partes = @((Join-Path $JavaDir "$modulo\target\classes")) + ($jars | ForEach-Object { $_.FullName })
@@ -154,8 +144,6 @@ switch -Regex ($Orden) {
     }
 
     '^migraciones$' {
-        # Aplica el lote entero sobre una base vacía y desechable y dice qué pasó: nada toca
-        # la base de verdad, así que vale en integración continua.
         Requisitos
         if ($Resto.Count -eq 0 -or $Resto[0] -ne '--verificar') {
             Malo 'uso:  cero migraciones --verificar [directorio] [url-jdbc]'
@@ -163,13 +151,11 @@ switch -Regex ($Orden) {
         $dir = if ($Resto.Count -gt 1) { $Resto[1] } else { 'db\migraciones' }
         if (-not (Test-Path -PathType Container $dir)) { Malo "no existe el directorio de migraciones $dir" }
         Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', '-pl', 'cero-launcher', '-am', 'install')
-        # El driver lo pone quien llama; si no dice nada, se usa el H2 de ~\.m2.
         $driver = if ($env:CERO_JDBC_JAR) { $env:CERO_JDBC_JAR } else {
             (Get-ChildItem (Join-Path $HOME '.m2\repository\com\h2database\h2\*\h2-*.jar') -ErrorAction SilentlyContinue |
              Select-Object -First 1).FullName
         }
         if (-not $driver) { Malo 'hace falta un driver JDBC: $env:CERO_JDBC_JAR = C:\ruta\driver.jar' }
-        # Las clases recién compiladas, no los jar de target\: ahí conviven versiones viejas.
         $cp = @('cero-launcher', 'cero-data', 'cero-core' |
                 ForEach-Object { Join-Path $JavaDir "$_\target\classes" }) + $driver -join ';'
         $argumentos = @($dir); if ($Resto.Count -gt 2) { $argumentos += $Resto[2] }
@@ -178,20 +164,11 @@ switch -Regex ($Orden) {
     }
 
     '^(migrar|migrate)$' {
-        # Migra una aplicación de una versión anterior del framework a Cero 0.6.0.
-        #
-        # Exige que el árbol de git de la aplicación esté limpio: así el propio git es la copia
-        # de seguridad —`git diff` enseña todo y `git checkout .` lo deshace— y no hay que dejar
-        # carpetas .bak por ahí. Mismo trato que en el guion de bash.
         if ($Resto.Count -eq 0) { Malo 'uso:  cero migrar <ruta-de-la-app> [--probar]' }
         $destino = $Resto[0]
         if (-not (Test-Path -PathType Container $destino)) { Malo "no existe la carpeta $destino" }
         $ensayo = (($Resto -contains '--probar') -or ($Resto -contains '--dry-run'))
 
-        # El try envuelve a git a propósito: una carpeta que no es un repositorio hace que
-        # `rev-parse` salga con 128, y desde PowerShell 7.4 un código distinto de cero en una
-        # orden nativa aborta el guion entero por el $ErrorActionPreference de arriba. Que la
-        # aplicación no esté en git no es un error: solo significa que no hay red de seguridad.
         if (-not $ensayo -and (Get-Command git -ErrorAction SilentlyContinue)) {
             $sucio = $null
             try {

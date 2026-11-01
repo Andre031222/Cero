@@ -55,10 +55,10 @@ donde citarlos no demuestra nada. La cuenta solo mira `pruebas/`.
 respuesta. Es lo que hace probable el ruteo sin abrir un puerto, y de paso lo que permite montar
 Cero dentro de otra cosa.
 
-## Las tablas de HPACK no están escritas a mano
+## Las tablas de HPACK son estáticas y se comprueban
 
-Se generan de los apéndices A y B del RFC con un guion, igual que en Java y en Rust. Lo que las
-respalda es la **suma de Kraft** —la de dos elevado a menos cada longitud—, que en un código
+Son datos fijos en el código, tomados de los apéndices A y B del RFC; no hay ningún guion que las
+genere. Lo que las respalda es la **suma de Kraft** —la de dos elevado a menos cada longitud—, que en un código
 prefijo completo vale exactamente 1, y hay una prueba que la calcula: una tabla de 257 filas
 copiada a mano no revienta cuando se equivoca, decodifica mal y en silencio.
 

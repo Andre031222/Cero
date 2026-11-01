@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Carga sostenida: horas de tráfico vigilando memoria y descriptores de archivo.
-#
-# Las pruebas hostiles del módulo son ráfagas de segundos — ahí no aparece una fuga. Esto manda
-# tráfico continuo y muestrea RSS y descriptores abiertos cada poco. Lo que se busca no es un
-# número alto, sino una recta plana: si el RSS o los descriptores suben sin parar, hay fuga.
-#
-#   ./carga-sostenida.sh [minutos] [conexiones]
 set -euo pipefail
 
 MINUTOS="${1:-30}"
@@ -59,7 +52,6 @@ echo "servidor pid=$SERVIDOR · $MINUTOS min · $CONNS conexiones · muestra cad
 fin=$(( $(date +%s) + MINUTOS * 60 ))
 inicio=$(date +%s)
 
-# El generador de carga corre en bucle; el bucle de muestreo vigila mientras tanto.
 (
   while [ "$(date +%s)" -lt "$fin" ]; do
     (cd "$AQUI/load" && java LoadClient "http://127.0.0.1:$PUERTO/json" "$CONNS" "$MUESTREO" 0) >/dev/null 2>&1 || true

@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Benchmark dockerizado, reproducible y de un solo comando.
-# Construye cada framework como imagen (misma base JRE, mismos límites de CPU/RAM),
-# mide arranque en frío, RSS, tamaño de imagen y throughput/latencia, y escribe
-# ../results/RESULTS-docker.md automáticamente.
-#
-# Requisitos: Docker en marcha + un JDK en el host (para el LoadClient).
-# Uso: ./bench.sh [conexiones] [segundos] [repeticiones]
-#      ./bench.sh --tabla              rehace la tabla desde el CSV, sin volver a medir
 set -euo pipefail
 
 SOLO_TABLA=0
@@ -18,16 +10,7 @@ REPS="${3:-3}"
 CPUS="${BENCH_CPUS:-2}"
 MEM="${BENCH_MEM:-1g}"
 PORT="${BENCH_PORT:-8080}"
-# Sin tope de montón, la columna de RSS no mide el framework sino lo que el recolector decidió
-# tomar: con `--memory=1g` la JVM se fija un máximo del 25 %, y quien asigna más por petición lo
-# llena hasta arriba mientras quien asigna poco se queda abajo. Medido: Cero subía 32 MB por
-# repetición hasta estancarse en 401 MB, y con `-Xmx96m` servía el mismo tráfico un 4 % más
-# rápido en 176 MB. No era una fuga —se estancaba— sino un montón sin acotar. Con el mismo tope
-# para todos la columna vuelve a comparar frameworks.
 JAVA_OPTS="${BENCH_JAVA_OPTS:--Xmx256m}"
-# Reproducibilidad avanzada (opcional):
-#   BENCH_CPUSET="0,1"      -> fija el contenedor a esos núcleos (docker --cpuset-cpus)
-#   BENCH_CLIENT_CPUS="2,3" -> fija el LoadClient a OTROS núcleos (taskset) para no competir
 CPUSET="${BENCH_CPUSET:-}"
 CLIENT_CPUS="${BENCH_CLIENT_CPUS:-}"
 CLIENT_PREFIX=()
@@ -38,9 +21,7 @@ REPO="$(cd "$HERE/../.." && pwd)"
 OUT="$HERE/../results/RESULTS-docker.md"
 CSV="$HERE/../results/raw-docker.csv"
 
-# El contexto de build de cero es el REPO; el de los rivales, su propia carpeta.
 APPS=(cero spring quarkus micronaut javalin helidon vertx jooby)
-# BENCH_NATIVE=1 añade Quarkus compilado a binario nativo (GraalVM) — build lento (~5-10 min).
 [ "${BENCH_NATIVE:-0}" = "1" ] && APPS+=(quarkus-native)
 
 if [ "$SOLO_TABLA" = 0 ]; then
@@ -53,8 +34,6 @@ if [ "$SOLO_TABLA" = 0 ]; then
 
   echo "framework,image_mb,startup_ms,rss_mb,endpoint,conns,dur,requests,errors,non2xx,rps,meanMs,p50,p90,p95,p99" > "$CSV"
 else
-  # Los parámetros de la corrida salen del propio CSV, no de los argumentos: la tabla
-  # tiene que describir lo que se midió, no lo que se teclee al rehacerla.
   [ -s "$CSV" ] || { echo "No hay $CSV que agregar."; exit 1; }
   CONNS=$(awk -F, 'NR==2{print $6}' "$CSV")
   DUR=$(awk -F, 'NR==2{print $7}' "$CSV")
@@ -63,7 +42,6 @@ else
   echo "Rehaciendo la tabla desde $CSV (conns=$CONNS dur=${DUR}s reps=$REPS)."
 fi
 
-# Milisegundos desde época. GNU date admite %3N; BSD (macOS) no, así que se cae a python3.
 ahora_ms() {
   local t
   t=$(date +%s%3N 2>/dev/null)
@@ -73,13 +51,9 @@ ahora_ms() {
   esac
 }
 
-# Con `-p` el tráfico pasa por el reenvío de puertos de Docker, y ese es el techo antes que el
-# servidor: medido en la corrida del 25 de septiembre, 76 452 rps por el puerto publicado contra
-# 94 212 yendo directo a la IP del contenedor, con la CPU del servidor al 74 % en el primer caso.
-# Se mide contra la IP para que el número hable del framework y no del demonio de Docker.
 BASE=""
 
-wait_up() {  # espera 200 en /plaintext, imprime ms de arranque
+wait_up() {
   local start now code
   start=$(ahora_ms)
   for _ in $(seq 1 600); do
@@ -112,7 +86,6 @@ for fw in "${APPS[@]}"; do
   runargs=(--cpus="$CPUS" --memory="$MEM")
   [ -n "$JAVA_OPTS" ] && runargs+=(-e "JAVA_TOOL_OPTIONS=$JAVA_OPTS")
   [ -n "$CPUSET" ] && runargs+=(--cpuset-cpus="$CPUSET")
-  # `set -e` mataba el banco entero si un solo `docker run` fallaba (p. ej. puerto ocupado).
   if ! docker run -d --name "bench_$fw" "${runargs[@]}" -p "$PORT:8080" "$img" >/dev/null 2>"/tmp/bench-run-$fw.log"; then
     echo "  $fw: NO se pudo lanzar el contenedor —"; sed 's/^/    /' "/tmp/bench-run-$fw.log"
     continue
@@ -129,14 +102,11 @@ for fw in "${APPS[@]}"; do
   fi
   echo "  arranque=${startup_ms}ms  imagen=${image_mb}MB"
 
-  # warmup + medición de carga (host -> contenedor).
-  # BENCH_DB=1 añade el endpoint /db (SELECT real sobre H2 in-memory).
   for ep in plaintext json ${BENCH_DB:+db}; do
     for r in $(seq 1 "$REPS"); do
       line=$( (cd "$HERE/../load" && ${CLIENT_PREFIX[@]+"${CLIENT_PREFIX[@]}"} java LoadClient "$BASE/$ep" "$CONNS" "$DUR" 5) 2>/dev/null )
       rss_mb=$(docker stats --no-stream --format '{{.MemUsage}}' "bench_$fw" | awk -F'/' '{gsub(/[^0-9.]/,"",$1); print $1}')
       echo "$fw,$image_mb,$startup_ms,$rss_mb,$line" >> "$CSV"
-      # Validez: errores/no-2xx invalidan la medición (posible saturación del cliente o del server).
       e=$(echo "$line" | awk -F, '{print ($5+$6)+0}')
       [ "${e:-0}" -gt 0 ] && echo "  ⚠ $fw /$ep rep $r: errores/no-2xx=$e — medición SOSPECHOSA (revisa saturación/CPU del cliente)"
     done
@@ -147,16 +117,12 @@ done
 
 echo "CSV crudo -> $CSV"
 
-# Mediana de la columna $2 (1-indexed del CSV) para el framework $1; filtro opcional de endpoint en $3.
-# La URL del CSV lleva la IP del contenedor, distinta en cada framework, así que el endpoint se
-# casa por el final y no por la cadena entera.
 med() {
   awk -F, -v f="$1" -v c="$2" -v ep="${3:-}" \
     '$1==f && (ep=="" || substr($5, length($5)-length(ep)+1)==ep){print $c}' "$CSV" \
     | sort -n | awk '{a[NR]=$1} END{print (NR? a[int((NR+1)/2)] : "-")}'
 }
 
-# Agrega el CSV a una tabla Markdown (mediana por framework/endpoint).
 {
   echo "# Resultados dockerizados"
   echo
@@ -189,16 +155,13 @@ tope de montón para todos: sin él compara decisiones del recolector, no framew
   echo
   echo "| Framework | Imagen (MB) | Arranque (ms) | RSS (MB) | rps /plaintext (mediana) | rps /json (mediana) | rps /db (mediana) |"
   echo "|---|---|---|---|---|---|---|"
-  # Filas ordenadas por arranque: la clave numérica va delante y se recorta tras ordenar.
   for fw in "${APPS[@]}"; do
-    im=$(awk -F, -v f="$fw" '$1==f{print $2; exit}' "$CSV")   # imagen: valor constante por framework
-    su=$(med "$fw" 3)                                          # arranque: mediana
-    rs=$(med "$fw" 4)                                          # RSS: mediana
-    # El filtro usa $PORT, no 8080 fijo: con BENCH_PORT distinto la tabla salía vacía
-    # aunque el CSV tuviera los datos.
+    im=$(awk -F, -v f="$fw" '$1==f{print $2; exit}' "$CSV")
+    su=$(med "$fw" 3)
+    rs=$(med "$fw" 4)
     pt=$(med "$fw" 11 "/plaintext")
     js=$(med "$fw" 11 "/json")
-    db=$(med "$fw" 11 "/db")                                  # "-" si no se corrió con BENCH_DB=1
+    db=$(med "$fw" 11 "/db")
     err=$(awk -F, -v f="$fw" '$1==f{e+=$9+$10} END{print e+0}' "$CSV")
     flag=""; [ "${err:-0}" -gt 0 ] && flag=" ⚠"
     if [ -n "$im" ]; then
@@ -212,7 +175,6 @@ tope de montón para todos: sin él compara decisiones del recolector, no framew
 echo "Tabla -> $OUT"
 cat "$OUT"
 
-# Validez global: si hubo cualquier error/no-2xx, avisar fuerte y salir con código != 0.
 total_err=$(awk -F, 'NR>1{e+=$9+$10} END{print e+0}' "$CSV")
 if [ "${total_err:-0}" -gt 0 ]; then
   echo ""

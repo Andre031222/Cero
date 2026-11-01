@@ -157,18 +157,19 @@ Esto es lo que hace reversible la decisión: se puede volver al contenedor sin r
 ### Metas de la fase
 
 Mismo harness, mismas condiciones para los ocho contendientes. Medido el 25 de septiembre de
-2026 en Linux sin virtualizar ([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones
-dentro de esa misma corrida, porque los absolutos dependen de la máquina.
+2026 ([cómo se mide](../benchmarks/results/LEEME.md)); comparaciones
+dentro de esa misma corrida, porque los absolutos dependen de la máquina. El entorno de esa
+corrida no está descrito en un `ENV.md` propio; el que hay describe Docker Desktop sobre macOS.
 
 | Métrica | Meta | Medido | Mejor rival, misma corrida | ¿Cumple? |
 |---|---|---|---|---|
 | Arranque | < 150 ms | 155 ms | jooby 443 ms | **casi**: falla por 5 ms y gana por 2,9× |
-| JAR runtime | ≤ 400 KB | 416 KB | — | **no**, por 16 KB |
+| JAR runtime | ≤ 400 KB | 378 796 bytes (`cero-http` + `cero-core` + `cero-data`, sin `cero-view`) | — | **sí** |
 | Dependencias | 0 | **0** | spring: decenas | **sí** |
 | rps `/json` | batir al mejor rival | 94 634 | vertx 98 589 | **no**, por un 4 % medible |
 | RSS | < 120 MB | 307,9 MB | jooby 73,4 MB | **no**, y es el peor de los ocho |
 
-Una de cinco limpia, y conviene leer las cuatro que fallan antes que la que pasa.
+Dos de cinco limpias, y conviene leer las tres que fallan antes que las que pasan.
 
 **El RSS es el problema de verdad.** 307,9 MB contra los 73,4 de Jooby: el peor de los ocho, por
 más de cuatro veces. No es una fuga —el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico
@@ -178,13 +179,13 @@ siguiente que hay que arreglar, y está medido, no estimado.
 **El `/json` se pierde, y ahora se puede afirmar que se pierde.** Vert.x hace 98 589 contra
 94 634, y los intervalos de las cinco repeticiones no se solapan: Cero entre 93 095 y 95 777,
 Vert.x entre 97 913 y 99 828. Con Jooby y Helidon sí hay empate técnico. Esto solo se puede decir
-porque la corrida es bare-metal y con el generador de carga en núcleos propios; con el arnés
+porque el generador de carga iba en núcleos propios; con el arnés
 anterior los ocho caían dentro del 2 % y la medida no distinguía nada.
 
 **El arranque sí se gana.** 155 ms contra 443 del segundo: esa distancia no la explica ningún
 margen. La meta de 150 ms se falla por 5 ms, y eso también se dice.
 
-Falta repetir la corrida en Linux sin virtualizar: lo de arriba es Docker Desktop. Ver
+Falta una corrida con su propio `ENV.md`: el único que hay describe Docker Desktop. Ver
 [docs/mediciones-locales.md](mediciones-locales.md).
 
 ## Fase 2 — Cubrir todo lo que ponía el contenedor

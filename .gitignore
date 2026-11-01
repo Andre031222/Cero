@@ -128,3 +128,6 @@ papers/**/*.log
 papers/**/*.out
 papers/**/*.pdf
 papers/**/*.spl
+.claude/
+.superpowers/
+Soft_Cero-Web/

@@ -210,7 +210,7 @@ crédito, y el candado cogido por trama para no parar a los demás flujos mientr
 crédito. `:authority` pasa a `host`. El preámbulo se ojea sin consumirlo. `credito.rs` está aparte
 porque lo gastan varios hilos y lo repone el que lee. En `hpack.rs`, el índice 1 es la entrada más
 reciente; una entrada que no cabe vacía la tabla (§4.4); el entero de longitud variable tiene tope
-de cinco septetos; el codificador no indexa. `hpack_tablas.rs` se extrajo de `HpackTablas.java`.
+de cinco septetos; el codificador no indexa. `hpack_tablas.rs` son tablas estáticas, tomadas de los apéndices A y B del RFC 7541 y no generadas por ningún guion; las respaldan la prueba de la suma de Kraft y los vectores del apéndice C.
 
 **`cero-data`.** `Valor` no admite cualquier cosa: lo que el framework no sabe nombrar, el driver
 tendría que adivinarlo. `memoria.rs` entiende exactamente lo que `Repositorio` emite y nada más, y

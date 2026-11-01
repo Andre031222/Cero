@@ -9,7 +9,7 @@ if [ -n "$salida" ]; then
   fallo=1
 fi
 
-salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results' ':!herramientas/verificar-orden.sh')
+salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results' ':!papers/LEEME.md' ':!docs/papers.md' ':!herramientas/verificar-orden.sh')
 if [ -n "$salida" ]; then
   echo "referencias a jxmvc:"
   echo "$salida"
@@ -30,6 +30,23 @@ fi
 
 if ! git ls-files -z -- java rust c++ herramientas | xargs -0 python3 herramientas/comentarios.py --verificar; then
   echo "código con comentarios"
+  fallo=1
+fi
+
+if grep -qiE 'bare-metal|sin virtualizar' README.md && grep -qi 'docker desktop' benchmarks/results/ENV.md; then
+  echo "el README dice bare-metal o sin virtualizar, y ENV.md describe Docker Desktop"
+  fallo=1
+fi
+
+if ! grep -qx 'Soft_Cero-Web/' .gitignore; then
+  echo "Soft_Cero-Web/ no figura en .gitignore"
+  fallo=1
+fi
+
+salida=$(find . -name .DS_Store -not -path './.git/*' -not -path '*/target/*' -not -path './Soft_Cero-Web/*')
+if [ -n "$salida" ]; then
+  echo "archivos .DS_Store:"
+  echo "$salida"
   fallo=1
 fi
 

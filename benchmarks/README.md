@@ -99,3 +99,24 @@ Se consolidan en [`results/`](results/LEEME.md), con el CSV crudo por corrida al
 - **AOT vs JIT**: Quarkus y Micronaut pueden compilarse a nativo (GraalVM), lo que cambia
   radicalmente arranque y memoria; indicar el modo (JVM o nativo) de cada corrida.
 - **Paridad de endpoints**: los tres endpoints deben ser idénticos en semántica y salida.
+
+## 3. Notas de los guiones
+
+- **Sin tope de montón, la columna de RSS no mide el framework.** Con `--memory=1g` la JVM se fija
+  un máximo del 25 % y quien asigna más por petición lo llena. Medido: Cero subía 32 MB por
+  repetición hasta estancarse en 401 MB, y con `-Xmx96m` servía el mismo tráfico un 4 % más rápido
+  en 176 MB. No era una fuga sino un montón sin acotar. Con el mismo tope para todos la columna
+  vuelve a comparar frameworks.
+- **Se mide contra la IP del contenedor, no contra el puerto publicado.** Con `-p` el tráfico pasa
+  por el reenvío de Docker y ese es el techo: 76 452 rps por el puerto publicado contra 94 212
+  yendo a la IP, con la CPU del servidor al 74 % en el primer caso.
+- **Reproducibilidad avanzada.** `BENCH_CPUSET="0,1"` fija el contenedor a esos núcleos y
+  `BENCH_CLIENT_CPUS="2,3"` fija el generador de carga a otros (con `taskset`). `BENCH_DB=1` añade
+  `/db`; `BENCH_NATIVE=1` añade Quarkus nativo (GraalVM, build de 5 a 10 minutos).
+- **`./bench.sh --tabla`** rehace la tabla desde el CSV sin volver a medir; los parámetros salen
+  del propio CSV, no de los argumentos, para que la tabla describa lo que se midió.
+- **Validez.** Cualquier error o respuesta no-2xx invalida la medición y el guion sale con código
+  distinto de cero. `set -e` no se usa: mataba el banco entero si un solo `docker run` fallaba.
+- **`carga-sostenida.sh [minutos] [conexiones]`.** Las pruebas hostiles son ráfagas de segundos y
+  ahí no aparece una fuga. Esto manda tráfico continuo y muestrea RSS y descriptores abiertos; lo
+  que se busca es una recta plana.
