@@ -9,9 +9,9 @@ quien responde. Sin dependencias de terceros en ejecución, en ninguna implement
 
 | Implementación | Estado | Banco | Ataques | h2spec | Requisitos |
 |---|---|---|---|---|---|
-| [Java](java/) | completa | 23 de 23 | 9 de 9 | 145 de 146 | 182 de 182 |
-| [Rust](rust/) | completa | 23 de 23 | 9 de 9 | 145 de 146 | 182 de 182 |
-| [C++](c++/) | en marcha, hito 11 | 23 de 23 | 9 de 9 | 145 de 146 | 157 citados en pruebas, de 182 |
+| [Java](java/) | completa | 23 de 23 | 10 de 10 | 145 de 146 | 182 de 182 |
+| [Rust](rust/) | completa | 23 de 23 | 10 de 10 | 145 de 146 | 182 de 182 |
+| [C++](c++/) | en marcha, hito 11 | 23 de 23 | 10 de 10 | 145 de 146 | 157 citados en pruebas, de 182 |
 | Python | planeada | por empezar | por empezar | por empezar | por empezar |
 | PHP | planeada | por empezar | por empezar | por empezar | por empezar |
 
@@ -273,7 +273,7 @@ Lo que dice que el contrato no es una transcripción de Java: diez de esos requi
 `H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
 cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el contrato y no `java/`.
 
-[`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 9 de 9 en los ataques, 145 de 146 en h2spec
+[`c++/`](c++/) va por el hito 11: 23 de 23 en el banco, 10 de 10 en los ataques, 145 de 146 en h2spec
 y 157 requisitos citados en sus pruebas; le faltan el contenedor de dependencias y las sesiones en
 tabla. Después vienen Python y PHP, en ese orden, cada uno escrito contra
 los requisitos y no contra el código de otro lenguaje.
