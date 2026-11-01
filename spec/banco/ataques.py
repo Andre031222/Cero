@@ -7,6 +7,10 @@ porque uno de los requisitos es justo que el servidor se niegue a arrancar:
     python3 spec/banco/ataques.py ./c++/build/conforme
     python3 spec/banco/ataques.py ./rust/target/release/conforme
     python3 spec/banco/ataques.py java -cp <clases> cero.http.Conforme
+    python3 spec/banco/ataques.py --solo-http1 python3 -m cero.conforme
+
+Con `--solo-http1` los vectores de HTTP/2 salen como «n/a» y no cuentan: es para una
+implementación que todavía no habla h2.
 
 A la orden se le añaden dos argumentos, `<puerto> <plazo en ms>`, y el servidor de conformidad
 tiene que usar ese plazo para esperar crédito y para escribir, y el doble para la inactividad.
@@ -455,13 +459,16 @@ VECTORES = [
 
 def main() -> int:
     orden = sys.argv[1:]
+    solo_http1 = orden[:1] == ["--solo-http1"]
+    if solo_http1:
+        orden = orden[1:]
     if not orden:
         print(__doc__)
         return 2
     puerto = libre()
     servidor = subprocess.Popen(orden + [str(puerto), str(int(PLAZO * 1000))],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    fallos = 0
+    fallos = omitidos = 0
     try:
         hasta = time.monotonic() + 60
         while not escucha(puerto):
@@ -471,6 +478,10 @@ def main() -> int:
             time.sleep(0.2)
 
         for req, desc, vector in VECTORES:
+            if solo_http1 and not req.startswith("HTTP-"):
+                print(f"  n/a  {req:<9} {desc}")
+                omitidos += 1
+                continue
             try:
                 ok, detalle = vector(puerto)
             except (OSError, ConnectionError, StopIteration) as fallo:
@@ -487,8 +498,10 @@ def main() -> int:
     print(f"        {detalle}")
     fallos += not ok
 
-    total = len(VECTORES) + 1
+    total = len(VECTORES) + 1 - omitidos
     print(f"\n{total} vectores · {total - fallos} pasan · {fallos} fallan")
+    if omitidos:
+        print(f"{omitidos} de HTTP/2 no aplican: la implementación todavía no habla h2")
     return 1 if fallos else 0
 
 

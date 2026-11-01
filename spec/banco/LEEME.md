@@ -48,7 +48,12 @@ no se conecta a un servidor que ya corre: **lo arranca él**, porque necesita pl
 python3 spec/banco/ataques.py ./c++/build/conforme
 python3 spec/banco/ataques.py ./rust/target/release/conforme
 python3 spec/banco/ataques.py java -cp java/cero-http/target/classes:java/cero-http/target/test-classes cero.http.Conforme
+(cd python && python3 ../spec/banco/ataques.py --solo-http1 python3 -m cero.conforme)
 ```
+
+`--solo-http1`, delante de la orden, es para una implementación que todavía no habla HTTP/2, como
+la de Python: corre los tres de HTTP/1.1 y marca los ocho de h2 como «n/a», sin contarlos ni como
+pasados ni como fallados. El resumen lo dice en una línea aparte.
 
 A la orden le añade `<puerto> <plazo en ms>`, y se conecta a `127.0.0.1`: los tres servidores de
 conformidad escuchan solo ahí. En macOS, un socket que escucha en `0.0.0.0` con `SO_REUSEADDR`
