@@ -27,6 +27,7 @@ void Ventanas::soltar(std::uint32_t flujo) {
 }
 
 bool Ventanas::ampliar(std::uint32_t flujo, std::int64_t cuanto) {
+    bool despierta = false;
     {
         const std::lock_guard tomado{candado_};
         auto* ventana = &conexion_;
@@ -36,9 +37,10 @@ bool Ventanas::ampliar(std::uint32_t flujo, std::int64_t cuanto) {
             ventana = &i->second;
         }
         if (*ventana + cuanto > kTope) return false;
+        despierta = *ventana <= 0 && *ventana + cuanto > 0;
         *ventana += cuanto;
     }
-    hay_.notify_all();
+    if (despierta) hay_.notify_all();
     return true;
 }
 
@@ -51,7 +53,7 @@ bool Ventanas::reajustar(std::int64_t delta) {
         inicial_ += delta;
         for (auto& f : flujos_) f.second += delta;
     }
-    hay_.notify_all();
+    if (delta > 0) hay_.notify_all();
     return true;
 }
 

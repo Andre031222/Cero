@@ -7,8 +7,11 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
+#include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -23,6 +26,7 @@
 #include "cero/respuesta.hpp"
 #include "cero/ruta.hpp"
 #include "cero/servidor.hpp"
+#include "cero/socket.hpp"
 #include "cliente_h2.hpp"
 #include "prueba.hpp"
 
@@ -100,7 +104,8 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
         (void)::write(d, pedido.data(), pedido.size());
         char c = 0;
         const auto leidos = ::read(d, &c, 1);
-        COMPRUEBA(leidos <= 0, "sin hilo para atenderla, la conexión se cierra");
+        const bool cerrada = leidos == 0 || (leidos < 0 && errno == ECONNRESET);
+        COMPRUEBA(cerrada, "sin hilo para atenderla, la conexión se cierra y no se queda colgada");
         ::close(d);
     }
     std::this_thread::sleep_for(200ms);
@@ -133,32 +138,135 @@ PRUEBA(un_cliente_que_corta_a_mitad_no_tumba_el_proceso) {
     COMPRUEBA(c.linea().starts_with("HTTP/1.1 200"), "SIGPIPE: el proceso sigue y sigue atendiendo");
 }
 
-PRUEBA(un_cliente_que_no_lee_no_cuelga_la_conexion) {
+struct EnMarcha {
+    int cliente;
+    std::thread hilo;
+    std::shared_ptr<std::atomic<bool>> acabo;
+};
+
+void par_tcp(int fd[2]) {
+    const int oyente = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    auto largo = static_cast<socklen_t>(sizeof a);
+    ::bind(oyente, reinterpret_cast<sockaddr*>(&a), largo);
+    ::listen(oyente, 1);
+    ::getsockname(oyente, reinterpret_cast<sockaddr*>(&a), &largo);
+    fd[1] = ::socket(AF_INET, SOCK_STREAM, 0);
+    const int poco = 4096;
+    ::setsockopt(fd[1], SOL_SOCKET, SO_RCVBUF, &poco, sizeof poco);
+    ::connect(fd[1], reinterpret_cast<sockaddr*>(&a), largo);
+    fd[0] = ::accept(oyente, nullptr, nullptr);
+    ::setsockopt(fd[0], SOL_SOCKET, SO_SNDBUF, &poco, sizeof poco);
+    ::close(oyente);
+}
+
+EnMarcha en_marcha(cero::Plazos plazos, cero::http2::Atender atender, bool tcp = false) {
     int fd[2];
-    ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
-    timeval espera{};
-    espera.tv_usec = 200'000;
-    ::setsockopt(fd[0], SOL_SOCKET, SO_SNDTIMEO, &espera, sizeof espera);
-    std::atomic<bool> acabo{false};
-    std::thread hilo{[d = fd[0], &acabo] {
+    if (tcp) {
+        par_tcp(fd);
+    } else {
+        ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+    }
+    auto acabo = std::make_shared<std::atomic<bool>>(false);
+    std::thread hilo{[d = fd[0], acabo, plazos, atender = std::move(atender)] {
         cero::http2::DesdeSocket entrada{d};
-        cero::http2::servir(entrada, cero::http2::Ajustes{}, [](const cero::Peticion&) {
-            return cero::Respuesta::texto(std::string(4 << 20, 'x'));
-        });
-        acabo = true;
+        cero::http2::servir(entrada, cero::http2::Ajustes{}, atender, std::nullopt, plazos);
+        *acabo = true;
         ::close(d);
     }};
+    return {fd[1], std::move(hilo), acabo};
+}
+
+cero::http2::Atender grande() {
+    return [](const cero::Peticion&) { return cero::Respuesta::texto(std::string(4 << 20, 'x')); };
+}
+
+void pedir(prueba::Cliente& c, std::uint32_t id) {
+    c.mandar(cero::http2::Trama{cero::http2::kHeaders,
+                                cero::http2::kFinCabeceras | cero::http2::kFinFlujo, id,
+                                cero::http2::codificar(prueba::get())});
+}
+
+void sin_freno(prueba::Cliente& c) {
+    c.abrir_h2(prueba::ajuste(0x4, 0x7fff'ffff));
+    c.mandar(cero::http2::Trama::ventana(0, 0x7fff'ffff - 65'535));
+}
+
+bool esperar(const std::atomic<bool>& hecho, std::chrono::milliseconds cuanto) {
+    const auto hasta = std::chrono::steady_clock::now() + cuanto;
+    while (!hecho && std::chrono::steady_clock::now() < hasta) std::this_thread::sleep_for(20ms);
+    return hecho;
+}
+
+PRUEBA(un_cliente_que_no_lee_no_cuelga_la_conexion) {
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 200ms, .escritura = 2s, .inactividad = 30s},
+                                      grande());
     {
-        prueba::Cliente c{fd[1]};
-        c.abrir_h2(prueba::ajuste(0x4, 0x7fff'ffff));
-        c.mandar(cero::http2::Trama::ventana(0, 0x7fff'ffff - 65'535));
-        for (std::uint32_t id = 1; id < 8; id += 2) {
-            c.mandar(cero::http2::Trama{cero::http2::kHeaders,
-                                        cero::http2::kFinCabeceras | cero::http2::kFinFlujo, id,
-                                        cero::http2::codificar(prueba::get())});
+        prueba::Cliente c{d};
+        sin_freno(c);
+        for (std::uint32_t id = 1; id < 8; id += 2) pedir(c, id);
+        COMPRUEBA(esperar(*acabo, 3s), "una escritura que no avanza tiene plazo y suelta la conexión");
+    }
+    hilo.join();
+}
+
+PRUEBA(un_cliente_que_lee_a_gotas_no_retiene_la_conexion) {
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 1s, .escritura = 1s, .inactividad = 30s},
+                                      grande());
+    {
+        prueba::Cliente c{d};
+        sin_freno(c);
+        pedir(c, 1);
+        const auto hasta = std::chrono::steady_clock::now() + 8s;
+        char gota[1024];
+        while (!*acabo && std::chrono::steady_clock::now() < hasta) {
+            (void)::read(d, gota, sizeof gota);
+            std::this_thread::sleep_for(300ms);
         }
-        for (int i = 0; i < 60 && !acabo; ++i) std::this_thread::sleep_for(50ms);
-        COMPRUEBA(acabo.load(), "una escritura que no avanza tiene plazo y suelta la conexión");
+        COMPRUEBA(acabo->load(),
+                  "leer a gotas reinicia el plazo de cada send, pero no el plazo total de la escritura");
+    }
+    hilo.join();
+}
+
+PRUEBA(un_cliente_callado_con_la_ventana_a_cero_se_despide) {
+    std::atomic<int> llamadas{0};
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 30s, .inactividad = 300ms},
+                                      [&](const cero::Peticion&) {
+                                          ++llamadas;
+                                          return cero::Respuesta::texto("hola");
+                                      });
+    {
+        prueba::Cliente c{d};
+        c.abrir_h2(prueba::ajuste(0x4, 0));
+        pedir(c, 1);
+        pedir(c, 3);
+        const auto empezo = std::chrono::steady_clock::now();
+        const auto adios = c.hasta(cero::http2::kGoaway);
+        const auto tardo = std::chrono::steady_clock::now() - empezo;
+        COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) == 0,
+                  "el silencio se despide con GOAWAY NO_ERROR");
+        COMPRUEBA(tardo < 2s, "dentro del plazo de inactividad");
+        COMPRUEBA(esperar(*acabo, 2s), "y los hilos que esperaban ventana terminan");
+        COMPRUEBA(llamadas == 2, "los dos flujos se habían atendido");
+    }
+    hilo.join();
+}
+
+PRUEBA(un_manejador_lento_no_es_un_cliente_callado) {
+    auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 30s, .inactividad = 200ms},
+                                      [](const cero::Peticion&) {
+                                          std::this_thread::sleep_for(700ms);
+                                          return cero::Respuesta::texto("tarde");
+                                      });
+    {
+        prueba::Cliente c{d};
+        c.abrir_h2();
+        pedir(c, 1);
+        const auto r = c.hasta(cero::http2::kHeaders);
+        COMPRUEBA(r && prueba::estado(*r) == "200", "mientras se calcula, callar no es inactividad");
     }
     hilo.join();
 }

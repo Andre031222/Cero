@@ -1,10 +1,13 @@
 #include "cero/http2/conexion.hpp"
 
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cctype>
 #include <condition_variable>
@@ -54,7 +57,7 @@ bool contiene_token(std::string_view lista, std::string_view token) {
 
 class Salida {
 public:
-    explicit Salida(int descriptor) : descriptor_(descriptor) {}
+    Salida(int descriptor, cero::Plazos plazos) : descriptor_(descriptor), plazos_(plazos) {}
 
     bool crudo(std::string_view octetos) {
         const std::lock_guard tomado{candado_};
@@ -104,7 +107,7 @@ public:
 private:
     bool escribir(std::string_view octetos) {
         if (rota_) return false;
-        if (mandar_todo(descriptor_, octetos)) return true;
+        if (mandar_todo(descriptor_, octetos, plazos_)) return true;
         rota_ = true;
         ::shutdown(descriptor_, SHUT_RDWR);
         return false;
@@ -117,6 +120,7 @@ private:
     }
 
     int descriptor_;
+    cero::Plazos plazos_;
     std::mutex candado_;
     std::size_t max_trama_ = 16'384;
     std::set<std::uint32_t> en_marcha_;
@@ -126,13 +130,14 @@ private:
 };
 
 struct Comun {
-    explicit Comun(int descriptor) : salida(descriptor) {}
+    Comun(int descriptor, cero::Plazos plazos) : salida(descriptor, plazos) {}
 
     Salida salida;
     Ventanas ventanas;
     std::mutex candado;
     std::condition_variable avisa;
     std::size_t en_vuelo = 0;
+    std::atomic<int> calculando{0};
 };
 
 bool responder(Comun& comun, std::uint32_t flujo, const cero::Respuesta& r, bool solo_cabeceras) {
@@ -176,9 +181,11 @@ void lanzar(const std::shared_ptr<Comun>& comun, const Atender& atender, std::ui
     comun->salida.empezar(flujo);
     try {
         std::thread{[comun, &atender, flujo, acabar, p = std::move(p)] {
+            ++comun->calculando;
             const auto r = cero::metodo_conocido(p.metodo)
                                ? atender(p)
                                : cero::Respuesta::codigo(501, "método no implementado");
+            --comun->calculando;
             acabar(responder(*comun, flujo, r, p.metodo == "HEAD"));
         }}.detach();
     } catch (const std::system_error&) {
@@ -237,6 +244,16 @@ std::size_t DesdeSocket::leer(char* destino, std::size_t cuantos) {
         copiados += cabe;
     }
     return copiados;
+}
+
+bool DesdeSocket::esperar(std::chrono::milliseconds cuanto) {
+    if (i_ < tengo_) return true;
+    pollfd mira{descriptor_, POLLIN, 0};
+    while (true) {
+        const int listo = ::poll(&mira, 1, static_cast<int>(cuanto.count()));
+        if (listo < 0 && errno == EINTR) continue;
+        return listo != 0;
+    }
 }
 
 bool DesdeSocket::asomar(std::string_view prefijo) {
@@ -326,10 +343,11 @@ cero::Peticion armar(std::vector<Cabecera> cabeceras, std::string cuerpo) {
 }
 
 void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
-            std::optional<cero::Peticion> primera) {
+            std::optional<cero::Peticion> primera, cero::Plazos plazos) {
     const int descriptor = entrada.descriptor();
     sin_sigpipe(descriptor);
-    auto comun = std::make_shared<Comun>(descriptor);
+    plazo_de_lectura(descriptor, plazos.inactividad);
+    auto comun = std::make_shared<Comun>(descriptor, plazos);
     auto& salida = comun->salida;
     auto& ventanas = comun->ventanas;
 
@@ -372,6 +390,11 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
 
     bool seguir = true;
     while (seguir) {
+        if (!entrada.esperar(plazos.inactividad)) {
+            if (comun->calculando > 0) continue;
+            salida.mandar({Trama::goaway(sesion.ultimo(), Error::Ninguno)});
+            break;
+        }
         const auto t = leer_trama(entrada, sesion.mios().max_trama);
         if (!t) {
             if (t.error().codigo != Error::Ninguno) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -13,6 +14,7 @@
 #include "cero/http2/trama.hpp"
 #include "cero/peticion.hpp"
 #include "cero/respuesta.hpp"
+#include "cero/socket.hpp"
 
 namespace cero::http2 {
 
@@ -23,6 +25,7 @@ public:
     int octeto() override;
     std::size_t leer(char* destino, std::size_t cuantos) override;
     bool asomar(std::string_view prefijo);
+    bool esperar(std::chrono::milliseconds cuanto);
     int descriptor() const { return descriptor_; }
 
 private:
@@ -48,6 +51,6 @@ std::vector<Trama> tramas_de_cabeceras(std::uint32_t flujo, std::string_view blo
 cero::Peticion armar(std::vector<Cabecera> cabeceras, std::string cuerpo);
 
 void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
-            std::optional<cero::Peticion> primera = std::nullopt);
+            std::optional<cero::Peticion> primera = std::nullopt, cero::Plazos plazos = {});
 
 }

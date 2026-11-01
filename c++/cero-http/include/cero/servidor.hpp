@@ -18,6 +18,7 @@
 #include "cero/ruta.hpp"
 #include "cero/seguridad.hpp"
 #include "cero/sesion.hpp"
+#include "cero/socket.hpp"
 
 namespace cero {
 
@@ -63,6 +64,7 @@ public:
     Servidor&& salud(std::shared_ptr<Salud> s) &&;
     Servidor&& sesiones(std::shared_ptr<Sesiones> s) &&;
     Servidor&& sin_registrar(std::vector<std::string> caminos) &&;
+    Servidor&& plazos(Plazos p) &&;
     Servidor&& tras_tls() &&;
 
     Respuesta responder(const Peticion& peticion, std::string_view cliente = "local") const;
@@ -90,6 +92,7 @@ private:
     bool csrf_activo_ = false;
     std::vector<std::string> sin_registrar_;
     bool seguro_ = false;
+    Plazos plazos_;
     std::shared_ptr<Metricas> metricas_ = std::make_shared<Metricas>();
     std::shared_ptr<Log> log_ = std::make_shared<Log>("cero", Nivel::Info);
 };

@@ -5,10 +5,14 @@
 
 namespace cero {
 
-inline constexpr std::chrono::milliseconds kPlazoDeEscritura{30'000};
+struct Plazos {
+    std::chrono::milliseconds sin_avance{30'000};
+    std::chrono::milliseconds escritura{60'000};
+    std::chrono::milliseconds inactividad{120'000};
+};
 
 void sin_sigpipe(int descriptor);
-void plazo_de_escritura(int descriptor, std::chrono::milliseconds plazo);
-bool mandar_todo(int descriptor, std::string_view datos);
+void plazo_de_lectura(int descriptor, std::chrono::milliseconds plazo);
+bool mandar_todo(int descriptor, std::string_view datos, const Plazos& plazos);
 
 }

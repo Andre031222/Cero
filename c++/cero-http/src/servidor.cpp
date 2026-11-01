@@ -159,6 +159,11 @@ Servidor&& Servidor::sin_registrar(std::vector<std::string> caminos) && {
     return std::move(*this);
 }
 
+Servidor&& Servidor::plazos(Plazos p) && {
+    plazos_ = p;
+    return std::move(*this);
+}
+
 Servidor&& Servidor::tras_tls() && {
     seguro_ = true;
     return std::move(*this);
@@ -305,15 +310,14 @@ int Servidor::escuchar(unsigned short puerto) const {
                                  (quien.sin_addr.s_addr >> 16) & 0xff,
                                  (quien.sin_addr.s_addr >> 24) & 0xff);
         sin_sigpipe(cliente);
-        plazo_de_escritura(cliente, kPlazoDeEscritura);
         try {
-            std::thread{[this, cliente, desde] {
+            std::thread{[this, cliente, desde, plazos = plazos_] {
                 http2::DesdeSocket lector{cliente};
                 const http2::Atender atender = [this, &desde](const Peticion& p) {
                     return responder(p, desde);
                 };
                 if (lector.asomar(http2::kPreambulo)) {
-                    http2::servir(lector, http2::Ajustes{}, atender);
+                    http2::servir(lector, http2::Ajustes{}, atender, std::nullopt, plazos);
                     ::close(cliente);
                     return;
                 }
@@ -321,18 +325,19 @@ int Servidor::escuchar(unsigned short puerto) const {
                     auto peticion = leer(lector);
                     if (!peticion) {
                         const auto fallo = Respuesta::codigo(estado_de(peticion.error()));
-                        mandar_todo(cliente, escribir(fallo, false, true));
+                        mandar_todo(cliente, escribir(fallo, false, true), plazos);
                         break;
                     }
                     if (http2::pide_h2c(*peticion)) {
-                        http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion));
+                        http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion),
+                                      plazos);
                         break;
                     }
                     const auto conexion = peticion->cabecera("connection").value_or("");
                     const bool cerrar = peticion->version == "HTTP/1.0" || conexion == "close";
                     const auto respuesta = responder(*peticion, desde);
                     const bool cabeza = peticion->metodo == "HEAD";
-                    if (!mandar_todo(cliente, escribir(respuesta, cabeza, cerrar))) break;
+                    if (!mandar_todo(cliente, escribir(respuesta, cabeza, cerrar), plazos)) break;
                     if (cerrar) break;
                 }
                 ::close(cliente);

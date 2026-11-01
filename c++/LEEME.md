@@ -7,7 +7,7 @@ conformidad, que son bytes sobre un socket y no saben en qué lenguaje está esc
 **Estado: hito 10.** El framework usable sobre HTTP/1.1, y HTTP/2 en claro (h2c) por prefacio y por
 `Upgrade: h2c` en el mismo puerto, con control de flujo de salida. **23 de 23 vectores del banco**,
 **los 32 del apéndice C del RFC 7541**, **145 de 146 en h2spec** —el que falta es el mismo que en
-Java y en Rust— y 189 pruebas propias.
+Java y en Rust— y 192 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -20,7 +20,7 @@ Java y en Rust— y 189 pruebas propias.
 | 7 | HTTP/2 · capa de tramas | `H2-001`–`H2-014` y `H2-027` · 15 pruebas |
 | 8 | HTTP/2 · HPACK | `H2-015`, `H2-016`, `H2-033`, `H2-039` · 20 pruebas con los vectores del RFC |
 | 9 | HTTP/2 · flujos y h2c | la máquina de estados y el conductor · h2spec 138 de 146 · 50 pruebas |
-| 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 3 de robustez |
+| 10 | HTTP/2 · control de flujo de salida | `H2-040`, `H2-041` · h2spec 145 de 146 · 13 pruebas, y 6 de robustez |
 
 ## Cuántos requisitos citan las pruebas
 
@@ -208,11 +208,18 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   `WINDOW_UPDATE` de la conexión solo cuentan como control sin flujo cuando no hay ninguno vivo: si
   no, una descarga larga acabaría en `ENHANCE_YOUR_CALM`. Una escritura que no avanza tiene plazo;
   al vencer, la salida se da por rota y el socket se cierra en los dos sentidos, para que el hilo que
-  lee también se entere.
+  lee también se entere. Una conexión que calla más que `inactividad` recibe GOAWAY `NO_ERROR` y se
+  cierra, y cerrarla despierta a los flujos que esperaban ventana; si algún manejador sigue
+  calculando, callar no cuenta como inactividad, porque el cliente está esperando la respuesta.
 - **`socket.hpp`.** Lo que comparten HTTP/1.1 y h2 al escribir: sin `SIGPIPE` —un cliente que corta
-  a mitad de respuesta mataba el proceso entero— y con plazo, 30 segundos, para que un cliente que no
-  lee no retenga la conexión. Si no se puede crear el hilo de una conexión, se cierra esa conexión y
-  el servidor sigue.
+  a mitad de respuesta mataba el proceso entero— y con `Plazos`, que son ajustes del `Servidor`
+  (`.plazos(...)`): `sin_avance` (30 s sin mover un octeto), `escritura` (60 s por cada 16 KiB) e
+  `inactividad` (120 s sin una trama de h2). El plazo de `SO_SNDTIMEO` vuelve a empezar cada vez que
+  el cliente lee algo, así que solo no basta: un cliente que lee un octeto antes de que venza retiene
+  la conexión sin fin. Por eso cada 16 KiB tiene su plazo total, y se escribe en piezas de 4 KiB
+  para que ninguna llamada a `send` pueda durar más que eso. En macOS el plazo de `send` se reinicia
+  dentro de la misma llamada con cada avance; un `send` grande no vencería nunca. Si no se puede
+  crear el hilo de una conexión, se cierra esa conexión y el servidor sigue.
 - **`conforme.cpp`.** El servidor del banco lee el cuerpo en `/eco`: sin eso los vectores de
   encuadre no comprueban nada.
 - **`CMakeLists.txt`.** CMake es a C++ lo que Maven a Java y Cargo a Rust: construye, no se enlaza.
