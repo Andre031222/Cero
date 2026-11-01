@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
 
     cero::Router router;
     if (!router.ruta("GET", "/", "raiz") || !router.ruta("GET", "/eco", "eco") ||
-        !router.ruta("POST", "/eco", "eco") || !router.ruta("GET", "/grande", "grande")) {
+        !router.ruta("POST", "/eco", "eco") || !router.ruta("GET", "/grande", "grande") ||
+        !router.ruta("GET", "/descarga", "descarga")) {
         return 1;
     }
     return cero::Servidor{std::move(router)}
@@ -32,6 +33,9 @@ int main(int argc, char** argv) {
         .accion("eco", [](const cero::Contexto& c) { return cero::Respuesta::texto(c.peticion.cuerpo); })
         .accion("grande", [](const cero::Contexto&) {
             return cero::Respuesta::texto(std::string(1 << 20, 'x'));
+        })
+        .accion("descarga", [](const cero::Contexto&) {
+            return cero::Respuesta::texto(std::string(32 << 20, 'x'));
         })
         .plazos(plazos)
         .escuchar(puerto);

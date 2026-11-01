@@ -437,6 +437,14 @@ PRUEBA(h2_055_un_cuerpo_de_mas_recibe_413) {
         const auto corte = c.hasta(cero::http2::kRstStream);
         COMPRUEBA(corte && corte->flujo == 1 && cero::http2::entero32(corte->carga, 0) == 0,
                   "H2-055: y RST_STREAM NO_ERROR para que deje de mandar");
+
+        auto anunciada = post;
+        anunciada.emplace_back("content-length", "1000");
+        c.mandar(cero::http2::Trama{cero::http2::kHeaders, cero::http2::kFinCabeceras, 3,
+                                    cero::http2::codificar(anunciada)});
+        const auto antes = c.hasta(cero::http2::kHeaders);
+        COMPRUEBA(antes && antes->flujo == 3 && prueba::estado(*antes) == "413",
+                  "H2-055: un content-length de más es 413 antes de mandar nada");
     }
     hilo.join();
 }

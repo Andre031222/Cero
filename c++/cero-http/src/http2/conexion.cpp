@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <charconv>
 #include <cerrno>
 #include <chrono>
 #include <cctype>
@@ -264,6 +265,16 @@ void despedirse(int descriptor) {
     }
 }
 
+bool anuncia_de_mas(const std::vector<Cabecera>& cabeceras, std::size_t tope) {
+    for (const auto& [nombre, valor] : cabeceras) {
+        if (nombre != "content-length") continue;
+        std::uint64_t largo = 0;
+        std::from_chars(valor.data(), valor.data() + valor.size(), largo);
+        return largo > tope;
+    }
+    return false;
+}
+
 struct EnCurso {
     std::vector<Cabecera> cabeceras;
     std::string cuerpo;
@@ -448,6 +459,15 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
         ventanas.soltar(flujo);
     };
 
+    const auto cuerpo_de_mas = [&](std::uint32_t flujo) {
+        const auto bloque = cabeceras_de_respuesta(413, {{"content-length", "0"}});
+        auto tramas = tramas_de_cabeceras(flujo, bloque, salida.max_trama(), true);
+        tramas.push_back(Trama::rst(flujo, Error::Ninguno));
+        salida.mandar(tramas);
+        olvidar(flujo);
+        sesion.desechar(flujo);
+    };
+
     const auto ocupada = [&] {
         const std::lock_guard tomado{comun->candado};
         return comun->en_vuelo > 0;
@@ -514,19 +534,14 @@ void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
                     } else if constexpr (std::is_same_v<A, Reajustar>) {
                         if (!ventanas.reajustar(a.delta)) desbordada();
                     } else if constexpr (std::is_same_v<A, Peticion>) {
+                        if (anuncia_de_mas(a.cabeceras, limites.cuerpo)) return cuerpo_de_mas(a.flujo);
                         ventanas.abrir(a.flujo);
                         en_curso[a.flujo] = EnCurso{std::move(a.cabeceras), {}};
                     } else if constexpr (std::is_same_v<A, Cuerpo>) {
                         const auto i = en_curso.find(a.flujo);
                         if (i == en_curso.end()) return;
                         if (a.datos.size() > limites.cuerpo - i->second.cuerpo.size()) {
-                            const auto bloque = cabeceras_de_respuesta(413, {{"content-length", "0"}});
-                            auto tramas = tramas_de_cabeceras(a.flujo, bloque, salida.max_trama(), true);
-                            tramas.push_back(Trama::rst(a.flujo, Error::Ninguno));
-                            salida.mandar(tramas);
-                            olvidar(a.flujo);
-                            sesion.desechar(a.flujo);
-                            return;
+                            return cuerpo_de_mas(a.flujo);
                         }
                         i->second.cuerpo += a.datos;
                     }
