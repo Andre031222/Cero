@@ -1,26 +1,50 @@
-import contextlib
 import errno
+import io
 import socket
 import sys
 import threading
+import time
 import traceback
 
-from cero.peticion import METODOS, Rechazo, encuadre, leer_cabecera, leer_cuerpo
+from cero.peticion import (LIMITE_CUERPO, METODOS, Rechazo, encuadre, leer_cabecera,
+                           leer_cuerpo)
 from cero.respuesta import Respuesta, como_respuesta, serializar, texto
 from cero.ruta import NoEncontrado, NoPermitido, Router
 
-ESPERA = 30
-MAXIMO_CONEXIONES = 512
+SIN_RECURSOS = {errno.EMFILE, errno.ENFILE, errno.ENOBUFS, errno.ENOMEM}
+
+
+class _Plazo(io.RawIOBase):
+
+    def __init__(self, conexion, espera):
+        self.conexion = conexion
+        self.espera = espera
+        self.limite = time.monotonic() + espera
+
+    def readable(self):
+        return True
+
+    def readinto(self, destino):
+        resta = self.limite - time.monotonic()
+        if resta <= 0:
+            raise TimeoutError("plazo agotado")
+        self.conexion.settimeout(min(resta, self.espera))
+        return self.conexion.recv_into(destino)
 
 
 class Servidor:
 
-    def __init__(self, router=None):
+    def __init__(self, router=None, *, maximo_conexiones=256, espera=30, plazo_cabecera=10,
+                 plazo_cuerpo=60, limite_cuerpo=LIMITE_CUERPO):
         self.router = router or Router()
+        self.espera = espera
+        self.plazo_cabecera = plazo_cabecera
+        self.plazo_cuerpo = plazo_cuerpo
+        self.limite_cuerpo = limite_cuerpo
         self.listo = threading.Event()
         self.parado = threading.Event()
         self.puerto = None
-        self.cupo = threading.BoundedSemaphore(MAXIMO_CONEXIONES)
+        self.cupo = threading.BoundedSemaphore(maximo_conexiones)
 
     def responder(self, peticion):
         if peticion.destino == "*":
@@ -54,20 +78,30 @@ class Servidor:
                     conexion, _ = oyente.accept()
                 except TimeoutError:
                     continue
-                if not self.cupo.acquire(blocking=False):
-                    with conexion, contextlib.suppress(OSError):
-                        conexion.sendall(serializar(texto(503, "demasiadas conexiones"), cerrar=True))
+                except OSError as fallo:
+                    if fallo.errno in SIN_RECURSOS:
+                        time.sleep(0.1)
                     continue
-                threading.Thread(target=self._atender, args=(conexion,), daemon=True).start()
+                self._repartir(conexion)
 
     def cerrar(self):
         self.parado.set()
 
+    def _repartir(self, conexion):
+        if not self.cupo.acquire(blocking=False):
+            _rechazar(conexion, texto(503, "demasiadas conexiones"), 0.05)
+            return
+        try:
+            threading.Thread(target=self._atender, args=(conexion,), daemon=True).start()
+        except RuntimeError:
+            self.cupo.release()
+            conexion.close()
+
     def _atender(self, conexion):
         try:
-            conexion.settimeout(ESPERA)
-            with conexion.makefile("rb") as entrada:
-                while self._una(conexion, entrada):
+            reloj = _Plazo(conexion, self.espera)
+            with io.BufferedReader(reloj) as entrada:
+                while self._una(conexion, reloj, entrada):
                     pass
         except OSError:
             pass
@@ -75,38 +109,48 @@ class Servidor:
             conexion.close()
             self.cupo.release()
 
-    def _una(self, conexion, entrada):
+    def _una(self, conexion, reloj, entrada):
+        reloj.limite = time.monotonic() + self.plazo_cabecera
         try:
             peticion = leer_cabecera(entrada)
             if peticion is None:
                 return False
-            forma = encuadre(peticion)
+            forma = encuadre(peticion, self.limite_cuerpo)
+            reloj.limite = time.monotonic() + self.plazo_cuerpo
             expect = peticion.cabecera("expect")
             if expect is not None:
                 if expect.lower() != "100-continue":
                     raise Rechazo(417, "Expect no admitido")
                 if peticion.version == "HTTP/1.1" and forma != 0:
+                    conexion.settimeout(self.espera)
                     conexion.sendall(b"HTTP/1.1 100 Continue\r\n\r\n")
-            leer_cuerpo(entrada, peticion, forma)
+            leer_cuerpo(entrada, peticion, forma, self.limite_cuerpo)
         except Rechazo as rechazo:
             _rechazar(conexion, texto(rechazo.estado, rechazo.motivo))
             return False
+        except TimeoutError:
+            _rechazar(conexion, texto(408, "la petición tardó demasiado"))
+            return False
         seguir = peticion.persistente()
+        modo = "close" if not seguir else "keep-alive" if peticion.version == "HTTP/1.0" else None
         try:
-            datos = serializar(self.responder(peticion), peticion.verbo == "HEAD", not seguir)
+            datos = serializar(self.responder(peticion), peticion.verbo == "HEAD", modo)
         except ValueError:
             traceback.print_exc(file=sys.stderr)
-            datos, seguir = serializar(texto(500, "error interno"), cerrar=True), False
+            datos, seguir = serializar(texto(500, "error interno"), conexion="close"), False
+        conexion.settimeout(self.espera)
         conexion.sendall(datos)
         return seguir
 
 
-def _rechazar(conexion, respuesta):
+def _rechazar(conexion, respuesta, espera=1):
+    limite = time.monotonic() + espera
     try:
-        conexion.settimeout(1)
-        conexion.sendall(serializar(respuesta, cerrar=True))
+        conexion.settimeout(espera)
+        conexion.sendall(serializar(respuesta, conexion="close"))
         conexion.shutdown(socket.SHUT_WR)
-        for _ in range(64):
+        while (resta := limite - time.monotonic()) > 0:
+            conexion.settimeout(resta)
             if not conexion.recv(65536):
                 break
     except OSError:

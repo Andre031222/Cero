@@ -3,6 +3,7 @@ import io
 import socket
 import struct
 import threading
+import time
 import unittest
 
 from cero.peticion import Peticion
@@ -29,8 +30,8 @@ def router_de_prueba():
     return router
 
 
-def arrancar():
-    servidor = Servidor(router_de_prueba())
+def arrancar(**ajustes):
+    servidor = Servidor(router_de_prueba(), **ajustes)
     hilo = threading.Thread(target=servidor.escuchar, args=(0,), daemon=True)
     hilo.start()
     servidor.listo.wait(5)
@@ -140,12 +141,22 @@ class Socket(unittest.TestCase):
         self.assertEqual(pedir(self.puerto, b"GET / HTTP/1.1\r\nHost: x\r\n\r\n")[0], 200)
 
     def test_cliente_que_corta_a_mitad_no_tumba_el_servidor(self):
+        escapados = []
+        anterior = threading.excepthook
+        threading.excepthook = escapados.append
+        self.addCleanup(setattr, threading, "excepthook", anterior)
+        antes = threading.active_count()
         for _ in range(3):
             conexion = socket.create_connection(("127.0.0.1", self.puerto), timeout=5)
             conexion.sendall(b"GET /grande HTTP/1.1\r\nHost: x\r\n\r\n")
             conexion.recv(1024)
             conexion.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
             conexion.close()
+        limite = time.monotonic() + 10
+        while threading.active_count() > antes and time.monotonic() < limite:
+            time.sleep(0.05)
+        self.assertEqual(threading.active_count(), antes)
+        self.assertEqual(escapados, [])
         estado, _, cuerpo = pedir(self.puerto, b"GET / HTTP/1.1\r\nHost: x\r\n\r\n")
         self.assertEqual((estado, cuerpo), (200, b"ok"))
         self.assertTrue(self.hilo.is_alive())

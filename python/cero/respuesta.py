@@ -27,7 +27,10 @@ def como_respuesta(valor):
     raise TypeError(f"una acción no puede devolver {type(valor).__name__}")
 
 
-def serializar(respuesta, sin_cuerpo=False, cerrar=False):
+ENCUADRE = {"content-length", "transfer-encoding", "connection"}
+
+
+def serializar(respuesta, sin_cuerpo=False, conexion=None):
     try:
         frase = HTTPStatus(respuesta.estado).phrase
     except ValueError:
@@ -36,11 +39,12 @@ def serializar(respuesta, sin_cuerpo=False, cerrar=False):
     for nombre, valor in respuesta.cabeceras:
         if any(c in f"{nombre}{valor}" for c in "\r\n\0"):
             raise ValueError(f"cabecera de respuesta con un salto de línea: {nombre!r}")
-        lineas.append(f"{nombre}: {valor}")
+        if nombre.lower() not in ENCUADRE:
+            lineas.append(f"{nombre}: {valor}")
     lleva_cuerpo = respuesta.estado not in (204, 304)
     if lleva_cuerpo:
         lineas.append(f"Content-Length: {len(respuesta.cuerpo)}")
-    if cerrar:
-        lineas.append("Connection: close")
+    if conexion:
+        lineas.append(f"Connection: {conexion}")
     cabeza = ("\r\n".join(lineas) + "\r\n\r\n").encode("latin-1")
     return cabeza + respuesta.cuerpo if lleva_cuerpo and not sin_cuerpo else cabeza

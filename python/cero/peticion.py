@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 METODOS = {"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE"}
 LIMITE_LINEA = 8192
 LIMITE_CABECERAS = 100
-LIMITE_CUERPO = 16 * 1024 * 1024
+LIMITE_CUERPO = 1024 * 1024
+PORCION = 64 * 1024
 
 TOKEN = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 VERSION = re.compile(r"HTTP/[0-9]\.[0-9]")
@@ -30,7 +31,7 @@ class Peticion:
     consulta: str
     version: str
     cabeceras: list
-    cuerpo: bytes = b""
+    cuerpo: bytearray = field(default_factory=bytearray)
     variables: dict = field(default_factory=dict)
 
     def cabecera(self, nombre):
@@ -119,21 +120,22 @@ def leer_cabecera(entrada):
     return peticion
 
 
-def _longitud(peticion):
-    valores = {v.strip() for v in ",".join(peticion.todas("content-length")).split(",")}
-    if valores == {""}:
+def _longitud(peticion, limite):
+    valores = peticion.todas("content-length")
+    if not valores:
         return 0
-    if len(valores) != 1 or not DIGITOS.fullmatch(next(iter(valores))):
+    elementos = {v.strip(" \t") for v in ",".join(valores).split(",")}
+    if len(elementos) != 1 or not DIGITOS.fullmatch(next(iter(elementos))):
         raise Rechazo(400, "Content-Length inválido")
-    longitud = int(valores.pop())
-    if longitud > LIMITE_CUERPO:
+    longitud = int(elementos.pop())
+    if longitud > limite:
         raise Rechazo(413, "cuerpo demasiado grande")
     return longitud
 
 
-def encuadre(peticion):
+def encuadre(peticion, limite=LIMITE_CUERPO):
     if not peticion.todas("transfer-encoding"):
-        return _longitud(peticion)
+        return _longitud(peticion, limite)
     if peticion.todas("content-length"):
         raise Rechazo(400, "Content-Length y Transfer-Encoding juntos")
     lista = [c.strip().lower() for c in peticion.cabecera("transfer-encoding").split(",")]
@@ -144,40 +146,42 @@ def encuadre(peticion):
     return "chunked"
 
 
-def _exacto(entrada, n):
-    datos = entrada.read(n)
-    if len(datos) != n:
-        raise Rechazo(400, "el cuerpo es más corto de lo anunciado")
-    return datos
+def _anadir(entrada, destino, n):
+    while n:
+        trozo = entrada.read(min(n, PORCION))
+        if not trozo:
+            raise Rechazo(400, "el cuerpo es más corto de lo anunciado")
+        destino += trozo
+        n -= len(trozo)
 
 
-def leer_cuerpo(entrada, peticion, forma):
+def leer_cuerpo(entrada, peticion, forma, limite=LIMITE_CUERPO):
+    cuerpo = bytearray()
     if forma != "chunked":
-        peticion.cuerpo = _exacto(entrada, forma)
+        _anadir(entrada, cuerpo, forma)
+        peticion.cuerpo = cuerpo
         return
-    trozos = []
-    total = 0
     while True:
         linea = _linea(entrada, 400)
         if linea is None:
             raise Rechazo(400, "la conexión se cerró en un trozo")
-        tamano = linea.partition(";")[0].strip(" \t")
-        if not HEXADECIMAL.fullmatch(tamano):
-            raise Rechazo(400, "tamaño de trozo no hexadecimal")
+        tamano, _, extension = linea.partition(";")
+        tamano = tamano.rstrip(" \t")
+        if not HEXADECIMAL.fullmatch(tamano) or CONTROL.search(extension):
+            raise Rechazo(400, "línea de trozo mal formada")
         tamano = int(tamano, 16)
-        total += tamano
-        if total > LIMITE_CUERPO:
+        if len(cuerpo) + tamano > limite:
             raise Rechazo(413, "cuerpo demasiado grande")
         if tamano == 0:
             break
-        trozos.append(_exacto(entrada, tamano))
-        if _exacto(entrada, 2) != b"\r\n":
+        _anadir(entrada, cuerpo, tamano)
+        if entrada.read(2) != b"\r\n":
             raise Rechazo(400, "trozo sin CRLF al final")
     for _ in range(LIMITE_CABECERAS + 1):
         linea = _linea(entrada, 400)
         if linea is None:
             raise Rechazo(400, "la conexión se cerró en los trailers")
         if linea == "":
-            peticion.cuerpo = b"".join(trozos)
+            peticion.cuerpo = cuerpo
             return
     raise Rechazo(431, "demasiados trailers")

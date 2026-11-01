@@ -5,13 +5,19 @@ import tempfile
 import zipapp
 
 CERO = pathlib.Path(__file__).resolve().parent
-SOBRANTES = shutil.ignore_patterns("__pycache__", "*.pyc", ".*")
+SOBRANTES = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyz", ".*")
+HERRAMIENTAS = shutil.ignore_patterns("__pycache__", "*.pyc", "empaquetar.py", "conforme.py")
 
 
 def empaquetar(carpeta, salida, entrada=None):
-    carpeta = pathlib.Path(carpeta)
+    carpeta = pathlib.Path(carpeta).resolve()
     if not carpeta.is_dir():
         raise ValueError(f"{carpeta} no es una carpeta")
+    if pathlib.Path(salida).resolve().is_relative_to(carpeta):
+        raise ValueError(f"la salida {salida} no puede quedar dentro de {carpeta}")
+    enlaces = [str(p) for p in carpeta.rglob("*") if p.is_symlink()]
+    if enlaces:
+        raise ValueError(f"{carpeta} trae enlaces simbólicos, que no se siguen: {', '.join(enlaces)}")
     if carpeta.joinpath("cero").exists():
         raise ValueError(f"{carpeta} ya trae una carpeta cero; chocaría con el framework")
     if entrada is None and not carpeta.joinpath("__main__.py").is_file():
@@ -19,7 +25,7 @@ def empaquetar(carpeta, salida, entrada=None):
     with tempfile.TemporaryDirectory() as tmp:
         raiz = pathlib.Path(tmp, "app")
         shutil.copytree(carpeta, raiz, ignore=SOBRANTES)
-        shutil.copytree(CERO, raiz / "cero", ignore=SOBRANTES)
+        shutil.copytree(CERO, raiz / "cero", ignore=HERRAMIENTAS)
         zipapp.create_archive(raiz, salida, interpreter="/usr/bin/env python3", main=entrada,
                               compressed=True)
 

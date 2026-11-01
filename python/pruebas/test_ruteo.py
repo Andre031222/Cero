@@ -73,7 +73,7 @@ class Resolucion(unittest.TestCase):
         router.agregar("GET", "/usuarios/nuevo", accion("form"))
         self.assertEqual(router.resolver("GET", "/usuarios/nuevo").accion(None), "form")
 
-    def test_rut_008_literal_gana_aunque_otra_ruta_tenga_el_verbo(self):
+    def test_rut_008_el_literal_de_otro_verbo_no_tapa_la_variable(self):
         router = Router()
         router.agregar("GET", "/usuarios/{id}", accion("uno"))
         router.agregar("DELETE", "/usuarios/nuevo", accion("borrar"))
