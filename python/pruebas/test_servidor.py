@@ -25,6 +25,7 @@ def router_de_prueba():
     router.agregar("GET", "/grande", lambda p: Respuesta(200, [], GRANDE))
     router.agregar("POST", "/eco", lambda p: p.cuerpo)
     router.agregar("GET", "/falla", lambda p: 1 / 0)
+    router.agregar("GET", "/inyecta", lambda p: Respuesta(200, [("X-A", "a\r\nSet-Cookie: b")]))
     return router
 
 
@@ -99,6 +100,12 @@ class Socket(unittest.TestCase):
     def test_rut_013_405_por_el_socket_lleva_allow(self):
         estado, cabeceras, _ = pedir(self.puerto, b"PUT /usuarios/1 HTTP/1.1\r\nHost: x\r\n\r\n")
         self.assertEqual((estado, cabeceras["allow"]), (405, "DELETE, GET, HEAD"))
+
+    def test_cabecera_con_salto_de_linea_da_500_y_no_se_inyecta(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            estado, cabeceras, _ = pedir(self.puerto, b"GET /inyecta HTTP/1.1\r\nHost: x\r\n\r\n")
+        self.assertEqual(estado, 500)
+        self.assertNotIn("set-cookie", cabeceras)
 
     def test_keep_alive_atiende_dos_peticiones_en_la_misma_conexion(self):
         with socket.create_connection(("127.0.0.1", self.puerto), timeout=5) as conexion:

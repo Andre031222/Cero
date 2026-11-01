@@ -92,8 +92,12 @@ class Servidor:
             _rechazar(conexion, texto(rechazo.estado, rechazo.motivo))
             return False
         seguir = peticion.persistente()
-        respuesta = self.responder(peticion)
-        conexion.sendall(serializar(respuesta, peticion.verbo == "HEAD", not seguir))
+        try:
+            datos = serializar(self.responder(peticion), peticion.verbo == "HEAD", not seguir)
+        except ValueError:
+            traceback.print_exc(file=sys.stderr)
+            datos, seguir = serializar(texto(500, "error interno"), cerrar=True), False
+        conexion.sendall(datos)
         return seguir
 
 

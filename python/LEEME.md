@@ -5,7 +5,7 @@ traducción del código de otro lenguaje: la referencia son los requisitos numer
 los mismos vectores de conformidad, que son bytes sobre un socket y no saben en qué lenguaje está
 escrito quien responde.
 
-**Estado: hito 1.** HTTP/1.1 y ruteo. **23 de 23 vectores del banco** y 33 pruebas propias.
+**Estado: hito 1.** HTTP/1.1 y ruteo. **23 de 23 vectores del banco** y 34 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -46,6 +46,9 @@ def main():
 
 Una acción devuelve una cadena (texto plano), unos bytes (`application/octet-stream`), `None`
 (204) o una `Respuesta` hecha a mano.
+
+`escuchar` atiende solo en `127.0.0.1` salvo que se le pida otra cosa: para salir de la máquina
+es `escuchar(8080, "0.0.0.0")`, y la decisión queda a la vista.
 
 Las pruebas y el banco:
 
