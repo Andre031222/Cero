@@ -72,6 +72,47 @@ python3 ../spec/banco/ataques.py --solo-http1 python3 -m cero.conforme
 tres vectores de HTTP/1.1 (`HTTP-024` a `HTTP-026`) y marca los ocho de HTTP/2 como «n/a»: esta
 implementación todavía no habla h2, y h2spec tampoco aplica.
 
+## Usar librerías de terceros con Cero
+
+Que Cero no dependa de nada no obliga a la aplicación a lo mismo. Lo que pida la aplicación se
+instala con pip, como siempre, en un venv mientras se desarrolla:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install humanize
+```
+
+Para que viaje dentro del `.pyz`, se instala en la carpeta de la aplicación con `--target`, y
+`cero.empaquetar` la lleva junto al código, porque la raíz del archivo está en `sys.path`:
+
+```bash
+python3 -m pip install --target miapp humanize
+python3 -m cero.empaquetar miapp/ app.pyz app:main
+python3 app.pyz 8080
+```
+
+```python
+import sys
+
+import humanize
+
+from cero.ruta import Router
+from cero.servidor import Servidor
+
+
+def main():
+    router = Router()
+    router.agregar("GET", "/tamano/{bytes}",
+                   lambda peticion: humanize.naturalsize(int(peticion.variables["bytes"])))
+    Servidor(router).escuchar(int(sys.argv[1]))
+```
+
+`GET /tamano/3000000` responde `3.0 MB`. Eso vale para las librerías de Python puro. Las que traen
+código compilado, como numpy, no: Python no carga un `.so` ni un `.pyd` desde dentro de un zip, y
+además quedarían atadas al sistema y a la versión en que se instalaron. Con esas, la aplicación se
+despliega como carpeta, con su venv y el paquete `cero` al lado, y se arranca con el Python de ese
+venv en vez de con el `.pyz`.
+
 ## La decisión de concurrencia: un hilo del sistema por conexión
 
 Igual que en Rust y en C++. `asyncio` está en la biblioteca estándar y habría sido la elección
