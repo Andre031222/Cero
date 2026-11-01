@@ -49,7 +49,9 @@ python3 spec/banco/ataques.py ./rust/target/release/conforme
 python3 spec/banco/ataques.py java -cp java/cero-http/target/classes:java/cero-http/target/test-classes cero.http.Conforme
 ```
 
-A la orden le añade `<puerto> <plazo en ms>`. El servidor de conformidad tiene que usar ese plazo
+A la orden le añade `<puerto> <plazo en ms>`, y se conecta a `127.0.0.1`: los tres servidores de
+conformidad escuchan solo ahí. En macOS, un socket que escucha en `0.0.0.0` con `SO_REUSEADDR`
+comparte el puerto con otro proceso que ya escucha en `127.0.0.1`, y entonces contesta el otro. El servidor de conformidad tiene que usar ese plazo
 para esperar crédito y para escribir, y el doble para la inactividad; con 0 o con un número
 negativo tiene que terminar con un código distinto de cero sin llegar a escuchar. El banco usa un
 segundo, y tarda unos siete con C++ o Rust; algo más con Java, por el arranque de la JVM.
