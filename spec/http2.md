@@ -14,6 +14,7 @@ nos ocurrió comprobar» de «comprueba lo que dice el RFC».
 ```
 146 tests, 145 passed, 0 skipped, 1 failed     ← Java
 146 tests, 145 passed, 0 skipped, 1 failed     ← Rust
+146 tests, 145 passed, 0 skipped, 1 failed     ← C++
 ```
 
 **La primera corrida en Java dio 124 de 146.** Los 22 fallos tenían pocas causas: no había máquina

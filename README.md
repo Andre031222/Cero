@@ -15,8 +15,9 @@ quien responde. Sin dependencias de terceros en ejecución, en ninguna implement
 | Python | planeada | por empezar | por empezar | por empezar | por empezar |
 | PHP | planeada | por empezar | por empezar | por empezar | por empezar |
 
-El único fallo de h2spec es el mismo en las tres: asume un puerto dedicado a h2c. Los ataques son
-los de HTTP/2 Bomb (CVE-2026-49975) y los plazos, en [`spec/banco/ataques.py`](spec/banco/ataques.py).
+El único fallo de h2spec es el mismo en las tres: asume un puerto dedicado a h2c. Los ataques,
+inspirados en la familia de ataques HTTP/2 Bomb, y los plazos están en
+[`spec/banco/ataques.py`](spec/banco/ataques.py).
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=0b1220&color=38bdf8)](https://central.sonatype.com/namespace/dev.ginit.cero)
 [![Java 25+](https://img.shields.io/badge/java-25%2B-38bdf8?style=flat-square&labelColor=0b1220&logo=openjdk&logoColor=38bdf8)](https://openjdk.org/)

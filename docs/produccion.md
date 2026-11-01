@@ -5,11 +5,11 @@ funcionalidad y bastante en confianza.
 
 ## Lo que sí está resuelto
 
-- **1 835 aserciones en verde**, cero dependencias en el núcleo verificadas en cada corrida
-  de CI. Esa cifra es la de la corrida con PostgreSQL y MySQL levantados, que es la de CI.
-  Sin ellos, `MotorTests` se omite —y lo dice— y salen 1 624: si mides en local y no
-  cuadra, es por eso.
-- Arranca en ~100 ms dentro de un contenedor y pesa 407 KB. El resto de contendientes, medidos
+- **1 635 aserciones de Java en verde sin motores** (`./cero verificar --sin-motores`), más 208
+  pruebas de Rust y las 13 suites de C++, con cero dependencias en el núcleo verificadas en cada
+  corrida de CI. CI levanta además PostgreSQL y MySQL, y `MotorTests` suma ahí sus aserciones; sin
+  ellos se omite —y lo dice—, así que si mides en local sin motores salen esas 1 635.
+- Arranca en ~100 ms dentro de un contenedor y pesa 378 796 bytes (≈ 370 KiB, los tres jars del núcleo). El resto de contendientes, medidos
   a la vez y en las mismas condiciones, tardan entre 4 y 13 veces más.
 - El endurecimiento HTTP es explícito y está probado: rechaza cabeceras plegadas,
   `Content-Length` duplicado, `Content-Length` junto a `Transfer-Encoding`, `Host` ausente o
@@ -48,8 +48,8 @@ Ordenado por lo que más pesa.
 
 ### 1. Nadie lo ha puesto en producción todavía
 
-Ya hay una aplicación completa encima —`java/ejemplo`, con vistas, formularios, CSRF, validación,
-base de datos y API REST, cubierta por 43 pruebas de punta a punta— y destapó cuatro huecos que la
+Ya hay una aplicación completa encima —`java/ejemplo`, una API JSON con validación, base de datos,
+sesiones y CSRF, cubierta por 59 comprobaciones de punta a punta— y destapó cuatro huecos que la
 lista de casillas no veía. Eso convierte «paridad» en algo verificado, no declarado.
 
 Lo que sigue sin ocurrir es tráfico real: nadie ha desplegado esto y lo ha dejado correr semanas.
