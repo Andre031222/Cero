@@ -74,7 +74,7 @@ spec/                 el contrato — manda en lo que cubre
 spec/banco/           el juez: bytes sobre un socket, sin lenguaje
 java/                 primera implementación · referencia en lo que el contrato aún no cubre
 rust/                 segunda implementación · 182 de 182
-c++/                  tercera implementación · en marcha, hito 11
+c++/                  tercera implementación · 175 de 175 aplicables
 python/               cuarta implementación · en marcha, hito 4, sin HTTP/2
 php/                  planeada
 benchmarks/           mide, no especifica
