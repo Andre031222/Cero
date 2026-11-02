@@ -21,8 +21,9 @@ struct Plazos {
 struct Limites {
     std::size_t en_vuelo = 32 * 1024 * 1024;
     std::size_t cuerpo = kMaxCuerpo;
+    std::size_t conexiones = 10'000;
 
-    bool validos() const { return en_vuelo > 0 && cuerpo > 0; }
+    bool validos() const { return en_vuelo > 0 && cuerpo > 0 && conexiones > 0; }
 };
 
 void sin_sigpipe(int descriptor);

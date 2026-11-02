@@ -40,6 +40,7 @@ public:
         timeval espera{};
         espera.tv_sec = 5;
         ::setsockopt(d_, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
+        ::setsockopt(d_, SOL_SOCKET, SO_SNDTIMEO, &espera, sizeof espera);
     }
     ~Cliente() { ::close(d_); }
     Cliente(const Cliente&) = delete;

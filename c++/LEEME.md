@@ -63,6 +63,9 @@ Es el mismo tipo de decisión que en Rust fue no usar un runtime asíncrono: el 
 de cómo se abre el socket**, así que se cumple igual. Lo que cambia es que aquí no hay nada
 portable debajo, y eso hay que decirlo en vez de disimularlo. Como en Rust, un hilo del sistema por
 conexión: Java tiene hilos virtuales en la plataforma y aquí no hay equivalente sin dependencias.
+Por eso hay un tope de conexiones a la vez, `Limites::conexiones` (10 000): la que pasa del tope se
+cierra igual que si el sistema no hubiera podido darle un hilo, y el proceso sigue atendiendo a las
+demás.
 
 TLS, igual que en Rust: **fuera del proceso**. El argumento está en
 [`rust/LEEME.md`](../rust/LEEME.md) y no cambia porque cambie el lenguaje — escribir una pila TLS
@@ -296,8 +299,8 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   `inactividad` (120 s sin una petición nueva, en HTTP/1.1, y sin `HEADERS` ni `DATA`, en h2). Un
   plazo de 0 o negativo no arranca: `escuchar` devuelve 1 sin abrir el puerto (`HTTP-025`), porque 0
   en un socket quiere decir «sin plazo» y en una cuenta atrás «ya pasó». `Limites`
-  (`.limites(...)`) lleva el presupuesto de respuestas en vuelo (32 MiB) y el tope del cuerpo
-  (10 MiB): un cuerpo mayor es 413, en HTTP/1.1 antes de leerlo (`HTTP-026`; antes se reservaba lo
+  (`.limites(...)`) lleva el presupuesto de respuestas en vuelo (32 MiB), el de conexiones a la vez
+  (10 000) y el tope del cuerpo (10 MiB): un cuerpo mayor es 413, en HTTP/1.1 antes de leerlo (`HTTP-026`; antes se reservaba lo
   que dijera `Content-Length`) y en h2 con `RST_STREAM NO_ERROR` (`H2-055`), en cuanto llega un
   `content-length` de más o en cuanto lo acumulado pasa del tope, siempre antes de la acción. El plazo de `SO_SNDTIMEO` vuelve a empezar cada vez que
   el cliente lee algo, así que solo no basta: un cliente que lee un octeto antes de que venza retiene

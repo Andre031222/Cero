@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <charconv>
 #include <chrono>
@@ -474,6 +475,7 @@ int Servidor::escuchar(unsigned short puerto) const {
     if (oyente < 0) return 1;
     linea("cero · escuchando en :{}", puerto);
 
+    const auto vivas = make_shared<atomic<size_t>>(0);
     while (true) {
         sockaddr_storage quien{};
         auto cuanto = static_cast<socklen_t>(sizeof quien);
@@ -482,15 +484,18 @@ int Servidor::escuchar(unsigned short puerto) const {
         const auto desde = quien_es(quien, cuanto);
         sin_sigpipe(cliente);
         try {
-            thread{[this, cliente, desde, plazos = plazos_, limites = limites_] {
+            if (++*vivas > limites_.conexiones) throw system_error{make_error_code(errc::resource_unavailable_try_again)};
+            thread{[this, cliente, desde, vivas, plazos = plazos_, limites = limites_] {
                 try {
                     conversar(cliente, desde, plazos, limites);
                 } catch (...) {
                     log_->escribir(Nivel::Error, "la conexión con {} cayó: {}", {desde, en_curso().mensaje});
                 }
                 ::close(cliente);
+                --*vivas;
             }}.detach();
         } catch (const system_error&) {
+            --*vivas;
             ::close(cliente);
         }
     }

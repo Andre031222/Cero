@@ -1,10 +1,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
-#include <signal.h>
-#include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 #include <atomic>
@@ -16,7 +13,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <thread>
 #include <utility>
 
@@ -67,45 +63,18 @@ int conectar(unsigned short puerto) {
     return -1;
 }
 
-void dormir_siempre() {
-    while (true) this_thread::sleep_for(1h);
-}
-
 PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
     const auto puerto = static_cast<unsigned short>(base() + 15'000);
-    int tubo[2];
-    if (::pipe(tubo) != 0) {
-        COMPRUEBA(false, "no se pudo abrir la tubería");
-        return;
-    }
-    const pid_t hijo = ::fork();
-    if (hijo == 0) {
-        ::close(tubo[0]);
-        const rlimit uno{1, 1};
-        ::setrlimit(RLIMIT_NPROC, &uno);
-        bool agotado = false;
-        try {
-            for (int i = 0; i < 20'000; ++i) thread{dormir_siempre}.detach();
-        } catch (const system_error&) {
-            agotado = true;
-        }
-        const char aviso = agotado ? '1' : '0';
-        (void)::write(tubo[1], &aviso, 1);
-        if (!agotado) ::_exit(0);
-        (void)servidor_grande().escuchar(puerto);
-        ::_exit(1);
-    }
-    ::close(tubo[1]);
-    char aviso = '0';
-    (void)::read(tubo[0], &aviso, 1);
-    ::close(tubo[0]);
-    if (aviso != '1') {
-        cero::linea("  · aquí no se pueden agotar los hilos; la prueba no dice nada");
-        ::waitpid(hijo, nullptr, 0);
-        return;
-    }
+    thread{[puerto] {
+        (void)servidor_grande()
+            .plazos({.sin_avance = 30s, .escritura = 30s, .inactividad = 30s})
+            .limites({.conexiones = 1})
+            .escuchar(puerto);
+    }}.detach();
+    const int ocupa = conectar(puerto);
+    COMPRUEBA(ocupa >= 0, "la primera conexión se queda con el único hilo");
     const int d = conectar(puerto);
-    COMPRUEBA(d >= 0, "el hijo escucha");
+    COMPRUEBA(d >= 0, "la segunda llega al oyente");
     if (d >= 0) {
         timeval espera{};
         espera.tv_sec = 5;
@@ -118,12 +87,15 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
         COMPRUEBA(cerrada, "sin hilo para atenderla, la conexión se cierra y no se queda colgada");
         ::close(d);
     }
-    this_thread::sleep_for(200ms);
-    int como = 0;
-    const bool vivo = ::waitpid(hijo, &como, WNOHANG) == 0;
-    COMPRUEBA(vivo, "un hilo que no se puede crear no tumba el proceso");
-    ::kill(hijo, SIGKILL);
-    if (vivo) ::waitpid(hijo, nullptr, 0);
+    if (ocupa >= 0) ::close(ocupa);
+    bool atendida = false;
+    for (int intento = 0; intento < 50 && !atendida; ++intento) {
+        this_thread::sleep_for(50ms);
+        prueba::Cliente c{conectar(puerto)};
+        c.mandar("GET / HTTP/1.1\r\nHost: a\r\nConnection: close\r\n\r\n");
+        atendida = c.linea().starts_with("HTTP/1.1 200");
+    }
+    COMPRUEBA(atendida, "un hilo que no se puede crear no tumba el proceso, y en cuanto hay hilo vuelve a atender");
 }
 
 string respuesta(prueba::Cliente& c) {
@@ -224,6 +196,7 @@ PRUEBA(http_025_un_plazo_de_cero_o_negativo_no_arranca) {
     };
     COMPRUEBA(!con_topes({.en_vuelo = 0}), "HTTP-025: el presupuesto de respuestas en vuelo");
     COMPRUEBA(!con_topes({.cuerpo = 0}), "HTTP-025: el tope del cuerpo");
+    COMPRUEBA(!con_topes({.conexiones = 0}), "HTTP-025: el tope de conexiones a la vez");
     COMPRUEBA(conectar_una_vez(puerto) < 0, "HTTP-025: y nadie llegó a escuchar");
 }
 
