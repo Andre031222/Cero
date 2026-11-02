@@ -2,12 +2,14 @@
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "cero/datos/disco.hpp"
+#include "cero/formato.hpp"
 #include "cero/servidor.hpp"
 #include "prueba.hpp"
 
@@ -172,6 +174,100 @@ PRUEBA(la_carpeta_y_los_archivos_solo_los_lee_su_dueno) {
     for (const auto& e : filesystem::directory_iterator{c}) {
         COMPRUEBA((e.status().permissions() & ajenos) == filesystem::perms::none, "y cada archivo, 0600");
     }
+    filesystem::remove_all(c);
+}
+
+PRUEBA(ses_007_dos_peticiones_sobre_la_misma_sesion_en_disco_no_se_pisan) {
+    const auto c = carpeta("pisarse");
+    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    const auto id = a.crear()->sesion->id();
+
+    const auto una = *a.recuperar(id);
+    const auto otra = *a.recuperar(id);
+    {
+        const auto tomado = una.tomar();
+        una.sesion->poner("de-una", "1");
+    }
+    a.guardar(una);
+    {
+        const auto tomado = otra.tomar();
+        otra.sesion->poner("de-otra", "2");
+    }
+    a.guardar(otra);
+
+    cero::AlmacenEnDisco fresco{c, 600s, nullopt};
+    const auto vista = fresco.recuperar(id);
+    COMPRUEBA(vista && vista->sesion->leer("de-una") == "1", "SES-007: la primera no se perdió");
+    COMPRUEBA(vista && vista->sesion->leer("de-otra") == "2", "SES-007: ni la segunda");
+    filesystem::remove_all(c);
+}
+
+PRUEBA(ses_007_hilos_que_recuperan_y_guardan_a_la_vez_no_pierden_nada) {
+    const auto c = carpeta("hilos");
+    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    const auto id = a.crear()->sesion->id();
+    constexpr int kHilos = 8;
+    constexpr int kVueltas = 25;
+    {
+        vector<jthread> hilos;
+        for (int h = 0; h < kHilos; ++h) {
+            hilos.emplace_back([&a, &id, h] {
+                for (int i = 0; i < kVueltas; ++i) {
+                    const auto g = a.recuperar(id);
+                    if (!g) continue;
+                    {
+                        const auto tomado = g->tomar();
+                        g->sesion->poner(cero::formato("clave-{}-{}", h, i), "x");
+                    }
+                    a.guardar(*g);
+                }
+            });
+        }
+    }
+    cero::AlmacenEnDisco fresco{c, 600s, nullopt};
+    const auto vista = fresco.recuperar(id);
+    COMPRUEBA(vista && vista->sesion->atributos().size() == kHilos * kVueltas,
+              "SES-007: " + to_string(vista ? vista->sesion->atributos().size() : 0));
+    filesystem::remove_all(c);
+}
+
+PRUEBA(los_provisionales_viejos_se_barren_al_arrancar) {
+    const auto c = carpeta("barrer");
+    filesystem::create_directories(c);
+    const auto viejo = c / ("." + string(64, 'a') + ".0123456789abcdef");
+    const auto reciente = c / ("." + string(64, 'b') + ".0123456789abcdef");
+    ofstream{viejo} << "{";
+    ofstream{reciente} << "{";
+    filesystem::last_write_time(viejo, filesystem::file_time_type::clock::now() - 2h);
+
+    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    COMPRUEBA(!filesystem::exists(viejo), "el que dejó una caída hace horas se borra");
+    COMPRUEBA(filesystem::exists(reciente), "el que puede estar escribiendo otra instancia, no");
+    filesystem::remove_all(c);
+}
+
+PRUEBA(una_carpeta_que_es_un_enlace_no_se_acepta) {
+    const auto c = carpeta("enlace");
+    const auto destino = carpeta("enlace-destino");
+    filesystem::create_directories(destino);
+    filesystem::create_directory_symlink(destino, c);
+    bool rechazada = false;
+    try {
+        cero::AlmacenEnDisco a{c, 600s, nullopt};
+    } catch (const filesystem::filesystem_error&) {
+        rechazada = true;
+    }
+    COMPRUEBA(rechazada, "un enlace puede llevar a una carpeta de otro");
+    filesystem::remove(c);
+    filesystem::remove_all(destino);
+}
+
+PRUEBA(un_archivo_forjado_con_fechas_absurdas_no_vale) {
+    const auto c = carpeta("forjado");
+    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    const string id(64, 'c');
+    ofstream{c / id} << R"({"creada":18448744073709551,"tocada":18448744073709551,"datos":{}})";
+    COMPRUEBA(!a.recuperar(id).has_value(), "una fecha que desborda el reloj no resucita la sesión");
     filesystem::remove_all(c);
 }
 

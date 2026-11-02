@@ -75,6 +75,49 @@ PRUEBA(los_caracteres_se_cuentan_y_no_los_octetos) {
     COMPRUEBA(r.estado == 200, "«Ñu» son dos caracteres aunque sean tres octetos: " + r.cuerpo);
 }
 
+PRUEBA(seg_028_el_utf8_roto_no_burla_el_maximo) {
+    const auto r = servidor().responder(alta("{\"nombre\":\"AB" + string(1 << 20, '\x80') + "\"}"));
+    COMPRUEBA(r.estado == 422, "SEG-028: un mega de octetos sueltos no son dos caracteres");
+    const auto detalle = leido(r);
+    const auto* campos = detalle.get("campos");
+    COMPRUEBA(campos && campos->get("nombre") &&
+                  campos->get("nombre")->cadena() == "no es UTF-8 válido",
+              "SEG-028: y se dice por qué");
+}
+
+PRUEBA(el_utf8_mal_formado_se_rechaza_en_todas_sus_formas) {
+    for (const string malo : {"A\xc3", "\xc0\xaf", "\xed\xa0\x80", "\xf4\x90\x80\x80", "\xff"}) {
+        const auto r = servidor().responder(alta("{\"nombre\":\"Ana" + malo + "\"}"));
+        COMPRUEBA(r.estado == 422, "corta, larga, sustituto, fuera de rango o imposible");
+    }
+}
+
+cero::Servidor solo_obligatorio() {
+    cero::Router r;
+    (void)r.ruta("POST", "/usuarios", "alta");
+    return cero::Servidor{std::move(r)}.accion("alta", [](const cero::Contexto& c) {
+        return cero::validar(c.cuerpo_json(), {{"apodo", cero::Obligatorio{}}});
+    });
+}
+
+PRUEBA(seg_028_obligatorio_no_se_conforma_con_un_null_ni_con_algo_vacio) {
+    for (const string vacio : {R"({"apodo":null})", R"({"apodo":""})", R"({"apodo":[]})", R"({"apodo":{}})"}) {
+        const auto r = solo_obligatorio().responder(alta(vacio));
+        COMPRUEBA(r.estado == 422, "SEG-028: " + vacio);
+    }
+    COMPRUEBA(solo_obligatorio().responder(alta(R"({"apodo":"ana"})")).estado == 200,
+              "y lo que tiene valor pasa");
+}
+
+PRUEBA(el_tipo_lo_dicen_texto_y_entero_aunque_haya_obligatorio) {
+    const auto r = servidor().responder(alta(R"({"nombre":5})"));
+    const auto detalle = leido(r);
+    const auto* campos = detalle.get("campos");
+    COMPRUEBA(r.estado == 422 && campos && campos->get("nombre") &&
+                  campos->get("nombre")->cadena() == "tiene que ser texto",
+              r.cuerpo);
+}
+
 PRUEBA(un_cuerpo_que_no_es_json_es_400_y_no_422) {
     COMPRUEBA(servidor().responder(alta("{no")).estado == 400, "no se entendió, así que 400");
 }

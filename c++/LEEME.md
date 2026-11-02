@@ -168,26 +168,41 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   `Sesion::nueva` y `renovar_id` lo que los dos necesitan para crear y rotar.
 - **`fallo.hpp` y `servidor.hpp`.** Una acción devuelve `Respuesta`, texto, `Json` o nada, y
   `accion` lo convierte (`RUT-019`, `RUT-020`); devolver nada es 204. Para fallar **lanza**: es lo
-  que C++ tiene, y `Fallo` es el tipo hecho para eso. Un `Fallo` por debajo de 500 conserva estado
-  y mensaje (`RUT-026`); de 500 en adelante, y cualquier otra excepción —estándar o no—, el cliente
-  recibe `{"error":"error interno","ruta":"/patrón"}` y el mensaje va al log (`RUT-024`, `RUT-025`).
+  que C++ tiene, y `Fallo` es el tipo hecho para eso. Su estado va de 400 a 599: construir uno
+  fuera de ese rango lanza `invalid_argument`, que acaba en 500, porque un «fallo» con 200 es un
+  error del programa. Un `Fallo` 4xx conserva estado y mensaje, y su `detalle` sale como cuerpo
+  JSON (`RUT-026`); un 5xx conserva el estado, pero ni el mensaje ni el `detalle` salen: van al
+  log. Cualquier otra excepción —estándar o no— es un 500. En los dos casos el cliente recibe
+  `{"error":"error interno","ruta":"/patrón"}` (`RUT-024`, `RUT-025`).
   Antes de este hito una excepción en una acción subía hasta el hilo de la conexión y, sin nadie que
   la atrapara, llamaba a `std::terminate`: una petición tumbaba el servidor. `al_fallar` decide antes
-  que la regla por defecto, incluso sobre un 500 (`RUT-027`), y si también lanza se aplica la regla.
+  que la regla por defecto, incluso sobre un 500 (`RUT-027`); si también lanza, se anotan los dos
+  fallos —el original y el suyo— y se aplica la regla.
   `usar` compone el middleware por índice, en el orden en que se declaró (`RUT-028`), y corre
   también sin ruta (`RUT-029`); `por_defecto` atiende lo no enrutado sin tocar el 405 (`RUT-030`,
-  `RUT-031`). Lo que lance un middleware se atrapa en `responder`. `variable_como<T>` acepta los
-  enteros, porque es lo que `from_chars` da igual en libc++ y en libstdc++, y exige consumir el
+  `RUT-031`). Lo que lance un middleware se atrapa en `responder`, y `responder` entero tiene un
+  último `catch` que da 500 con las cabeceras de protección: el almacén de sesiones también puede
+  lanzar. El hilo de cada conexión y el de cada flujo h2 tienen además el suyo; en h2 el flujo se
+  corta con `RST_STREAM INTERNAL_ERROR` y la conexión sigue. Nada llega a `std::terminate`.
+  `variable_como<T>` acepta los enteros —no `bool` ni los de carácter, y eso se comprueba al
+  compilar—, porque es lo que `from_chars` da igual en libc++ y en libstdc++, y exige consumir el
   segmento entero: `7x` no es 7 (`RUT-015`). `cuerpo_como<T>` pide a `T` un `de_json`: no hay
   reflexión, y la forma de leerse es cosa del tipo. JSON mal formado es 400; bien formado y con
   otra forma, 422 (`RUT-017`).
 - **`dependencias.hpp`.** Cada servicio se registra con la función que lo construye, se guarda por
-  `type_index` y se construye una vez. Los ciclos se detectan con una pila por hilo, que lleva
-  también qué contenedor resuelve, y la fábrica corre fuera del candado, como en Rust (`RUT-035`).
+  `type_index` y se construye **una vez**, aunque lo pidan varios hilos a la vez: cada tipo tiene su
+  obra con su candado, y el segundo espera al primero. Registrar y leer las recetas pasa por el
+  candado del contenedor, así que se puede registrar con el servidor en marcha. Los ciclos se
+  detectan con una pila por hilo, que lleva también qué contenedor resuelve, y antes de tomar el
+  candado de la obra (`RUT-035`). Un ciclo repartido entre dos hilos —A pide B en uno mientras B pide
+  A en otro— se bloquea en vez de detectarse; en un solo hilo se detecta siempre.
   No va dentro del `Contexto`: una acción que lo necesite lo captura.
 - **`validacion.hpp`.** 422 y no 400 (`SEG-028`), con el motivo de cada campo; se para en la primera
-  regla que falla de cada campo, y el cuerpo vuelve tal cual (`SEG-027`). Los caracteres se cuentan
-  como puntos de código UTF-8, no como octetos. `Json::entero` ya no convierte un número que no cabe:
+  regla que falla de cada campo, y el cuerpo vuelve tal cual (`SEG-027`). `Texto` cuenta puntos de
+  código y no octetos, y un texto que no es UTF-8 válido —secuencia cortada, forma larga, sustituto,
+  más allá de U+10FFFF— es 422 «no es UTF-8 válido»: contando solo los octetos de cabecera, un mega
+  de bytes de continuación sueltos medía cero caracteres y pasaba el máximo. `Obligatorio` rechaza
+  lo ausente, `null`, `""`, `[]` y `{}`; el tipo lo dicen `Texto` y `Entero`, que van detrás. `Json::entero` ya no convierte un número que no cabe:
   con 2^63 el `static_cast` era comportamiento indefinido, y en ARM devolvía un entero falso.
 - **`cero-data/disco.hpp`.** `SES-012` pide que una sesión abierta en una instancia se reconozca en
   otra. Sin dependencias no hay base de datos, pero hay sistema de archivos: un archivo por sesión
@@ -196,10 +211,17 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   hexadecimal de 64 antes de tocar el disco: si no, `../` lee sesiones de otra carpeta. La carpeta es
   0700 y cada archivo 0600. Se escribe en un provisional con `O_EXCL` y se renombra, que en POSIX es
   atómico: quien lee ve la versión vieja o la nueva, nunca media. Como en Rust: se guarda solo si
-  cambió, rotar escribe el nuevo antes de borrar el viejo, y la caducada se borra al tocarla. Lo que
-  no hace: dos peticiones que escriben a la vez la misma sesión desde dos instancias se pisan, y gana
-  la última; el candado de `SES-007` es por proceso. Una carpeta en red (NFS) sirve para varias
-  máquinas solo si su `rename` es atómico.
+  cambió, rotar escribe el nuevo antes de borrar el viejo, y la caducada se borra al tocarla.
+  **`SES-007` dentro del proceso:** mientras una petición tiene una sesión, las demás del mismo
+  proceso reciben la misma `Sesion` y el mismo candado, no una copia leída del disco; hay un registro
+  por identificador, con `weak_ptr`, que se vacía solo cuando nadie la usa. Cada `guardar` escribe
+  el estado entero bajo el candado de la sesión, así que lo que puso una petición no lo borra la
+  otra. **Entre procesos no hay candado:** dos instancias que escriben a la vez la misma sesión se
+  pisan y gana la última. Leer del disco ocurre bajo el candado del registro, así que dos peticiones
+  no pueden abrir dos copias de la misma. Se hace `fsync` antes de renombrar, y los provisionales
+  que dejó una caída, de más de una hora, se barren al arrancar. La carpeta no puede ser un enlace ni
+  de otro usuario. Una fecha que no cabe en el reloj invalida el archivo en vez de desbordarlo. Una
+  carpeta en red (NFS) sirve para varias máquinas solo si su `rename` es atómico.
 - **`estaticos.cpp`.** Tras resolver enlaces se comprueba que el camino sigue dentro de la raíz.
 - **`json.hpp`.** Propio, porque una biblioteca de JSON sería una dependencia escondida.
 - **`formato.hpp`.** `formato(...)` y `linea(...)` sobre `<format>`, porque `std::print` pide GCC 14.
