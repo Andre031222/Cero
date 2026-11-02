@@ -14,10 +14,11 @@ class Dependencias {
 public:
     template <class T, class F>
     Dependencias& registrar(F fabrica) {
-        recetas_.insert_or_assign(std::type_index{typeid(T)},
-                                  [f = std::move(fabrica)](Dependencias& d) -> Hecho {
-                                      return std::shared_ptr<T>{f(d)};
-                                  });
+        Fabrica receta = [f = std::move(fabrica)](Dependencias& d) -> Hecho {
+            return std::shared_ptr<T>{f(d)};
+        };
+        const std::lock_guard tomado{candado_};
+        recetas_.insert_or_assign(std::type_index{typeid(T)}, std::move(receta));
         return *this;
     }
 
@@ -33,12 +34,18 @@ public:
 
 private:
     using Hecho = std::shared_ptr<void>;
+    using Fabrica = std::function<Hecho(Dependencias&)>;
+
+    struct Obra {
+        std::mutex candado;
+        Hecho hecho;
+    };
 
     Hecho resolver(std::type_index tipo);
 
-    std::map<std::type_index, std::function<Hecho(Dependencias&)>> recetas_;
     std::mutex candado_;
-    std::map<std::type_index, Hecho> hechos_;
+    std::map<std::type_index, Fabrica> recetas_;
+    std::map<std::type_index, std::shared_ptr<Obra>> obras_;
 };
 
 }

@@ -28,6 +28,8 @@ cero::Servidor servidor() {
     (void)r.ruta("GET", "/revienta/{id}", "revienta");
     (void)r.ruta("GET", "/no-esta", "no_esta");
     (void)r.ruta("GET", "/huerfana", "sin_accion");
+    (void)r.ruta("GET", "/bien", "bien");
+    (void)r.ruta("GET", "/ocupado", "ocupado");
     return cero::Servidor{std::move(r)}
         .accion("estalla",
                 [](const cero::Contexto&) -> string {
@@ -36,6 +38,10 @@ cero::Servidor servidor() {
         .accion("revienta", [](const cero::Contexto&) -> string { throw 42; })
         .accion("no_esta", [](const cero::Contexto&) -> string {
             throw cero::Fallo{404, "el artículo no existe"};
+        })
+        .accion("bien", [](const cero::Contexto&) -> string { throw cero::Fallo{200, "todo bien"}; })
+        .accion("ocupado", [](const cero::Contexto&) -> string {
+            throw cero::Fallo{503, "la base no contesta", cero::Json::objeto({{"host", "db-interna:5432"}})};
         });
 }
 
@@ -81,6 +87,37 @@ PRUEBA(rut_027_el_manejador_de_error_decide) {
     COMPRUEBA(r.estado == 409, "RUT-027");
     COMPRUEBA(r.cuerpo == R"({"motivo":"el artículo no existe"})", "RUT-027");
     COMPRUEBA(s.responder(peticion("/estalla")).estado == 409, "RUT-027: también sobre un 500");
+}
+
+bool en_el_log(const cero::Servidor& s, string_view trozo) {
+    for (const auto& l : s.log().lineas()) {
+        if (contiene(l, trozo)) return true;
+    }
+    return false;
+}
+
+PRUEBA(un_fallo_con_estado_que_no_es_de_error_es_un_500) {
+    const auto r = servidor().responder(peticion("/bien"));
+    COMPRUEBA(r.estado == 500, "un Fallo de 200 es un error del programa");
+    COMPRUEBA(!contiene(r.cuerpo, "todo bien"), r.cuerpo);
+}
+
+PRUEBA(rut_024_el_detalle_de_un_5xx_no_sale_pero_se_anota) {
+    const auto s = servidor();
+    const auto r = s.responder(peticion("/ocupado"));
+    COMPRUEBA(r.estado == 503, "RUT-026: el estado se conserva");
+    COMPRUEBA(!contiene(r.cuerpo, "db-interna") && !contiene(r.cuerpo, "no contesta"), "RUT-024: " + r.cuerpo);
+    COMPRUEBA(en_el_log(s, "db-interna"), "y quien opera lo ve");
+}
+
+PRUEBA(si_al_fallar_tambien_falla_se_anotan_los_dos) {
+    const auto s = servidor().al_fallar([](const cero::Contexto&, const cero::Fallo&) -> cero::Respuesta {
+        throw runtime_error("el manejador se rompió");
+    });
+    const auto r = s.responder(peticion("/estalla"));
+    COMPRUEBA(r.estado == 500, "sale la regla por defecto");
+    COMPRUEBA(en_el_log(s, "hunter2"), "el fallo original queda anotado");
+    COMPRUEBA(en_el_log(s, "el manejador se rompió"), "y el del manejador también");
 }
 
 PRUEBA(un_middleware_que_lanza_no_tumba_el_servidor) {

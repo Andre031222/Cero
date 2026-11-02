@@ -99,6 +99,13 @@ cero::Servidor servidor() {
         });
 }
 
+template <class T>
+concept SeConvierte = requires(const cero::Contexto& c) { c.template variable_como<T>(""); };
+
+static_assert(SeConvierte<int> && SeConvierte<unsigned long long>);
+static_assert(!SeConvierte<bool> && !SeConvierte<char> && !SeConvierte<char8_t> &&
+              !SeConvierte<wchar_t>);
+
 PRUEBA(rut_014_y_015_la_variable_se_convierte_o_es_400) {
     const auto s = servidor();
     COMPRUEBA(s.responder(peticion("GET", "/numero/21")).cuerpo == "42", "RUT-014");
@@ -147,7 +154,10 @@ PRUEBA(rut_022_el_nombre_de_la_descarga_se_sanea) {
     const auto disposicion = cabecera(r, "Content-Disposition");
     COMPRUEBA(disposicion.has_value(), "RUT-022");
     COMPRUEBA(disposicion && disposicion->find_first_of("\r\n") == string::npos, "RUT-022");
-    COMPRUEBA(disposicion && disposicion->find('"', 22) == disposicion->size() - 1,
+    constexpr string_view kAbre = "filename=\"";
+    const auto nombre = disposicion ? disposicion->find(kAbre) : string::npos;
+    COMPRUEBA(nombre != string::npos &&
+                  disposicion->find('"', nombre + kAbre.size()) == disposicion->size() - 1,
               "RUT-022: la comilla del nombre no cierra antes de tiempo");
     COMPRUEBA(!cabecera(r, "Set-Cookie").has_value(), "RUT-022: y no se coló ninguna cookie");
 }

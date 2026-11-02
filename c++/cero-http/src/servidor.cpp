@@ -212,6 +212,21 @@ Servidor&& Servidor::tras_tls() && {
 }
 
 Respuesta Servidor::responder(const Peticion& p, string_view cliente) const {
+    try {
+        return despachar(p, cliente);
+    } catch (...) {
+        const auto camino = p.camino();
+        log_->escribir(Nivel::Error, "{} {} falló fuera de la acción: {}",
+                       {p.metodo, camino, en_curso().mensaje});
+        auto r = Respuesta::json(Json::objeto({{"error", "error interno"}, {"ruta", camino}}).escribir());
+        r.estado = 500;
+        const auto proteccion = proteccion_.aplicar(seguro_);
+        r.extra.insert(r.extra.end(), proteccion.begin(), proteccion.end());
+        return r;
+    }
+}
+
+Respuesta Servidor::despachar(const Peticion& p, string_view cliente) const {
     const auto empezo = chrono::steady_clock::now();
     const string camino{p.camino()};
 
@@ -329,7 +344,8 @@ Respuesta Servidor::del_fallo(const Contexto& ctx, string_view ruta, const Fallo
         try {
             return al_fallar_(ctx, fallo);
         } catch (...) {
-            log_->escribir(Nivel::Error, "el manejador de fallos de {} también falló", {ruta});
+            log_->escribir(Nivel::Error, "el manejador de fallos de {} también falló: {} · el fallo era: {}",
+                           {ruta, en_curso().mensaje, fallo.mensaje});
         }
     }
     if (fallo.contable()) {
@@ -338,7 +354,8 @@ Respuesta Servidor::del_fallo(const Contexto& ctx, string_view ruta, const Fallo
         r.estado = fallo.estado;
         return r;
     }
-    log_->escribir(Nivel::Error, "{} falló: {}", {ruta, fallo.mensaje});
+    const auto detalle = fallo.detalle ? fallo.detalle->escribir() : string{};
+    log_->escribir(Nivel::Error, "{} falló: {} {}", {ruta, fallo.mensaje, detalle});
     auto r = Respuesta::json(Json::objeto({{"error", "error interno"}, {"ruta", ruta}}).escribir());
     r.estado = fallo.estado;
     return r;
@@ -421,6 +438,33 @@ string quien_es(const sockaddr_storage& quien, socklen_t cuanto) {
 
 }
 
+void Servidor::conversar(int cliente, const string& desde, Plazos plazos, Limites limites) const {
+    plazo_de_lectura(cliente, plazos.inactividad);
+    http2::DesdeSocket lector{cliente};
+    const http2::Atender atender = [this, &desde](const Peticion& p) { return responder(p, desde); };
+    if (lector.asomar(http2::kPreambulo)) {
+        http2::servir(lector, http2::Ajustes{}, atender, nullopt, plazos, limites);
+        return;
+    }
+    while (lector.esperar(plazos.inactividad)) {
+        auto peticion = leer(lector, limites.cuerpo);
+        if (!peticion) {
+            const auto fallo = Respuesta::codigo(estado_de(peticion.error()));
+            mandar_todo(cliente, escribir(fallo, false, true), plazos);
+            return;
+        }
+        if (http2::pide_h2c(*peticion)) {
+            http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion), plazos, limites);
+            return;
+        }
+        const auto conexion = peticion->cabecera("connection").value_or("");
+        const bool cerrar = peticion->version == "HTTP/1.0" || conexion == "close";
+        const auto respuesta = responder(*peticion, desde);
+        const bool cabeza = peticion->metodo == "HEAD";
+        if (!mandar_todo(cliente, escribir(respuesta, cabeza, cerrar), plazos) || cerrar) return;
+    }
+}
+
 int Servidor::escuchar(unsigned short puerto) const {
     if (!plazos_.validos() || !limites_.validos()) {
         aviso("cero · los plazos y los topes tienen que ser mayores que cero");
@@ -439,34 +483,10 @@ int Servidor::escuchar(unsigned short puerto) const {
         sin_sigpipe(cliente);
         try {
             thread{[this, cliente, desde, plazos = plazos_, limites = limites_] {
-                plazo_de_lectura(cliente, plazos.inactividad);
-                http2::DesdeSocket lector{cliente};
-                const http2::Atender atender = [this, &desde](const Peticion& p) {
-                    return responder(p, desde);
-                };
-                if (lector.asomar(http2::kPreambulo)) {
-                    http2::servir(lector, http2::Ajustes{}, atender, nullopt, plazos, limites);
-                    ::close(cliente);
-                    return;
-                }
-                while (lector.esperar(plazos.inactividad)) {
-                    auto peticion = leer(lector, limites.cuerpo);
-                    if (!peticion) {
-                        const auto fallo = Respuesta::codigo(estado_de(peticion.error()));
-                        mandar_todo(cliente, escribir(fallo, false, true), plazos);
-                        break;
-                    }
-                    if (http2::pide_h2c(*peticion)) {
-                        http2::servir(lector, http2::Ajustes{}, atender, std::move(*peticion),
-                                      plazos, limites);
-                        break;
-                    }
-                    const auto conexion = peticion->cabecera("connection").value_or("");
-                    const bool cerrar = peticion->version == "HTTP/1.0" || conexion == "close";
-                    const auto respuesta = responder(*peticion, desde);
-                    const bool cabeza = peticion->metodo == "HEAD";
-                    if (!mandar_todo(cliente, escribir(respuesta, cabeza, cerrar), plazos)) break;
-                    if (cerrar) break;
+                try {
+                    conversar(cliente, desde, plazos, limites);
+                } catch (...) {
+                    log_->escribir(Nivel::Error, "la conexión con {} cayó: {}", {desde, en_curso().mensaje});
                 }
                 ::close(cliente);
             }}.detach();

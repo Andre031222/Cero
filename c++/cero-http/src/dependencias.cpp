@@ -1,10 +1,10 @@
 #include "cero/dependencias.hpp"
 
 #include <algorithm>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <typeindex>
-#include <utility>
 #include <vector>
 
 #include "cero/fallo.hpp"
@@ -34,13 +34,18 @@ string camino(const Dependencias* contenedor, type_index cierre) {
 }
 
 Dependencias::Hecho Dependencias::resolver(type_index tipo) {
+    Fabrica fabrica;
+    shared_ptr<Obra> obra;
     {
         const lock_guard tomado{candado_};
-        if (const auto hecho = hechos_.find(tipo); hecho != hechos_.end()) return hecho->second;
-    }
-    const auto receta = recetas_.find(tipo);
-    if (receta == recetas_.end()) {
-        throw Fallo::interno(string{"no hay nada registrado para "} + tipo.name());
+        const auto receta = recetas_.find(tipo);
+        if (receta == recetas_.end()) {
+            throw Fallo::interno(string{"no hay nada registrado para "} + tipo.name());
+        }
+        fabrica = receta->second;
+        auto& sitio = obras_[tipo];
+        if (!sitio) sitio = make_shared<Obra>();
+        obra = sitio;
     }
     const EnCurso este{this, tipo};
     if (ranges::find(pila, este) != pila.end()) {
@@ -51,10 +56,9 @@ Dependencias::Hecho Dependencias::resolver(type_index tipo) {
     const struct Salida {
         ~Salida() { pila.pop_back(); }
     } salida;
-    auto hecho = receta->second(*this);
-
-    const lock_guard tomado{candado_};
-    return hechos_.try_emplace(tipo, std::move(hecho)).first->second;
+    const lock_guard construyendo{obra->candado};
+    if (!obra->hecho) obra->hecho = fabrica(*this);
+    return obra->hecho;
 }
 
 }

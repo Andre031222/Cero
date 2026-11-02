@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -31,6 +32,8 @@
 #include "cliente_h2.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+
 namespace {
 
 using namespace std::chrono_literals;
@@ -41,7 +44,7 @@ cero::Servidor servidor_grande() {
     cero::Router r;
     (void)r.ruta("GET", "/", "grande");
     return cero::Servidor{std::move(r)}
-        .accion("grande", [](const cero::Contexto&) { return cero::Respuesta::texto(std::string(8 << 20, 'x')); })
+        .accion("grande", [](const cero::Contexto&) { return cero::Respuesta::texto(string(8 << 20, 'x')); })
         .direccion("127.0.0.1");
 }
 
@@ -59,13 +62,13 @@ int conectar_una_vez(unsigned short puerto) {
 int conectar(unsigned short puerto) {
     for (int intento = 0; intento < 100; ++intento) {
         if (const int d = conectar_una_vez(puerto); d >= 0) return d;
-        std::this_thread::sleep_for(50ms);
+        this_thread::sleep_for(50ms);
     }
     return -1;
 }
 
 void dormir_siempre() {
-    while (true) std::this_thread::sleep_for(1h);
+    while (true) this_thread::sleep_for(1h);
 }
 
 PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
@@ -82,8 +85,8 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
         ::setrlimit(RLIMIT_NPROC, &uno);
         bool agotado = false;
         try {
-            for (int i = 0; i < 20'000; ++i) std::thread{dormir_siempre}.detach();
-        } catch (const std::system_error&) {
+            for (int i = 0; i < 20'000; ++i) thread{dormir_siempre}.detach();
+        } catch (const system_error&) {
             agotado = true;
         }
         const char aviso = agotado ? '1' : '0';
@@ -107,7 +110,7 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
         timeval espera{};
         espera.tv_sec = 5;
         ::setsockopt(d, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
-        const std::string_view pedido = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+        const string_view pedido = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
         (void)::write(d, pedido.data(), pedido.size());
         char c = 0;
         const auto leidos = ::read(d, &c, 1);
@@ -115,7 +118,7 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
         COMPRUEBA(cerrada, "sin hilo para atenderla, la conexión se cierra y no se queda colgada");
         ::close(d);
     }
-    std::this_thread::sleep_for(200ms);
+    this_thread::sleep_for(200ms);
     int como = 0;
     const bool vivo = ::waitpid(hijo, &como, WNOHANG) == 0;
     COMPRUEBA(vivo, "un hilo que no se puede crear no tumba el proceso");
@@ -123,15 +126,65 @@ PRUEBA(sin_hilos_se_cierra_esa_conexion_y_el_proceso_sigue) {
     if (vivo) ::waitpid(hijo, nullptr, 0);
 }
 
-std::string respuesta(prueba::Cliente& c) {
-    std::string cabeza;
+string respuesta(prueba::Cliente& c) {
+    string cabeza;
     for (auto l = c.linea(); !l.empty() && l != "\r"; l = c.linea()) cabeza += l + "\n";
     return cabeza + c.linea();
 }
 
+class SesionesRotas final : public cero::Sesiones {
+public:
+    optional<cero::Guardada> recuperar(optional<string_view>) override {
+        throw runtime_error("el almacén no responde");
+    }
+    optional<cero::Guardada> crear() override { return nullopt; }
+    optional<string> rotar(const cero::Guardada&) override { return nullopt; }
+    size_t cuantas() const override { return 0; }
+};
+
+PRUEBA(lo_que_lanza_fuera_de_la_accion_no_tumba_el_proceso) {
+    const auto puerto = static_cast<unsigned short>(base() + 6);
+    thread{[puerto] {
+        (void)cero::Servidor{cero::Router{}}
+            .sesiones(make_shared<SesionesRotas>())
+            .direccion("127.0.0.1")
+            .escuchar(puerto);
+    }}.detach();
+    for (int vez = 0; vez < 2; ++vez) {
+        prueba::Cliente c{conectar(puerto)};
+        c.mandar("GET / HTTP/1.1\r\nHost: a\r\nConnection: close\r\n\r\n");
+        COMPRUEBA(respuesta(c).starts_with("HTTP/1.1 500"),
+                  "un almacén que lanza da 500 y el proceso sigue para la siguiente");
+    }
+}
+
+PRUEBA(lo_que_lanza_en_un_flujo_h2_corta_ese_flujo_y_no_el_proceso) {
+    auto [d, hilo] = prueba::conductor([](const cero::Peticion& p) -> cero::Respuesta {
+        if (p.destino == "/rompe") throw runtime_error("roto");
+        return cero::Respuesta::texto("hola");
+    });
+    {
+        prueba::Cliente c{d};
+        c.abrir_h2();
+        auto rompe = prueba::get();
+        rompe[2].second = "/rompe";
+        c.mandar(cero::http2::Trama{cero::http2::kHeaders,
+                                    cero::http2::kFinCabeceras | cero::http2::kFinFlujo, 1,
+                                    cero::http2::codificar(rompe)});
+        const auto rst = c.hasta(cero::http2::kRstStream);
+        COMPRUEBA(rst && rst->flujo == 1, "el flujo que lanzó se corta");
+        c.mandar(cero::http2::Trama{cero::http2::kHeaders,
+                                    cero::http2::kFinCabeceras | cero::http2::kFinFlujo, 3,
+                                    cero::http2::codificar(prueba::get())});
+        const auto r = c.hasta(cero::http2::kHeaders);
+        COMPRUEBA(r && r->flujo == 3 && prueba::estado(*r) == "200", "y la conexión sigue atendiendo");
+    }
+    hilo.join();
+}
+
 PRUEBA(http_024_una_conexion_ociosa_entre_peticiones_se_cierra) {
     const auto puerto = static_cast<unsigned short>(base() + 1);
-    std::thread{[puerto] {
+    thread{[puerto] {
         cero::Router r;
         (void)r.ruta("GET", "/", "hola");
         (void)cero::Servidor{std::move(r)}
@@ -145,13 +198,13 @@ PRUEBA(http_024_una_conexion_ociosa_entre_peticiones_se_cierra) {
     const auto primera = respuesta(c);
     COMPRUEBA(primera.starts_with("HTTP/1.1 200") && !primera.contains("Connection: close"),
               "HTTP-024: la primera petición se atiende y la conexión sigue");
-    std::this_thread::sleep_for(200ms);
+    this_thread::sleep_for(200ms);
     c.mandar("GET / HTTP/1.1\r\nHost: a\r\n\r\n");
     COMPRUEBA(respuesta(c).starts_with("HTTP/1.1 200"),
               "HTTP-024: una segunda a media inactividad se atiende por la misma conexión");
-    const auto empezo = std::chrono::steady_clock::now();
+    const auto empezo = chrono::steady_clock::now();
     const auto resto = c.linea();
-    const auto tardo = std::chrono::steady_clock::now() - empezo;
+    const auto tardo = chrono::steady_clock::now() - empezo;
     COMPRUEBA(resto.empty() && tardo < 2s, "HTTP-024: callar después cierra la conexión");
     COMPRUEBA(tardo >= 300ms, "HTTP-024: y no antes de la inactividad");
 }
@@ -179,7 +232,7 @@ int conectar_por_nombre(const char* nombre, unsigned short puerto) {
     pista.ai_socktype = SOCK_STREAM;
     for (int intento = 0; intento < 100; ++intento) {
         addrinfo* lista = nullptr;
-        if (::getaddrinfo(nombre, std::to_string(puerto).c_str(), &pista, &lista) != 0) return -1;
+        if (::getaddrinfo(nombre, to_string(puerto).c_str(), &pista, &lista) != 0) return -1;
         for (const addrinfo* a = lista; a != nullptr; a = a->ai_next) {
             const int d = ::socket(a->ai_family, a->ai_socktype, a->ai_protocol);
             if (d >= 0 && ::connect(d, a->ai_addr, a->ai_addrlen) == 0) {
@@ -189,7 +242,7 @@ int conectar_por_nombre(const char* nombre, unsigned short puerto) {
             if (d >= 0) ::close(d);
         }
         ::freeaddrinfo(lista);
-        std::this_thread::sleep_for(50ms);
+        this_thread::sleep_for(50ms);
     }
     return -1;
 }
@@ -211,9 +264,9 @@ PRUEBA(una_direccion_que_no_vale_o_un_puerto_ocupado_no_arranca) {
 }
 
 PRUEBA(la_direccion_admite_nombres_e_ipv6) {
-    for (const auto [nombre, desfase] : {std::pair{"localhost", 4}, std::pair{"::1", 5}}) {
+    for (const auto& [nombre, desfase] : {pair{"localhost", 4}, pair{"::1", 5}}) {
         const auto puerto = static_cast<unsigned short>(base() + desfase);
-        std::thread{[nombre, puerto] { (void)servidor_grande().direccion(nombre).escuchar(puerto); }}.detach();
+        thread{[nombre, puerto] { (void)servidor_grande().direccion(nombre).escuchar(puerto); }}.detach();
         const int d = conectar_por_nombre(nombre, puerto);
         COMPRUEBA(d >= 0, cero::formato("escucha en {}", nombre));
         if (d >= 0) ::close(d);
@@ -222,8 +275,8 @@ PRUEBA(la_direccion_admite_nombres_e_ipv6) {
 
 PRUEBA(un_cliente_que_corta_a_mitad_no_tumba_el_proceso) {
     const auto puerto = base();
-    std::thread{[puerto] { (void)servidor_grande().escuchar(puerto); }}.detach();
-    const std::string_view pedido = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+    thread{[puerto] { (void)servidor_grande().escuchar(puerto); }}.detach();
+    const string_view pedido = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
     for (int vuelta = 0; vuelta < 20; ++vuelta) {
         const int d = conectar(puerto);
         if (d < 0) break;
@@ -236,7 +289,7 @@ PRUEBA(un_cliente_que_corta_a_mitad_no_tumba_el_proceso) {
         }
         ::close(d);
     }
-    std::this_thread::sleep_for(500ms);
+    this_thread::sleep_for(500ms);
     prueba::Cliente c{conectar(puerto)};
     c.mandar(pedido);
     COMPRUEBA(c.linea().starts_with("HTTP/1.1 200"), "SIGPIPE: el proceso sigue y sigue atendiendo");
@@ -244,8 +297,8 @@ PRUEBA(un_cliente_que_corta_a_mitad_no_tumba_el_proceso) {
 
 struct EnMarcha {
     int cliente;
-    std::thread hilo;
-    std::shared_ptr<std::atomic<bool>> acabo;
+    thread hilo;
+    shared_ptr<atomic<bool>> acabo;
 };
 
 void par_tcp(int fd[2]) {
@@ -274,10 +327,10 @@ EnMarcha en_marcha(cero::Plazos plazos, cero::http2::Atender atender, bool tcp =
     } else {
         ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
     }
-    auto acabo = std::make_shared<std::atomic<bool>>(false);
-    std::thread hilo{[d = fd[0], acabo, plazos, limites, atender = std::move(atender)] {
+    auto acabo = make_shared<atomic<bool>>(false);
+    thread hilo{[d = fd[0], acabo, plazos, limites, atender = std::move(atender)] {
         cero::http2::DesdeSocket entrada{d};
-        cero::http2::servir(entrada, cero::http2::Ajustes{}, atender, std::nullopt, plazos, limites);
+        cero::http2::servir(entrada, cero::http2::Ajustes{}, atender, nullopt, plazos, limites);
         *acabo = true;
         ::close(d);
     }};
@@ -285,10 +338,10 @@ EnMarcha en_marcha(cero::Plazos plazos, cero::http2::Atender atender, bool tcp =
 }
 
 cero::http2::Atender grande() {
-    return [](const cero::Peticion&) { return cero::Respuesta::texto(std::string(4 << 20, 'x')); };
+    return [](const cero::Peticion&) { return cero::Respuesta::texto(string(4 << 20, 'x')); };
 }
 
-void pedir(prueba::Cliente& c, std::uint32_t id) {
+void pedir(prueba::Cliente& c, uint32_t id) {
     c.mandar(cero::http2::Trama{cero::http2::kHeaders,
                                 cero::http2::kFinCabeceras | cero::http2::kFinFlujo, id,
                                 cero::http2::codificar(prueba::get())});
@@ -299,9 +352,9 @@ void sin_freno(prueba::Cliente& c) {
     c.mandar(cero::http2::Trama::ventana(0, 0x7fff'ffff - 65'535));
 }
 
-bool esperar(const std::atomic<bool>& hecho, std::chrono::milliseconds cuanto) {
-    const auto hasta = std::chrono::steady_clock::now() + cuanto;
-    while (!hecho && std::chrono::steady_clock::now() < hasta) std::this_thread::sleep_for(20ms);
+bool esperar(const atomic<bool>& hecho, chrono::milliseconds cuanto) {
+    const auto hasta = chrono::steady_clock::now() + cuanto;
+    while (!hecho && chrono::steady_clock::now() < hasta) this_thread::sleep_for(20ms);
     return hecho;
 }
 
@@ -311,7 +364,7 @@ PRUEBA(un_cliente_que_no_lee_no_cuelga_la_conexion) {
     {
         prueba::Cliente c{d};
         sin_freno(c);
-        for (std::uint32_t id = 1; id < 8; id += 2) pedir(c, id);
+        for (uint32_t id = 1; id < 8; id += 2) pedir(c, id);
         COMPRUEBA(esperar(*acabo, 3s), "una escritura que no avanza tiene plazo y suelta la conexión");
     }
     hilo.join();
@@ -324,11 +377,11 @@ PRUEBA(un_cliente_que_lee_a_gotas_no_retiene_la_conexion) {
         prueba::Cliente c{d};
         sin_freno(c);
         pedir(c, 1);
-        const auto hasta = std::chrono::steady_clock::now() + 8s;
+        const auto hasta = chrono::steady_clock::now() + 8s;
         char gota[1024];
-        while (!*acabo && std::chrono::steady_clock::now() < hasta) {
+        while (!*acabo && chrono::steady_clock::now() < hasta) {
             (void)::read(d, gota, sizeof gota);
-            std::this_thread::sleep_for(300ms);
+            this_thread::sleep_for(300ms);
         }
         COMPRUEBA(acabo->load(),
                   "leer a gotas reinicia el plazo de cada send, pero no el plazo total de la escritura");
@@ -337,7 +390,7 @@ PRUEBA(un_cliente_que_lee_a_gotas_no_retiene_la_conexion) {
 }
 
 PRUEBA(h2_052_un_cliente_callado_con_la_ventana_a_cero_suelta_sus_flujos) {
-    std::atomic<int> llamadas{0};
+    atomic<int> llamadas{0};
     auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 300ms, .inactividad = 300ms},
                                       [&](const cero::Peticion&) {
                                           ++llamadas;
@@ -348,17 +401,17 @@ PRUEBA(h2_052_un_cliente_callado_con_la_ventana_a_cero_suelta_sus_flujos) {
         c.abrir_h2(prueba::ajuste(0x4, 0));
         pedir(c, 1);
         pedir(c, 3);
-        const auto empezo = std::chrono::steady_clock::now();
+        const auto empezo = chrono::steady_clock::now();
         int cortados = 0;
-        std::optional<cero::http2::Trama> adios;
+        optional<cero::http2::Trama> adios;
         for (auto x = c.trama(); x && !adios; x = c.trama()) {
             if (x->tipo == cero::http2::kRstStream &&
-                cero::http2::entero32(x->carga, 0) == static_cast<std::uint32_t>(cero::http2::Error::Anulado)) {
+                cero::http2::entero32(x->carga, 0) == static_cast<uint32_t>(cero::http2::Error::Anulado)) {
                 ++cortados;
             }
             if (x->tipo == cero::http2::kGoaway) adios = x;
         }
-        const auto tardo = std::chrono::steady_clock::now() - empezo;
+        const auto tardo = chrono::steady_clock::now() - empezo;
         COMPRUEBA(cortados == 2, "H2-052: los dos flujos sin crédito se cortan con CANCEL");
         COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) == 0,
                   "H2-053: y después el silencio se despide con GOAWAY NO_ERROR");
@@ -372,21 +425,21 @@ PRUEBA(h2_052_un_cliente_callado_con_la_ventana_a_cero_suelta_sus_flujos) {
 PRUEBA(h2_052_el_goteo_de_credito_no_reinicia_el_plazo) {
     auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 500ms, .inactividad = 30s},
                                       [](const cero::Peticion&) {
-                                          return cero::Respuesta::texto(std::string(100, 'x'));
+                                          return cero::Respuesta::texto(string(100, 'x'));
                                       });
     {
         prueba::Cliente c{d};
         c.abrir_h2(prueba::ajuste(0x4, 0));
         pedir(c, 1);
-        std::atomic<bool> parar{false};
-        std::thread goteo{[&] {
+        atomic<bool> parar{false};
+        thread goteo{[&] {
             while (!parar) {
                 c.mandar(cero::http2::Trama::ventana(1, 1));
-                std::this_thread::sleep_for(50ms);
+                this_thread::sleep_for(50ms);
             }
         }};
-        std::size_t datos = 0;
-        std::optional<cero::http2::Trama> corte;
+        size_t datos = 0;
+        optional<cero::http2::Trama> corte;
         for (auto x = c.trama(); x && !corte; x = c.trama()) {
             if (x->tipo == cero::http2::kData && x->flujo == 1) datos += x->carga.size();
             if (x->tipo == cero::http2::kRstStream && x->flujo == 1) corte = x;
@@ -394,7 +447,7 @@ PRUEBA(h2_052_el_goteo_de_credito_no_reinicia_el_plazo) {
         parar = true;
         goteo.join();
         COMPRUEBA(corte && cero::http2::entero32(corte->carga, 0) ==
-                               static_cast<std::uint32_t>(cero::http2::Error::Anulado),
+                               static_cast<uint32_t>(cero::http2::Error::Anulado),
                   "H2-052: un octeto de crédito cada 50 ms no salva una trama en 500 ms");
         COMPRUEBA(datos > 0 && datos < 100, "H2-052: salió lo que cabía, y no la respuesta entera");
     }
@@ -407,19 +460,19 @@ PRUEBA(h2_053_los_ping_no_reinician_la_inactividad) {
     {
         prueba::Cliente c{d};
         c.abrir_h2();
-        std::atomic<bool> parar{false};
-        std::thread latido{[&] {
+        atomic<bool> parar{false};
+        thread latido{[&] {
             while (!parar) {
                 c.mandar(cero::http2::Trama{cero::http2::kPing, 0, 0, "12345678"});
                 c.mandar(cero::http2::Trama::ventana(0, 1));
                 c.mandar(cero::http2::Trama{cero::http2::kSettings, 0, 0, ""});
-                c.mandar(cero::http2::Trama{cero::http2::kPriority, 0, 3, std::string{"\0\0\0\0\x0f", 5}});
-                std::this_thread::sleep_for(100ms);
+                c.mandar(cero::http2::Trama{cero::http2::kPriority, 0, 3, string{"\0\0\0\0\x0f", 5}});
+                this_thread::sleep_for(100ms);
             }
         }};
-        const auto empezo = std::chrono::steady_clock::now();
+        const auto empezo = chrono::steady_clock::now();
         const auto adios = c.hasta(cero::http2::kGoaway);
-        const auto tardo = std::chrono::steady_clock::now() - empezo;
+        const auto tardo = chrono::steady_clock::now() - empezo;
         parar = true;
         latido.join();
         COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) == 0,
@@ -436,10 +489,10 @@ PRUEBA(h2_054_las_respuestas_en_vuelo_tienen_presupuesto) {
     {
         prueba::Cliente c{d};
         c.abrir_h2(prueba::ajuste(0x4, 0));
-        for (std::uint32_t id = 1; id < 20; id += 2) pedir(c, id);
+        for (uint32_t id = 1; id < 20; id += 2) pedir(c, id);
         const auto adios = c.hasta(cero::http2::kGoaway);
         COMPRUEBA(adios && cero::http2::entero32(adios->carga, 4) ==
-                               static_cast<std::uint32_t>(cero::http2::Error::Calma),
+                               static_cast<uint32_t>(cero::http2::Error::Calma),
                   "H2-054: 40 MiB construidos y sin salir pasan de los 32: ENHANCE_YOUR_CALM");
         COMPRUEBA(!c.trama(), "H2-054: y el servidor cierra su mitad");
     }
@@ -454,14 +507,14 @@ PRUEBA(h2_054_una_respuesta_sola_pasa_aunque_supere_el_presupuesto) {
         prueba::Cliente c{d};
         sin_freno(c);
         pedir(c, 1);
-        std::size_t datos = 0;
+        size_t datos = 0;
         bool fin = false;
         for (auto x = c.trama(); x && !fin; x = c.trama()) {
             COMPRUEBA(x->tipo != cero::http2::kGoaway, "H2-054: sin GOAWAY");
             if (x->tipo == cero::http2::kData) datos += x->carga.size();
             fin = x->tipo == cero::http2::kData && x->fin_flujo();
         }
-        COMPRUEBA(fin && datos == std::size_t{4} << 20,
+        COMPRUEBA(fin && datos == size_t{4} << 20,
                   "H2-054: con nada más en vuelo, 4 MiB salen enteros con un presupuesto de 1 MiB");
     }
     hilo.join();
@@ -478,8 +531,8 @@ PRUEBA(h2_055_un_cuerpo_de_mas_recibe_413) {
         post[0].second = "POST";
         c.mandar(cero::http2::Trama{cero::http2::kHeaders, cero::http2::kFinCabeceras, 1,
                                     cero::http2::codificar(post)});
-        c.mandar(cero::http2::Trama{cero::http2::kData, 0, 1, std::string(60, 'x')});
-        c.mandar(cero::http2::Trama{cero::http2::kData, 0, 1, std::string(60, 'x')});
+        c.mandar(cero::http2::Trama{cero::http2::kData, 0, 1, string(60, 'x')});
+        c.mandar(cero::http2::Trama{cero::http2::kData, 0, 1, string(60, 'x')});
         const auto r = c.hasta(cero::http2::kHeaders);
         COMPRUEBA(r && r->flujo == 1 && prueba::estado(*r) == "413" && r->fin_flujo(),
                   "H2-055: pasar de 100 octetos de cuerpo es 413 y fin de flujo");
@@ -501,7 +554,7 @@ PRUEBA(h2_055_un_cuerpo_de_mas_recibe_413) {
 PRUEBA(un_manejador_lento_no_es_un_cliente_callado) {
     auto [d, hilo, acabo] = en_marcha({.sin_avance = 30s, .escritura = 30s, .inactividad = 200ms},
                                       [](const cero::Peticion&) {
-                                          std::this_thread::sleep_for(700ms);
+                                          this_thread::sleep_for(700ms);
                                           return cero::Respuesta::texto("tarde");
                                       });
     {

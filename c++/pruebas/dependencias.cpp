@@ -1,6 +1,10 @@
+#include <atomic>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include "cero/dependencias.hpp"
 #include "cero/fallo.hpp"
@@ -74,6 +78,37 @@ PRUEBA(una_cadena_sin_ciclo_se_resuelve_una_vez) {
     const auto a = d.obtener<Agenda>();
     COMPRUEBA(a->reloj == d.obtener<Reloj>(), "la misma instancia en toda la cadena");
     COMPRUEBA(construidos == 1, "y se construyó una sola vez");
+}
+
+PRUEBA(a_la_vez_la_fabrica_corre_una_sola_vez) {
+    cero::Dependencias d;
+    atomic<int> construidos = 0;
+    d.registrar<Reloj>([&construidos](cero::Dependencias&) {
+        ++construidos;
+        this_thread::sleep_for(chrono::milliseconds{50});
+        return make_shared<Reloj>();
+    });
+    vector<shared_ptr<Reloj>> vistos(8);
+    {
+        vector<jthread> hilos;
+        for (auto& visto : vistos) hilos.emplace_back([&d, &visto] { visto = d.obtener<Reloj>(); });
+    }
+    COMPRUEBA(construidos == 1, "la fábrica corrió " + to_string(construidos.load()) + " veces");
+    for (const auto& v : vistos) COMPRUEBA(v == vistos.front(), "y todos ven la misma");
+}
+
+PRUEBA(registrar_mientras_otro_resuelve_no_rompe_nada) {
+    cero::Dependencias d;
+    d.registrar<Reloj>([](cero::Dependencias&) { return make_shared<Reloj>(); });
+    jthread lector{[&d] {
+        for (int i = 0; i < 2000; ++i) (void)d.obtener<Reloj>();
+    }};
+    for (int i = 0; i < 2000; ++i) {
+        d.registrar<Agenda>(
+            [](cero::Dependencias& r) { return make_shared<Agenda>(Agenda{r.obtener<Reloj>()}); });
+    }
+    lector.join();
+    COMPRUEBA(d.obtener<Agenda>()->reloj == d.obtener<Reloj>(), "el registro sigue entero");
 }
 
 PRUEBA(lo_no_registrado_falla) {

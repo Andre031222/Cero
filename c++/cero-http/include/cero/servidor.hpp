@@ -30,6 +30,14 @@ namespace cero {
 class Servidor;
 
 template <class T>
+concept EnteroDeRuta =
+    std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool> &&
+    !std::same_as<std::remove_cv_t<T>, char> && !std::same_as<std::remove_cv_t<T>, signed char> &&
+    !std::same_as<std::remove_cv_t<T>, unsigned char> && !std::same_as<std::remove_cv_t<T>, wchar_t> &&
+    !std::same_as<std::remove_cv_t<T>, char8_t> && !std::same_as<std::remove_cv_t<T>, char16_t> &&
+    !std::same_as<std::remove_cv_t<T>, char32_t>;
+
+template <class T>
 concept DesdeJson = requires(const Json& j) {
     { T::de_json(j) } -> std::same_as<std::optional<T>>;
 };
@@ -46,7 +54,7 @@ public:
     std::optional<std::string> campo(std::string_view nombre) const;
     Json cuerpo_json() const;
 
-    template <std::integral T>
+    template <EnteroDeRuta T>
     T variable_como(std::string_view nombre) const {
         const auto texto = variable(nombre).value_or("");
         const auto fin = texto.data() + texto.size();
@@ -134,6 +142,8 @@ public:
     Log& log() const { return *log_; }
 
 private:
+    Respuesta despachar(const Peticion& p, std::string_view cliente) const;
+    void conversar(int cliente, const std::string& desde, Plazos plazos, Limites limites) const;
     Respuesta cadena(std::size_t i, const Contexto& ctx, std::string_view camino,
                      const Resolucion& resolucion) const;
     Respuesta atender_ruta(const Contexto& ctx, std::string_view camino,
