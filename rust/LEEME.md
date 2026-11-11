@@ -107,6 +107,23 @@ decisiones que no son evidentes:
 Y una caducada se borra al tocarla, no en un barrido: no hace falta un hilo que limpie, y la fila
 muerta no puede volver a autenticar a nadie por mucho que quede.
 
+**`SES-007` se cumplía en memoria y no en la tabla.** `AlmacenSql::recuperar` leía la fila y
+devolvía una sesión nueva en cada petición, y `guardar` soltaba el candado antes de escribir. Dos
+peticiones a la vez sobre la misma sesión trabajaban cada una con su copia, y la segunda en
+escribir borraba lo de la primera. Ahora el almacén lleva un registro de las sesiones que alguna
+petición tiene abiertas, por identificador y con referencias débiles: la segunda petición recibe la
+misma sesión que la primera, y `guardar` escribe la fila con el candado de la sesión cogido. Una
+entrada solo se añade después de leer una fila que existe, así que un identificador inventado no
+hace crecer el registro, y las muertas se barren al añadir. Es lo mismo que hizo C++, y la prueba
+es la misma: ocho hilos sobre una sesión, cada uno con su clave, y ninguna se pierde. **Dentro de
+un proceso no se pierde nada; entre procesos, gana la última escritura**, porque cada proceso
+escribe la fila entera y no hay candado en la base.
+
+De paso, `AlmacenSql` creaba y rotaba con el almacén en memoria que usa para las reglas de
+caducidad, y ese almacén guardaba una referencia fuerte a cada sesión creada que nunca soltaba:
+las sesiones se acumulaban en memoria aunque vivieran en la tabla. `Sesion::nueva` y
+`Sesion::cambiar_id` hacen ahora ese trabajo para los dos almacenes.
+
 ## El hito 11: lo que el ruteo no tenía
 
 El bloque de ruteo estaba a medias y no se notaba, porque los 35 requisitos aparecían citados en

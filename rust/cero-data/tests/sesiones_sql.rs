@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::sync::{Arc, Barrier};
+use std::thread;
 use std::time::Duration;
 
 use cero_data::memoria::EnMemoria;
@@ -121,4 +122,50 @@ fn ses_013_el_esquema_nombra_la_tabla_pedida() {
     for columna in ["id", "datos", "creada", "tocada"] {
         assert!(ddl.contains(columna), "falta la columna {columna}");
     }
+}
+
+#[test]
+fn ses_007_peticiones_simultaneas_sobre_la_tabla_no_se_pisan() {
+    const N: usize = 8;
+    let (a, _) = almacen("sesiones");
+    let id = a.crear().unwrap().lock().unwrap().id().to_string();
+    let dentro = Barrier::new(N);
+    let escribieron = Barrier::new(N);
+
+    thread::scope(|s| {
+        for i in 0..N {
+            let (a, id, dentro, escribieron) = (&a, &id, &dentro, &escribieron);
+            s.spawn(move || {
+                let sesion = a.recuperar(Some(id)).expect("está");
+                dentro.wait();
+                sesion.lock().unwrap().poner(&format!("k{i}"), "v").unwrap();
+                a.guardar(&sesion);
+                escribieron.wait();
+            });
+        }
+    });
+
+    let vista = a.recuperar(Some(&id)).expect("sigue");
+    let g = vista.lock().unwrap();
+    for i in 0..N {
+        assert!(g.leer(&format!("k{i}")).unwrap().is_some(), "SES-007: se perdió k{i}");
+    }
+}
+
+#[test]
+fn ses_012_sin_peticion_viva_se_relee_la_fila() {
+    let fuente = EnMemoria::nueva();
+    let reglas = || Duration::from_secs(600);
+    let una = AlmacenSql::nuevo(Arc::new(fuente.clone()), "sesiones", reglas(), None).unwrap();
+    let otra = AlmacenSql::nuevo(Arc::new(fuente.clone()), "sesiones", reglas(), None).unwrap();
+    let id = una.crear().unwrap().lock().unwrap().id().to_string();
+
+    let s = otra.recuperar(Some(&id)).unwrap();
+    s.lock().unwrap().poner("usuario", "ana").unwrap();
+    otra.guardar(&s);
+    drop(s);
+
+    let vista = una.recuperar(Some(&id)).unwrap();
+    assert_eq!(vista.lock().unwrap().leer("usuario").unwrap().map(String::as_str), Some("ana"),
+               "SES-012");
 }

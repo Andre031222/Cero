@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{self, Read};
+use std::mem;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, SystemTime};
 
-pub(crate) fn identificador() -> std::io::Result<String> {
-    use std::io::Read;
+pub(crate) fn identificador() -> io::Result<String> {
     let mut crudo = [0u8; 32];
-    std::fs::File::open("/dev/urandom")?.read_exact(&mut crudo)?;
+    File::open("/dev/urandom")?.read_exact(&mut crudo)?;
     Ok(crudo.iter().map(|b| format!("{b:02x}")).collect())
 }
 
@@ -21,6 +23,46 @@ pub struct Sesion {
 }
 
 impl Sesion {
+    pub fn nueva() -> io::Result<Sesion> {
+        let ahora = SystemTime::now();
+        Ok(Sesion {
+            id: identificador()?,
+            atributos: HashMap::new(),
+            creada: ahora,
+            tocada: ahora,
+            viva: true,
+            cookie_pendiente: true,
+            sucia: true,
+        })
+    }
+
+    pub fn rescatada(
+        id: &str,
+        atributos: HashMap<String, String>,
+        creada: SystemTime,
+        tocada: SystemTime,
+    ) -> Sesion {
+        Sesion {
+            id: id.into(),
+            atributos,
+            creada,
+            tocada,
+            viva: true,
+            cookie_pendiente: false,
+            sucia: false,
+        }
+    }
+
+    pub fn cambiar_id(&mut self) -> Result<String, &'static str> {
+        if !self.viva {
+            return Err("una sesión invalidada no se rota");
+        }
+        self.id = identificador().map_err(|_| "sin fuente aleatoria")?;
+        self.cookie_pendiente = true;
+        self.sucia = true;
+        Ok(self.id.clone())
+    }
+
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -65,38 +107,17 @@ impl Sesion {
     }
 
     pub fn sucia(&mut self) -> bool {
-        std::mem::take(&mut self.sucia)
-    }
-
-    pub fn rescatada(
-        id: &str,
-        atributos: HashMap<String, String>,
-        creada: SystemTime,
-        tocada: SystemTime,
-    ) -> Sesion {
-        Sesion {
-            id: id.into(),
-            atributos,
-            creada,
-            tocada,
-            viva: true,
-            cookie_pendiente: false,
-            sucia: false,
-        }
+        mem::take(&mut self.sucia)
     }
 
     pub fn cookie_pendiente(&mut self) -> Option<String> {
-        if !self.cookie_pendiente {
-            return None;
-        }
-        self.cookie_pendiente = false;
-        Some(self.id.clone())
+        mem::take(&mut self.cookie_pendiente).then(|| self.id.clone())
     }
 }
 
 pub trait Sesiones: Send + Sync {
     fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>>;
-    fn crear(&self) -> std::io::Result<Arc<Mutex<Sesion>>>;
+    fn crear(&self) -> io::Result<Arc<Mutex<Sesion>>>;
     fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str>;
     fn cuantas(&self) -> usize;
 
@@ -118,59 +139,42 @@ impl Almacen {
         let desde = |t: SystemTime| SystemTime::now().duration_since(t).unwrap_or_default();
         desde(tocada) > self.inactividad || self.vida_maxima.is_some_and(|v| desde(creada) > v)
     }
-
-    pub fn inactividad(&self) -> Duration {
-        self.inactividad
-    }
 }
 
 impl Sesiones for Almacen {
     fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>> {
         let id = id?;
-        let mapa = self.sesiones.read().ok()?;
-        let s = mapa.get(id)?.clone();
+        let s = Arc::clone(self.sesiones.read().ok()?.get(id)?);
         let caduca = {
             let g = s.lock().ok()?;
             !g.viva || self.caducada(g.creada, g.tocada)
         };
         if caduca {
-            drop(mapa);
             self.sesiones.write().ok()?.remove(id);
             return None;
         }
         Some(s)
     }
 
-    fn crear(&self) -> std::io::Result<Arc<Mutex<Sesion>>> {
-        let ahora = SystemTime::now();
-        let s = Arc::new(Mutex::new(Sesion {
-            id: identificador()?,
-            atributos: HashMap::new(),
-            creada: ahora,
-            tocada: ahora,
-            viva: true,
-            cookie_pendiente: true,
-            sucia: true,
-        }));
-        let id = s.lock().expect("recién creada").id.clone();
-        self.sesiones.write().expect("almacén envenenado").insert(id, s.clone());
+    fn crear(&self) -> io::Result<Arc<Mutex<Sesion>>> {
+        let sesion = Sesion::nueva()?;
+        let id = sesion.id.clone();
+        let s = Arc::new(Mutex::new(sesion));
+        self.sesiones
+            .write()
+            .map_err(|_| io::Error::other("almacén envenenado"))?
+            .insert(id, Arc::clone(&s));
         Ok(s)
     }
 
     fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str> {
         let mut g = sesion.lock().map_err(|_| "sesión envenenada")?;
-        if !g.viva {
-            return Err("una sesión invalidada no se rota");
-        }
         let viejo = g.id.clone();
-        let nuevo = identificador().map_err(|_| "sin fuente aleatoria")?;
-        g.id = nuevo.clone();
-        g.cookie_pendiente = true;
-        g.sucia = true;
+        let nuevo = g.cambiar_id()?;
         drop(g);
         let mut mapa = self.sesiones.write().map_err(|_| "almacén envenenado")?;
         mapa.remove(&viejo);
-        mapa.insert(nuevo.clone(), sesion.clone());
+        mapa.insert(nuevo.clone(), Arc::clone(sesion));
         Ok(nuevo)
     }
 
