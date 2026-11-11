@@ -306,9 +306,9 @@ en vez de fallarla. El ejemplo usa todo el pipeline.
 ## Lo que el contrato deja a cada implementación
 
 El contrato fija algunos números —256 campos por bloque, 32 MiB en vuelo, 10 MiB de cuerpo— y
-deja otros a lo «configurado». Las tres implementaciones no eligieron lo mismo en estos, y conviene
-saberlo antes de desplegar: una conexión keep-alive ociosa se cierra a los 30 s en Java y a los
-120 s en Rust y en C++.
+deja otros a lo «configurado». Las cuatro implementaciones no eligieron lo mismo en estos, y conviene
+saberlo antes de desplegar: una conexión keep-alive ociosa se cierra a los 30 s en Java, a los
+120 s en Rust y en C++, y a los 10 s en Python.
 
 | Valor por defecto | Java | Rust | C++ | Python | Requisito |
 |---|---|---|---|---|---|

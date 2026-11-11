@@ -172,7 +172,8 @@ class SaneadoHtml(unittest.TestCase):
             with self.subTest(entrada=entrada[:12]):
                 inicio = time.process_time()
                 salida = sanear_html(entrada)
-                self.assertLess(time.process_time() - inicio, TOPE_HOSTIL)
+                medido = time.process_time() - inicio
+                self.assertLess(medido, TOPE_HOSTIL, f"{medido:.2f} s frente a {BASE_HOSTIL} s de base")
                 self.assertEqual(salida.count("<"), salida.count("</") * 2)
 
     def test_la_profundidad_tiene_tope(self):
