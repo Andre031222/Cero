@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLongArray;
 
 public final class Metrics implements Middleware {
 
+    private static final String SIN_RUTA = "(sin ruta)";
     private static final long[] TOPES = {1, 2, 5, 10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, Long.MAX_VALUE};
 
     private final Map<String, Acumulado> porRuta = new ConcurrentHashMap<>();
@@ -142,8 +143,7 @@ public final class Metrics implements Middleware {
     }
 
     private static String clave(Context context) {
-        String patron = context.routed() ? context.route().pattern().raw() : context.path();
-        return context.method() + " " + patron;
+        return context.routed() ? context.method() + " " + context.route().pattern().raw() : SIN_RUTA;
     }
 
     private static String escapar(String texto) {

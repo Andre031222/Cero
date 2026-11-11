@@ -46,6 +46,7 @@ final class ObservabilidadTests {
 
         Check.group("métricas");
         metricas();
+        metricasSinRuta();
 
         Check.group("log de acceso");
         acceso();
@@ -272,6 +273,26 @@ final class ObservabilidadTests {
 
             metricas.reset();
             Check.equal("reset vacía el registro", metricas.snapshot().peticiones(), 0L);
+        } finally {
+            servidor.stop();
+        }
+    }
+
+    private static void metricasSinRuta() throws Exception {
+        Metrics metricas = Metrics.enabled();
+        Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
+                .use(metricas)
+                .controllers(TiendaController.class)
+                .start();
+        try {
+            String base = "http://127.0.0.1:" + servidor.port();
+            for (int n = 1; n <= 3; n++) {
+                Cliente.get(base + "/no/existe/" + n);
+            }
+            List<Metrics.Ruta> rutas = metricas.snapshot().rutas();
+            Check.equal("OBS-014: las peticiones sin ruta van a una sola serie", rutas.size(), 1);
+            Check.equal("OBS-014: que se llama (sin ruta)", rutas.get(0).ruta(), "(sin ruta)");
+            Check.equal("OBS-014: y cuenta las tres", rutas.get(0).peticiones(), 3L);
         } finally {
             servidor.stop();
         }
