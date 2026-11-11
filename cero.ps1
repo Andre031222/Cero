@@ -419,7 +419,7 @@ function PasoRequisitos {
         $p = $linea.Split('|')
         if (-not $p[7]) { continue }
         Azul (T 'ver-comprobando' @("$(T 'ver-requisitos') $($p[0])"))
-        $archivos = foreach ($d in ($p[6] -split ' ')) { Get-ChildItem (Join-Path (Join-Path $Aqui $p[1]) $d) -Recurse -File }
+        $archivos = foreach ($d in ($p[6] -split ' ')) { Get-ChildItem (Join-Path (Join-Path $Aqui $p[1]) $d) -Recurse -File | Where-Object { $_.Extension -ne '.pyc' } }
         $n = ($archivos | Select-String -Pattern '(HTTP|OBS|RUT|SEG|SES|H2)[-_][0-9]{3}' -AllMatches |
               ForEach-Object { $_.Matches.Value.ToUpper().Replace('_', '-') } | Sort-Object -Unique | Measure-Object).Count
         Anotar "$(T 'ver-requisitos') · $($p[0])" (T 'ver-de-minimo' @($n, $p[7])) ($n -ge [int]$p[7])

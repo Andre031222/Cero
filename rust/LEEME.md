@@ -310,11 +310,11 @@ deja otros a lo «configurado». Las tres implementaciones no eligieron lo mismo
 saberlo antes de desplegar: una conexión keep-alive ociosa se cierra a los 30 s en Java y a los
 120 s en Rust y en C++.
 
-| Valor por defecto | Java | Rust | C++ | Requisito |
-|---|---|---|---|---|
-| Inactividad: keep-alive y h2 sin trabajo | 30 s (`idleTimeoutMillis`) | 120 s (`Plazos::inactividad`) | 120 s (`Plazos::inactividad`) | `HTTP-024`, `H2-053` |
-| `SETTINGS_MAX_HEADER_LIST_SIZE` anunciado | 32 KiB (`http2MaxListaCabeceras`) | 16 KiB | 16 KiB | `H2-051` |
-| Flujos anulados por conexión antes de `ENHANCE_YOUR_CALM` | 100 (`http2MaxAnulados`) | 200 | 200 | `H2-037` |
+| Valor por defecto | Java | Rust | C++ | Python | Requisito |
+|---|---|---|---|---|---|
+| Inactividad: keep-alive y h2 sin trabajo | 30 s (`idleTimeoutMillis`) | 120 s (`Plazos::inactividad`) | 120 s (`Plazos::inactividad`) | 10 s (`inactividad`) | `HTTP-024`, `H2-053` |
+| `SETTINGS_MAX_HEADER_LIST_SIZE` anunciado | 32 KiB (`http2MaxListaCabeceras`) | 16 KiB | 16 KiB | sin HTTP/2 | `H2-051` |
+| Flujos anulados por conexión antes de `ENHANCE_YOUR_CALM` | 100 (`http2MaxAnulados`) | 200 | 200 | sin HTTP/2 | `H2-037` |
 
 ## Usarlo
 

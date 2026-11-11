@@ -77,11 +77,8 @@ class Router:
         self.rutas.append((verbo, patron, accion))
 
     def resolver(self, verbo, camino):
-        casan = []
-        for v, patron, accion in self.rutas:
-            variables = patron.casar(camino)
-            if variables is not None:
-                casan.append((v, patron, accion, variables))
+        casan = [(v, p, a, variables) for v, p, a in self.rutas
+                 if (variables := p.casar(camino)) is not None]
         if not casan:
             return NoEncontrado()
         for buscado in [verbo, "GET"] if verbo == "HEAD" else [verbo]:

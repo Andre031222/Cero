@@ -7,6 +7,8 @@ from cero.saneado import PROFUNDIDAD, sanear_html, sanear_nombre, sanear_texto
 
 PERMITIDAS = {"p", "b", "i", "em", "strong", "a", "ul", "ol", "li", "br", "code", "pre",
               "blockquote", "div", "span"}
+TOPE_HOSTIL = 5
+BASE_HOSTIL = 0.95
 
 
 def marcado(html):
@@ -170,7 +172,7 @@ class SaneadoHtml(unittest.TestCase):
             with self.subTest(entrada=entrada[:12]):
                 inicio = time.process_time()
                 salida = sanear_html(entrada)
-                self.assertLess(time.process_time() - inicio, 5)
+                self.assertLess(time.process_time() - inicio, TOPE_HOSTIL)
                 self.assertEqual(salida.count("<"), salida.count("</") * 2)
 
     def test_la_profundidad_tiene_tope(self):

@@ -35,16 +35,18 @@ class _Saneador(HTMLParser):
             if etiqueta in CON_CONTENIDO and etiqueta not in VACIAS and not cierre:
                 self.dentro += 1
             return
-        if self.con_marcado and etiqueta in PERMITIDAS:
-            if etiqueta not in VACIAS and len(self.abiertas) >= PROFUNDIDAD:
-                return
-            partes = [etiqueta, *_atributos(etiqueta, atributos)]
-            self.salida.append("<" + " ".join(partes) + ">")
-            if etiqueta not in VACIAS:
-                self.abiertas.append(etiqueta)
-                self.cuantas[etiqueta] += 1
-                if cierre:
-                    self.handle_endtag(etiqueta)
+        if not (self.con_marcado and etiqueta in PERMITIDAS):
+            return
+        vacia = etiqueta in VACIAS
+        if not vacia and len(self.abiertas) >= PROFUNDIDAD:
+            return
+        partes = [etiqueta, *_atributos(etiqueta, atributos)]
+        self.salida.append("<" + " ".join(partes) + ">")
+        if not vacia:
+            self.abiertas.append(etiqueta)
+            self.cuantas[etiqueta] += 1
+            if cierre:
+                self.handle_endtag(etiqueta)
 
     def handle_starttag(self, etiqueta, atributos):
         self._abrir(etiqueta, atributos, False)
@@ -57,13 +59,14 @@ class _Saneador(HTMLParser):
             if etiqueta in CON_CONTENIDO:
                 self.dentro -= 1
             return
-        if self.cuantas[etiqueta]:
-            while True:
-                cima = self.abiertas.pop()
-                self.cuantas[cima] -= 1
-                self.salida.append(f"</{cima}>")
-                if cima == etiqueta:
-                    break
+        if not self.cuantas[etiqueta]:
+            return
+        while True:
+            cima = self.abiertas.pop()
+            self.cuantas[cima] -= 1
+            self.salida.append(f"</{cima}>")
+            if cima == etiqueta:
+                return
 
     def handle_data(self, datos):
         if not self.dentro:

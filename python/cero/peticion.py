@@ -54,17 +54,19 @@ class Peticion:
         return [v for n, v in self.cabeceras if n == nombre]
 
     def sesion(self):
-        if not self.buscada and self.almacen is not None:
-            self.buscada = True
-            self.abierta = self.almacen.recuperar(id_de_cookie(self.todas("cookie")))
+        if self.buscada or self.almacen is None:
+            return self.abierta
+        self.buscada = True
+        self.abierta = self.almacen.recuperar(id_de_cookie(self.todas("cookie")))
         return self.abierta
 
     def abrir_sesion(self):
         actual = self.sesion()
-        if actual is None or not actual.viva:
-            if self.almacen is None:
-                raise RuntimeError("esta petición no tiene almacén de sesiones")
-            self.abierta = self.almacen.crear()
+        if actual is not None and actual.viva:
+            return actual
+        if self.almacen is None:
+            raise RuntimeError("esta petición no tiene almacén de sesiones")
+        self.abierta = self.almacen.crear()
         return self.abierta
 
     def token_csrf(self):
