@@ -3,6 +3,10 @@ Copyright (c) 2026 Richar Andre Vilca-Solorzano
 
 Distribuido bajo la licencia Apache 2.0. Ver LICENSE.
 
+Cero empezó como una bifurcación de JxMVC 3.4.0, publicado bajo licencia MIT, y
+se reescribió entero; hoy comparte menos del 1 % de sus líneas, todas
+genéricas. Cómo se mide está en docs/autores.md.
+
 Los cuatro módulos del núcleo -- cero-http, cero-core, cero-data y cero-test --
 no dependen de nada fuera del JDK, así que ningún jar de terceros se
 redistribuye con ellos.

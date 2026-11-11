@@ -10,6 +10,30 @@ Facultad de Ingeniería Estadística e Informática, Puno, Perú.
 Cero se distribuye bajo licencia Apache 2.0. El aviso de copyright está en [LICENSE](../LICENSE) y
 los avisos de terceros, en [NOTICE](../NOTICE).
 
+## Procedencia
+
+Cero empezó como una bifurcación de JxMVC 3.4.0 y se reescribió entero; hoy comparte menos del
+1 % de sus líneas, todas genéricas.
+
+Cómo se mide: de cada proyecto se toman las líneas de sus `.java`, sin la sangría ni los espacios
+del final; se quedan las de 40 caracteres o más, para no contar llaves ni `return null;`; se
+ordenan y se quitan las repetidas. `comm -12` da las comunes:
+
+```
+lineas() { find "$1" -name '*.java' -not -path '*/target/*' -print0 | xargs -0 cat \
+  | LC_ALL=C sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'length >= 40' | LC_ALL=C sort -u; }
+lineas ruta/a/jxmvc > jxmvc.txt
+lineas java > cero.txt
+LC_ALL=C comm -12 jxmvc.txt cero.txt | wc -l
+```
+
+La última medición, del 11 de noviembre de 2026, dio 46 líneas comunes de 7 513 distintas de Cero
+(0,6 %). Son `import` del JDK y de `jakarta.servlet`, bucles como
+`for (int i = 0; i < params.length; i++) {`, cabeceras HTTP como
+`.header("Content-Type", "application/json")`, la URL de autorización de Google y algunas líneas
+de `pom.xml` que van dentro de las plantillas de `cero new`: líneas que escribiría igual cualquiera
+que use el JDK y Maven.
+
 ## Sobre las cabeceras del código
 
 Los archivos fuente no llevan cabecera de autoría. La autoría vive en `LICENSE` y en este
