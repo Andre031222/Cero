@@ -155,11 +155,12 @@ impl<'f> Repositorio<'f> {
         if otras.is_empty() {
             return Err(Fallo("una fila con solo la clave no tiene nada que guardar".into()));
         }
-        let valores: Vec<&Valor> = otras.iter().filter_map(|c| fila.valor(c)).collect();
+        let valores: Vec<Valor> = otras.iter().filter_map(|c| fila.valor(c).cloned()).collect();
 
         let asigna: Vec<String> = otras.iter().map(|c| format!("{c} = ?")).collect();
         let sql = format!("UPDATE {} SET {} WHERE {} = ?", self.tabla, asigna.join(", "), self.clave);
-        let parametros: Vec<Valor> = valores.iter().copied().chain(iter::once(clave)).cloned().collect();
+        let mut parametros = valores.clone();
+        parametros.push(clave.clone());
         let mut c = self.fuente.conexion()?;
         if c.ejecutar(&sql, &parametros)? > 0 {
             return Ok(());
@@ -169,7 +170,8 @@ impl<'f> Repositorio<'f> {
             iter::once(self.clave.as_str()).chain(otras.iter().map(|c| c.as_str())).collect();
         let huecos = vec!["?"; columnas.len()].join(", ");
         let sql = format!("INSERT INTO {} ({}) VALUES ({})", self.tabla, columnas.join(", "), huecos);
-        let parametros: Vec<Valor> = iter::once(clave).chain(valores).cloned().collect();
+        let mut parametros = vec![clave.clone()];
+        parametros.extend(valores);
         c.ejecutar(&sql, &parametros)?;
         Ok(())
     }

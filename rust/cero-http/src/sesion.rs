@@ -147,7 +147,7 @@ impl Sesiones for Almacen {
         let s = Arc::clone(self.sesiones.read().ok()?.get(id)?);
         let caduca = {
             let g = s.lock().ok()?;
-            !g.viva || self.caducada(g.creada, g.tocada)
+            !g.viva || g.id != id || self.caducada(g.creada, g.tocada)
         };
         if caduca {
             self.sesiones.write().ok()?.remove(id);
@@ -169,10 +169,10 @@ impl Sesiones for Almacen {
 
     fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str> {
         let mut g = sesion.lock().map_err(|_| "sesión envenenada")?;
+        let mut mapa = self.sesiones.write().map_err(|_| "almacén envenenado")?;
         let viejo = g.id.clone();
         let nuevo = g.cambiar_id()?;
         drop(g);
-        let mut mapa = self.sesiones.write().map_err(|_| "almacén envenenado")?;
         mapa.remove(&viejo);
         mapa.insert(nuevo.clone(), Arc::clone(sesion));
         Ok(nuevo)

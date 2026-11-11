@@ -61,6 +61,15 @@ fn ses_005_rotar_cambia_el_id_y_conserva_los_atributos() {
 }
 
 #[test]
+fn ses_005_cambiar_el_id_por_fuera_del_almacen_tampoco_deja_vivo_el_viejo() {
+    let a = almacen();
+    let s = a.crear().unwrap();
+    let viejo = s.lock().unwrap().id().to_string();
+    s.lock().unwrap().cambiar_id().unwrap();
+    assert!(a.recuperar(Some(&viejo)).is_none(), "SES-005: el viejo ya no vale");
+}
+
+#[test]
 fn ses_006_una_sesion_invalidada_no_se_rota() {
     let a = almacen();
     let s = a.crear().unwrap();

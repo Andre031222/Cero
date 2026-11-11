@@ -124,6 +124,19 @@ caducidad, y ese almacén guardaba una referencia fuerte a cada sesión creada q
 las sesiones se acumulaban en memoria aunque vivieran en la tabla. `Sesion::nueva` y
 `Sesion::cambiar_id` hacen ahora ese trabajo para los dos almacenes.
 
+`cambiar_id` es público porque `cero-data` es otro crate, y eso deja que una aplicación lo llame
+sin pasar por `Sesiones::rotar`. Los dos almacenes se cierran ante eso: una sesión solo se devuelve
+si su identificador es el que se pidió, así que el viejo deja de valer aunque el almacén no se haya
+enterado del cambio. Lo peor que hace el mal uso es cerrar la sesión del usuario. Una sesión que
+caduca se invalida además de borrarse, y una petición que todavía la tenga abierta no puede volver
+a escribir la fila al guardar.
+
+Queda una ventana estrecha al rotar: entre escribir la fila nueva y borrar la vieja, una petición
+que llegue con la cookie vieja y no encuentre la sesión en el registro lee la fila vieja, que todavía
+existe. Esa petición sigue autenticada hasta que termina, y si la ensucia puede volver a escribir la
+fila vieja. Cerrarlo del todo exige comprobar la fila de nuevo al registrar; una lápida en el
+registro no basta, porque la lectura pudo empezar antes de rotar.
+
 ## El hito 11: lo que el ruteo no tenía
 
 El bloque de ruteo estaba a medias y no se notaba, porque los 35 requisitos aparecían citados en
@@ -490,10 +503,9 @@ escrito con el vocabulario de un lenguaje**. «Que lanza» no es neutral: en Rus
 «una comprobación que falla de forma no prevista». Es una contaminación más leve que las dos
 anteriores —no cambia el diseño, solo la redacción— y por eso es fácil que se cuele.
 
-## Lo que este hito **no** hace
+## Lo que todavía no hace
 
 - No hay TLS ni WebSocket.
-- HTTP/2 está a medias: tramas y HPACK sí, flujos y control de flujo no.
-- Las sesiones viven en memoria: `SES-012` —almacén compartido entre instancias— no está.
+- Entre procesos que comparten la tabla, gana la última escritura de cada sesión.
 - No hay API de aplicación estable. Lo que hoy se llame `Servidor` puede llamarse otra cosa
   mañana: el contrato es el comportamiento, no los nombres.

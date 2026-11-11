@@ -41,6 +41,10 @@ impl AlmacenSql {
         &self.tabla
     }
 
+    pub fn abiertas(&self) -> usize {
+        self.vivas.lock().map_or(0, |v| v.len())
+    }
+
     pub fn esquema(tabla: &str) -> String {
         format!(
             "CREATE TABLE IF NOT EXISTS {tabla} (\n  \
@@ -89,12 +93,16 @@ impl Sesiones for AlmacenSql {
     fn recuperar(&self, id: Option<&str>) -> Option<Arc<Mutex<Sesion>>> {
         let id = id?;
         let sesion = self.viva(id).or_else(|| self.cargar(id))?;
-        let g = sesion.lock().ok()?;
-        let vale = g.viva() && g.id() == id && !self.reglas.caducada(g.creada(), g.tocada());
-        drop(g);
-        if vale {
+        let mut g = sesion.lock().ok()?;
+        if g.id() != id {
+            return None;
+        }
+        if g.viva() && !self.reglas.caducada(g.creada(), g.tocada()) {
+            drop(g);
             return Some(sesion);
         }
+        g.invalidar();
+        drop(g);
         if let Ok(mut vivas) = self.vivas.lock() {
             vivas.remove(id);
         }
@@ -114,13 +122,13 @@ impl Sesiones for AlmacenSql {
 
     fn rotar(&self, sesion: &Arc<Mutex<Sesion>>) -> Result<String, &'static str> {
         let mut g = sesion.lock().map_err(|_| "sesión envenenada")?;
+        let mut vivas = self.vivas.lock().map_err(|_| "registro envenenado")?;
         let viejo = g.id().to_string();
         let nuevo = g.cambiar_id()?;
-        drop(g);
-        let mut vivas = self.vivas.lock().map_err(|_| "registro envenenado")?;
         vivas.remove(&viejo);
         vivas.insert(nuevo.clone(), Arc::downgrade(sesion));
         drop(vivas);
+        drop(g);
         self.guardar(sesion);
         let r = self.repositorio().map_err(|_| "la tabla no está disponible")?;
         let _ = r.borrar(Valor::Texto(viejo));

@@ -153,7 +153,7 @@ fn ses_007_peticiones_simultaneas_sobre_la_tabla_no_se_pisan() {
 }
 
 #[test]
-fn ses_012_sin_peticion_viva_se_relee_la_fila() {
+fn ses_012_otra_instancia_lee_lo_que_guardo_la_primera() {
     let fuente = EnMemoria::nueva();
     let reglas = || Duration::from_secs(600);
     let una = AlmacenSql::nuevo(Arc::new(fuente.clone()), "sesiones", reglas(), None).unwrap();
@@ -168,4 +168,38 @@ fn ses_012_sin_peticion_viva_se_relee_la_fila() {
     let vista = una.recuperar(Some(&id)).unwrap();
     assert_eq!(vista.lock().unwrap().leer("usuario").unwrap().map(String::as_str), Some("ana"),
                "SES-012");
+}
+
+#[test]
+fn ses_005_cambiar_el_id_por_fuera_del_almacen_tampoco_deja_vivo_el_viejo() {
+    let (a, _) = almacen("sesiones");
+    let s = a.crear().unwrap();
+    let viejo = s.lock().unwrap().id().to_string();
+    s.lock().unwrap().cambiar_id().unwrap();
+    assert!(a.recuperar(Some(&viejo)).is_none(), "SES-005: el viejo ya no vale");
+}
+
+#[test]
+fn ses_001_un_id_inventado_no_hace_crecer_el_registro() {
+    let (a, _) = almacen("sesiones");
+    let _abierta = a.crear().unwrap();
+    for i in 0..100 {
+        assert!(a.recuperar(Some(&format!("falso{i}"))).is_none(), "SES-001");
+    }
+    assert_eq!(a.abiertas(), 1, "solo la sesión que existe");
+}
+
+#[test]
+fn una_sesion_caducada_no_vuelve_a_escribirse_desde_otra_peticion() {
+    let fuente = EnMemoria::nueva();
+    let a = AlmacenSql::nuevo(Arc::new(fuente.clone()), "sesiones", Duration::from_millis(30), None)
+        .unwrap();
+    let s = a.crear().unwrap();
+    let id = s.lock().unwrap().id().to_string();
+
+    thread::sleep(Duration::from_millis(60));
+    assert!(a.recuperar(Some(&id)).is_none(), "caducada");
+    assert!(!s.lock().unwrap().viva(), "y la otra petición la ve invalidada");
+    a.guardar(&s);
+    assert_eq!(fuente.cuantas("sesiones"), 0, "guardarla no resucita la fila");
 }
