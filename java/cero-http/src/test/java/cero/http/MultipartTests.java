@@ -99,7 +99,7 @@ final class MultipartTests {
     }
 
     private static byte[] build(byte[]... parts) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        var out = new ByteArrayOutputStream();
         try {
             for (byte[] part : parts) {
                 out.write(("--" + BOUNDARY + "\r\n").getBytes(StandardCharsets.ISO_8859_1));

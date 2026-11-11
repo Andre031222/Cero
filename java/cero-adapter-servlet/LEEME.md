@@ -20,3 +20,9 @@ El código no lleva comentarios. Lo que explicaban y el código no dice solo est
 
 **`switchProtocols()` no está.** El socket lo tiene el contenedor, así que WebSocket y lo que ceda
 la conexión solo funcionan sobre el servidor propio de Cero.
+
+**Un multipart no pasa de 10 MiB, ni cada archivo ni la petición entera.** Es el mismo tope que
+`maxBodyBytes` pone por omisión en el servidor propio, para que una aplicación acepte lo mismo
+dentro de Tomcat que fuera. Un archivo no puede ser mayor que la petición que lo trae, así que
+los dos valores coinciden. Quien necesite más llama a `setMultipartConfig` sobre el registro que
+devuelve `addServlet`, que manda sobre la anotación.

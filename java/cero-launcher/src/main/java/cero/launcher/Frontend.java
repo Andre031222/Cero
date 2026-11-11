@@ -62,7 +62,7 @@ final class Frontend {
 
                 public final class App {
 
-                    public static void main(String[] args) throws Exception {
+                    void main(String[] args) throws Exception {
                         Cero.app()
                            .port(args.length > 0 ? Integer.parseInt(args[0]) : 8080)
                            // En desarrollo el frontend corre en su propio puerto, así que es otro

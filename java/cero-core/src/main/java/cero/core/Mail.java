@@ -1,5 +1,8 @@
 package cero.core;
 
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Locale;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.BufferedReader;
@@ -19,7 +22,7 @@ public final class Mail {
 
     private static final Log log = Log.of(Mail.class);
     private static final DateTimeFormatter FECHA =
-            DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm:ss Z", java.util.Locale.US);
+            DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm:ss Z", Locale.US);
 
     private final String host;
     private final int puerto;
@@ -127,7 +130,7 @@ public final class Mail {
         }
 
         static Sesion abrir(Mail config) throws IOException {
-            Sesion sesion = new Sesion(config);
+            var sesion = new Sesion(config);
             Socket bruto = config.ssl
                     ? SSLSocketFactory.getDefault().createSocket()
                     : new Socket();
@@ -149,8 +152,8 @@ public final class Mail {
             List<String> capacidades = decir("EHLO " + local(), 250);
             if (!config.ssl && config.startTls && anuncia(capacidades, "STARTTLS")) {
                 decir("STARTTLS", 220);
-                SSLSocketFactory fabrica = (SSLSocketFactory) SSLSocketFactory.getDefault();
-                SSLSocket seguro = (SSLSocket) fabrica.createSocket(
+                var fabrica = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                var seguro = (SSLSocket) fabrica.createSocket(
                         socket, config.host, config.puerto, true);
                 seguro.startHandshake();
                 usar(seguro);
@@ -177,7 +180,7 @@ public final class Mail {
         }
 
         private String cuerpoCompleto(String de, Mensaje mensaje) {
-            StringBuilder trama = new StringBuilder();
+            var trama = new StringBuilder();
             trama.append("From: ").append(de).append("\r\n");
             trama.append("To: ").append(mensaje.para()).append("\r\n");
             trama.append("Subject: ").append(asuntoCodificado(mensaje.asunto())).append("\r\n");
@@ -217,7 +220,7 @@ public final class Mail {
         }
 
         private List<String> esperar(int esperado) throws IOException {
-            List<String> lineas = new java.util.ArrayList<>();
+            List<String> lineas = new ArrayList<>();
             String linea;
             while ((linea = entrada.readLine()) != null) {
                 lineas.add(linea);
@@ -255,7 +258,7 @@ public final class Mail {
 
         private static String local() {
             try {
-                return java.net.InetAddress.getLocalHost().getHostName();
+                return InetAddress.getLocalHost().getHostName();
             } catch (IOException sinNombre) {
                 return "localhost";
             }

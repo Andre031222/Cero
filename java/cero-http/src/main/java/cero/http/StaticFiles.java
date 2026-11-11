@@ -3,10 +3,13 @@ package cero.http;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -206,14 +209,14 @@ public final class StaticFiles implements Handler {
     private static byte[] leerTrozo(Path archivo, Ranges rango) throws IOException {
         long longitud = rango.longitud();
         byte[] trozo = new byte[(int) longitud];
-        try (java.nio.channels.SeekableByteChannel canal = Files.newByteChannel(archivo)) {
+        try (SeekableByteChannel canal = Files.newByteChannel(archivo)) {
             canal.position(rango.desde());
-            java.nio.ByteBuffer destino = java.nio.ByteBuffer.wrap(trozo);
+            ByteBuffer destino = ByteBuffer.wrap(trozo);
             while (destino.hasRemaining() && canal.read(destino) > 0) {
                 continue;
             }
             return destino.hasRemaining()
-                    ? java.util.Arrays.copyOf(trozo, destino.position())
+                    ? Arrays.copyOf(trozo, destino.position())
                     : trozo;
         }
     }
@@ -237,7 +240,7 @@ public final class StaticFiles implements Handler {
         }
         byte[] content = cachear(name);
 
-        String etag = "\"" + Integer.toHexString(java.util.Arrays.hashCode(content)) + "\"";
+        String etag = "\"" + Integer.toHexString(Arrays.hashCode(content)) + "\"";
         if (notModified(request, response, etag)) {
             return;
         }
@@ -254,7 +257,7 @@ public final class StaticFiles implements Handler {
         }
         if (pedido != null) {
             response.status(206).header("Content-Range", pedido.contentRange(content.length));
-            response.send(java.util.Arrays.copyOfRange(content,
+            response.send(Arrays.copyOfRange(content,
                     (int) pedido.desde(), (int) pedido.hasta() + 1));
             return;
         }

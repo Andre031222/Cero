@@ -122,8 +122,8 @@ final class AutenticacionTests {
 
     private static void googleCompleto() throws Exception {
         KeyPair par = generar();
-        RSAPublicKey publica = (RSAPublicKey) par.getPublic();
-        RSAPrivateKey privada = (RSAPrivateKey) par.getPrivate();
+        var publica = (RSAPublicKey) par.getPublic();
+        var privada = (RSAPrivateKey) par.getPrivate();
 
         String idCliente = "1234.apps.googleusercontent.com";
         String kid = "clave-de-prueba";
@@ -164,7 +164,7 @@ final class AutenticacionTests {
 
         try {
             String base = "http://127.0.0.1:" + google.port();
-            OAuth.Proveedor falso = new OAuth.Proveedor("google-de-prueba",
+            var falso = new OAuth.Proveedor("google-de-prueba",
                     base + "/auth", base + "/token", base + "/certs", base + "/userinfo",
                     "https://accounts.google.com", true);
 

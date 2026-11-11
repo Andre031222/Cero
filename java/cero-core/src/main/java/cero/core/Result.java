@@ -74,7 +74,7 @@ public final class Result {
         if (filename == null || filename.isBlank()) {
             return "descarga";
         }
-        StringBuilder limpio = new StringBuilder(filename.length());
+        var limpio = new StringBuilder(filename.length());
         for (int i = 0; i < filename.length(); i++) {
             char c = filename.charAt(i);
             boolean seguro = c >= ' ' && c < 127 && c != '"' && c != '\\' && c != '/';

@@ -8,6 +8,7 @@ import cero.http.Session;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Map;
 
 final class Binder {
 
@@ -40,23 +41,18 @@ final class Binder {
 
     private static final Object[] SIN_ARGUMENTOS = new Object[0];
 
+    private static final Map<Class<?>, Fuente> INYECTADOS = Map.of(
+            Context.class, contexto -> contexto,
+            Request.class, Context::request,
+            Response.class, Context::response,
+            Session.class, Context::session,
+            Principal.class, Context::principal);
+
     private static Fuente fuenteDe(Parameter parameter) {
         Class<?> type = parameter.getType();
-
-        if (type == Context.class) {
-            return contexto -> contexto;
-        }
-        if (type == Request.class) {
-            return Context::request;
-        }
-        if (type == Response.class) {
-            return Context::response;
-        }
-        if (type == Session.class) {
-            return Context::session;
-        }
-        if (type == Principal.class) {
-            return Context::principal;
+        var inyectado = INYECTADOS.get(type);
+        if (inyectado != null) {
+            return inyectado;
         }
 
         Path path = parameter.getAnnotation(Path.class);

@@ -92,7 +92,7 @@ public final class Migrations {
     }
 
     public Verificacion verify(String fuenteDesechable) {
-        Migrations ensayo = new Migrations(fuenteDesechable, origen).table(tabla);
+        var ensayo = new Migrations(fuenteDesechable, origen).table(tabla);
         try {
             return new Verificacion(true, ensayo.run(), null, null);
         } catch (RuntimeException fallo) {
@@ -181,7 +181,7 @@ public final class Migrations {
 
     static List<String> sentencias(String sql) {
         List<String> partes = new ArrayList<>();
-        StringBuilder actual = new StringBuilder();
+        var actual = new StringBuilder();
         int i = 0;
         while (i < sql.length()) {
             char c = sql.charAt(i);

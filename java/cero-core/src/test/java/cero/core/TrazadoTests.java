@@ -1,9 +1,12 @@
 package cero.core;
 
+import cero.http.ErrorReporter;
 import cero.http.Server;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -28,11 +31,11 @@ final class TrazadoTests {
         Check.equal("la traza son 32 hex", t.traza().length(), 32);
         Check.equal("el tramo son 16 hex", t.tramo().length(), 16);
         Check.that("todo en minúscula: la especificación no admite mayúsculas",
-                t.traceparent().equals(t.traceparent().toLowerCase(java.util.Locale.ROOT)));
+                t.traceparent().equals(t.traceparent().toLowerCase(Locale.ROOT)));
         Check.equal("la cabecera es version-traza-tramo-banderas",
                 t.traceparent(), "00-" + t.traza() + "-" + t.tramo() + "-01");
 
-        Set<String> vistas = new java.util.HashSet<>();
+        Set<String> vistas = new HashSet<>();
         for (int i = 0; i < 500; i++) {
             vistas.add(Trace.nueva().traza());
         }
@@ -70,7 +73,7 @@ final class TrazadoTests {
                 "00-" + "0".repeat(32) + "-00f067aa0ba902b7-01",
                 "00-" + heredada + "-" + "0".repeat(16) + "-01",
                 "ff-" + heredada + "-00f067aa0ba902b7-01",
-                "00-" + heredada.toUpperCase(java.util.Locale.ROOT) + "-00f067aa0ba902b7-01");
+                "00-" + heredada.toUpperCase(Locale.ROOT) + "-00f067aa0ba902b7-01");
 
         for (String mala : malas) {
             Trace t = Trace.deCabecera(mala);
@@ -110,9 +113,9 @@ final class TrazadoTests {
     }
 
     private static void deExtremoAExtremo() throws Exception {
-        ConcurrentLinkedQueue<String> vistas = new ConcurrentLinkedQueue<>();
+        var vistas = new ConcurrentLinkedQueue<String>();
 
-        Server dentro = Cero.app().host("127.0.0.1").port(0).quiet().reporter(cero.http.ErrorReporter.silent())
+        Server dentro = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Trace.middleware())
                 .routes(r -> r.get("/dentro", ctx -> {
                     vistas.add("dentro:" + ctx.trace().traza());
@@ -120,7 +123,7 @@ final class TrazadoTests {
                 }))
                 .start();
 
-        Server fuera = Cero.app().host("127.0.0.1").port(0).quiet().reporter(cero.http.ErrorReporter.silent())
+        Server fuera = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .use(Trace.middleware())
                 .routes(r -> r.get("/fuera", ctx -> {
                     vistas.add("fuera:" + ctx.trace().traza());

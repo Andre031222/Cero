@@ -90,7 +90,7 @@ final class ValueTests {
     }
 
     private static void paginas() {
-        Page<String> page = new Page<>(List.of("a", "b"), 2, 2, 7);
+        var page = new Page<String>(List.of("a", "b"), 2, 2, 7);
 
         Check.equal("totalPages redondea hacia arriba", page.totalPages(), 4);
         Check.equal("offset", page.offset(), 2);

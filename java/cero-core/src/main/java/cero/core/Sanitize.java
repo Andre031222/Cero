@@ -72,8 +72,8 @@ public final class Sanitize {
         if (entrada == null || entrada.isEmpty()) {
             return entrada;
         }
-        StringBuilder salida = new StringBuilder(entrada.length());
-        ArrayDeque<String> abiertas = new ArrayDeque<>();
+        var salida = new StringBuilder(entrada.length());
+        var abiertas = new ArrayDeque<String>();
         int i = 0;
 
         while (i < entrada.length()) {
@@ -211,7 +211,7 @@ public final class Sanitize {
     }
 
     private static String sinControles(String texto) {
-        StringBuilder limpia = new StringBuilder(texto.length());
+        var limpia = new StringBuilder(texto.length());
         for (int i = 0; i < texto.length(); i++) {
             char c = texto.charAt(i);
             if (c > 0x20 && c != 0x7F) {
@@ -225,7 +225,7 @@ public final class Sanitize {
         if (texto.indexOf('&') < 0) {
             return texto;
         }
-        StringBuilder salida = new StringBuilder(texto.length());
+        var salida = new StringBuilder(texto.length());
         int i = 0;
         while (i < texto.length()) {
             char c = texto.charAt(i);

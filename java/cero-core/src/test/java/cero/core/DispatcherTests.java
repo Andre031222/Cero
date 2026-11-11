@@ -6,7 +6,9 @@ import cero.http.Server;
 
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 final class DispatcherTests {
 
@@ -149,7 +151,7 @@ final class DispatcherTests {
 
         @OnError(ReglaRota.class)
         public Object reglaRota(ReglaRota fallo) {
-            return Result.json(java.util.Map.of("motivo", fallo.getMessage())).status(422);
+            return Result.json(Map.of("motivo", fallo.getMessage())).status(422);
         }
     }
 
@@ -339,7 +341,7 @@ final class DispatcherTests {
         Check.equal("y con su tipo",
                 crudo.headers().firstValue("Content-Type").orElse(""), "application/octet-stream");
         Check.equal("llegan todos los bytes", crudo.body().length, 256);
-        Check.that("y sin tocar ninguno", java.util.Arrays.equals(crudo.body(), TODOS_LOS_BYTES));
+        Check.that("y sin tocar ninguno", Arrays.equals(crudo.body(), TODOS_LOS_BYTES));
 
         HttpResponse<byte[]> descarga = Cliente.bytes(base + "/api/descarga");
         Check.equal("download nombra el archivo",

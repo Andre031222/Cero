@@ -12,6 +12,14 @@ import java.util.Map;
 
 public final class OpenApi {
 
+    private static final Map<Class<?>, String> SIMPLES = Map.ofEntries(
+            Map.entry(boolean.class, "boolean"), Map.entry(Boolean.class, "boolean"),
+            Map.entry(int.class, "integer"), Map.entry(Integer.class, "integer"),
+            Map.entry(long.class, "integer"), Map.entry(Long.class, "integer"),
+            Map.entry(short.class, "integer"), Map.entry(Short.class, "integer"),
+            Map.entry(double.class, "number"), Map.entry(Double.class, "number"),
+            Map.entry(float.class, "number"), Map.entry(Float.class, "number"));
+
     private final Router router;
 
     private String title = "API";
@@ -85,7 +93,7 @@ public final class OpenApi {
                 continue;
             }
             @SuppressWarnings("unchecked")
-            Map<String, Object> operaciones = (Map<String, Object>) caminos
+            var operaciones = (Map<String, Object>) caminos
                     .computeIfAbsent(ruta.pattern().raw(), clave -> new LinkedHashMap<String, Object>());
             operaciones.put(ruta.verb().name().toLowerCase(), operacion(ruta, esquemas));
         }
@@ -228,15 +236,9 @@ public final class OpenApi {
     }
 
     private static Map<String, Object> tipoSimple(Class<?> tipo) {
-        if (tipo == boolean.class || tipo == Boolean.class) {
-            return Map.of("type", "boolean");
-        }
-        if (tipo == int.class || tipo == Integer.class || tipo == long.class || tipo == Long.class
-                || tipo == short.class || tipo == Short.class) {
-            return Map.of("type", "integer");
-        }
-        if (tipo == double.class || tipo == Double.class || tipo == float.class || tipo == Float.class) {
-            return Map.of("type", "number");
+        var simple = SIMPLES.get(tipo);
+        if (simple != null) {
+            return Map.of("type", simple);
         }
         if (Map.class.isAssignableFrom(tipo)) {
             return Map.of("type", "object");

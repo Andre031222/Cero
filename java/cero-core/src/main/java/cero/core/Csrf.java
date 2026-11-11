@@ -4,6 +4,7 @@ import cero.http.HttpException;
 import cero.http.HttpMethod;
 import cero.http.Session;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -93,8 +94,8 @@ public final class Csrf implements Middleware {
     }
 
     private static boolean constantTimeEquals(String expected, String presented) {
-        byte[] a = expected.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        byte[] b = presented.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] a = expected.getBytes(StandardCharsets.UTF_8);
+        byte[] b = presented.getBytes(StandardCharsets.UTF_8);
         int difference = a.length ^ b.length;
         for (int i = 0; i < a.length && i < b.length; i++) {
             difference |= a[i] ^ b[i];

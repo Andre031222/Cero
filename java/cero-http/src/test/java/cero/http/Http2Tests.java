@@ -1,9 +1,20 @@
 package cero.http;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 final class Http2Tests {
 
@@ -59,11 +70,11 @@ final class Http2Tests {
             respuesta.text(String.valueOf(peticion.header("x-secreto")));
         };
         try (Server tope = Server.start(opciones, rutas, ErrorReporter.silent());
-             Http2Cliente c = new Http2Cliente(tope.port()).saludar()) {
+             var c = new Http2Cliente(tope.port()).saludar()) {
             int lento = c.pedir("GET", "/lento");
             byte[] nombre = "x-secreto".getBytes(StandardCharsets.US_ASCII);
             byte[] valor = "valor".getBytes(StandardCharsets.US_ASCII);
-            java.io.ByteArrayOutputStream rechazado = new java.io.ByteArrayOutputStream();
+            var rechazado = new ByteArrayOutputStream();
             rechazado.write(new byte[] { (byte) 0x82, (byte) 0x86, (byte) 0x84, 0x40, (byte) nombre.length });
             rechazado.write(nombre);
             rechazado.write(valor.length);
@@ -92,10 +103,10 @@ final class Http2Tests {
         ServerOptions conTls = ServerOptions.builder().host("127.0.0.1").port(0).http2(false)
                 .tls(Tls.fromKeystore(Fixture.keystore(), "cerotest".toCharArray())).build();
         try (Server s = Server.start(conTls, Http2Tests::rutas, ErrorReporter.silent())) {
-            javax.net.ssl.SSLSocketFactory fabrica = Fixture.trustEverything().getSocketFactory();
-            try (javax.net.ssl.SSLSocket socket =
-                         (javax.net.ssl.SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
-                javax.net.ssl.SSLParameters p = socket.getSSLParameters();
+            SSLSocketFactory fabrica = Fixture.trustEverything().getSocketFactory();
+            try (SSLSocket socket =
+                         (SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
+                SSLParameters p = socket.getSSLParameters();
                 p.setApplicationProtocols(new String[] { "h2", "http/1.1" });
                 socket.setSSLParameters(p);
                 socket.startHandshake();
@@ -109,7 +120,7 @@ final class Http2Tests {
     private static void porUpgrade() throws Exception {
         ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).build();
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
-            try (java.net.Socket socket = new java.net.Socket("127.0.0.1", s.port())) {
+            try (Socket socket = new Socket("127.0.0.1", s.port())) {
                 socket.setSoTimeout(10_000);
                 socket.getOutputStream().write(("GET / HTTP/1.1\r\n"
                         + "Host: 127.0.0.1\r\n"
@@ -132,9 +143,9 @@ final class Http2Tests {
         }
     }
 
-    private static String respuestaDelFlujoUno(java.net.Socket socket) throws IOException {
-        java.io.InputStream in = socket.getInputStream();
-        java.io.ByteArrayOutputStream cuerpo = new java.io.ByteArrayOutputStream();
+    private static String respuestaDelFlujoUno(Socket socket) throws IOException {
+        InputStream in = socket.getInputStream();
+        var cuerpo = new ByteArrayOutputStream();
         for (int i = 0; i < 64; i++) {
             byte[] cab = new byte[9];
             int leidos = 0;
@@ -162,15 +173,15 @@ final class Http2Tests {
     }
 
     private static void porAlpn() throws Exception {
-        java.nio.file.Path almacen = Fixture.keystore();
+        Path almacen = Fixture.keystore();
         ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0)
                 .tls(Tls.fromKeystore(almacen, "cerotest".toCharArray())).build();
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
-            javax.net.ssl.SSLContext confiado = Fixture.trustEverything();
-            javax.net.ssl.SSLSocketFactory fabrica = confiado.getSocketFactory();
-            try (javax.net.ssl.SSLSocket socket =
-                         (javax.net.ssl.SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
-                javax.net.ssl.SSLParameters p = socket.getSSLParameters();
+            SSLContext confiado = Fixture.trustEverything();
+            SSLSocketFactory fabrica = confiado.getSocketFactory();
+            try (SSLSocket socket =
+                         (SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
+                SSLParameters p = socket.getSSLParameters();
                 p.setApplicationProtocols(new String[] { "h2" });
                 socket.setSSLParameters(p);
                 socket.startHandshake();
@@ -182,7 +193,7 @@ final class Http2Tests {
                 escribirTramaCruda(socket, Http2Cliente.SETTINGS, 0, 0, new byte[0]);
                 escribirTramaCruda(socket, Http2Cliente.HEADERS,
                         Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 1,
-                        new Hpack.Codificador().codificar(java.util.List.of(
+                        new Hpack.Codificador().codificar(List.of(
                                 new Hpack.Campo(":method", "GET"),
                                 new Hpack.Campo(":scheme", "https"),
                                 new Hpack.Campo(":path", "/"),
@@ -193,7 +204,7 @@ final class Http2Tests {
         }
     }
 
-    private static void escribirTramaCruda(java.net.Socket socket, int tipo, int banderas,
+    private static void escribirTramaCruda(Socket socket, int tipo, int banderas,
                                            int flujo, byte[] carga) throws IOException {
         socket.getOutputStream().write(new byte[] {
                 (byte) (carga.length >>> 16), (byte) (carga.length >>> 8), (byte) carga.length,
@@ -224,7 +235,7 @@ final class Http2Tests {
             }
             case "/vacio" -> respuesta.status(204).send(new byte[0]);
             case "/chorro" -> {
-                try (java.io.OutputStream salida = respuesta.stream()) {
+                try (OutputStream salida = respuesta.stream()) {
                     for (int i = 0; i < 40; i++) {
                         salida.write(("trozo " + i + "\n").getBytes(StandardCharsets.UTF_8));
                         salida.flush();
@@ -232,9 +243,9 @@ final class Http2Tests {
                 }
             }
             case "/chorro-grande" -> {
-                try (java.io.OutputStream salida = respuesta.stream()) {
+                try (OutputStream salida = respuesta.stream()) {
                     byte[] bloque = new byte[64 * 1024];
-                    java.util.Arrays.fill(bloque, (byte) 'z');
+                    Arrays.fill(bloque, (byte) 'z');
                     for (int i = 0; i < 6; i++) {
                         salida.write(bloque);
                     }
@@ -311,10 +322,10 @@ final class Http2Tests {
                     "cuerpo con eñes y acentós");
 
             byte[] grande = new byte[100_000];
-            new java.util.Random(7).nextBytes(grande);
+            new Random(7).nextBytes(grande);
             byte[] vuelta = c.respuestaDe(c.pedirCon("POST", "/eco", grande)).cuerpo();
             Check.that("y uno de 100 KB, partido en tramas, también",
-                    java.util.Arrays.equals(grande, vuelta));
+                    Arrays.equals(grande, vuelta));
         }
     }
 
@@ -342,7 +353,7 @@ final class Http2Tests {
             Http2Cliente.Trama pong = c.esperar(Http2Cliente.PING);
             Check.that("un PING vuelve con la misma marca y el ACK puesto",
                     (pong.banderas() & Http2Cliente.RECONOCE) != 0
-                            && java.util.Arrays.equals(pong.carga(), marca));
+                            && Arrays.equals(pong.carga(), marca));
 
             int flujo = c.pedir("GET", "/grande");
             c.trama(Http2Cliente.RST_STREAM, 0, flujo, Http2Cliente.entero(0x8));
@@ -375,7 +386,7 @@ final class Http2Tests {
 
             Http2Cliente.Respuesta r = c.respuestaDe(c.pedir("GET", "/chorro"));
             Check.equal("un chorro responde 200", r.estado(), 200);
-            StringBuilder esperado = new StringBuilder();
+            var esperado = new StringBuilder();
             for (int i = 0; i < 40; i++) {
                 esperado.append("trozo ").append(i).append('\n');
             }

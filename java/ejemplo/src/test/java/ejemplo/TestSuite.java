@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class TestSuite {
+final class TestSuite {
 
     private static final Pattern CSRF =
             Pattern.compile("\"csrf\":\"([^\"]+)\"");
@@ -20,10 +20,7 @@ public final class TestSuite {
 
     private static TestServer app;
 
-    private TestSuite() {
-    }
-
-    public static void main(String[] args) {
+    void main() {
         System.out.println();
         System.out.println("── aplicación de ejemplo, de punta a punta");
 

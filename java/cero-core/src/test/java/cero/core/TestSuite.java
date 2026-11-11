@@ -1,11 +1,8 @@
 package cero.core;
 
-public final class TestSuite {
+final class TestSuite {
 
-    private TestSuite() {
-    }
-
-    public static void main(String[] args) throws Exception {
+    void main() throws Exception {
         JsonTests.run();
         RouterTests.run();
         RegistryTests.run();

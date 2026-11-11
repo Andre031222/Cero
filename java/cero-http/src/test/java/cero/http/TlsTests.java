@@ -1,5 +1,9 @@
 package cero.http;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.cert.X509Certificate;
+import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLContext;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -58,8 +62,8 @@ final class TlsTests {
     }
 
     private static void recargaDeCertificado() throws Exception {
-        java.nio.file.Path directorio = java.nio.file.Files.createTempDirectory("cero-recarga");
-        java.nio.file.Path keystore = directorio.resolve("recarga.p12");
+        Path directorio = Files.createTempDirectory("cero-recarga");
+        Path keystore = directorio.resolve("recarga.p12");
         generar(keystore, "CN=primero.local");
 
         Tls.Certificado certificado = Tls.reloadable(keystore, "cerotest".toCharArray());
@@ -70,7 +74,7 @@ final class TlsTests {
             Check.equal("arranca con el primer certificado",
                     sujetoPresentado(server.port()), "CN=primero.local");
 
-            java.nio.file.Files.deleteIfExists(keystore);
+            Files.deleteIfExists(keystore);
             generar(keystore, "CN=segundo.local");
             Check.equal("antes de recargar sigue el primero",
                     sujetoPresentado(server.port()), "CN=primero.local");
@@ -80,8 +84,8 @@ final class TlsTests {
                     sujetoPresentado(server.port()), "CN=segundo.local");
             Check.equal("y el servidor sigue atendiendo", cuerpo(server.port()), "ok");
         } finally {
-            java.nio.file.Files.deleteIfExists(keystore);
-            java.nio.file.Files.deleteIfExists(directorio);
+            Files.deleteIfExists(keystore);
+            Files.deleteIfExists(directorio);
         }
     }
 
@@ -90,8 +94,8 @@ final class TlsTests {
                 HttpRequest.newBuilder(URI.create("https://127.0.0.1:" + puerto + "/"))
                         .version(HttpClient.Version.HTTP_1_1).build(),
                 HttpResponse.BodyHandlers.ofString());
-        java.security.cert.X509Certificate presentado =
-                (java.security.cert.X509Certificate) respuesta.sslSession()
+        X509Certificate presentado =
+                (X509Certificate) respuesta.sslSession()
                         .orElseThrow().getPeerCertificates()[0];
         return presentado.getSubjectX500Principal().getName();
     }
@@ -103,15 +107,15 @@ final class TlsTests {
                 HttpResponse.BodyHandlers.ofString()).body();
     }
 
-    private static void generar(java.nio.file.Path destino, String dn) throws Exception {
+    private static void generar(Path destino, String dn) throws Exception {
         Process keytool = new ProcessBuilder(
-                java.nio.file.Path.of(System.getProperty("java.home"), "bin", "keytool").toString(),
+                Path.of(System.getProperty("java.home"), "bin", "keytool").toString(),
                 "-genkeypair", "-alias", "cero", "-keyalg", "RSA", "-keysize", "2048",
                 "-validity", "365", "-storetype", "PKCS12",
                 "-keystore", destino.toString(), "-storepass", "cerotest", "-keypass", "cerotest",
                 "-dname", dn, "-ext", "SAN=dns:localhost,ip:127.0.0.1")
                 .redirectErrorStream(true).start();
-        if (!keytool.waitFor(30, java.util.concurrent.TimeUnit.SECONDS) || keytool.exitValue() != 0) {
+        if (!keytool.waitFor(30, TimeUnit.SECONDS) || keytool.exitValue() != 0) {
             throw new IllegalStateException("keytool falló generando " + dn);
         }
     }

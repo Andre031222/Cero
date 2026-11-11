@@ -1,5 +1,7 @@
 package cero.http;
 
+import java.time.Duration;
+import java.util.Set;
 import javax.net.ssl.SSLContext;
 
 public record ServerOptions(
@@ -30,7 +32,7 @@ public record ServerOptions(
         int gzipMinBytes,
         boolean requireHost,
         boolean behindProxy,
-        java.util.Set<String> trustedProxies,
+        Set<String> trustedProxies,
         SSLContext tls) {
 
     public ServerOptions {
@@ -115,7 +117,7 @@ public record ServerOptions(
         private int gzipMinBytes = 1_024;
         private boolean requireHost = true;
         private boolean behindProxy;
-        private java.util.Set<String> trustedProxies = java.util.Set.of();
+        private Set<String> trustedProxies = Set.of();
         private SSLContext tls;
 
         public Builder host(String value) {
@@ -233,7 +235,7 @@ public record ServerOptions(
             return this;
         }
 
-        public Builder sessionMaxLifetime(java.time.Duration value) {
+        public Builder sessionMaxLifetime(Duration value) {
             sessionMaxLifetimeMillis = value == null ? 0 : value.toMillis();
             return this;
         }
@@ -254,13 +256,13 @@ public record ServerOptions(
         }
 
         public Builder trustProxy(String... direcciones) {
-            trustedProxies = direcciones == null ? java.util.Set.of() : java.util.Set.of(direcciones);
+            trustedProxies = direcciones == null ? Set.of() : Set.of(direcciones);
             behindProxy = behindProxy || trustedProxies.size() > 0;
             return this;
         }
 
-        Builder trustProxy(java.util.Set<String> direcciones) {
-            trustedProxies = direcciones == null ? java.util.Set.of() : direcciones;
+        Builder trustProxy(Set<String> direcciones) {
+            trustedProxies = direcciones == null ? Set.of() : direcciones;
             return this;
         }
 

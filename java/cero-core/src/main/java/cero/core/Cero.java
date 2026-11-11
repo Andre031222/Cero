@@ -7,6 +7,7 @@ import cero.http.ServerOptions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public final class Cero {
 
@@ -67,7 +68,7 @@ public final class Cero {
         return this;
     }
 
-    public Cero routes(java.util.function.Consumer<Router> definition) {
+    public Cero routes(Consumer<Router> definition) {
         definition.accept(router);
         return this;
     }

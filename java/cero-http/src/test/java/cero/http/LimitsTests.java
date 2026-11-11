@@ -1,5 +1,6 @@
 package cero.http;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -107,7 +108,7 @@ final class LimitsTests {
                     .getBytes(StandardCharsets.ISO_8859_1));
             extra.getOutputStream().flush();
             return extra.getInputStream().read() == -1;
-        } catch (java.io.IOException reset) {
+        } catch (IOException reset) {
             return true;
         }
     }
@@ -119,7 +120,7 @@ final class LimitsTests {
                 .idleTimeoutMillis(5_000)
                 .build();
 
-        AtomicBoolean lento = new AtomicBoolean();
+        var lento = new AtomicBoolean();
         Handler handler = (req, res) -> {
             if (req.path().equals("/lento")) {
                 lento.set(true);
@@ -148,7 +149,7 @@ final class LimitsTests {
                 .shutdownGraceMillis(5_000)
                 .build();
 
-        CountDownLatch entered = new CountDownLatch(1);
+        var entered = new CountDownLatch(1);
         Handler handler = (req, res) -> {
             entered.countDown();
             Thread.sleep(400);
@@ -158,7 +159,7 @@ final class LimitsTests {
         Server server = Server.start(options, handler, ErrorReporter.silent());
         int port = server.port();
 
-        StringBuilder captured = new StringBuilder();
+        var captured = new StringBuilder();
         Thread client = Thread.ofVirtual().start(() -> {
             try {
                 captured.append(Fixture.raw(port, "GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n"));

@@ -1,5 +1,10 @@
 package cero.adapter.servlet;
 
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -68,8 +73,8 @@ final class Doble {
                 case "getHeaders" -> Collections.enumeration(buscar((String) args[0]));
                 case "getHeaderNames" -> Collections.enumeration(cabeceras.keySet());
                 case "getCookies" -> galletas.isEmpty() ? null : galletas.entrySet().stream()
-                        .map(e -> new jakarta.servlet.http.Cookie(e.getKey(), e.getValue()))
-                        .toArray(jakarta.servlet.http.Cookie[]::new);
+                        .map(e -> new Cookie(e.getKey(), e.getValue()))
+                        .toArray(Cookie[]::new);
                 case "getInputStream" -> flujoEntrada(cuerpo);
                 case "getSession" -> {
                     boolean crear = args == null || args.length == 0 || (boolean) args[0];
@@ -168,27 +173,27 @@ final class Doble {
         }
     }
 
-    private static jakarta.servlet.ServletInputStream flujoEntrada(byte[] datos) {
-        ByteArrayInputStream origen = new ByteArrayInputStream(datos);
-        return new jakarta.servlet.ServletInputStream() {
+    private static ServletInputStream flujoEntrada(byte[] datos) {
+        var origen = new ByteArrayInputStream(datos);
+        return new ServletInputStream() {
             @Override public int read() { return origen.read(); }
             @Override public int read(byte[] destino, int desde, int cuantos) {
                 return origen.read(destino, desde, cuantos);
             }
             @Override public boolean isFinished() { return origen.available() == 0; }
             @Override public boolean isReady() { return true; }
-            @Override public void setReadListener(jakarta.servlet.ReadListener oyente) { }
+            @Override public void setReadListener(ReadListener oyente) { }
         };
     }
 
-    private static jakarta.servlet.ServletOutputStream flujoSalida(ByteArrayOutputStream destino) {
-        return new jakarta.servlet.ServletOutputStream() {
+    private static ServletOutputStream flujoSalida(ByteArrayOutputStream destino) {
+        return new ServletOutputStream() {
             @Override public void write(int b) { destino.write(b); }
             @Override public void write(byte[] datos, int desde, int cuantos) {
                 destino.write(datos, desde, cuantos);
             }
             @Override public boolean isReady() { return true; }
-            @Override public void setWriteListener(jakarta.servlet.WriteListener oyente) { }
+            @Override public void setWriteListener(WriteListener oyente) { }
         };
     }
 

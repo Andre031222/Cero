@@ -104,8 +104,8 @@ public final class Db {
         if (values.isEmpty()) {
             throw new IllegalArgumentException("no hay columnas que insertar en " + table);
         }
-        StringBuilder columns = new StringBuilder();
-        StringBuilder markers = new StringBuilder();
+        var columns = new StringBuilder();
+        var markers = new StringBuilder();
         List<Object> params = new ArrayList<>(values.size());
 
         for (String column : values.columns()) {
@@ -135,7 +135,7 @@ public final class Db {
         if (values.isEmpty()) {
             throw new IllegalArgumentException("no hay columnas que actualizar en " + table);
         }
-        StringBuilder assignments = new StringBuilder();
+        var assignments = new StringBuilder();
         List<Object> all = new ArrayList<>(values.size() + params.length);
 
         for (String column : values.columns()) {
@@ -160,8 +160,8 @@ public final class Db {
             return new int[0];
         }
         List<String> columns = new ArrayList<>(rows.get(0).columns());
-        StringBuilder names = new StringBuilder();
-        StringBuilder markers = new StringBuilder();
+        var names = new StringBuilder();
+        var markers = new StringBuilder();
         for (String column : columns) {
             if (!names.isEmpty()) {
                 names.append(", ");
@@ -233,7 +233,7 @@ public final class Db {
 
         List<Row> rows = new ArrayList<>();
         while (results.next()) {
-            Row row = new Row();
+            var row = new Row();
             for (int i = 0; i < columns; i++) {
                 row.set(names[i], results.getObject(i + 1));
             }

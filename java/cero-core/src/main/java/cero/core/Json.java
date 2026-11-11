@@ -4,15 +4,20 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -21,6 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class Json {
 
@@ -28,7 +35,7 @@ public final class Json {
     }
 
     public static String write(Object value) {
-        StringBuilder out = new StringBuilder(128);
+        var out = new StringBuilder(128);
         new Writer(out).value(value);
         return out.toString();
     }
@@ -49,7 +56,7 @@ public final class Json {
     private static final class Writer {
 
         private final StringBuilder out;
-        private final Set<Object> seen = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        private final Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
 
         Writer(StringBuilder out) {
             this.out = out;
@@ -68,8 +75,8 @@ public final class Json {
                 case Optional<?> maybe -> value(maybe.orElse(null));
                 case UUID id -> string(id.toString());
                 case Temporal moment -> string(moment.toString());
-                case java.sql.Timestamp instante -> string(instante.toInstant().toString());
-                case java.sql.Time reloj -> string(reloj.toString());
+                case Timestamp instante -> string(instante.toInstant().toString());
+                case Time reloj -> string(reloj.toString());
                 case java.sql.Date dia -> string(dia.toLocalDate().toString());
                 case Date moment -> string(Instant.ofEpochMilli(moment.getTime()).toString());
                 case Map<?, ?> map -> object(map);
@@ -266,7 +273,7 @@ public final class Json {
             };
         }
 
-        private <T> T anidar(java.util.function.Supplier<T> dentro) {
+        private <T> T anidar(Supplier<T> dentro) {
             if (++profundidad > MAX_PROFUNDIDAD) {
                 throw error("JSON anidado más de " + MAX_PROFUNDIDAD + " niveles");
             }
@@ -333,7 +340,7 @@ public final class Json {
 
         private String parseString() {
             at++;
-            StringBuilder value = new StringBuilder();
+            var value = new StringBuilder();
             while (true) {
                 if (at >= text.length()) {
                     throw error("cadena sin cerrar");
@@ -390,8 +397,7 @@ public final class Json {
                 if (decimal) {
                     return Double.parseDouble(raw);
                 }
-                long parsed = Long.parseLong(raw);
-                return parsed;
+                return Long.parseLong(raw);
             } catch (NumberFormatException cause) {
                 throw error("número inválido: " + raw);
             }
@@ -425,11 +431,34 @@ public final class Json {
 
     static final class Convert {
 
+        private static final Map<Class<?>, Function<Object, Object>> CONVERSIONES = Map.ofEntries(
+                Map.entry(String.class, String::valueOf),
+                Map.entry(int.class, s -> number(s).intValue()),
+                Map.entry(Integer.class, s -> number(s).intValue()),
+                Map.entry(long.class, s -> number(s).longValue()),
+                Map.entry(Long.class, s -> number(s).longValue()),
+                Map.entry(double.class, s -> number(s).doubleValue()),
+                Map.entry(Double.class, s -> number(s).doubleValue()),
+                Map.entry(float.class, s -> number(s).floatValue()),
+                Map.entry(Float.class, s -> number(s).floatValue()),
+                Map.entry(short.class, s -> number(s).shortValue()),
+                Map.entry(Short.class, s -> number(s).shortValue()),
+                Map.entry(byte.class, s -> number(s).byteValue()),
+                Map.entry(Byte.class, s -> number(s).byteValue()),
+                Map.entry(boolean.class, Convert::booleano),
+                Map.entry(Boolean.class, Convert::booleano),
+                Map.entry(BigDecimal.class, s -> new BigDecimal(String.valueOf(s))),
+                Map.entry(BigInteger.class, s -> new BigInteger(String.valueOf(s))),
+                Map.entry(UUID.class, s -> UUID.fromString(String.valueOf(s))),
+                Map.entry(Instant.class, s -> Instant.parse(String.valueOf(s))),
+                Map.entry(LocalDate.class, s -> LocalDate.parse(String.valueOf(s))),
+                Map.entry(LocalDateTime.class, s -> LocalDateTime.parse(String.valueOf(s))));
+
         private Convert() {
         }
 
         @SuppressWarnings({"unchecked", "rawtypes"})
-        static Object to(Object source, Class<?> type, java.lang.reflect.Type generic) {
+        static Object to(Object source, Class<?> type, Type generic) {
             if (type == Object.class) {
                 return source;
             }
@@ -450,47 +479,9 @@ public final class Json {
             if (type.isInstance(source) && !(source instanceof Number && type != source.getClass())) {
                 return source;
             }
-            if (type == String.class) {
-                return String.valueOf(source);
-            }
-            if (type == int.class || type == Integer.class) {
-                return number(source).intValue();
-            }
-            if (type == long.class || type == Long.class) {
-                return number(source).longValue();
-            }
-            if (type == double.class || type == Double.class) {
-                return number(source).doubleValue();
-            }
-            if (type == float.class || type == Float.class) {
-                return number(source).floatValue();
-            }
-            if (type == short.class || type == Short.class) {
-                return number(source).shortValue();
-            }
-            if (type == byte.class || type == Byte.class) {
-                return number(source).byteValue();
-            }
-            if (type == boolean.class || type == Boolean.class) {
-                return source instanceof Boolean flag ? flag : Boolean.parseBoolean(String.valueOf(source));
-            }
-            if (type == BigDecimal.class) {
-                return new BigDecimal(String.valueOf(source));
-            }
-            if (type == BigInteger.class) {
-                return new BigInteger(String.valueOf(source));
-            }
-            if (type == UUID.class) {
-                return UUID.fromString(String.valueOf(source));
-            }
-            if (type == Instant.class) {
-                return Instant.parse(String.valueOf(source));
-            }
-            if (type == LocalDate.class) {
-                return LocalDate.parse(String.valueOf(source));
-            }
-            if (type == LocalDateTime.class) {
-                return LocalDateTime.parse(String.valueOf(source));
+            var conversion = CONVERSIONES.get(type);
+            if (conversion != null) {
+                return conversion.apply(source);
             }
             if (type.isEnum()) {
                 return Enum.valueOf((Class<Enum>) type, String.valueOf(source));
@@ -547,13 +538,17 @@ public final class Json {
             }
         }
 
-        private static Class<?> argumentOf(java.lang.reflect.Type generic, int index) {
-            if (generic instanceof java.lang.reflect.ParameterizedType parameterized
+        private static Class<?> argumentOf(Type generic, int index) {
+            if (generic instanceof ParameterizedType parameterized
                     && parameterized.getActualTypeArguments().length > index
                     && parameterized.getActualTypeArguments()[index] instanceof Class<?> argument) {
                 return argument;
             }
             return null;
+        }
+
+        private static Object booleano(Object source) {
+            return source instanceof Boolean flag ? flag : Boolean.parseBoolean(String.valueOf(source));
         }
 
         private static Number number(Object source) {

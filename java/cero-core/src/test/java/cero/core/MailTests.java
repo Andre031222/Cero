@@ -108,7 +108,7 @@ final class MailTests {
         }
 
         static Servidor arrancar(boolean rechaza) throws IOException {
-            Servidor servidor = new Servidor(new ServerSocket(0, 50, InetAddress.getLoopbackAddress()), rechaza);
+            var servidor = new Servidor(new ServerSocket(0, 50, InetAddress.getLoopbackAddress()), rechaza);
             Thread.ofVirtual().start(servidor::atender);
             return servidor;
         }
@@ -129,7 +129,7 @@ final class MailTests {
 
         private void atender() {
             try (Socket cliente = puerta.accept();
-                 BufferedReader lector = new BufferedReader(
+                 var lector = new BufferedReader(
                          new InputStreamReader(cliente.getInputStream(), StandardCharsets.UTF_8))) {
                 OutputStream salida = cliente.getOutputStream();
                 responder(salida, "220 prueba lista");

@@ -13,6 +13,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class OAuth {
 
@@ -22,7 +23,7 @@ public final class OAuth {
 
     private static final String SESION = "cero.oauth";
 
-    private static final Map<String, Claves> CACHE_CLAVES = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, Claves> CACHE_CLAVES = new ConcurrentHashMap<>();
 
     private static final long VIDA_CLAVES_MILLIS = 10 * 60_000L;
 
@@ -96,7 +97,7 @@ public final class OAuth {
         String estado = azar(32);
         String reto = URL64.encodeToString(sha256(verificador.getBytes(StandardCharsets.US_ASCII)));
 
-        StringBuilder url = new StringBuilder(proveedor.autorizacion())
+        var url = new StringBuilder(proveedor.autorizacion())
                 .append(proveedor.autorizacion().indexOf('?') >= 0 ? '&' : '?')
                 .append("client_id=").append(escapar(idCliente))
                 .append("&redirect_uri=").append(escapar(redireccion))
@@ -132,7 +133,7 @@ public final class OAuth {
         if (!respuesta.ok()) {
             throw new OAuthException("el proveedor rechazó el canje: " + respuesta.cuerpo());
         }
-        Map<?, ?> tokens = (Map<?, ?>) respuesta.json();
+        var tokens = (Map<?, ?>) respuesta.json();
         String acceso = texto(tokens.get("access_token"));
         String identidad = texto(tokens.get("id_token"));
 
@@ -150,8 +151,8 @@ public final class OAuth {
         if (partes.length != 3) {
             throw new OAuthException("el id_token no tiene tres partes");
         }
-        Map<?, ?> cabecera = (Map<?, ?>) Json.read(new String(URL64_DEC.decode(partes[0]), StandardCharsets.UTF_8));
-        Map<?, ?> cuerpo = (Map<?, ?>) Json.read(new String(URL64_DEC.decode(partes[1]), StandardCharsets.UTF_8));
+        var cabecera = (Map<?, ?>) Json.read(new String(URL64_DEC.decode(partes[0]), StandardCharsets.UTF_8));
+        var cuerpo = (Map<?, ?>) Json.read(new String(URL64_DEC.decode(partes[1]), StandardCharsets.UTF_8));
 
         String algoritmo = texto(cabecera.get("alg"));
         if (!"RS256".equals(algoritmo)) {
@@ -178,7 +179,7 @@ public final class OAuth {
         if (!perfil.ok()) {
             throw new OAuthException("no se pudo leer el perfil: " + perfil.cuerpo());
         }
-        Map<?, ?> datos = (Map<?, ?>) perfil.json();
+        var datos = (Map<?, ?>) perfil.json();
         return new Identidad(
                 texto(datos.get("id") != null ? datos.get("id") : datos.get("sub")),
                 texto(datos.get("email")),
@@ -254,8 +255,8 @@ public final class OAuth {
                 continue;
             }
             try {
-                BigInteger modulo = new BigInteger(1, URL64_DEC.decode(texto(clave.get("n"))));
-                BigInteger exponente = new BigInteger(1, URL64_DEC.decode(texto(clave.get("e"))));
+                var modulo = new BigInteger(1, URL64_DEC.decode(texto(clave.get("n"))));
+                var exponente = new BigInteger(1, URL64_DEC.decode(texto(clave.get("e"))));
                 var publica = KeyFactory.getInstance("RSA")
                         .generatePublic(new RSAPublicKeySpec(modulo, exponente));
                 Signature verificador = Signature.getInstance("SHA256withRSA");

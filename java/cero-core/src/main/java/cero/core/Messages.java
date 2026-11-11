@@ -25,7 +25,7 @@ public final class Messages {
     }
 
     public static Messages from(String nombre, String... idiomas) {
-        Messages m = new Messages();
+        var m = new Messages();
         m.cargar(m.base, "/" + nombre + ".properties", false);
         for (String idioma : idiomas) {
             m.cargar(idioma, "/" + nombre + "." + idioma + ".properties", true);
@@ -111,23 +111,6 @@ public final class Messages {
         return base;
     }
 
-    Set<String> claves(String idioma) {
-        Set<String> todas = new java.util.LinkedHashSet<>();
-        Properties b = porIdioma.get(base);
-        if (b != null) {
-            b.stringPropertyNames().forEach(todas::add);
-        }
-        Properties p = porIdioma.get(idioma);
-        if (p != null) {
-            p.stringPropertyNames().forEach(todas::add);
-        }
-        return todas;
-    }
-
-    boolean tiene(String idioma, String clave) {
-        return buscar(idioma, clave) != null;
-    }
-
     private String buscar(String idioma, String clave) {
         String cacheado = resueltos.get(idioma + "|" + clave);
         if (cacheado != null) {
@@ -153,7 +136,7 @@ public final class Messages {
                 }
                 return;
             }
-            Properties p = new Properties();
+            var p = new Properties();
             p.load(new InputStreamReader(entrada, StandardCharsets.UTF_8));
             porIdioma.merge(idioma, p, (existente, llegado) -> {
                 existente.putAll(llegado);

@@ -5,6 +5,7 @@ import cero.http.SessionStore;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.UnaryOperator;
 
 public final class JdbcSessions implements SessionStore {
@@ -111,7 +112,7 @@ public final class JdbcSessions implements SessionStore {
 
     private static void esperarUnPoco(int intento) {
         long millis = Math.min(1L << Math.min(intento, 5), 40)
-                + java.util.concurrent.ThreadLocalRandom.current().nextLong(4);
+                + ThreadLocalRandom.current().nextLong(4);
         try {
             Thread.sleep(millis);
         } catch (InterruptedException cortado) {

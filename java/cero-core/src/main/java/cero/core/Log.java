@@ -73,7 +73,7 @@ public final class Log {
         if (!activo(candidato)) {
             return;
         }
-        StringBuilder linea = new StringBuilder(96)
+        var linea = new StringBuilder(96)
                 .append(RELOJ.format(Instant.now()))
                 .append("  ").append(etiqueta(candidato))
                 .append("  ").append(nombre);
@@ -99,7 +99,7 @@ public final class Log {
         if (datos == null || datos.length == 0) {
             return plantilla;
         }
-        StringBuilder salida = new StringBuilder(plantilla.length() + 16);
+        var salida = new StringBuilder(plantilla.length() + 16);
         int siguiente = 0;
         int desde = 0;
         int marca;

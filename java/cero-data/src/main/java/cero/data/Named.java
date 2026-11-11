@@ -7,7 +7,7 @@ import java.util.Map;
 record Named(String sql, Object[] values) {
 
     static Named compile(String source, Map<String, Object> params) {
-        StringBuilder sql = new StringBuilder(source.length());
+        var sql = new StringBuilder(source.length());
         List<Object> values = new ArrayList<>(params.size());
 
         int at = 0;

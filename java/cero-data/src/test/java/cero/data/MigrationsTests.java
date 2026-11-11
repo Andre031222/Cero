@@ -167,7 +167,7 @@ final class MigrationsTests {
     }
 
     private static void elFalloDiceQueMigracionYQueSentencia() {
-        SQLException clave = new SQLException("ERROR: insert or update on table \"copias\" violates"
+        var clave = new SQLException("ERROR: insert or update on table \"copias\" violates"
                 + " foreign key constraint \"copias_medio_fk\"\n  Detail: Key (id)=(106) is not"
                 + " present in table \"medios\".", "23503");
         DataException falla = Migrations.explicar("042_copias.sql", 3,

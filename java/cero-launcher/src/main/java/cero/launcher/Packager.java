@@ -49,7 +49,7 @@ public final class Packager {
         if (entradas.isEmpty()) {
             throw new IllegalStateException("no hay nada que empaquetar");
         }
-        Manifest manifiesto = new Manifest();
+        var manifiesto = new Manifest();
         manifiesto.getMainAttributes().putValue("Manifest-Version", "1.0");
         manifiesto.getMainAttributes().putValue("Main-Class", mainClass);
         manifiesto.getMainAttributes().putValue("Created-By", "cero-launcher");

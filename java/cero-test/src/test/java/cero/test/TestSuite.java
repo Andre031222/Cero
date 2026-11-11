@@ -1,11 +1,8 @@
 package cero.test;
 
-public final class TestSuite {
+final class TestSuite {
 
-    private TestSuite() {
-    }
-
-    public static void main(String[] args) throws Exception {
+    void main() throws Exception {
         ArranqueTests.run();
         SesionTests.run();
         BaseDeDatosTests.run();

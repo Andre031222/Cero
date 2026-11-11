@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.PreparedStatement;
@@ -12,6 +13,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -22,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
-public final class FakeDb implements java.sql.Driver {
+public final class FakeDb implements Driver {
 
     public static final String URL = "jdbc:cerotest:memoria";
 
@@ -185,7 +187,7 @@ public final class FakeDb implements java.sql.Driver {
             }
             case "executeBatch" -> {
                 int[] counts = new int[batch.size()];
-                java.util.Arrays.fill(counts, 1);
+                Arrays.fill(counts, 1);
                 yield counts;
             }
             case "getGeneratedKeys" -> resultSet(List.of(row("id", nextKey.getAndIncrement())));

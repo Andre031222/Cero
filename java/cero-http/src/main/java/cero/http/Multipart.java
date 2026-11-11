@@ -34,7 +34,7 @@ final class Multipart {
             if (headerEnd < 0) {
                 throw new HttpException(400, "parte multipart sin cabeceras");
             }
-            String rawHeaders = new String(body, cursor, headerEnd - cursor, StandardCharsets.ISO_8859_1);
+            var rawHeaders = new String(body, cursor, headerEnd - cursor, StandardCharsets.ISO_8859_1);
             int contentStart = headerEnd + 4;
 
             int next = indexOf(body, delimiter, contentStart);

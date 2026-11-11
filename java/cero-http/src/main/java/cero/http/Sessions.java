@@ -48,7 +48,7 @@ final class Sessions {
             store.remove(id);
             return null;
         }
-        Entry entry = new Entry(this, id, datos);
+        var entry = new Entry(this, id, datos);
         entry.tocar();
         return entry;
     }
@@ -59,7 +59,7 @@ final class Sessions {
             sweep();
         }
         long ahora = System.currentTimeMillis();
-        Entry entry = new Entry(this, newId(), new SessionStore.Datos(new HashMap<>(), ahora, ahora));
+        var entry = new Entry(this, newId(), new SessionStore.Datos(new HashMap<>(), ahora, ahora));
         entry.guardar();
         return entry;
     }

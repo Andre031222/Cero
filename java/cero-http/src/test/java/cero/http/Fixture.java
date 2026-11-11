@@ -61,14 +61,14 @@ final class Fixture {
     }
 
     static Socket connect(int port) throws IOException {
-        Socket socket = new Socket();
+        var socket = new Socket();
         socket.connect(new InetSocketAddress("127.0.0.1", port), 5_000);
         socket.setSoTimeout(5_000);
         return socket;
     }
 
     static String readHead(InputStream in) throws IOException {
-        StringBuilder head = new StringBuilder();
+        var head = new StringBuilder();
         int state = 0;
         int value;
         while (state < 4 && (value = in.read()) >= 0) {

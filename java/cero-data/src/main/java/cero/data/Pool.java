@@ -3,8 +3,11 @@ package cero.data;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,7 +20,7 @@ public final class Pool implements AutoCloseable {
     private final long borrowTimeoutMillis;
     private final boolean validate;
     private final long validacionCadaMillis;
-    private final java.util.Map<Connection, Long> ultimaValidacion = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<Connection, Long> ultimaValidacion = new ConcurrentHashMap<>();
 
     private final BlockingQueue<Connection> idle;
     private final AtomicInteger created = new AtomicInteger();
@@ -207,7 +210,7 @@ public final class Pool implements AutoCloseable {
             return this;
         }
 
-        public Builder validateEvery(java.time.Duration intervalo) {
+        public Builder validateEvery(Duration intervalo) {
             validacionCadaMillis = intervalo == null ? 0 : Math.max(0, intervalo.toMillis());
             return this;
         }

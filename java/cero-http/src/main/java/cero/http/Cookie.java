@@ -62,7 +62,7 @@ public record Cookie(
     }
 
     String encode() {
-        StringBuilder text = new StringBuilder(64);
+        var text = new StringBuilder(64);
         text.append(name).append('=').append(value);
         if (path != null) {
             text.append("; Path=").append(path);

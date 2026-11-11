@@ -1,6 +1,9 @@
 package cero.core;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -92,7 +95,7 @@ public final class Http {
     }
 
     public Respuesta postForm(Map<String, ?> campos) {
-        StringBuilder codificado = new StringBuilder();
+        var codificado = new StringBuilder();
         campos.forEach((clave, valor) -> {
             if (!codificado.isEmpty()) {
                 codificado.append('&');
@@ -111,15 +114,15 @@ public final class Http {
                 cuerpo == null ? null : "application/json",
                 "text/event-stream");
         try {
-            HttpResponse<java.io.InputStream> respuesta =
+            HttpResponse<InputStream> respuesta =
                     CLIENTE.send(peticion, HttpResponse.BodyHandlers.ofInputStream());
 
             if (respuesta.statusCode() >= 400) {
                 throw new HttpClientException(respuesta.statusCode(),
                         new String(respuesta.body().readAllBytes(), StandardCharsets.UTF_8));
             }
-            try (var lector = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(respuesta.body(), StandardCharsets.UTF_8))) {
+            try (var lector = new BufferedReader(
+                    new InputStreamReader(respuesta.body(), StandardCharsets.UTF_8))) {
                 String linea;
                 while ((linea = lector.readLine()) != null) {
                     if (!linea.startsWith("data:")) {
@@ -198,7 +201,7 @@ public final class Http {
         if (consulta.isEmpty()) {
             return url;
         }
-        StringBuilder completa = new StringBuilder(url);
+        var completa = new StringBuilder(url);
         completa.append(url.indexOf('?') >= 0 ? '&' : '?');
         boolean primero = true;
         for (Map.Entry<String, String> par : consulta.entrySet()) {

@@ -51,7 +51,7 @@ public final class Rows extends AbstractList<Row> {
     }
 
     public String toJson() {
-        StringBuilder out = new StringBuilder(64).append('[');
+        var out = new StringBuilder(64).append('[');
         for (int i = 0; i < rows.size(); i++) {
             if (i > 0) {
                 out.append(',');

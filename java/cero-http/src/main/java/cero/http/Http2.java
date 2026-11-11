@@ -1,12 +1,17 @@
 package cero.http;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PushbackInputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -157,14 +162,14 @@ final class Http2 implements Watchdog.Vigilada {
         out.flush();
 
         try (ExecutorService hilos = Executors.newVirtualThreadPerTaskExecutor()) {
-            Http2 conexion = new Http2(socket, in, out, context, remoto, hilos);
+            var conexion = new Http2(socket, in, out, context, remoto, hilos);
             conexion.ajustesDeCabecera(peticion.header("HTTP2-Settings"));
             conexion.correr(comoHttp2(peticion, context));
         }
     }
 
     private static IncomingRequest comoHttp2(IncomingRequest original, ServerContext context) {
-        Headers limpias = new Headers(original.headers().size());
+        var limpias = new Headers(original.headers().size());
         for (int i = 0; i < original.headers().size(); i++) {
             String nombre = original.headers().name(i);
             if (nombre.equalsIgnoreCase("Connection") || nombre.equalsIgnoreCase("Upgrade")
@@ -179,13 +184,13 @@ final class Http2 implements Watchdog.Vigilada {
 
     private void ajustesDeCabecera(String base64url) {
         try {
-            byte[] crudos = java.util.Base64.getUrlDecoder().decode(base64url.trim());
+            byte[] crudos = Base64.getUrlDecoder().decode(base64url.trim());
             ajustes(0, 0, crudos, false);
         } catch (IllegalArgumentException | IOException malFormados) {
         }
     }
 
-    static boolean pareceHttp2(java.io.PushbackInputStream entrada) throws IOException {
+    static boolean pareceHttp2(PushbackInputStream entrada) throws IOException {
         byte[] ojeada = new byte[PREAMBULO.length];
         int leidos = 0;
         boolean coincide = true;
@@ -209,17 +214,17 @@ final class Http2 implements Watchdog.Vigilada {
         byte[] esperado = new byte[PREAMBULO.length];
         try {
             leerDelTodo(esperado);
-        } catch (java.io.EOFException cortado) {
+        } catch (EOFException cortado) {
             return;
         }
-        if (!java.util.Arrays.equals(esperado, PREAMBULO)) {
+        if (!Arrays.equals(esperado, PREAMBULO)) {
             adios(ERROR_PROTOCOLO, "preámbulo inválido");
             return;
         }
 
         if (deUpgrade != null) {
             ultimoFlujoVisto = 1;
-            Flujo f = new Flujo(1, ventanaInicialFlujo, maxCuerpo);
+            var f = new Flujo(1, ventanaInicialFlujo, maxCuerpo);
             flujos.put(1, f);
             f.finEntrada = true;
             lanzar(f, deUpgrade);
@@ -243,7 +248,7 @@ final class Http2 implements Watchdog.Vigilada {
             adios(ERROR_COMPRESION, rota.getMessage());
         } catch (Hpack.Desmedida desmedida) {
             adios(ERROR_CALMA, desmedida.getMessage());
-        } catch (java.io.EOFException cortado) {
+        } catch (EOFException cortado) {
         } finally {
             vivo = false;
             context.watchdog().soltar(this);
@@ -266,7 +271,7 @@ final class Http2 implements Watchdog.Vigilada {
                 int primero = in.read();
                 socketCrudo.setSoTimeout(inactividadMillis);
                 return primero;
-            } catch (java.net.SocketTimeoutException ociosa) {
+            } catch (SocketTimeoutException ociosa) {
                 if (enCurso.get() == 0) {
                     return OCIOSA;
                 }
@@ -413,7 +418,7 @@ final class Http2 implements Watchdog.Vigilada {
             escribirTrama(RST_STREAM, 0, idFlujo, deEntero(ERROR_PROTOCOLO));
             return;
         }
-        Flujo flujo = new Flujo(idFlujo, ventanaInicialFlujo, maxCuerpo);
+        var flujo = new Flujo(idFlujo, ventanaInicialFlujo, maxCuerpo);
         flujos.put(idFlujo, flujo);
         if ((banderas & FIN_FLUJO) != 0) {
             flujo.finEntrada = true;
@@ -464,7 +469,7 @@ final class Http2 implements Watchdog.Vigilada {
         if (pos + recorte > carga.length) {
             throw new ErrorConexion(ERROR_PROTOCOLO, "relleno mayor que la trama");
         }
-        ByteArrayOutputStream bloque = new ByteArrayOutputStream();
+        var bloque = new ByteArrayOutputStream();
         bloque.write(carga, pos, carga.length - pos - recorte);
         if (bloque.size() > maxBloqueCabeceras) {
             throw new ErrorConexion(ERROR_CALMA, "bloque de cabeceras desmedido");
@@ -503,7 +508,7 @@ final class Http2 implements Watchdog.Vigilada {
         String destino = null;
         String autoridad = null;
         String esquema = null;
-        Headers cabeceras = new Headers();
+        var cabeceras = new Headers();
         boolean yaHuboNormal = false;
 
         for (Hpack.Campo c : campos) {
@@ -567,7 +572,7 @@ final class Http2 implements Watchdog.Vigilada {
     private void lanzar(Flujo flujo, IncomingRequest peticion) {
         enCurso.incrementAndGet();
         hilos.execute(() -> {
-            Http2Respuesta respuesta = new Http2Respuesta(this, flujo, peticion);
+            var respuesta = new Http2Respuesta(this, flujo, peticion);
             try {
                 context.handler().handle(peticion, respuesta);
                 respuesta.terminar();
@@ -787,12 +792,12 @@ final class Http2 implements Watchdog.Vigilada {
                 return;
             }
             escribirTrama(HEADERS, fin ? FIN_FLUJO : 0, flujo,
-                    java.util.Arrays.copyOfRange(bloque, 0, tramaMaxima));
+                    Arrays.copyOfRange(bloque, 0, tramaMaxima));
             int pos = tramaMaxima;
             while (pos < bloque.length) {
                 int hasta = Math.min(pos + tramaMaxima, bloque.length);
                 escribirTrama(CONTINUATION, hasta == bloque.length ? FIN_CABECERAS : 0, flujo,
-                        java.util.Arrays.copyOfRange(bloque, pos, hasta));
+                        Arrays.copyOfRange(bloque, pos, hasta));
                 pos = hasta;
             }
         }
@@ -825,7 +830,7 @@ final class Http2 implements Watchdog.Vigilada {
                             return;
                         }
                         escribirTrama(DATA, ultimo ? FIN_FLUJO : 0, flujo.id,
-                                java.util.Arrays.copyOfRange(cuerpo, pos, pos + trozo));
+                                Arrays.copyOfRange(cuerpo, pos, pos + trozo));
                     }
                     pos += trozo;
                     descargar(trozo);
@@ -1013,7 +1018,7 @@ final class Http2 implements Watchdog.Vigilada {
         while (leidos < destino.length) {
             int n = in.read(destino, leidos, destino.length - leidos);
             if (n < 0) {
-                throw new java.io.EOFException();
+                throw new EOFException();
             }
             leidos += n;
         }
@@ -1025,20 +1030,20 @@ final class Http2 implements Watchdog.Vigilada {
         final Tuberia entrada;
         final AtomicBoolean empezada = new AtomicBoolean();
         volatile boolean cortado;
-        final java.util.concurrent.atomic.AtomicInteger ventana;
+        final AtomicInteger ventana;
         volatile boolean finEntrada;
 
         volatile boolean respondido;
 
         volatile long declarado = -1;
 
-        final java.util.concurrent.atomic.AtomicLong recibido =
-                new java.util.concurrent.atomic.AtomicLong();
+        final AtomicLong recibido =
+                new AtomicLong();
 
         Flujo(int id, int ventanaInicial, long maxCuerpo) {
             this.id = id;
             this.entrada = new Tuberia(maxCuerpo);
-            this.ventana = new java.util.concurrent.atomic.AtomicInteger(ventanaInicial);
+            this.ventana = new AtomicInteger(ventanaInicial);
         }
 
         void cerrarEntrada() {
@@ -1079,7 +1084,7 @@ final class Http2 implements Watchdog.Vigilada {
             if (cerrada) {
                 return;
             }
-            trozos.add(java.util.Arrays.copyOfRange(datos, desde, desde + largo));
+            trozos.add(Arrays.copyOfRange(datos, desde, desde + largo));
             notifyAll();
         }
 

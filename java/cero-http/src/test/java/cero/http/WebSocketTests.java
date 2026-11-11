@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +37,7 @@ final class WebSocketTests {
     }
 
     private static void lectorQueNoLee() throws Exception {
-        CountDownLatch cerrado = new CountDownLatch(1);
+        var cerrado = new CountDownLatch(1);
         ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).writeTimeoutMillis(300).build();
         try (Server server = Server.start(opciones, (peticion, respuesta) -> WebSockets.accept(peticion,
                 respuesta, new WebSocketHandler() {
@@ -105,7 +106,7 @@ final class WebSocketTests {
         Check.group("WebSocket · texto mal formado");
 
         List<String> recibidos = new CopyOnWriteArrayList<>();
-        WebSocketHandler oyente = new WebSocketHandler() {
+        var oyente = new WebSocketHandler() {
             @Override
             public void onMessage(WebSocket socket, String texto) {
                 recibidos.add(texto);
@@ -185,7 +186,7 @@ final class WebSocketTests {
         return Server.start(ServerOptions.builder().host("127.0.0.1").port(0).handlerTimeoutMillis(300).build(),
                 (peticion, respuesta) -> WebSockets.accept(peticion, respuesta,
                         new WebSocketHandler() {
-                        }, java.util.Set.of(admitidos)),
+                        }, Set.of(admitidos)),
                 ErrorReporter.silent());
     }
 
@@ -310,7 +311,7 @@ final class WebSocketTests {
     }
 
     private static void cierreOrdenado() throws Exception {
-        CountDownLatch cerrado = new CountDownLatch(1);
+        var cerrado = new CountDownLatch(1);
         List<String> motivos = new CopyOnWriteArrayList<>();
 
         try (Server server = servidor(new WebSocketHandler() {
@@ -425,7 +426,7 @@ final class WebSocketTests {
 
     private static Marco recibirMarco(Socket socket) throws IOException {
         InputStream entrada = socket.getInputStream();
-        DataInputStream datos = new DataInputStream(entrada);
+        var datos = new DataInputStream(entrada);
         int primero = datos.readUnsignedByte();
         int segundo = datos.readUnsignedByte();
         int longitud = segundo & 0x7F;

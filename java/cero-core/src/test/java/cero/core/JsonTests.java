@@ -1,5 +1,8 @@
 package cero.core;
 
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -68,11 +71,11 @@ final class JsonTests {
         Check.equal("fecha", Json.write(LocalDate.of(2026, 8, 1)), "\"2026-08-01\"");
 
         Check.equal("hora sql es etiqueta de reloj, no instante",
-                Json.write(java.sql.Time.valueOf("19:00:00")), "\"19:00:00\"");
+                Json.write(Time.valueOf("19:00:00")), "\"19:00:00\"");
         Check.equal("fecha sql no se desplaza a UTC",
-                Json.write(java.sql.Date.valueOf("2026-10-01")), "\"2026-10-01\"");
+                Json.write(Date.valueOf("2026-10-01")), "\"2026-10-01\"");
         Check.equal("marca de tiempo sql sí es un instante",
-                Json.write(java.sql.Timestamp.from(Instant.parse("2026-08-01T10:00:00Z"))),
+                Json.write(Timestamp.from(Instant.parse("2026-08-01T10:00:00Z"))),
                 "\"2026-08-01T10:00:00Z\"");
         Check.equal("escapes", Json.write("a\"b\\c\nd\te"), "\"a\\\"b\\\\c\\nd\\te\"");
         Check.equal("control", Json.write("\u0001"), "\"\\u0001\"");
@@ -80,7 +83,7 @@ final class JsonTests {
         Check.equal("NaN se serializa como null", Json.write(Double.NaN), "null");
         Check.equal("infinito se serializa como null", Json.write(Double.POSITIVE_INFINITY), "null");
 
-        Cuenta cuenta = new Cuenta();
+        var cuenta = new Cuenta();
         cuenta.titular = "Ana";
         cuenta.saldo = 10.5;
         String bean = Json.write(cuenta);
@@ -167,7 +170,7 @@ final class JsonTests {
         Check.raises("alternando objeto y array igual", IllegalArgumentException.class,
                 () -> Json.read("[{\"a\":".repeat(50_000)));
 
-        StringBuilder hermanos = new StringBuilder("[");
+        var hermanos = new StringBuilder("[");
         for (int i = 0; i < 1_000; i++) {
             hermanos.append(i > 0 ? "," : "").append("[[1]]");
         }

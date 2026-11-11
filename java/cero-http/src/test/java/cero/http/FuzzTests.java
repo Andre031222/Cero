@@ -1,8 +1,11 @@
 package cero.http;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Random;
 
 final class FuzzTests {
@@ -33,7 +36,7 @@ final class FuzzTests {
     }
 
     private static void ruidoHttp1(int puerto) {
-        Random azar = new Random(SEMILLA);
+        var azar = new Random(SEMILLA);
         String[] plantillas = {
                 "GET / HTTP/1.1\r\nHost: x\r\n\r\n",
                 "POST /eco HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nhola\n",
@@ -44,7 +47,7 @@ final class FuzzTests {
         int caidas = 0;
         for (int i = 0; i < CASOS; i++) {
             byte[] crudo = plantillas[azar.nextInt(plantillas.length)]
-                    .getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+                    .getBytes(StandardCharsets.ISO_8859_1);
             crudo = estropear(crudo, azar);
             if (!aguanta(puerto, crudo)) {
                 caidas++;
@@ -55,10 +58,10 @@ final class FuzzTests {
     }
 
     private static void ruidoDeTramas(int puerto) {
-        Random azar = new Random(SEMILLA + 1);
+        var azar = new Random(SEMILLA + 1);
         int caidas = 0;
         for (int i = 0; i < CASOS; i++) {
-            java.io.ByteArrayOutputStream fuera = new java.io.ByteArrayOutputStream();
+            var fuera = new ByteArrayOutputStream();
             fuera.writeBytes(Http2.PREAMBULO);
             for (int t = 0; t < 1 + azar.nextInt(4); t++) {
                 int largo = azar.nextInt(64);
@@ -84,12 +87,12 @@ final class FuzzTests {
     }
 
     private static void ruidoTrasElPreambulo(int puerto) {
-        Random azar = new Random(SEMILLA + 2);
+        var azar = new Random(SEMILLA + 2);
         int caidas = 0;
         for (int i = 0; i < CASOS; i++) {
             byte[] basura = new byte[azar.nextInt(512)];
             azar.nextBytes(basura);
-            java.io.ByteArrayOutputStream fuera = new java.io.ByteArrayOutputStream();
+            var fuera = new ByteArrayOutputStream();
             fuera.writeBytes(Http2.PREAMBULO);
             fuera.writeBytes(basura);
             if (!aguanta(puerto, fuera.toByteArray())) {
@@ -106,7 +109,7 @@ final class FuzzTests {
             case 0 -> copia[azar.nextInt(copia.length)] = (byte) azar.nextInt(256);
             case 1 -> {
                 int corte = azar.nextInt(copia.length);
-                copia = java.util.Arrays.copyOfRange(copia, 0, corte);
+                copia = Arrays.copyOfRange(copia, 0, corte);
             }
             case 2 -> {
                 byte[] doble = new byte[copia.length * 2];

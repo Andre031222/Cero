@@ -308,7 +308,7 @@ final class IncomingRequest implements Request {
     }
 
     private byte[] readAll() throws IOException {
-        ByteArrayOutputStream collected = new ByteArrayOutputStream(Math.max(64, body.available()));
+        var collected = new ByteArrayOutputStream(Math.max(64, body.available()));
         byte[] scratch = new byte[8_192];
         int read;
         while ((read = body.read(scratch, 0, scratch.length)) >= 0) {

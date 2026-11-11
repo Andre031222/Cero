@@ -1,5 +1,7 @@
 package cero.core;
 
+import cero.http.HttpException;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -56,7 +58,7 @@ public final class AccessLog implements Middleware {
             Object salida = chain.proceed(context);
             estado = context.response().status();
             return salida;
-        } catch (cero.http.HttpException fallo) {
+        } catch (HttpException fallo) {
             estado = fallo.status();
             throw fallo;
         } catch (Exception fallo) {
@@ -123,11 +125,6 @@ public final class AccessLog implements Middleware {
     }
 
     private boolean ignorada(String ruta) {
-        for (String prefijo : ignoradas) {
-            if (ruta.startsWith(prefijo)) {
-                return true;
-            }
-        }
-        return false;
+        return ignoradas.stream().anyMatch(ruta::startsWith);
     }
 }

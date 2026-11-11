@@ -3,11 +3,13 @@ package cero.http;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PushbackInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
+import javax.net.ssl.SSLSocket;
 
 final class Connection implements Runnable, Watchdog.Vigilada {
 
@@ -25,7 +27,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     private AsciiBuffer head;
 
-    private java.io.PushbackInputStream entrada;
+    private PushbackInputStream entrada;
 
     Connection(Socket socket, ServerContext context, Consumer<Connection> release) {
         this.socket = socket;
@@ -48,15 +50,15 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
             OutputStream out = new BufferedOutputStream(open.getOutputStream(), 16_384);
 
-            if (options.http2() && open instanceof javax.net.ssl.SSLSocket cifrado
+            if (options.http2() && open instanceof SSLSocket cifrado
                     && "h2".equals(cifrado.getApplicationProtocol())) {
                 ociosa = false;
                 Http2.servir(open, open.getInputStream(), out, context, remoteAddress(open));
                 return;
             }
 
-            java.io.PushbackInputStream entrada =
-                    new java.io.PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
+            PushbackInputStream entrada =
+                    new PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
             if (options.http2() && Http2.pareceHttp2(entrada)) {
                 ociosa = false;
                 Http2.servir(open, entrada, out, context, remoteAddress(open));
@@ -64,8 +66,8 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             }
 
             this.entrada = entrada;
-            ByteReader reader = new ByteReader(entrada, options.readBufferBytes());
-            RequestReader requests = new RequestReader(reader, context);
+            var reader = new ByteReader(entrada, options.readBufferBytes());
+            var requests = new RequestReader(reader, context);
             head = new AsciiBuffer(512);
 
             context.watchdog().vigilar(this);
@@ -108,7 +110,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
             boolean last = served + 1 == options.maxKeepAliveRequests();
             boolean keepAlive = wantsKeepAlive(request) && !last && context.accepting().getAsBoolean();
 
-            OutgoingResponse response = new OutgoingResponse(out, request, options, head);
+            var response = new OutgoingResponse(out, request, options, head);
             enCurso = response;
             response.source(reader);
             response.keepAlive(keepAlive);
@@ -208,7 +210,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
 
     private void writeError(OutputStream out, int status, String message) {
         try {
-            OutgoingResponse response = new OutgoingResponse(out, null, context.options(), head);
+            var response = new OutgoingResponse(out, null, context.options(), head);
             response.keepAlive(false);
             response.status(status);
             response.type("text/plain; charset=utf-8");

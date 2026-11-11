@@ -1,7 +1,10 @@
 package cero.http;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -81,9 +84,9 @@ final class Hpack {
         IZQUIERDA = new int[nodos];
         DERECHA = new int[nodos];
         SIMBOLO = new int[nodos];
-        java.util.Arrays.fill(IZQUIERDA, -1);
-        java.util.Arrays.fill(DERECHA, -1);
-        java.util.Arrays.fill(SIMBOLO, -1);
+        Arrays.fill(IZQUIERDA, -1);
+        Arrays.fill(DERECHA, -1);
+        Arrays.fill(SIMBOLO, -1);
 
         int siguiente = 1;
         for (int simbolo = 0; simbolo < HpackTablas.CODIGO.length; simbolo++) {
@@ -108,7 +111,7 @@ final class Hpack {
     }
 
     static String huffmanDecodificar(byte[] datos) {
-        StringBuilder salida = new StringBuilder(datos.length * 8 / 5);
+        var salida = new StringBuilder(datos.length * 8 / 5);
         int nodo = 0;
         int bitsDeRelleno = 0;
         for (byte b : datos) {
@@ -138,7 +141,7 @@ final class Hpack {
     static byte[] huffmanCodificar(String texto) {
         long acumulador = 0;
         int bits = 0;
-        java.io.ByteArrayOutputStream salida = new java.io.ByteArrayOutputStream(texto.length());
+        var salida = new ByteArrayOutputStream(texto.length());
         for (int i = 0; i < texto.length(); i++) {
             int c = texto.charAt(i) & 0xFF;
             acumulador = (acumulador << HpackTablas.LARGO[c]) | (HpackTablas.CODIGO[c] & 0xFFFFFFFFL);
@@ -216,7 +219,7 @@ final class Hpack {
 
         List<Campo> decodificar(byte[] bloque) {
             List<Campo> campos = new ArrayList<>();
-            Lector in = new Lector(bloque);
+            var in = new Lector(bloque);
             boolean todaviaAlPrincipio = true;
             long lista = 0;
             while (in.hay()) {
@@ -272,7 +275,7 @@ final class Hpack {
             if (huffman) {
                 return huffmanDecodificar(crudo);
             }
-            return new String(crudo, java.nio.charset.StandardCharsets.ISO_8859_1);
+            return new String(crudo, StandardCharsets.ISO_8859_1);
         }
 
         private Campo enIndice(int indice) {
@@ -340,7 +343,7 @@ final class Hpack {
             boolean vale = (bitsHuffman + 7) / 8 < texto.length();
             byte[] datos = vale
                     ? huffmanCodificar(texto)
-                    : texto.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+                    : texto.getBytes(StandardCharsets.ISO_8859_1);
             escribirEntero(salida, datos.length, 7, vale ? 0x80 : 0x00);
             for (byte b : datos) {
                 salida.add(b);

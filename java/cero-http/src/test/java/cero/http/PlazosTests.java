@@ -146,7 +146,7 @@ final class PlazosTests {
     }
 
     private static Http2Cliente sinVentana(int puerto) throws IOException {
-        Http2Cliente c = new Http2Cliente(puerto).preambulo();
+        var c = new Http2Cliente(puerto).preambulo();
         c.trama(Http2Cliente.SETTINGS, 0, 0, new byte[] { 0, 4, 0, 0, 0, 0 });
         return c;
     }
@@ -166,7 +166,7 @@ final class PlazosTests {
     private static void ventanaACeroConGoteo(int puerto) throws Exception {
         try (Http2Cliente c = sinVentana(puerto)) {
             c.pedir("GET", "/");
-            AtomicBoolean parar = new AtomicBoolean();
+            var parar = new AtomicBoolean();
             Thread goteo = latir(c, parar, Http2Cliente.WINDOW_UPDATE, 1, Http2Cliente.entero(1));
             int datos = 0;
             Http2Cliente.Trama corte = null;
@@ -189,7 +189,7 @@ final class PlazosTests {
 
     private static void pingsSinTrabajo(int puerto) throws Exception {
         try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
-            AtomicBoolean parar = new AtomicBoolean();
+            var parar = new AtomicBoolean();
             Thread latido = Thread.ofVirtual().start(() -> {
                 try {
                     while (!parar.get()) {

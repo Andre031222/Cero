@@ -1,5 +1,6 @@
 package cero.http;
 
+import java.util.Arrays;
 import java.util.List;
 
 final class HpackTests {
@@ -31,7 +32,7 @@ final class HpackTests {
     private static byte[] cookies(int campos) {
         byte[] bloque = new byte[12 + campos - 1];
         System.arraycopy(hex("4006636f6f6b6965 03613d31"), 0, bloque, 0, 12);
-        java.util.Arrays.fill(bloque, 12, bloque.length, (byte) (0x80 | 62));
+        Arrays.fill(bloque, 12, bloque.length, (byte) (0x80 | 62));
         return bloque;
     }
 
@@ -54,7 +55,7 @@ final class HpackTests {
     }
 
     private static String texto(List<Hpack.Campo> campos) {
-        StringBuilder s = new StringBuilder();
+        var s = new StringBuilder();
         for (Hpack.Campo c : campos) {
             s.append(c.nombre()).append(": ").append(c.valor()).append('\n');
         }
@@ -82,7 +83,7 @@ final class HpackTests {
     }
 
     private static int leer(byte[] datos, int prefijo) {
-        Hpack.Lector in = new Hpack.Lector(datos);
+        var in = new Hpack.Lector(datos);
         in.leer();
         return Hpack.leerEntero(in, prefijo);
     }
@@ -92,7 +93,7 @@ final class HpackTests {
         Check.equal("decodifica www.example.com",
                 Hpack.huffmanDecodificar(codificado), "www.example.com");
         Check.that("y codificarlo devuelve los mismos bytes",
-                java.util.Arrays.equals(Hpack.huffmanCodificar("www.example.com"), codificado));
+                Arrays.equals(Hpack.huffmanCodificar("www.example.com"), codificado));
 
         Check.equal("decodifica una fecha",
                 Hpack.huffmanDecodificar(hex("d07a be94 1054 d444 a820 0595 040b 8166 e082 a62d 1bff")),
@@ -100,7 +101,7 @@ final class HpackTests {
     }
 
     private static void peticionesSinHuffman() {
-        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        var d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
 
         Check.equal("C.3.1 · primera petición",
                 texto(d.decodificar(hex("8286 8441 0f77 7777 2e65 7861 6d70 6c65 2e63 6f6d"))),
@@ -122,7 +123,7 @@ final class HpackTests {
     }
 
     private static void peticionesConHuffman() {
-        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        var d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
 
         Check.equal("C.4.1 · primera petición",
                 texto(d.decodificar(hex("8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4 ff"))),
@@ -139,7 +140,7 @@ final class HpackTests {
     }
 
     private static void respuestasConTablaPequena() {
-        Hpack.Decodificador d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        var d = new Hpack.Decodificador(Hpack.TAMANO_TABLA, Integer.MAX_VALUE, Integer.MAX_VALUE);
         d.decodificar(hex("3f e1 1f"));
 
         Check.equal("C.5.1 · primera respuesta",

@@ -1,11 +1,13 @@
 package cero.core;
 
 import cero.http.ErrorReporter;
+import cero.http.HttpException;
 import cero.http.Server;
 
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class ObservabilidadTests {
 
@@ -23,7 +25,7 @@ final class ObservabilidadTests {
         @Get("/{id}")
         public Object ver(@Path("id") int id) {
             if (id > 100) {
-                throw new cero.http.HttpException(404, "no existe");
+                throw new HttpException(404, "no existe");
             }
             return "artículo " + id;
         }
@@ -57,8 +59,8 @@ final class ObservabilidadTests {
     }
 
     private static void salud() throws Exception {
-        java.util.concurrent.atomic.AtomicBoolean bdEnPie =
-                new java.util.concurrent.atomic.AtomicBoolean(true);
+        AtomicBoolean bdEnPie =
+                new AtomicBoolean(true);
 
         Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .health(Health.checks()

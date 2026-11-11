@@ -2,12 +2,14 @@ package cero.data;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 final class Mapping {
 
@@ -46,7 +48,7 @@ final class Mapping {
     }
 
     Row toRow(Object entity, boolean includeId) {
-        Row row = new Row();
+        var row = new Row();
         for (Property property : properties) {
             if (!includeId && property.identity()) {
                 continue;
@@ -86,7 +88,7 @@ final class Mapping {
             }
         } else {
             for (Field field : type.getDeclaredFields()) {
-                if (field.isSynthetic() || java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                if (field.isSynthetic() || Modifier.isStatic(field.getModifiers())) {
                     continue;
                 }
                 field.setAccessible(true);
@@ -100,7 +102,7 @@ final class Mapping {
 
     private static String defaultTable(Class<?> type) {
         String name = type.getSimpleName();
-        StringBuilder snake = new StringBuilder(name.length() + 4);
+        var snake = new StringBuilder(name.length() + 4);
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
             if (Character.isUpperCase(c) && i > 0) {
@@ -129,10 +131,10 @@ final class Mapping {
     }
 
     private record Property(String name, String column, boolean identity, boolean generated,
-                            java.util.function.Function<Object, Object> reader) {
+                            Function<Object, Object> reader) {
 
         static Property of(String name, AnnotatedElement element,
-                           java.util.function.Function<Object, Object> reader) {
+                           Function<Object, Object> reader) {
             Column column = element.getAnnotation(Column.class);
             Id id = element.getAnnotation(Id.class);
             return new Property(name,

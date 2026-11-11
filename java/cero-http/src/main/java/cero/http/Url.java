@@ -57,7 +57,7 @@ public final class Url {
     }
 
     private static String decode(String text, boolean plusIsSpace, boolean rechazarSeparadores) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(text.length());
+        var out = new ByteArrayOutputStream(text.length());
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             if (c == '%' && i + 2 < text.length()) {

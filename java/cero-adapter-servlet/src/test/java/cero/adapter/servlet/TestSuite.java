@@ -18,13 +18,10 @@ import cero.core.Required;
 import cero.http.ErrorReporter;
 import cero.http.HttpException;
 
-public final class TestSuite {
+final class TestSuite {
 
     private static int passed;
     private static int failed;
-
-    private TestSuite() {
-    }
 
     public record Nota(@Required String titulo) {
     }
@@ -106,11 +103,11 @@ public final class TestSuite {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    void main() throws Exception {
         System.out.println();
         System.out.println("── adaptador de servlet");
 
-        CeroServlet servlet = new CeroServlet(Cero.app()
+        var servlet = new CeroServlet(Cero.app()
                 .quiet()
                 .reporter(ErrorReporter.silent())
                 .controllers(ApiController.class));
@@ -246,7 +243,7 @@ public final class TestSuite {
     }
 
     private static Doble.Peticion peticion(String metodo, String uri) {
-        Doble.Peticion p = new Doble.Peticion();
+        var p = new Doble.Peticion();
         p.metodo = metodo;
         p.uri = uri;
         return p;
@@ -254,7 +251,7 @@ public final class TestSuite {
 
     private static Doble.Respuesta llamar(CeroServlet servlet, Doble.Peticion peticion)
             throws Exception {
-        Doble.Respuesta respuesta = new Doble.Respuesta();
+        var respuesta = new Doble.Respuesta();
         servlet.service(peticion.construir(), respuesta.construir());
         return respuesta;
     }

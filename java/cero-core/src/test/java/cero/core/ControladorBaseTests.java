@@ -6,6 +6,7 @@ import java.net.http.HttpResponse;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -65,9 +66,9 @@ final class ControladorBaseTests {
 
     private static void aislamiento(String base) throws Exception {
         int peticiones = 200;
-        var respuestas = new java.util.concurrent.ConcurrentLinkedQueue<String>();
-        CountDownLatch salida = new CountDownLatch(1);
-        CountDownLatch fin = new CountDownLatch(peticiones);
+        var respuestas = new ConcurrentLinkedQueue<String>();
+        var salida = new CountDownLatch(1);
+        var fin = new CountDownLatch(peticiones);
 
         try (var hilos = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < peticiones; i++) {

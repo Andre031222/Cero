@@ -86,7 +86,7 @@ final class ByteReader {
                 if (length > 0 && buffer[end - 1] == '\r') {
                     length--;
                 }
-                String line = new String(buffer, position, length, StandardCharsets.ISO_8859_1);
+                var line = new String(buffer, position, length, StandardCharsets.ISO_8859_1);
                 position = newline + 1;
                 return line;
             }

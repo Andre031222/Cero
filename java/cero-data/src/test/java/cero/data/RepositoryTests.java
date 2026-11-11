@@ -24,7 +24,7 @@ final class RepositoryTests {
         FakeDb.reset();
         DataSources.registerDefault(Pool.to(FakeDb.URL).validate(false).build());
 
-        Repository<Usuario, Long> usuarios = new Repository<>(Usuario.class);
+        var usuarios = new Repository<Usuario, Long>(Usuario.class);
 
         Check.equal("toma el nombre de @Table", usuarios.table(), "usuarios");
         Check.equal("sin @Table lo deriva de la clase",

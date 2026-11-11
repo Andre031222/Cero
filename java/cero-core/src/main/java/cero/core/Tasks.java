@@ -27,7 +27,7 @@ public final class Tasks implements AutoCloseable {
 
     private Tasks() {
         reloj = Executors.newSingleThreadScheduledExecutor(tarea -> {
-            Thread hilo = new Thread(tarea, "cero-tasks");
+            var hilo = new Thread(tarea, "cero-tasks");
             hilo.setDaemon(true);
             return hilo;
         });
@@ -46,7 +46,7 @@ public final class Tasks implements AutoCloseable {
     public <T> CompletableFuture<T> submit(Callable<T> tarea) {
         requerirAbierto();
         lanzadas.incrementAndGet();
-        CompletableFuture<T> promesa = new CompletableFuture<>();
+        var promesa = new CompletableFuture<T>();
         trabajadores.execute(() -> {
             try {
                 promesa.complete(tarea.call());
@@ -77,7 +77,7 @@ public final class Tasks implements AutoCloseable {
 
     public Cancelacion cron(String expresion, Runnable tarea) {
         requerirAbierto();
-        Programada programada = new Programada(Cron.of(expresion), tarea);
+        var programada = new Programada(Cron.of(expresion), tarea);
         programadas.add(programada);
         asegurarLatido();
         return () -> {

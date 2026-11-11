@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpSession;
 import cero.http.Session;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 final class SessionOverServlet implements Session {
@@ -58,12 +57,7 @@ final class SessionOverServlet implements Session {
     @Override
     public Set<String> keys() {
         requerirValida();
-        Set<String> claves = new HashSet<>();
-        var nombres = nativa.getAttributeNames();
-        while (nombres.hasMoreElements()) {
-            claves.add(nombres.nextElement());
-        }
-        return Collections.unmodifiableSet(claves);
+        return Set.copyOf(Collections.list(nativa.getAttributeNames()));
     }
 
     @Override

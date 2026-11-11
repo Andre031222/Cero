@@ -1,6 +1,7 @@
 package cero.core;
 
 import cero.http.ErrorReporter;
+import cero.http.HttpException;
 import cero.http.Server;
 
 import java.time.Duration;
@@ -9,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,8 +38,8 @@ final class AsincronoTests {
     }
 
     private static void clienteHttp() throws Exception {
-        AtomicReference<String> recibido = new AtomicReference<>();
-        AtomicInteger llamadas = new AtomicInteger();
+        var recibido = new AtomicReference<String>();
+        var llamadas = new AtomicInteger();
 
         Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .routes(r -> r
@@ -50,12 +52,12 @@ final class AsincronoTests {
                         .post("/formulario", ctx -> ctx.form("campo"))
                         .get("/inestable", ctx -> {
                             if (llamadas.incrementAndGet() < 3) {
-                                throw new cero.http.HttpException(503, "todavía no");
+                                throw new HttpException(503, "todavía no");
                             }
                             return "por fin";
                         })
                         .get("/roto", ctx -> {
-                            throw new cero.http.HttpException(404, "no está");
+                            throw new HttpException(404, "no está");
                         })
                         .get("/flujo", ctx -> {
                             ctx.response().header("Content-Type", "text/event-stream");
@@ -173,7 +175,7 @@ final class AsincronoTests {
 
     private static void trabajos() throws Exception {
         try (Tasks jobs = Tasks.start()) {
-            CountDownLatch hecho = new CountDownLatch(3);
+            var hecho = new CountDownLatch(3);
             for (int i = 0; i < 3; i++) {
                 jobs.run(hecho::countDown);
             }
@@ -189,16 +191,16 @@ final class AsincronoTests {
             boolean propago = false;
             try {
                 falla.get(5, TimeUnit.SECONDS);
-            } catch (java.util.concurrent.ExecutionException esperado) {
+            } catch (ExecutionException esperado) {
                 propago = esperado.getCause() instanceof IllegalStateException;
             }
             Check.that("submit() propaga el fallo al futuro", propago);
 
-            CountDownLatch tras = new CountDownLatch(1);
+            var tras = new CountDownLatch(1);
             jobs.after(Duration.ofMillis(120), tras::countDown);
             Check.that("after() dispara pasado el retraso", tras.await(5, TimeUnit.SECONDS));
 
-            AtomicInteger repeticiones = new AtomicInteger();
+            var repeticiones = new AtomicInteger();
             var cancelar = jobs.every(Duration.ofMillis(60), repeticiones::incrementAndGet);
             Thread.sleep(400);
             cancelar.cancel();
@@ -209,11 +211,11 @@ final class AsincronoTests {
 
             Check.equal("cron() se registra", programadasTras(jobs, "*/5 * * * *"), 1);
 
-            AtomicInteger fallos = new AtomicInteger();
+            var fallos = new AtomicInteger();
             Log.Nivel previo = Log.nivel();
             Log.nivel(Log.Nivel.NADA);
             try {
-                CountDownLatch corrio = new CountDownLatch(1);
+                var corrio = new CountDownLatch(1);
                 jobs.run(() -> {
                     corrio.countDown();
                     throw new IllegalStateException("revienta");

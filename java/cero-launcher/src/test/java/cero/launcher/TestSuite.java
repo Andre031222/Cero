@@ -1,26 +1,27 @@
 package cero.launcher;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
-public final class TestSuite {
+final class TestSuite {
 
     private static int pasadas;
     private static int fallidas;
 
-    private TestSuite() {
-    }
-
-    public static void main(String[] args) throws Exception {
+    void main() throws Exception {
         System.out.println();
         System.out.println("── cero-launcher, el jar que arranca solo");
 
@@ -73,10 +74,10 @@ public final class TestSuite {
                 GeneradorProyecto.Peticion.de("com.ejemplo", "mi-app", "Mi app", "ninguno"));
         boolean limpio = true;
         String pom = "";
-        try (java.util.zip.ZipInputStream entrada =
-                     new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(zip))) {
-            for (java.util.zip.ZipEntry e = entrada.getNextEntry(); e != null; e = entrada.getNextEntry()) {
-                String texto = new String(entrada.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        try (ZipInputStream entrada =
+                     new ZipInputStream(new ByteArrayInputStream(zip))) {
+            for (ZipEntry e = entrada.getNextEntry(); e != null; e = entrada.getNextEntry()) {
+                var texto = new String(entrada.readAllBytes(), StandardCharsets.UTF_8);
                 if (e.getName().contains("plantillas/") || texto.contains("cero" + "-view")
                         || texto.contains("View" + "Renderer") || texto.contains("plantillas/")) {
                     limpio = false;

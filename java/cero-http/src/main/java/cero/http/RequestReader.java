@@ -89,7 +89,7 @@ final class RequestReader {
     }
 
     private Headers readHeaders() throws IOException {
-        Headers headers = new Headers();
+        var headers = new Headers();
         int budget = options.maxHeaderBytes();
 
         while (true) {

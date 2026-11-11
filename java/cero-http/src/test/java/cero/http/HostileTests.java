@@ -114,7 +114,7 @@ final class HostileTests {
     }
 
     private static void abandonos() throws Exception {
-        AtomicInteger atendidas = new AtomicInteger();
+        var atendidas = new AtomicInteger();
 
         try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 (req, res) -> {
@@ -141,15 +141,15 @@ final class HostileTests {
     }
 
     private static void concurrencia() throws Exception {
-        AtomicInteger correctas = new AtomicInteger();
-        AtomicInteger fallidas = new AtomicInteger();
+        var correctas = new AtomicInteger();
+        var fallidas = new AtomicInteger();
         int hilos = 40;
         int porHilo = 25;
 
         try (Server server = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 (req, res) -> res.text(req.path()), ErrorReporter.silent())) {
 
-            CountDownLatch listos = new CountDownLatch(hilos);
+            var listos = new CountDownLatch(hilos);
             List<Thread> tareas = new ArrayList<>(hilos);
 
             for (int h = 0; h < hilos; h++) {

@@ -3,9 +3,12 @@ package cero.data;
 import cero.core.Json;
 
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,7 +28,7 @@ public final class Row extends AbstractMap<String, Object> {
         if (keysAndValues.length % 2 != 0) {
             throw new IllegalArgumentException("se esperaban pares clave/valor");
         }
-        Row row = new Row();
+        var row = new Row();
         for (int i = 0; i < keysAndValues.length; i += 2) {
             row.set(String.valueOf(keysAndValues[i]), keysAndValues[i + 1]);
         }
@@ -33,7 +36,7 @@ public final class Row extends AbstractMap<String, Object> {
     }
 
     public static Row from(Map<String, ?> source) {
-        Row row = new Row();
+        var row = new Row();
         source.forEach(row::set);
         return row;
     }
@@ -124,8 +127,8 @@ public final class Row extends AbstractMap<String, Object> {
             case null -> null;
             case LocalDate date -> date;
             case LocalDateTime moment -> moment.toLocalDate();
-            case java.sql.Date date -> date.toLocalDate();
-            case java.sql.Timestamp stamp -> stamp.toLocalDateTime().toLocalDate();
+            case Date date -> date.toLocalDate();
+            case Timestamp stamp -> stamp.toLocalDateTime().toLocalDate();
             default -> LocalDate.parse(String.valueOf(value));
         };
     }
@@ -136,8 +139,8 @@ public final class Row extends AbstractMap<String, Object> {
             case null -> null;
             case LocalDateTime moment -> moment;
             case LocalDate date -> date.atStartOfDay();
-            case java.sql.Timestamp stamp -> stamp.toLocalDateTime();
-            case Instant instant -> LocalDateTime.ofInstant(instant, java.time.ZoneOffset.UTC);
+            case Timestamp stamp -> stamp.toLocalDateTime();
+            case Instant instant -> LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
             default -> LocalDateTime.parse(String.valueOf(value));
         };
     }

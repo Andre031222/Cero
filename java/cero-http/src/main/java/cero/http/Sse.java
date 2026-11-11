@@ -57,7 +57,7 @@ public final class Sse implements AutoCloseable {
     }
 
     private void enviar(String evento, String datos, String id) {
-        StringBuilder trama = new StringBuilder();
+        var trama = new StringBuilder();
         if (id != null) {
             trama.append("id: ").append(id).append('\n');
         }

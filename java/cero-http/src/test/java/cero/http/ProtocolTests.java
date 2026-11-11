@@ -8,6 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 final class ProtocolTests {
@@ -69,7 +71,7 @@ final class ProtocolTests {
     }
 
     private static void apagadoEsperaLoQueEstaEnVuelo() throws Exception {
-        java.util.concurrent.CountDownLatch dentro = new java.util.concurrent.CountDownLatch(1);
+        var dentro = new CountDownLatch(1);
         ServerOptions options = ServerOptions.builder()
                 .host("127.0.0.1").port(0).shutdownGraceMillis(5_000).build();
         Server server = Server.start(options, (peticion, respuesta) -> {
@@ -83,7 +85,7 @@ final class ProtocolTests {
         }, ErrorReporter.silent());
 
         String base = "http://127.0.0.1:" + server.port();
-        var respuesta = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+        var respuesta = CompletableFuture.supplyAsync(() -> {
             try {
                 return Fixture.get(base + "/").body();
             } catch (Exception fallo) {

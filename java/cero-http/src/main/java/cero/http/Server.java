@@ -1,5 +1,6 @@
 package cero.http;
 
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLServerSocket;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -112,7 +113,7 @@ public final class Server implements AutoCloseable {
                     : new ServerSocket();
             if (opened instanceof SSLServerSocket secure) {
                 secure.setUseClientMode(false);
-                javax.net.ssl.SSLParameters parametros = secure.getSSLParameters();
+                SSLParameters parametros = secure.getSSLParameters();
                 parametros.setApplicationProtocols(options.http2()
                         ? new String[] { "h2", "http/1.1" }
                         : new String[] { "http/1.1" });
@@ -143,7 +144,7 @@ public final class Server implements AutoCloseable {
                 closeQuietly(client);
                 continue;
             }
-            Connection conexion = new Connection(client, context, this::soltar);
+            var conexion = new Connection(client, context, this::soltar);
             abiertas.add(conexion);
             try {
                 connections.execute(conexion);

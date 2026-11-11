@@ -76,7 +76,7 @@ final class RegistryTests {
     static void run() {
         Check.group("inyección de dependencias");
 
-        Registry registry = new Registry();
+        var registry = new Registry();
 
         registry.add(new RelojFijo());
         Check.equal("resuelve por clase concreta", registry.get(RelojFijo.class).ahora(), 1_000L);
@@ -99,16 +99,16 @@ final class RegistryTests {
         Check.raises("dependencia circular se detecta", IllegalStateException.class,
                 () -> new Registry().get(CicloA.class));
 
-        Registry sustituto = new Registry();
+        var sustituto = new Registry();
         sustituto.add(Reloj.class, (Reloj) () -> 7L);
         Check.equal("se puede registrar una implementación por contrato",
                 sustituto.get(Reloj.class).ahora(), 7L);
 
-        Registry aislado = new Registry();
+        var aislado = new Registry();
         Check.that("create() no cachea",
                 aislado.create(Repositorio.class) != aislado.create(Repositorio.class));
 
-        Registry hondo = new Registry();
+        var hondo = new Registry();
         Check.that("resuelve cadenas hondas sin 'Recursive update'",
                 hondo.get(N10.class) != null);
         Check.that("y siguen siendo singleton en toda la cadena",

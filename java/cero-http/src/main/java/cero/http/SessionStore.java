@@ -2,6 +2,7 @@ package cero.http;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.UnaryOperator;
 
 public interface SessionStore {
 
@@ -12,7 +13,7 @@ public interface SessionStore {
 
     void save(String id, Datos datos);
 
-    default void update(String id, java.util.function.UnaryOperator<Datos> cambio) {
+    default void update(String id, UnaryOperator<Datos> cambio) {
         Datos siguiente = cambio.apply(load(id));
         if (siguiente != null) {
             save(id, siguiente);
@@ -45,7 +46,7 @@ public interface SessionStore {
         }
 
         @Override
-        public void update(String id, java.util.function.UnaryOperator<Datos> cambio) {
+        public void update(String id, UnaryOperator<Datos> cambio) {
             entradas.compute(id, (ignorado, previo) -> cambio.apply(previo));
         }
 

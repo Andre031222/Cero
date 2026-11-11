@@ -80,7 +80,7 @@ final class RoutePattern implements Comparable<RoutePattern> {
             }
         }
         if (trailingWildcard) {
-            StringBuilder resto = new StringBuilder();
+            var resto = new StringBuilder();
             for (int i = segments.length; i < parts.length; i++) {
                 if (i > segments.length) {
                     resto.append('/');

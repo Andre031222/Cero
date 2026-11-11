@@ -1,5 +1,7 @@
 package cero.adapter.servlet;
 
+import cero.http.Url;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import cero.http.Headers;
 import cero.http.HttpException;
@@ -11,6 +13,7 @@ import cero.http.Session;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,7 +68,7 @@ final class RequestOverServlet implements Request {
 
     @Override
     public List<String> queryAll(String nombre) {
-        return cero.http.Url.parseQuery(rawQuery()).getOrDefault(nombre, List.of());
+        return Url.parseQuery(rawQuery()).getOrDefault(nombre, List.of());
     }
 
     @Override
@@ -85,7 +88,7 @@ final class RequestOverServlet implements Request {
         if (tipo == null || !tipo.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
             return Map.of();
         }
-        return cero.http.Url.parseQuery(bodyText());
+        return Url.parseQuery(bodyText());
     }
 
     @Override
@@ -134,9 +137,9 @@ final class RequestOverServlet implements Request {
     public Map<String, String> cookies() {
         if (galletas == null) {
             galletas = new LinkedHashMap<>();
-            jakarta.servlet.http.Cookie[] recibidas = crudo.getCookies();
+            Cookie[] recibidas = crudo.getCookies();
             if (recibidas != null) {
-                for (jakarta.servlet.http.Cookie galleta : recibidas) {
+                for (Cookie galleta : recibidas) {
                     galletas.putIfAbsent(galleta.getName(), galleta.getValue());
                 }
             }
@@ -171,7 +174,7 @@ final class RequestOverServlet implements Request {
             }
             partes = new ArrayList<>();
             try {
-                for (jakarta.servlet.http.Part nativa : crudo.getParts()) {
+                for (var nativa : crudo.getParts()) {
                     partes.add(new Part(nativa.getName(), nativa.getSubmittedFileName(),
                             nativa.getContentType(), leer(nativa.getInputStream())));
                 }
@@ -221,7 +224,7 @@ final class RequestOverServlet implements Request {
         String juego = crudo.getCharacterEncoding();
         return new String(bodyBytes(), juego == null
                 ? StandardCharsets.UTF_8
-                : java.nio.charset.Charset.forName(juego));
+                : Charset.forName(juego));
     }
 
     private static byte[] leer(InputStream entrada) throws IOException {

@@ -1,5 +1,7 @@
 package cero.core;
 
+import cero.http.HttpException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +49,7 @@ public final class Metrics implements Middleware {
             Object salida = chain.proceed(context);
             estado = context.response().status();
             return salida;
-        } catch (cero.http.HttpException fallo) {
+        } catch (HttpException fallo) {
             estado = fallo.status();
             throw fallo;
         } catch (Exception fallo) {
@@ -99,7 +101,7 @@ public final class Metrics implements Middleware {
 
     public String toPrometheus() {
         Resumen resumen = snapshot();
-        StringBuilder salida = new StringBuilder(512);
+        var salida = new StringBuilder(512);
 
         salida.append("# HELP cero_requests_total Peticiones atendidas\n");
         salida.append("# TYPE cero_requests_total counter\n");
@@ -134,12 +136,7 @@ public final class Metrics implements Middleware {
     }
 
     private boolean ignorada(String ruta) {
-        for (String prefijo : ignoradas) {
-            if (ruta.startsWith(prefijo)) {
-                return true;
-            }
-        }
-        return false;
+        return ignoradas.stream().anyMatch(ruta::startsWith);
     }
 
     private static String clave(Context context) {

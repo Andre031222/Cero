@@ -1,14 +1,18 @@
 package cero.core;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public final class Validation {
@@ -133,7 +137,7 @@ public final class Validation {
     private static boolean blank(Object value) {
         return value == null
                 || value instanceof CharSequence text && text.toString().isBlank()
-                || value instanceof java.util.Collection<?> items && items.isEmpty();
+                || value instanceof Collection<?> items && items.isEmpty();
     }
 
     @SuppressWarnings("unchecked")
@@ -166,7 +170,7 @@ public final class Validation {
         for (Class<?> current = type; current != null && current != Object.class;
              current = current.getSuperclass()) {
             for (Field field : current.getDeclaredFields()) {
-                if (field.isSynthetic() || java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                if (field.isSynthetic() || Modifier.isStatic(field.getModifiers())) {
                     continue;
                 }
                 field.setAccessible(true);
@@ -194,9 +198,9 @@ public final class Validation {
     }
 
     private record Member(String name, AnnotatedElement element,
-                          java.util.function.Function<Object, Object> reader) {
+                          Function<Object, Object> reader) {
 
-        <A extends java.lang.annotation.Annotation> A annotation(Class<A> type) {
+        <A extends Annotation> A annotation(Class<A> type) {
             return element.getAnnotation(type);
         }
 

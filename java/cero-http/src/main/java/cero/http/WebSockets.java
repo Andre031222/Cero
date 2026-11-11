@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
@@ -55,7 +56,7 @@ public final class WebSockets {
         response.header("Sec-WebSocket-Accept", aceptacion(clave));
 
         Duplex canal = response.switchProtocols();
-        WebSocket socket = new WebSocket(canal.out(), request);
+        var socket = new WebSocket(canal.out(), request);
 
         int codigo = WebSocket.CIERRE_NORMAL;
         String motivo = "";
@@ -84,7 +85,7 @@ public final class WebSockets {
     private static String bucle(InputStream entrada, WebSocket socket, WebSocketHandler handler)
             throws IOException {
 
-        ByteArrayOutputStream acumulado = new ByteArrayOutputStream();
+        var acumulado = new ByteArrayOutputStream();
         int codigoAcumulado = 0;
 
         while (true) {
@@ -198,7 +199,7 @@ public final class WebSockets {
             return StandardCharsets.UTF_8.newDecoder()
                     .onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(java.nio.ByteBuffer.wrap(carga))
+                    .decode(ByteBuffer.wrap(carga))
                     .toString();
         } catch (CharacterCodingException roto) {
             throw new CierreProtocolo(WebSocket.CIERRE_DATOS_INVALIDOS,

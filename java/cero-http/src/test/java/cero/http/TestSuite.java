@@ -1,11 +1,8 @@
 package cero.http;
 
-public final class TestSuite {
+final class TestSuite {
 
-    private TestSuite() {
-    }
-
-    public static void main(String[] args) throws Exception {
+    void main() throws Exception {
         HpackTests.run();
         Http2Tests.run();
         PlazosTests.run();

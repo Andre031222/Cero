@@ -1,8 +1,12 @@
 package cero.data;
 
 import java.sql.Connection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 final class PoolTests {
 
@@ -163,18 +167,18 @@ final class PoolTests {
 
         int hilos = 24;
         int vueltas = 40;
-        java.util.concurrent.atomic.AtomicInteger enUso = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.atomic.AtomicInteger pico = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.atomic.AtomicInteger fallos = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.CountDownLatch salida = new java.util.concurrent.CountDownLatch(1);
-        java.util.concurrent.CountDownLatch llegada = new java.util.concurrent.CountDownLatch(hilos);
+        var enUso = new AtomicInteger();
+        var pico = new AtomicInteger();
+        var fallos = new AtomicInteger();
+        var salida = new CountDownLatch(1);
+        var llegada = new CountDownLatch(hilos);
 
         for (int i = 0; i < hilos; i++) {
             Thread.ofVirtual().start(() -> {
                 try {
                     salida.await();
                     for (int vuelta = 0; vuelta < vueltas; vuelta++) {
-                        java.sql.Connection prestada = pool.borrow();
+                        Connection prestada = pool.borrow();
                         int ahora = enUso.incrementAndGet();
                         pico.updateAndGet(anterior -> Math.max(anterior, ahora));
                         Thread.yield();
@@ -191,7 +195,7 @@ final class PoolTests {
         salida.countDown();
         try {
             Check.that("todos los hilos terminan",
-                    llegada.await(30, java.util.concurrent.TimeUnit.SECONDS));
+                    llegada.await(30, TimeUnit.SECONDS));
         } catch (InterruptedException interrumpido) {
             Thread.currentThread().interrupt();
         }
@@ -216,7 +220,7 @@ final class PoolTests {
 
         FakeDb.reset();
         Pool diferido = Pool.to(FakeDb.URL).maxSize(1).validate(true)
-                .validateEvery(java.time.Duration.ofMinutes(1)).build();
+                .validateEvery(Duration.ofMinutes(1)).build();
         for (int i = 0; i < 5; i++) {
             diferido.release(diferido.borrow());
         }

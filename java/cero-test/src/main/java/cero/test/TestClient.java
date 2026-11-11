@@ -2,6 +2,7 @@ package cero.test;
 
 import cero.core.Json;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -96,7 +97,7 @@ public final class TestClient implements AutoCloseable {
         try {
             HttpResponse<String> response = client.send(request.build(), HttpResponse.BodyHandlers.ofString());
             return new TestResponse(method + " " + path, response);
-        } catch (java.io.IOException cause) {
+        } catch (IOException cause) {
             throw new UncheckedIOException(method + " " + path + " falló", cause);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -123,7 +124,7 @@ public final class TestClient implements AutoCloseable {
     }
 
     private static String urlencoded(Map<String, String> fields) {
-        StringBuilder out = new StringBuilder();
+        var out = new StringBuilder();
         fields.forEach((name, value) -> {
             if (!out.isEmpty()) {
                 out.append('&');

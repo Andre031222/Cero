@@ -2,6 +2,8 @@ package cero.core;
 
 import cero.http.HttpMethod;
 
+import java.util.Set;
+
 final class RouterTests {
 
     private RouterTests() {
@@ -87,7 +89,7 @@ final class RouterTests {
     }
 
     private static void registro() {
-        Router router = new Router().register(UsuarioController.class);
+        var router = new Router().register(UsuarioController.class);
         Check.equal("registra todas las acciones", router.size(), 6);
 
         Router.Match lista = router.resolve(HttpMethod.GET, "/usuarios");
@@ -104,7 +106,7 @@ final class RouterTests {
     }
 
     private static void prioridad() {
-        Router router = new Router().register(UsuarioController.class);
+        var router = new Router().register(UsuarioController.class);
         Check.equal("la ruta literal gana a la variable",
                 router.resolve(HttpMethod.GET, "/usuarios/nuevo").route().action().getName(), "nuevo");
         Check.equal("la variable atiende el resto",
@@ -112,14 +114,14 @@ final class RouterTests {
     }
 
     private static void convencion() {
-        Router router = new Router().register(ReporteController.class);
+        var router = new Router().register(ReporteController.class);
         Check.that("deriva la base del nombre de la clase",
                 router.resolve(HttpMethod.GET, "/reporte/mensual") != null);
         Check.that("un valor vacío mapea a la ruta base",
                 new Router().register(UsuarioController.class)
                         .resolve(HttpMethod.POST, "/usuarios") != null);
 
-        Router lambdas = new Router()
+        var lambdas = new Router()
                 .get("/ping", ctx -> "pong")
                 .post("/eco", ctx -> ctx.bodyText());
         Check.equal("registra rutas lambda", lambdas.size(), 2);
@@ -128,7 +130,7 @@ final class RouterTests {
     }
 
     private static void errores() {
-        Router router = new Router().register(UsuarioController.class);
+        var router = new Router().register(UsuarioController.class);
 
         Check.equal("ruta inexistente devuelve null",
                 router.resolve(HttpMethod.GET, "/nada"), null);
@@ -138,7 +140,7 @@ final class RouterTests {
                 noPermitido != null && noPermitido.methodNotAllowed());
         Check.that("allowedFor lista los verbos",
                 router.allowedFor("/usuarios/1").containsAll(
-                        java.util.Set.of(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.HEAD)));
+                        Set.of(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.HEAD)));
 
         Check.that("HEAD se resuelve contra GET",
                 !router.resolve(HttpMethod.HEAD, "/usuarios").methodNotAllowed());

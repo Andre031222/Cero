@@ -42,8 +42,8 @@ final class SseTests {
     }
 
     private static void lleganUnoAUno() throws Exception {
-        CountDownLatch primero = new CountDownLatch(1);
-        CountDownLatch seguir = new CountDownLatch(1);
+        var primero = new CountDownLatch(1);
+        var seguir = new CountDownLatch(1);
 
         Handler handler = (req, res) -> {
             try (Sse eventos = Sse.open(res)) {
@@ -62,7 +62,7 @@ final class SseTests {
                     "GET /e HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
             socket.getOutputStream().flush();
 
-            BufferedReader lector = new BufferedReader(
+            var lector = new BufferedReader(
                     new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
 
             Check.that("el servidor manda el primero sin esperar a terminar",
@@ -92,7 +92,7 @@ final class SseTests {
     }
 
     private static void seEnteraDeQueElClienteSeFue() throws Exception {
-        CountDownLatch salio = new CountDownLatch(1);
+        var salio = new CountDownLatch(1);
 
         Handler handler = (req, res) -> {
             try (Sse eventos = Sse.open(res)) {

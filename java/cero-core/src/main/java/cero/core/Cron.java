@@ -24,7 +24,7 @@ public final class Cron {
                     "cron necesita 5 campos (minuto hora día mes díaSemana), llegaron "
                             + campos.length + ": " + expresion);
         }
-        Cron cron = new Cron(expresion.trim());
+        var cron = new Cron(expresion.trim());
         llenar(cron.minutos, campos[0], 0, 59, expresion);
         llenar(cron.horas, campos[1], 0, 23, expresion);
         llenar(cron.dias, campos[2], 1, 31, expresion);

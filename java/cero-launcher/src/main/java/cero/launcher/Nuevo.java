@@ -7,18 +7,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public final class Nuevo {
 
-    private static final java.util.Set<String> MOTORES =
-            java.util.Set.of("ninguno", "h2", "postgresql", "mysql");
+    private static final Set<String> MOTORES =
+            Set.of("ninguno", "h2", "postgresql", "mysql");
 
-    private Nuevo() {
-    }
-
-    public static void main(String[] args) throws Exception {
+    void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].startsWith("-")) {
             System.err.println(Idioma.t("nuevo-uso"));
             System.exit(1);

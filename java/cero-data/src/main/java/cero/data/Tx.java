@@ -30,7 +30,7 @@ public final class Tx {
 
         Pool pool = DataSources.get(source);
         Connection connection = pool.borrow();
-        Active active = new Active(connection);
+        var active = new Active(connection);
         CURRENT.set(active);
         try {
             connection.setAutoCommit(false);

@@ -9,7 +9,7 @@ import cero.http.Handler;
 
 import java.io.IOException;
 
-@MultipartConfig(maxFileSize = 20_971_520, maxRequestSize = 41_943_040)
+@MultipartConfig(maxFileSize = 10L << 20, maxRequestSize = 10L << 20)
 public class CeroServlet extends HttpServlet {
 
     private final transient Handler handler;
@@ -25,8 +25,8 @@ public class CeroServlet extends HttpServlet {
     @Override
     protected void service(HttpServletRequest peticion, HttpServletResponse respuesta)
             throws IOException {
-        RequestOverServlet entrada = new RequestOverServlet(peticion);
-        ResponseOverServlet salida = new ResponseOverServlet(respuesta);
+        var entrada = new RequestOverServlet(peticion);
+        var salida = new ResponseOverServlet(respuesta);
         try {
             handler.handle(entrada, salida);
         } catch (IOException fallo) {

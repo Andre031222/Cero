@@ -17,7 +17,7 @@ final class Version {
             if (entrada == null) {
                 return "0.0.0";
             }
-            Properties propiedades = new Properties();
+            var propiedades = new Properties();
             propiedades.load(entrada);
             return propiedades.getProperty("version", "0.0.0");
         } catch (IOException ilegible) {

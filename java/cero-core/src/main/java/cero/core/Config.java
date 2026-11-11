@@ -10,6 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public final class Config {
 
@@ -38,7 +39,7 @@ public final class Config {
     }
 
     public static Config load(String resource) {
-        Config config = new Config();
+        var config = new Config();
         config.readClasspath(resource);
         config.readFile(Path.of(resource));
         config.readEnvironment();
@@ -154,7 +155,7 @@ public final class Config {
             String ignoradas = entorno.keySet().stream()
                     .filter(nombre -> nombre.startsWith(PREFIJO_ENTORNO))
                     .sorted()
-                    .collect(java.util.stream.Collectors.joining(", "));
+                    .collect(Collectors.joining(", "));
             if (!ignoradas.isEmpty()) {
                 LOG.warn("{} no se leen: la aplicación no llama a loadConfig()", ignoradas);
             }
@@ -187,7 +188,7 @@ public final class Config {
     }
 
     private void absorb(InputStream source) throws IOException {
-        Properties properties = new Properties();
+        var properties = new Properties();
         properties.load(source);
         properties.forEach((key, value) -> values.put(String.valueOf(key), String.valueOf(value)));
     }

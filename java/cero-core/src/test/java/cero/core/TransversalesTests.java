@@ -2,7 +2,9 @@ package cero.core;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,7 +62,7 @@ final class TransversalesTests {
     }
 
     private static void openapi() {
-        Router router = new Router()
+        var router = new Router()
                 .register(ArticuloController.class)
                 .get("/salud", contexto -> "ok")
                 .get("/informes/{anio}", contexto -> "informe");
@@ -72,57 +74,57 @@ final class TransversalesTests {
                 .json();
 
         Object leido = Json.read(json);
-        Check.that("la especificación es JSON válido", leido instanceof java.util.Map);
+        Check.that("la especificación es JSON válido", leido instanceof Map);
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> raiz = (java.util.Map<String, Object>) leido;
+        var raiz = (Map<String, Object>) leido;
         Check.equal("declara la versión de OpenAPI", raiz.get("openapi"), "3.0.3");
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> info = (java.util.Map<String, Object>) raiz.get("info");
+        var info = (Map<String, Object>) raiz.get("info");
         Check.equal("con el título dado", info.get("title"), "Catálogo");
         Check.equal("y la versión dada", info.get("version"), "2.1.0");
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> caminos = (java.util.Map<String, Object>) raiz.get("paths");
+        var caminos = (Map<String, Object>) raiz.get("paths");
         Check.that("describe la ruta con variable", caminos.containsKey("/api/articulos/{id}"));
         Check.that("describe la ruta base", caminos.containsKey("/api/articulos"));
         Check.that("y también las declaradas con lambda", caminos.containsKey("/salud"));
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> articulos = (java.util.Map<String, Object>) caminos.get("/api/articulos");
+        var articulos = (Map<String, Object>) caminos.get("/api/articulos");
         Check.that("la base tiene GET y POST", articulos.containsKey("get") && articulos.containsKey("post"));
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> crear = (java.util.Map<String, Object>) articulos.get("post");
+        var crear = (Map<String, Object>) articulos.get("post");
         Check.that("el POST declara cuerpo", crear.containsKey("requestBody"));
         Check.that("y que exige autenticación", crear.containsKey("security"));
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> componentes = (java.util.Map<String, Object>) raiz.get("components");
+        var componentes = (Map<String, Object>) raiz.get("components");
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> esquemas = (java.util.Map<String, Object>) componentes.get("schemas");
+        var esquemas = (Map<String, Object>) componentes.get("schemas");
         Check.that("registra el record devuelto", esquemas.containsKey("Articulo"));
         Check.that("y el record del cuerpo", esquemas.containsKey("NuevoArticulo"));
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> articulo = (java.util.Map<String, Object>) esquemas.get("Articulo");
+        var articulo = (Map<String, Object>) esquemas.get("Articulo");
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> propiedades = (java.util.Map<String, Object>) articulo.get("properties");
+        var propiedades = (Map<String, Object>) articulo.get("properties");
         Check.equal("con los tipos de sus componentes",
-                ((java.util.Map<?, ?>) propiedades.get("id")).get("type"), "integer");
+                ((Map<?, ?>) propiedades.get("id")).get("type"), "integer");
         Check.equal("incluidos los booleanos",
-                ((java.util.Map<?, ?>) propiedades.get("publicado")).get("type"), "boolean");
+                ((Map<?, ?>) propiedades.get("publicado")).get("type"), "boolean");
 
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> informe = (java.util.Map<String, Object>) caminos.get("/informes/{anio}");
+        var informe = (Map<String, Object>) caminos.get("/informes/{anio}");
         @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> informeGet = (java.util.Map<String, Object>) informe.get("get");
+        var informeGet = (Map<String, Object>) informe.get("get");
         @SuppressWarnings("unchecked")
-        List<Object> parametros = (List<Object>) informeGet.get("parameters");
+        var parametros = (List<Object>) informeGet.get("parameters");
         Check.equal("una lambda con variable declara su parámetro", parametros.size(), 1);
         Check.equal("y lo marca obligatorio",
-                ((java.util.Map<?, ?>) parametros.get(0)).get("required"), true);
+                ((Map<?, ?>) parametros.get(0)).get("required"), true);
 
         Check.raises("sin router no se describe nada", IllegalArgumentException.class,
                 () -> OpenApi.describing(null));
@@ -187,10 +189,10 @@ final class TransversalesTests {
 
     private static void cacheCargaUnaSolaVez() throws Exception {
         Cache cache = Cache.named("concurrente");
-        AtomicInteger cargas = new AtomicInteger();
+        var cargas = new AtomicInteger();
         int hilos = 16;
-        CountDownLatch salida = new CountDownLatch(1);
-        CountDownLatch llegada = new CountDownLatch(hilos);
+        var salida = new CountDownLatch(1);
+        var llegada = new CountDownLatch(hilos);
 
         for (int i = 0; i < hilos; i++) {
             Thread.ofVirtual().start(() -> {
@@ -224,7 +226,7 @@ final class TransversalesTests {
         List<String> llamadas = new ArrayList<>();
         Cache cache = Cache.named("externa").backedBy(new Cache.Backend() {
 
-            private final java.util.Map<String, Object> remoto = new java.util.HashMap<>();
+            private final Map<String, Object> remoto = new HashMap<>();
 
             @Override
             public void put(String nombre, String clave, Object valor, long segundos) {
@@ -305,7 +307,7 @@ final class TransversalesTests {
 
     private static void eventosPorAnotacion() {
         Events bus = Events.bus();
-        Avisos servicio = new Avisos();
+        var servicio = new Avisos();
         bus.listeners(servicio);
 
         bus.publish(new Creado(7, "a@b.c"));
@@ -315,7 +317,7 @@ final class TransversalesTests {
         bus.listeners(servicio);
         Check.equal("registrar dos veces no duplica", bus.listenerCount(Creado.class), 1);
 
-        Registry registro = new Registry();
+        var registro = new Registry();
         registro.add(new Avisos());
         Events desdeRegistro = Events.bus().listenersFrom(registro);
         Check.equal("también se cogen del registro de servicios",

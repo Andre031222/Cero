@@ -80,8 +80,8 @@ final class JdbcSessionsTests {
         almacen.save("s3", new SessionStore.Datos(new HashMap<>(), ahora, ahora));
 
         int escritores = 20;
-        CountDownLatch salida = new CountDownLatch(1);
-        CountDownLatch fin = new CountDownLatch(escritores);
+        var salida = new CountDownLatch(1);
+        var fin = new CountDownLatch(escritores);
 
         try (var hilos = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < escritores; i++) {

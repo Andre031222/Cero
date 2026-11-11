@@ -1,5 +1,6 @@
 package cero.adapter.servlet;
 
+import cero.http.Duplex;
 import jakarta.servlet.http.HttpServletResponse;
 import cero.http.Cookie;
 import cero.http.Headers;
@@ -119,7 +120,7 @@ final class ResponseOverServlet implements Response {
     }
 
     @Override
-    public cero.http.Duplex switchProtocols() {
+    public Duplex switchProtocols() {
         throw new UnsupportedOperationException(
                 "cambiar de protocolo no se puede desde el adaptador de servlet");
     }
@@ -174,7 +175,7 @@ final class ResponseOverServlet implements Response {
     }
 
     private static String encode(Cookie galleta) {
-        StringBuilder texto = new StringBuilder(64);
+        var texto = new StringBuilder(64);
         texto.append(galleta.name()).append('=').append(galleta.value());
         if (galleta.path() != null) {
             texto.append("; Path=").append(galleta.path());

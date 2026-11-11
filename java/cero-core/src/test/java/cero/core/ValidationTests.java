@@ -52,7 +52,7 @@ final class ValidationTests {
     }
 
     private static void valido() {
-        Registro completo = new Registro("Ana", "ana@unap.edu.pe", "unaclave123", 30, "admin", "12345678");
+        var completo = new Registro("Ana", "ana@unap.edu.pe", "unaclave123", 30, "admin", "12345678");
         Check.that("un registro correcto pasa", Validation.valid(completo));
         Check.equal("y no reporta problemas", Validation.problems(completo).size(), 0);
         Check.that("check no lanza", noLanza(() -> Validation.check(completo)));
@@ -60,7 +60,7 @@ final class ValidationTests {
     }
 
     private static void invalido() {
-        Registro roto = new Registro("", "no-es-correo", "corta", 5, "otro", "abc");
+        var roto = new Registro("", "no-es-correo", "corta", 5, "otro", "abc");
         Map<String, String> problemas = Validation.problems(roto);
 
         Check.equal("detecta los seis campos", problemas.size(), 6);
@@ -99,7 +99,7 @@ final class ValidationTests {
         Check.equal("mensaje de @Range con rango", problemas.get("edad"), "debe estar entre 18 y 120");
         Check.that("mensaje de @OneOf enumera", problemas.get("rol").contains("admin, editor, lector"));
 
-        Formulario largo = new Formulario();
+        var largo = new Formulario();
         largo.titulo = "ok";
         largo.resumen = "excede el máximo permitido";
         Check.equal("mensaje de @Length solo con máximo",
@@ -107,10 +107,10 @@ final class ValidationTests {
     }
 
     private static void objetos() {
-        Formulario vacio = new Formulario();
+        var vacio = new Formulario();
         Check.that("valida también clases con campos", Validation.problems(vacio).containsKey("titulo"));
 
-        Formulario completo = new Formulario();
+        var completo = new Formulario();
         completo.titulo = "Informe";
         completo.resumen = "corto";
         Check.that("y las acepta cuando cumplen", Validation.valid(completo));

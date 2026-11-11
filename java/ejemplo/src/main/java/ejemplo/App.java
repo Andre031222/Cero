@@ -11,10 +11,7 @@ import cero.http.Server;
 
 public final class App {
 
-    private App() {
-    }
-
-    public static void main(String[] args) throws Exception {
+    void main(String[] args) throws Exception {
         Server server = start(puerto(args), "jdbc:h2:mem:tareas;DB_CLOSE_DELAY=-1");
         server.await();
     }

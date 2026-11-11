@@ -1,6 +1,7 @@
 package cero.data;
 
 import java.util.List;
+import java.util.function.Function;
 
 public record Page<T>(List<T> data, int page, int size, long total) {
 
@@ -34,7 +35,7 @@ public record Page<T>(List<T> data, int page, int size, long total) {
         return data.isEmpty();
     }
 
-    public <R> Page<R> map(java.util.function.Function<T, R> mapper) {
+    public <R> Page<R> map(Function<T, R> mapper) {
         return new Page<>(data.stream().map(mapper).toList(), page, size, total);
     }
 }

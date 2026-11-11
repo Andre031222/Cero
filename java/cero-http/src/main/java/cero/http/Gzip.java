@@ -24,7 +24,7 @@ final class Gzip {
     }
 
     static byte[] compress(byte[] data) {
-        ByteArrayOutputStream collected = new ByteArrayOutputStream(Math.max(64, data.length / 3));
+        var collected = new ByteArrayOutputStream(Math.max(64, data.length / 3));
         try (GZIPOutputStream out = new GZIPOutputStream(collected, 8_192)) {
             out.write(data);
         } catch (IOException cause) {

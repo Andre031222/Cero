@@ -22,7 +22,7 @@ final class SessionTests {
     }
 
     private static void rotacion() throws Exception {
-        Sessions store = new Sessions(60_000);
+        var store = new Sessions(60_000);
         Sessions.Entry entry = store.create();
         entry.set("csrf", "abc123");
         String antes = entry.id();
@@ -52,7 +52,7 @@ final class SessionTests {
     }
 
     private static void vidaMaxima() throws Exception {
-        Sessions conTope = new Sessions(60_000, SessionStore.inMemory(), 200);
+        var conTope = new Sessions(60_000, SessionStore.inMemory(), 200);
         Sessions.Entry entry = conTope.create();
 
         Check.equal("dentro del tope se encuentra", conTope.find(entry.id()).id(), entry.id());
@@ -66,7 +66,7 @@ final class SessionTests {
     }
 
     private static void sinPisarse() throws Exception {
-        Sessions store = new Sessions(60_000);
+        var store = new Sessions(60_000);
         Sessions.Entry base = store.create();
         String id = base.id();
 
@@ -150,7 +150,7 @@ final class SessionTests {
     private static void sobreHttp2() throws Exception {
         try (Server servidor = Server.start(ServerOptions.builder().host("127.0.0.1").port(0).build(),
                 sessionHandler(), ErrorReporter.silent());
-                Http2Cliente c = new Http2Cliente(servidor.port())) {
+                var c = new Http2Cliente(servidor.port())) {
             c.saludar();
 
             Http2Cliente.Respuesta entrar = c.respuestaDe(c.pedir("GET", "/entrar"));
@@ -168,7 +168,7 @@ final class SessionTests {
     }
 
     private static void expiry() throws Exception {
-        Sessions store = new Sessions(150);
+        var store = new Sessions(150);
         Sessions.Entry entry = store.create();
         entry.set("k", "v");
 

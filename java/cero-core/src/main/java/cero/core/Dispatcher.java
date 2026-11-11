@@ -3,12 +3,14 @@ package cero.core;
 import cero.http.Handler;
 import cero.http.HttpException;
 import cero.http.HttpMethod;
+import cero.http.HttpStatus;
 import cero.http.Request;
 import cero.http.Response;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -45,7 +47,7 @@ final class Dispatcher implements Handler {
     @Override
     public void handle(Request request, Response response) {
         Router.Match match = router.resolve(request.method(), request.path());
-        Context context = new Context(request, response,
+        var context = new Context(request, response,
                 match == null ? Map.of() : match.pathVariables(),
                 match == null ? null : match.route(),
                 match != null && match.methodNotAllowed());
@@ -175,8 +177,8 @@ final class Dispatcher implements Handler {
         }
         int status = failure instanceof HttpException http ? http.status() : 500;
         String message = status == 500 ? "error interno" : failure.getMessage();
-        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
-        body.put("error", cero.http.HttpStatus.reason(status));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", HttpStatus.reason(status));
         body.put("message", message == null ? "" : message);
         body.put("path", context.path());
         if (failure instanceof ValidationException invalid) {
@@ -200,7 +202,7 @@ final class Dispatcher implements Handler {
     }
 
     private String allowHeader(String path) {
-        StringJoiner joined = new StringJoiner(", ");
+        var joined = new StringJoiner(", ");
         for (HttpMethod verb : router.allowedFor(path)) {
             joined.add(verb.name());
         }

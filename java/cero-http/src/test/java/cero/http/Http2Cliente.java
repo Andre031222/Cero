@@ -1,12 +1,14 @@
 package cero.http;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,7 +123,7 @@ final class Http2Cliente implements AutoCloseable {
     }
 
     byte[] cabecerasCrudas(String... paresPlanos) {
-        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        var salida = new ByteArrayOutputStream();
         for (int i = 0; i < paresPlanos.length; i += 2) {
             byte[] nombre = paresPlanos[i].getBytes(StandardCharsets.ISO_8859_1);
             byte[] valor = paresPlanos[i + 1].getBytes(StandardCharsets.ISO_8859_1);
@@ -135,7 +137,7 @@ final class Http2Cliente implements AutoCloseable {
     }
 
     byte[] bombaHpack(int tamanoValor, int veces) {
-        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        var salida = new ByteArrayOutputStream();
         byte[] nombre = "x-grande".getBytes(StandardCharsets.ISO_8859_1);
         byte[] valor = "v".repeat(tamanoValor).getBytes(StandardCharsets.ISO_8859_1);
 
@@ -180,7 +182,7 @@ final class Http2Cliente implements AutoCloseable {
             int hasta = Math.min(pos + 16_384, cuerpo.length);
             boolean ultimo = hasta == cuerpo.length;
             trama(DATA, ultimo ? FIN_FLUJO : 0, flujo,
-                    java.util.Arrays.copyOfRange(cuerpo, pos, hasta));
+                    Arrays.copyOfRange(cuerpo, pos, hasta));
             pos = hasta;
         } while (pos < cuerpo.length);
         if (cuerpo.length == 0) {
@@ -288,7 +290,7 @@ final class Http2Cliente implements AutoCloseable {
         while (leidos < destino.length) {
             int n = in.read(destino, leidos, destino.length - leidos);
             if (n < 0) {
-                throw new java.io.EOFException("el servidor cerró");
+                throw new EOFException("el servidor cerró");
             }
             leidos += n;
         }

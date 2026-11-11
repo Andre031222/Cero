@@ -208,7 +208,7 @@ final class MotorTests {
     }
 
     private static void repositorio() {
-        Repository<Articulo, Long> repo = new Repository<>(Articulo.class);
+        var repo = new Repository<Articulo, Long>(Articulo.class);
 
         long id = repo.insert(new Articulo(0, "Desde el repositorio",
                 new BigDecimal("42.00"), true, LocalDate.of(2026, 8, 4)));

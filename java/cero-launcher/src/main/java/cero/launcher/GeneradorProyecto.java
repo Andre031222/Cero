@@ -26,7 +26,7 @@ public final class GeneradorProyecto {
 
     public static byte[] construir(Peticion peticion) throws Exception {
         String ruta = peticion.paquete().replace('.', '/');
-        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        var salida = new ByteArrayOutputStream();
 
         try (ZipOutputStream zip = new ZipOutputStream(salida)) {
             anadir(zip, "pom.xml", pom(peticion));
@@ -176,7 +176,7 @@ public final class GeneradorProyecto {
                 
                 public final class App {
 
-                    public static void main(String[] args) throws Exception {
+                    void main(String[] args) throws Exception {
                         Cero.app()
                            .port(args.length > 0 ? Integer.parseInt(args[0]) : 8080)
                            .controllers(InicioController.class)
@@ -262,7 +262,7 @@ public final class GeneradorProyecto {
     }
 
     private static String paqueteValido(String candidato) {
-        StringBuilder paquete = new StringBuilder();
+        var paquete = new StringBuilder();
         for (String parte : candidato.split("\\.")) {
             String segmento = parte.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
             if (segmento.isEmpty()) {
