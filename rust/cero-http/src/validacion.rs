@@ -10,10 +10,10 @@ pub enum Regla {
 impl Regla {
     fn falta(&self, valor: Option<&Json>) -> Option<String> {
         let Some(v) = valor else {
-            return matches!(self, Regla::Obligatorio).then(|| "es obligatorio".to_string());
+            return matches!(self, Regla::Obligatorio).then(|| "es obligatorio".into());
         };
         match self {
-            Regla::Obligatorio => (v.texto() == Some("")).then(|| "es obligatorio".to_string()),
+            Regla::Obligatorio => (v.texto() == Some("")).then(|| "es obligatorio".into()),
             Regla::Texto { minimo, maximo } => match v.texto() {
                 None => Some("tiene que ser texto".into()),
                 Some(t) if t.chars().count() < *minimo => Some(format!("no llega a {minimo} caracteres")),

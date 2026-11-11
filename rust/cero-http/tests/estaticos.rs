@@ -1,13 +1,17 @@
+use std::fs;
+use std::path::PathBuf;
+use std::{env, process};
+
 use cero_http::estaticos::Estaticos;
 
-fn raiz(prueba: &str) -> std::path::PathBuf {
-    let caja = std::env::temp_dir().join(format!("cero-est-{}-{prueba}", std::process::id()));
+fn raiz(prueba: &str) -> PathBuf {
+    let caja = env::temp_dir().join(format!("cero-est-{}-{prueba}", process::id()));
     let d = caja.join("raiz");
-    std::fs::create_dir_all(d.join("sub")).unwrap();
-    std::fs::write(d.join("index.html"), "<h1>portada</h1>").unwrap();
-    std::fs::write(d.join("estilo.css"), "body{}").unwrap();
-    std::fs::write(d.join("sub/hondo.txt"), "hondo").unwrap();
-    std::fs::write(caja.join("cero-secreto.txt"), "no deberías ver esto").unwrap();
+    fs::create_dir_all(d.join("sub")).unwrap();
+    fs::write(d.join("index.html"), "<h1>portada</h1>").unwrap();
+    fs::write(d.join("estilo.css"), "body{}").unwrap();
+    fs::write(d.join("sub/hondo.txt"), "hondo").unwrap();
+    fs::write(caja.join("cero-secreto.txt"), "no deberías ver esto").unwrap();
     d
 }
 
@@ -64,7 +68,7 @@ fn el_respaldo_atiende_las_rutas_de_cliente() {
 #[test]
 fn lo_desconocido_no_se_adivina() {
     let d = raiz("desconocido");
-    std::fs::write(d.join("raro.xyz"), "datos").unwrap();
+    fs::write(d.join("raro.xyz"), "datos").unwrap();
     let e = Estaticos::en(d.to_str().unwrap()).unwrap();
     assert_eq!(e.servir("/raro.xyz").tipo, "application/octet-stream",
                "adivinar el tipo es lo que nosniff existe para impedir");

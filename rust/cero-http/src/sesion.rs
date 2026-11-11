@@ -179,7 +179,7 @@ impl Sesiones for Almacen {
     }
 
     fn cuantas(&self) -> usize {
-        self.sesiones.read().map(|m| m.len()).unwrap_or(0)
+        self.sesiones.read().map_or(0, |m| m.len())
     }
 }
 

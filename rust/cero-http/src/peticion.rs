@@ -45,13 +45,12 @@ impl Peticion {
 
     pub fn camino(&self) -> &str {
         let sin_consulta = self.destino.split('?').next().unwrap_or("/");
-        if let Some(resto) = sin_consulta.strip_prefix("http://").or_else(|| sin_consulta.strip_prefix("https://")) {
-            match resto.find('/') {
-                Some(i) => &resto[i..],
-                None => "/",
-            }
-        } else {
-            sin_consulta
+        let absoluto = sin_consulta
+            .strip_prefix("http://")
+            .or_else(|| sin_consulta.strip_prefix("https://"));
+        match absoluto {
+            Some(resto) => resto.find('/').map_or("/", |i| &resto[i..]),
+            None => sin_consulta,
         }
     }
 }
@@ -108,18 +107,18 @@ fn partir_linea_inicial(linea: &str) -> Result<(String, String, String), Rechazo
         v if v.starts_with("HTTP/") => return Err(Rechazo::VersionNoSoportada),
         _ => return Err(Rechazo::MalFormada("la versión no tiene la forma HTTP/x.y")),
     }
-    Ok((metodo.to_string(), destino.to_string(), version.to_string()))
+    Ok((metodo.into(), destino.into(), version.into()))
 }
 
 fn leer_cabeceras<R: BufRead>(lector: &mut R) -> Result<HashMap<String, String>, Rechazo> {
     let mut cabeceras: HashMap<String, String> = HashMap::new();
-    let mut vistas: Vec<String> = Vec::new();
+    let mut vistas = 0;
     loop {
         let l = linea(lector)?;
         if l.is_empty() {
             return Ok(cabeceras);
         }
-        if vistas.len() >= MAX_CABECERAS {
+        if vistas >= MAX_CABECERAS {
             return Err(Rechazo::Demasiado);
         }
         if l.starts_with(' ') || l.starts_with('\t') {
@@ -149,7 +148,7 @@ fn leer_cabeceras<R: BufRead>(lector: &mut R) -> Result<HashMap<String, String>,
                 continue;
             }
         }
-        vistas.push(clave.clone());
+        vistas += 1;
         cabeceras.insert(clave, valor);
     }
 }

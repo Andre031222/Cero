@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use std::io::{ErrorKind, Read};
+use std::io::{self, ErrorKind, Read};
 use std::net::{Shutdown, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use super::credito::Credito;
@@ -22,7 +22,7 @@ struct Salida {
 }
 
 impl Salida {
-    fn trama(&mut self, t: &Trama) -> std::io::Result<()> {
+    fn trama(&mut self, t: &Trama) -> io::Result<()> {
         if self.rota {
             return Err(ErrorKind::BrokenPipe.into());
         }
@@ -49,11 +49,11 @@ struct Comun {
 
 impl Comun {
     fn escribir(&self, t: &Trama) -> bool {
-        self.salida.lock().map(|mut s| s.trama(t).is_ok()).unwrap_or(false)
+        self.salida.lock().is_ok_and(|mut s| s.trama(t).is_ok())
     }
 
     fn max_trama(&self) -> usize {
-        self.salida.lock().map(|s| s.max_trama).unwrap_or(0)
+        self.salida.lock().map_or(0, |s| s.max_trama)
     }
 
     fn cargar(&self, octetos: usize) -> bool {
@@ -101,11 +101,11 @@ impl Drop for PorMandar<'_> {
 }
 
 fn responder(comun: &Comun, flujo: u32, r: Respuesta, solo_cabeceras: bool) {
-    let mut cabeceras = vec![("content-length".to_string(), r.cuerpo.len().to_string())];
+    let mut cabeceras = vec![("content-length".into(), r.cuerpo.len().to_string())];
     if !r.tipo.is_empty() {
-        cabeceras.push(("content-type".to_string(), r.tipo.clone()));
+        cabeceras.push(("content-type".into(), r.tipo));
     }
-    cabeceras.extend(r.extra.iter().cloned());
+    cabeceras.extend(r.extra);
     let bloque = cabeceras_de_respuesta(r.estado, &cabeceras);
 
     let vacio = solo_cabeceras || r.cuerpo.is_empty();
@@ -160,7 +160,7 @@ pub fn servir<F>(
     atender: Arc<F>,
     plazos: Plazos,
     limites: Limites,
-) -> std::io::Result<()>
+) -> io::Result<()>
 where
     F: Fn(Peticion) -> Respuesta + Send + Sync + 'static,
 {
@@ -297,7 +297,7 @@ fn anuncia_de_mas(cabeceras: &[(String, String)], tope: usize) -> bool {
 }
 
 fn cuerpo_de_mas(comun: &Comun, sesion: &mut Sesion, flujo: u32) {
-    let bloque = cabeceras_de_respuesta(413, &[("content-length".to_string(), "0".to_string())]);
+    let bloque = cabeceras_de_respuesta(413, &[("content-length".into(), "0".into())]);
     comun.escribir(&Trama { tipo: HEADERS, banderas: FIN_CABECERAS | FIN_FLUJO, flujo, carga: bloque });
     comun.escribir(&Trama::rst(flujo, Error::Ninguno));
     comun.credito.anular(flujo);
@@ -342,7 +342,7 @@ fn lanzar<F>(
     let suyo = Arc::clone(comun);
     let atender = Arc::clone(atender);
     let avisar = terminados.clone();
-    let hilo = std::thread::Builder::new().spawn(move || {
+    let hilo = thread::Builder::new().spawn(move || {
         let r = atender(peticion);
         responder(&suyo, flujo, r, solo_cabeceras);
         let _ = avisar.send(flujo);
@@ -367,7 +367,7 @@ fn armar(cabeceras: Vec<(String, String)>, cuerpo: Vec<u8>) -> Peticion {
             ":method" => metodo = valor,
             ":path" => destino = valor,
             ":authority" => {
-                mapa.insert("host".to_string(), valor);
+                mapa.insert("host".into(), valor);
             }
             ":scheme" => {}
             _ => {
@@ -380,10 +380,10 @@ fn armar(cabeceras: Vec<(String, String)>, cuerpo: Vec<u8>) -> Peticion {
             }
         }
     }
-    Peticion { metodo, destino, version: "HTTP/2".to_string(), cabeceras: mapa, cuerpo }
+    Peticion { metodo, destino, version: "HTTP/2".into(), cabeceras: mapa, cuerpo }
 }
 
-pub fn asomar_preambulo(socket: &mut TcpStream) -> std::io::Result<Option<Vec<u8>>> {
+pub fn asomar_preambulo(socket: &mut TcpStream) -> io::Result<Option<Vec<u8>>> {
     let mut visto = Vec::new();
     let mut uno = [0u8; 1];
     while visto.len() < PREAMBULO.len() {

@@ -1,10 +1,12 @@
 use cero_http::observabilidad::{Salud, Veredicto};
 use cero_http::seguridad::{Cors, Origenes};
 use cero_http::{Json, Respuesta, Router, Servidor};
+use std::env;
+use std::io;
 use std::time::Duration;
 
-fn main() -> std::io::Result<()> {
-    let puerto: u16 = std::env::args().nth(1).and_then(|p| p.parse().ok()).unwrap_or(8080);
+fn main() -> io::Result<()> {
+    let puerto: u16 = env::args().nth(1).and_then(|p| p.parse().ok()).unwrap_or(8080);
 
     let router = Router::nuevo()
         .ruta("GET", "/", "portada").expect("patrón")

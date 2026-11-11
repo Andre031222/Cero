@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use cero_http::http2::Credito;
@@ -73,8 +74,8 @@ fn h2_040_sin_credito_se_espera_hasta_que_llega() {
     c.reservar(1, 10, siempre());
 
     let suyo = Arc::clone(&c);
-    let hilo = std::thread::spawn(move || suyo.reservar(1, 100, siempre()));
-    std::thread::sleep(Duration::from_millis(50));
+    let hilo = thread::spawn(move || suyo.reservar(1, 100, siempre()));
+    thread::sleep(Duration::from_millis(50));
     c.ampliar(1, 70);
     assert_eq!(hilo.join().unwrap(), Some(70));
 }
@@ -85,8 +86,8 @@ fn cerrar_y_anular_despiertan_al_que_esperaba() {
         let c = Arc::new(Credito::nuevo(0));
         c.abrir(1);
         let suyo = Arc::clone(&c);
-        let hilo = std::thread::spawn(move || suyo.reservar(1, 10, siempre()));
-        std::thread::sleep(Duration::from_millis(50));
+        let hilo = thread::spawn(move || suyo.reservar(1, 10, siempre()));
+        thread::sleep(Duration::from_millis(50));
         if cerrar { c.cerrar() } else { c.anular(1) }
         assert_eq!(hilo.join().unwrap(), None);
     }

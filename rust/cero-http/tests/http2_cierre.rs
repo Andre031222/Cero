@@ -1,6 +1,8 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::Arc;
 use std::time::Duration;
+use std::{iter, thread};
 
 use cero_http::http2::{self, Ajustes, Trama, PREAMBULO};
 use cero_http::{Limites, Peticion, Plazos, Respuesta};
@@ -8,9 +10,9 @@ use cero_http::{Limites, Peticion, Plazos, Respuesta};
 fn conexion() -> TcpStream {
     let oyente = TcpListener::bind("127.0.0.1:0").expect("puerto");
     let puerto = oyente.local_addr().unwrap().port();
-    std::thread::spawn(move || {
+    thread::spawn(move || {
         let (socket, _) = oyente.accept().expect("conexión");
-        let atender = std::sync::Arc::new(|_: Peticion| Respuesta::texto("ok"));
+        let atender = Arc::new(|_: Peticion| Respuesta::texto("ok"));
         let _ = http2::conexion::servir(socket, Ajustes::default(), atender, Plazos::default(), Limites::default());
     });
     let cliente = TcpStream::connect(("127.0.0.1", puerto)).expect("conectar");
@@ -25,7 +27,7 @@ fn h2_048_el_goaway_se_puede_leer_despues_de_cerrar() {
     Ajustes::default().trama().escribir(&mut cliente).unwrap();
 
     let mut cabecera = vec![0x00, 0x4e, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01];
-    cabecera.extend(std::iter::repeat_n(0u8, 20_000));
+    cabecera.extend(iter::repeat_n(0u8, 20_000));
     let _ = cliente.write_all(&cabecera);
 
     let mut leido = Vec::new();

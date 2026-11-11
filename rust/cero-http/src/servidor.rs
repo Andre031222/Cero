@@ -7,12 +7,13 @@ use crate::peticion::{self, Peticion};
 use crate::registro::Registro;
 use crate::ruta::{Captura, Resolucion, Router};
 use crate::seguridad::{self, Cabeceras, Cors, Decision, Limitador};
-use crate::sesion::{self, Sesiones};
+use crate::sesion::{self, Almacen, Sesion, Sesiones};
 use crate::socket::{mandar_todo, Limites, Plazos};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Cursor, ErrorKind, Read};
+use std::io::{self, BufRead, BufReader, Cursor, ErrorKind, Read};
 use std::net::{TcpListener, TcpStream};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::{Duration, Instant};
 
 type Accion = Box<dyn Fn(&Contexto) -> Result<Respuesta, Fallo> + Send + Sync>;
@@ -54,7 +55,7 @@ impl Servidor {
             sin_registrar: Vec::new(),
             medios: Vec::new(),
             registro: Registro::nuevo(),
-            sesiones: Arc::new(sesion::Almacen::nuevo(
+            sesiones: Arc::new(Almacen::nuevo(
                 Duration::from_secs(30 * 60),
                 Some(Duration::from_secs(8 * 3600)),
             )),
@@ -69,7 +70,7 @@ impl Servidor {
             seguro: false,
             plazos: Plazos::default(),
             limites: Limites::default(),
-            direccion: "0.0.0.0".to_string(),
+            direccion: "0.0.0.0".into(),
         }
     }
 
@@ -107,7 +108,7 @@ impl Servidor {
     }
 
     pub fn sin_registrar(mut self, caminos: &[&str]) -> Servidor {
-        self.sin_registrar = caminos.iter().map(|c| c.to_string()).collect();
+        self.sin_registrar = caminos.iter().map(ToString::to_string).collect();
         self
     }
 
@@ -133,7 +134,7 @@ impl Servidor {
 
     pub fn csrf(mut self, exenciones: &[&str]) -> Servidor {
         self.csrf_activo = true;
-        self.csrf_exento = exenciones.iter().map(|e| e.to_string()).collect();
+        self.csrf_exento = exenciones.iter().map(ToString::to_string).collect();
         self
     }
 
@@ -158,7 +159,7 @@ impl Servidor {
     }
 
     pub fn direccion(mut self, d: &str) -> Servidor {
-        self.direccion = d.to_string();
+        self.direccion = d.into();
         self
     }
 
@@ -175,9 +176,9 @@ impl Servidor {
         &self.log
     }
 
-    pub fn escuchar(self, puerto: u16) -> std::io::Result<()> {
+    pub fn escuchar(self, puerto: u16) -> io::Result<()> {
         if !self.plazos.validos() || !self.limites.validos() {
-            return Err(std::io::Error::new(
+            return Err(io::Error::new(
                 ErrorKind::InvalidInput,
                 "los plazos y los topes tienen que ser mayores que cero",
             ));
@@ -188,7 +189,7 @@ impl Servidor {
         for conexion in oyente.incoming() {
             let Ok(flujo) = conexion else { continue };
             let yo = Arc::clone(&yo);
-            let _ = std::thread::Builder::new().spawn(move || Servidor::atender(yo, flujo));
+            let _ = thread::Builder::new().spawn(move || Servidor::atender(yo, flujo));
         }
         Ok(())
     }
@@ -225,12 +226,12 @@ impl Servidor {
                         || p.cabecera("connection").is_some_and(|c| c.eq_ignore_ascii_case("close"));
                     let solo_cabeceras = p.metodo == "HEAD";
                     let r = yo.responder(&p, &cliente);
-                    if escribir(&mut flujo, r, solo_cabeceras, cerrar, &plazos).is_err() || cerrar {
+                    if escribir(&mut flujo, &r, solo_cabeceras, cerrar, &plazos).is_err() || cerrar {
                         return;
                     }
                 }
                 Err(motivo) => {
-                    let _ = escribir(&mut flujo, Respuesta::estado(motivo.estado(), ""), false, true, &plazos);
+                    let _ = escribir(&mut flujo, &Respuesta::estado(motivo.estado(), ""), false, true, &plazos);
                     return;
                 }
             }
@@ -239,17 +240,17 @@ impl Servidor {
 
     pub fn responder(&self, p: &Peticion, cliente: &str) -> Respuesta {
         let empezo = Instant::now();
-        let camino = p.camino().to_string();
+        let camino = p.camino();
 
         if let Some(s) = &self.salud {
-            let informe = match camino.as_str() {
+            let informe = match camino {
                 "/cero/vivo" => Some(s.vivo()),
                 "/cero/listo" => Some(s.listo()),
                 _ => None,
             };
             if let Some(i) = informe {
                 return self.rematar(Respuesta { estado: i.estado, ..Respuesta::json_crudo(&i.cuerpo) },
-                                    p, &camino, empezo, None);
+                                    p, camino, empezo, None);
             }
         }
 
@@ -259,7 +260,7 @@ impl Servidor {
             if !v.permitida {
                 let mut r = Respuesta::estado(429, "demasiadas peticiones");
                 r.extra.extend(cabeceras);
-                return self.rematar(r, p, &camino, empezo, None);
+                return self.rematar(r, p, camino, empezo, None);
             }
         }
 
@@ -269,16 +270,15 @@ impl Servidor {
                 Decision::Corta(estado, h) => {
                     let mut r = Respuesta::estado(estado, "");
                     r.extra.extend(h);
-                    return self.rematar(r, p, &camino, empezo, None);
+                    return self.rematar(r, p, camino, empezo, None);
                 }
                 Decision::Sigue(h) => de_cors = h,
             }
         }
 
-        let id_cookie = sesion::id_de_cookie(p.cabecera("cookie")).map(str::to_string);
-        let sesion = self.sesiones.recuperar(id_cookie.as_deref());
+        let sesion = self.sesiones.recuperar(sesion::id_de_cookie(p.cabecera("cookie")));
 
-        let resolucion = self.router.resolver(&p.metodo, &camino);
+        let resolucion = self.router.resolver(&p.metodo, camino);
         let variables = match &resolucion {
             Resolucion::Encontrada(_, v) => v.clone(),
             _ => Captura::new(),
@@ -286,9 +286,9 @@ impl Servidor {
         let abrir = Box::new(|| self.sesiones.crear().ok());
         let ctx = Contexto::nuevo(p, variables, sesion, abrir, &self.registro);
 
-        let mut r = self.cadena(0, &ctx, &camino, &resolucion);
+        let mut r = self.cadena(0, &ctx, camino, &resolucion);
         r.extra.extend(de_cors);
-        self.rematar(r, p, &camino, empezo, ctx.sesion_final())
+        self.rematar(r, p, camino, empezo, ctx.sesion_final())
     }
 
     fn cadena(&self, i: usize, ctx: &Contexto, camino: &str, r: &Resolucion) -> Respuesta {
@@ -349,17 +349,17 @@ impl Servidor {
             .unwrap_or_else(|| nombre.to_string());
         let Some(f) = self.acciones.get(nombre) else {
             let fallo = Fallo::interno(&format!("la ruta {nombre} no tiene acción registrada"));
-            return self.del_fallo(ctx, &ruta, fallo);
+            return self.del_fallo(ctx, &ruta, &fallo);
         };
         match f(ctx) {
             Ok(r) => r,
-            Err(fallo) => self.del_fallo(ctx, &ruta, fallo),
+            Err(fallo) => self.del_fallo(ctx, &ruta, &fallo),
         }
     }
 
-    fn del_fallo(&self, ctx: &Contexto, ruta: &str, fallo: Fallo) -> Respuesta {
+    fn del_fallo(&self, ctx: &Contexto, ruta: &str, fallo: &Fallo) -> Respuesta {
         if let Some(manejador) = &self.al_fallar {
-            return manejador(ctx, &fallo);
+            return manejador(ctx, fallo);
         }
         if fallo.contable() {
             return match &fallo.detalle {
@@ -381,7 +381,7 @@ impl Servidor {
         p: &Peticion,
         camino: &str,
         empezo: Instant,
-        sesion: Option<Arc<std::sync::Mutex<crate::Sesion>>>,
+        sesion: Option<Arc<Mutex<Sesion>>>,
     ) -> Respuesta {
         r.extra.extend(self.cabeceras.aplicar(self.seguro));
 
@@ -409,11 +409,11 @@ impl Servidor {
 
 fn escribir(
     flujo: &mut TcpStream,
-    r: Respuesta,
+    r: &Respuesta,
     solo_cabeceras: bool,
     cerrar: bool,
     plazos: &Plazos,
-) -> std::io::Result<()> {
+) -> io::Result<()> {
     let mut salida = format!(
         "HTTP/1.1 {} {}\r\nContent-Length: {}\r\nContent-Type: {}\r\n",
         r.estado,
@@ -441,8 +441,8 @@ fn razon(estado: u16) -> &'static str {
         403 => "Forbidden",
         404 => "Not Found",
         405 => "Method Not Allowed",
-        429 => "Too Many Requests",
         413 => "Content Too Large",
+        429 => "Too Many Requests",
         431 => "Request Header Fields Too Large",
         500 => "Internal Server Error",
         501 => "Not Implemented",

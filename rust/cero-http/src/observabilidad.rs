@@ -1,4 +1,7 @@
+use std::any::type_name;
 use std::collections::HashMap;
+use std::fmt::Display;
+use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
 use std::time::{Duration, Instant};
@@ -46,8 +49,7 @@ impl Salud {
         let mut fallos: Vec<(String, String)> = Vec::new();
         let mut buenas: Vec<String> = Vec::new();
         for (nombre, f) in &self.comprobaciones {
-            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
-            match r {
+            match panic::catch_unwind(AssertUnwindSafe(f)) {
                 Ok(Veredicto::Bien) => buenas.push(nombre.clone()),
                 Ok(Veredicto::Mal(motivo)) => fallos.push((nombre.clone(), motivo)),
                 Err(_) => fallos.push((nombre.clone(), "la comprobación lanzó".into())),
@@ -109,8 +111,8 @@ impl Log {
         self.lineas.lock().expect("log envenenado").push(linea);
     }
 
-    pub fn con_error<E: std::fmt::Display>(&self, plantilla: &str, valores: &[&str], error: &E) {
-        let tipo = std::any::type_name::<E>().rsplit("::").next().unwrap_or("Error");
+    pub fn con_error<E: Display>(&self, plantilla: &str, valores: &[&str], error: &E) {
+        let tipo = type_name::<E>().rsplit("::").next().unwrap_or("Error");
         self.escribir(Nivel::Error, &format!("{plantilla}: {tipo}: {error}"), valores);
     }
 
@@ -125,10 +127,7 @@ pub fn interpolar(plantilla: &str, valores: &[&str]) -> String {
     let mut i = 0;
     while let Some(p) = resto.find("{}") {
         salida.push_str(&resto[..p]);
-        match valores.get(i) {
-            Some(v) => salida.push_str(v),
-            None => salida.push_str("{}"),
-        }
+        salida.push_str(valores.get(i).copied().unwrap_or("{}"));
         i += 1;
         resto = &resto[p + 2..];
     }
@@ -183,11 +182,11 @@ impl Metricas {
     }
 
     pub fn peticiones(&self, patron: &str) -> u64 {
-        self.por_patron.read().map(|m| m.get(patron).map_or(0, |c| c.peticiones)).unwrap_or(0)
+        self.por_patron.read().map_or(0, |m| m.get(patron).map_or(0, |c| c.peticiones))
     }
 
     pub fn errores(&self, patron: &str) -> u64 {
-        self.por_patron.read().map(|m| m.get(patron).map_or(0, |c| c.errores)).unwrap_or(0)
+        self.por_patron.read().map_or(0, |m| m.get(patron).map_or(0, |c| c.errores))
     }
 
     pub fn percentil(&self, patron: &str, p: f64) -> Option<u64> {
@@ -202,7 +201,7 @@ impl Metricas {
     }
 
     pub fn patrones(&self) -> usize {
-        self.por_patron.read().map(|m| m.len()).unwrap_or(0)
+        self.por_patron.read().map_or(0, |m| m.len())
     }
 
     pub fn json(&self) -> String {
@@ -229,12 +228,5 @@ pub fn linea_acceso(
     usuario: Option<&str>,
     tardo: Duration,
 ) -> String {
-    format!(
-        "{} {} {} {} {}ms",
-        metodo,
-        destino,
-        estado,
-        usuario.unwrap_or("-"),
-        tardo.as_millis()
-    )
+    format!("{metodo} {destino} {estado} {} {}ms", usuario.unwrap_or("-"), tardo.as_millis())
 }

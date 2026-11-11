@@ -1,5 +1,7 @@
 use crate::contexto::Respuesta;
 use crate::json::Json;
+use std::error::Error;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fallo {
@@ -26,13 +28,13 @@ impl Fallo {
     }
 }
 
-impl std::fmt::Display for Fallo {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Fallo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({})", self.mensaje, self.estado)
     }
 }
 
-impl std::error::Error for Fallo {}
+impl Error for Fallo {}
 
 pub trait EnRespuesta {
     fn en_respuesta(self) -> Result<Respuesta, Fallo>;

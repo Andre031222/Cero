@@ -1,5 +1,7 @@
 use cero_http::sesion::{self, Almacen, Sesiones};
+use cero_http::{Contexto, Peticion, Respuesta, Router, Servidor};
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 fn almacen() -> Almacen {
@@ -73,7 +75,7 @@ fn ses_007_dos_peticiones_a_la_vez_no_se_pisan() {
     let hilos: Vec<_> = (0..16)
         .map(|i| {
             let s = Arc::clone(&s);
-            std::thread::spawn(move || s.lock().unwrap().poner(&format!("k{i}"), "v").unwrap())
+            thread::spawn(move || s.lock().unwrap().poner(&format!("k{i}"), "v").unwrap())
         })
         .collect();
     for h in hilos {
@@ -118,7 +120,7 @@ fn caducidad_por_inactividad() {
     let a = Almacen::nuevo(Duration::from_millis(50), None);
     let id = a.crear().unwrap().lock().unwrap().id().to_string();
     assert!(a.recuperar(Some(&id)).is_some(), "antes de caducar sigue ahí");
-    std::thread::sleep(Duration::from_millis(80));
+    thread::sleep(Duration::from_millis(80));
     assert!(a.recuperar(Some(&id)).is_none(), "después de caducar ya no está");
     assert_eq!(a.cuantas(), 0, "y se suelta del almacén");
 }
@@ -129,7 +131,7 @@ fn caducidad_absoluta_aunque_se_toque() {
     let s = a.crear().unwrap();
     let id = s.lock().unwrap().id().to_string();
     for _ in 0..5 {
-        std::thread::sleep(Duration::from_millis(15));
+        thread::sleep(Duration::from_millis(15));
         let _ = s.lock().unwrap().poner("toque", "sí");
     }
     assert!(a.recuperar(Some(&id)).is_none(), "la caducidad absoluta manda sobre los toques");
@@ -144,10 +146,6 @@ fn lee_el_identificador_de_la_cabecera_cookie() {
 
 #[test]
 fn ses_012_un_almacen_compartido_reconoce_la_sesion_en_otra_instancia() {
-    use std::sync::Arc;
-    use std::time::Duration;
-    use cero_http::{Almacen, Contexto, Peticion, Respuesta, Router, Servidor};
-
     let compartido: Arc<dyn Sesiones> = Arc::new(Almacen::nuevo(Duration::from_secs(600), None));
     let instancia = || {
         let router = Router::nuevo()

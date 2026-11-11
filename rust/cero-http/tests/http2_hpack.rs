@@ -1,8 +1,10 @@
+use std::iter;
+
 use cero_http::http2::hpack::{Codificador, Decodificador, MAX_CAMPOS};
 use cero_http::http2::hpack_tablas::{CODIGO, ESTATICA, LARGO};
 
 fn hex(s: &str) -> Vec<u8> {
-    let limpio: String = s.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+    let limpio: String = s.chars().filter(char::is_ascii_hexdigit).collect();
     (0..limpio.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&limpio[i..i + 2], 16).unwrap())
@@ -190,8 +192,8 @@ fn h2_039_la_lista_que_se_expande_al_descomprimirse() {
     bloque.push(0x7f);
     bloque.push(0xe9);
     bloque.push(0x06);
-    bloque.extend(std::iter::repeat_n(b'a', 1000));
-    bloque.extend(std::iter::repeat_n(0x80 | 62, 100));
+    bloque.extend(iter::repeat_n(b'a', 1000));
+    bloque.extend(iter::repeat_n(0x80 | 62, 100));
     let fallo = dec.decodificar(&bloque).unwrap_err();
     assert_eq!(fallo.codigo, cero_http::http2::Error::Calma, "H2-039");
 }
@@ -201,7 +203,7 @@ fn h2_050_mas_de_256_campos_con_cookies_partidas() {
     let bloque = |campos: usize| {
         let mut b = vec![0x40, 0x06];
         b.extend_from_slice(b"cookie\x03a=1");
-        b.extend(std::iter::repeat_n(0x80 | 62, campos - 1));
+        b.extend(iter::repeat_n(0x80 | 62, campos - 1));
         b
     };
     assert!(d().decodificar(&bloque(MAX_CAMPOS)).is_ok(), "H2-050: 256 trozos de cookie sí");
@@ -244,7 +246,7 @@ fn reducir_la_tabla_desaloja_en_el_acto() {
 #[test]
 fn un_entero_sin_fin_no_cuelga() {
     let mut bloque = vec![0x7f];
-    bloque.extend(std::iter::repeat_n(0xffu8, 20));
+    bloque.extend(iter::repeat_n(0xffu8, 20));
     assert!(d().decodificar(&bloque).is_err());
 }
 

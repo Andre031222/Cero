@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use cero_http::http2::trama::{FIN_CABECERAS, FIN_FLUJO, HEADERS, RST_STREAM, SETTINGS};
@@ -36,7 +36,7 @@ fn agotar(soltar: &Arc<Mutex<Receiver<()>>>) -> (bool, Vec<JoinHandle<()>>) {
     let mut dormidos = Vec::new();
     for _ in 0..20_000 {
         let espera = Arc::clone(soltar);
-        let hilo = std::thread::Builder::new().stack_size(64 << 10).spawn(move || {
+        let hilo = thread::Builder::new().stack_size(64 << 10).spawn(move || {
             let _ = espera.lock().map(|r| r.recv());
         });
         match hilo {
@@ -51,7 +51,7 @@ fn conectar(puerto: u16) -> TcpStream {
     let c = (0..100)
         .find_map(|_| {
             TcpStream::connect(("127.0.0.1", puerto)).ok().or_else(|| {
-                std::thread::sleep(Duration::from_millis(50));
+                thread::sleep(Duration::from_millis(50));
                 None
             })
         })
@@ -71,7 +71,7 @@ fn sin_hilos_se_rechaza_el_flujo_o_se_cierra_la_conexion_y_el_proceso_sigue() {
     let puerto = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
     let router = Router::nuevo().ruta("GET", "/", "hola").expect("patrón");
     let servidor = Servidor::nuevo(router).accion("hola", |_| Respuesta::texto("hola")).direccion("127.0.0.1");
-    std::thread::spawn(move || servidor.escuchar(puerto));
+    thread::spawn(move || servidor.escuchar(puerto));
 
     let mut h2 = conectar(puerto);
     h2.write_all(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n").unwrap();

@@ -69,7 +69,7 @@ fn una_sesion_caducada_se_borra_al_tocarla() {
     let id = a.crear().unwrap().lock().unwrap().id().to_string();
     assert_eq!(fuente.cuantas("sesiones"), 1);
 
-    std::thread::sleep(Duration::from_millis(5));
+    thread::sleep(Duration::from_millis(5));
     assert!(a.recuperar(Some(&id)).is_none(), "caducada por inactividad");
     assert_eq!(fuente.cuantas("sesiones"), 0, "y la fila ya no está");
 }

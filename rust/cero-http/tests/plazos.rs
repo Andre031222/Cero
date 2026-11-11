@@ -1,11 +1,10 @@
-use std::io::{Read, Write};
+use std::cell::Cell;
+use std::io::{BufReader, Cursor, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread::JoinHandle;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
-
-use std::io::{BufReader, Cursor};
 
 use cero_http::http2::hpack::{Codificador, Decodificador};
 use cero_http::http2::trama::{
@@ -37,7 +36,7 @@ fn con_limites(
 ) -> (TcpStream, JoinHandle<()>) {
     let oyente = TcpListener::bind("127.0.0.1:0").expect("puerto");
     let puerto = oyente.local_addr().unwrap().port();
-    let hilo = std::thread::spawn(move || {
+    let hilo = thread::spawn(move || {
         let (socket, _) = oyente.accept().expect("conexión");
         let _ = http2::conexion::servir(socket, Ajustes::default(), Arc::new(atender), plazos, limites);
     });
@@ -81,9 +80,9 @@ fn latir_crudo(cliente: &TcpStream, cada: Duration, octetos: Vec<u8>) -> (Arc<At
     let parar = Arc::new(AtomicBool::new(false));
     let suyo = Arc::clone(&parar);
     let mut socket = cliente.try_clone().unwrap();
-    let hilo = std::thread::spawn(move || {
+    let hilo = thread::spawn(move || {
         while !suyo.load(Ordering::SeqCst) && socket.write_all(&octetos).is_ok() {
-            std::thread::sleep(cada);
+            thread::sleep(cada);
         }
     });
     (parar, hilo)
@@ -95,7 +94,7 @@ fn h2_052_un_cliente_callado_con_la_ventana_a_cero_suelta_sus_flujos() {
     pedir(&mut c, 1);
     pedir(&mut c, 3);
     let empezo = Instant::now();
-    let cortados = std::cell::Cell::new(0);
+    let cortados = Cell::new(0);
     let (adios, _) = hasta(&mut c, |t| {
         if t.tipo == RST_STREAM && codigo(t) == Error::Anulado as u32 {
             cortados.set(cortados.get() + 1);
@@ -256,10 +255,10 @@ fn servidor(p: Plazos) -> Servidor {
 #[test]
 fn http_024_una_conexion_ociosa_entre_peticiones_se_cierra() {
     let puerto = puerto_libre();
-    std::thread::spawn(move || servidor(plazos(30_000, 400)).escuchar(puerto));
+    thread::spawn(move || servidor(plazos(30_000, 400)).escuchar(puerto));
     let mut c = (0..100)
         .find_map(|_| TcpStream::connect(("127.0.0.1", puerto)).ok().or_else(|| {
-            std::thread::sleep(ms(50));
+            thread::sleep(ms(50));
             None
         }))
         .expect("escucha");
@@ -270,7 +269,7 @@ fn http_024_una_conexion_ociosa_entre_peticiones_se_cierra() {
     let primera = String::from_utf8_lossy(&respuesta[..n]).to_string();
     assert!(primera.starts_with("HTTP/1.1 200") && !primera.contains("Connection: close"),
             "HTTP-024: la primera petición se atiende y la conexión sigue");
-    std::thread::sleep(ms(200));
+    thread::sleep(ms(200));
     c.write_all(b"GET / HTTP/1.1\r\nHost: a\r\n\r\n").unwrap();
     let n = c.read(&mut respuesta).unwrap();
     assert!(respuesta[..n].starts_with(b"HTTP/1.1 200"), "HTTP-024: una segunda a media inactividad se atiende");

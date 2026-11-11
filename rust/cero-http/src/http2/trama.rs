@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 
 pub const PREAMBULO: &[u8] = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
@@ -87,7 +87,7 @@ impl Trama {
         Ok(Trama { tipo, banderas, flujo, carga })
     }
 
-    pub fn escribir(&self, destino: &mut impl Write) -> std::io::Result<()> {
+    pub fn escribir(&self, destino: &mut impl Write) -> io::Result<()> {
         let n = self.carga.len();
         let cabecera = [
             (n >> 16) as u8, (n >> 8) as u8, n as u8,

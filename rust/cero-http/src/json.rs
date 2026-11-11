@@ -13,7 +13,7 @@ pub enum Json {
 
 impl Json {
     pub fn objeto(pares: Vec<(&str, Json)>) -> Json {
-        Json::Objeto(pares.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+        Json::Objeto(pares.into_iter().map(|(k, v)| (k.into(), v)).collect())
     }
 
     pub fn lista(items: Vec<Json>) -> Json {

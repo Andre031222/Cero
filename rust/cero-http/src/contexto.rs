@@ -2,10 +2,11 @@ use crate::fallo::Fallo;
 use crate::json::{self, Json};
 use crate::peticion::Peticion;
 use crate::registro::Registro;
-use crate::seguridad::CLAVE_CSRF;
-use crate::sesion::Sesion;
+use crate::seguridad::{sanear_nombre, CLAVE_CSRF};
+use crate::sesion::{identificador, Sesion};
 use std::collections::HashMap;
 use std::cell::RefCell;
+use std::str::{self, FromStr};
 use std::sync::{Arc, Mutex};
 
 pub struct Respuesta {
@@ -47,7 +48,7 @@ impl Respuesta {
     }
 
     pub fn descarga(cuerpo: Vec<u8>, nombre: &str, tipo: &str) -> Respuesta {
-        let limpio = crate::seguridad::sanear_nombre(nombre);
+        let limpio = sanear_nombre(nombre);
         let mut r = Respuesta::con(200, tipo, cuerpo);
         r.extra.push((
             "Content-Disposition".into(),
@@ -98,7 +99,7 @@ impl<'p> Contexto<'p> {
         self.variables.get(nombre).map(String::as_str)
     }
 
-    pub fn variable_como<T: std::str::FromStr>(&self, nombre: &str) -> Result<T, Fallo> {
+    pub fn variable_como<T: FromStr>(&self, nombre: &str) -> Result<T, Fallo> {
         self.variable(nombre)
             .ok_or_else(|| Fallo::nuevo(400, "falta la variable"))?
             .parse()
@@ -114,7 +115,7 @@ impl<'p> Contexto<'p> {
     }
 
     pub fn consulta_o(&self, nombre: &str, defecto: &str) -> String {
-        self.consulta(nombre).unwrap_or_else(|| defecto.to_string())
+        self.consulta(nombre).unwrap_or_else(|| defecto.into())
     }
 
     pub fn cuerpo_texto(&self) -> String {
@@ -139,11 +140,8 @@ impl<'p> Contexto<'p> {
     }
 
     pub fn abrir_sesion(&self) -> Option<Arc<Mutex<Sesion>>> {
-        if let Some(ya) = self.abierta.borrow().as_ref() {
-            return Some(Arc::clone(ya));
-        }
-        if let Some(previa) = &self.sesion {
-            return Some(Arc::clone(previa));
+        if let Some(ya) = self.sesion_final() {
+            return Some(ya);
         }
         let nueva = (self.abrir)()?;
         *self.abierta.borrow_mut() = Some(Arc::clone(&nueva));
@@ -156,7 +154,7 @@ impl<'p> Contexto<'p> {
         if let Ok(Some(ya)) = g.leer(CLAVE_CSRF) {
             return Some(ya.clone());
         }
-        let token = crate::sesion::identificador().ok()?;
+        let token = identificador().ok()?;
         g.poner(CLAVE_CSRF, &token).ok()?;
         Some(token)
     }
@@ -165,7 +163,6 @@ impl<'p> Contexto<'p> {
         self.abierta.borrow().clone().or_else(|| self.sesion.clone())
     }
 }
-
 
 fn pares(cadena: &str) -> Vec<(String, String)> {
     cadena
@@ -184,7 +181,7 @@ fn desescapar(s: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
+            let hex = str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
             if let Ok(b) = u8::from_str_radix(hex, 16) {
                 salida.push(b);
                 i += 3;

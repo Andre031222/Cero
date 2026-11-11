@@ -26,6 +26,8 @@ enum Estado {
     MitadCerradoRemoto,
 }
 
+type Paso = Result<(Vec<Accion>, Option<Cortado>), FalloConexion>;
+
 struct Flujo {
     estado: Estado,
     ventana: i64,
@@ -98,7 +100,7 @@ impl Sesion {
         self.flujos.get(&flujo).map(|f| f.ventana)
     }
 
-    pub fn recibir(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    pub fn recibir(&mut self, t: Trama) -> Paso {
         t.comprobar()?;
 
         if let Some((flujo, _, _)) = &self.pendiente {
@@ -109,15 +111,14 @@ impl Sesion {
         }
 
         match t.tipo {
-            SETTINGS => self.settings(t),
-            PING => self.ping(t),
-            WINDOW_UPDATE => self.window_update(t),
-            RST_STREAM => self.rst(t),
-            HEADERS => self.headers(t),
-            CONTINUATION => self.continuation(t),
-            DATA => self.data(t),
-            PRIORITY => self.priority(t),
-            GOAWAY => Ok((Vec::new(), None)),
+            SETTINGS => self.settings(&t),
+            PING => self.ping(&t),
+            WINDOW_UPDATE => self.window_update(&t),
+            RST_STREAM => self.rst(&t),
+            HEADERS => self.headers(&t),
+            CONTINUATION => self.continuation(&t),
+            DATA => self.data(&t),
+            PRIORITY => self.priority(&t),
             _ => Ok((Vec::new(), None)),
         }
     }
@@ -130,7 +131,7 @@ impl Sesion {
         Ok(())
     }
 
-    fn settings(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn settings(&mut self, t: &Trama) -> Paso {
         if t.banderas & RECONOCE != 0 {
             return Ok((Vec::new(), None));
         }
@@ -143,7 +144,7 @@ impl Sesion {
         Ok((acciones, None))
     }
 
-    fn ping(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn ping(&mut self, t: &Trama) -> Paso {
         if t.banderas & RECONOCE != 0 {
             return Ok((Vec::new(), None));
         }
@@ -151,7 +152,7 @@ impl Sesion {
         Ok((vec![Accion::Escribir(Trama::ping_ack(&t.carga))], None))
     }
 
-    fn window_update(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn window_update(&mut self, t: &Trama) -> Paso {
         let cuanto = u32::from_be_bytes([t.carga[0] & 0x7f, t.carga[1], t.carga[2], t.carga[3]]) as i64;
         if t.flujo == 0 {
             if self.flujos.is_empty() {
@@ -171,7 +172,7 @@ impl Sesion {
         Ok((vec![Accion::Credito { flujo: t.flujo, cuanto }], None))
     }
 
-    fn priority(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn priority(&mut self, t: &Trama) -> Paso {
         if t.flujo == 0 {
             return Err(conexion(Error::Protocolo, "PRIORITY sobre la conexión"));
         }
@@ -185,7 +186,7 @@ impl Sesion {
         Ok((Vec::new(), None))
     }
 
-    fn rst(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn rst(&mut self, t: &Trama) -> Paso {
         if t.flujo > self.ultimo {
             return Err(conexion(Error::Protocolo, "RST_STREAM de un flujo que nunca se abrió"));
         }
@@ -197,7 +198,7 @@ impl Sesion {
         Ok((vec![Accion::Anulado(t.flujo)], None))
     }
 
-    fn headers(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn headers(&mut self, t: &Trama) -> Paso {
         let trailers = match self.flujos.get(&t.flujo) {
             Some(f) if f.estado == Estado::MitadCerradoRemoto => {
                 let porque = "cabeceras después del fin de flujo";
@@ -231,7 +232,7 @@ impl Sesion {
                         estado: Estado::Abierto,
                         ventana: self.ajustes.ventana_inicial as i64,
                         cabeceras_vistas: false,
-                        malformado: prioridad_de(&t)
+                        malformado: prioridad_de(t)
                             .filter(|p| depende_de_si_mismo(p, t.flujo))
                             .map(|_| "el flujo depende de sí mismo"),
                         declarado: None,
@@ -242,7 +243,7 @@ impl Sesion {
             }
         };
 
-        let bloque = recortar(&t)?;
+        let bloque = recortar(t)?;
         if t.fin_cabeceras() {
             self.terminar_bloque(t.flujo, bloque, t.fin_flujo(), trailers)
         } else {
@@ -251,16 +252,15 @@ impl Sesion {
         }
     }
 
-    fn continuation(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
-        let (flujo, mut bloque, fin) = match self.pendiente.take() {
-            Some(x) => x,
-            None => return Err(conexion(Error::Protocolo, "CONTINUATION sin HEADERS delante")),
+    fn continuation(&mut self, t: &Trama) -> Paso {
+        let Some((flujo, mut bloque, fin)) = self.pendiente.take() else {
+            return Err(conexion(Error::Protocolo, "CONTINUATION sin HEADERS delante"));
         };
         bloque.extend_from_slice(&t.carga);
         if bloque.len() > self.topes.bloque_cabeceras {
             return Err(conexion(Error::Calma, "bloque de cabeceras sin fin"));
         }
-        let trailers = self.flujos.get(&flujo).map(|f| f.cabeceras_vistas).unwrap_or(false);
+        let trailers = self.flujos.get(&flujo).is_some_and(|f| f.cabeceras_vistas);
         if t.fin_cabeceras() {
             self.terminar_bloque(flujo, bloque, fin, trailers)
         } else {
@@ -275,7 +275,7 @@ impl Sesion {
         bloque: Vec<u8>,
         fin: bool,
         trailers: bool,
-    ) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    ) -> Paso {
         let cabeceras = self.decodificador.decodificar(&bloque)?;
 
         let mut malformado = None;
@@ -287,23 +287,23 @@ impl Sesion {
             malformado = f.malformado;
         }
         if let Some(porque) = malformado {
-            return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque })));
+            return self.malformada(flujo, porque);
         }
         if trailers {
             return Ok((vec![Accion::Cuerpo { flujo, datos: Vec::new(), fin: true }], None));
         }
 
         if let Err(porque) = validar(&cabeceras) {
-            return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque })));
+            return self.malformada(flujo, porque);
         }
 
         let declarado = match declarado(&cabeceras) {
-            Err(porque) => return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque }))),
+            Err(porque) => return self.malformada(flujo, porque),
             Ok(d) => d,
         };
         if fin && declarado.unwrap_or(0) != 0 {
             let porque = "content-length sin cuerpo que lo respalde";
-            return Ok((self.cortar(flujo, porque), Some(Cortado { flujo, codigo: Error::Protocolo, porque })));
+            return self.malformada(flujo, porque);
         }
         if let Some(f) = self.flujos.get_mut(&flujo) {
             f.declarado = declarado;
@@ -311,19 +311,23 @@ impl Sesion {
         Ok((vec![Accion::Peticion { flujo, cabeceras, fin }], None))
     }
 
-    fn cortar(&mut self, flujo: u32, _porque: &'static str) -> Vec<Accion> {
+    fn malformada(&mut self, flujo: u32, porque: &'static str) -> Paso {
+        Ok((self.cortar(flujo), Some(Cortado { flujo, codigo: Error::Protocolo, porque })))
+    }
+
+    fn cortar(&mut self, flujo: u32) -> Vec<Accion> {
         self.flujos.remove(&flujo);
         vec![Accion::Escribir(Trama::rst(flujo, Error::Protocolo))]
     }
 
-    fn data(&mut self, t: Trama) -> Result<(Vec<Accion>, Option<Cortado>), FalloConexion> {
+    fn data(&mut self, t: &Trama) -> Paso {
         let tamano = t.carga.len() as i64;
         self.ventana -= tamano;
         if self.ventana < 0 {
             return Err(conexion(Error::ControlDeFlujo, "el cliente se pasó de la ventana de la conexión"));
         }
 
-        let datos = recortar(&t)?;
+        let datos = recortar(t)?;
         self.ventana += tamano;
         let credito = || (tamano > 0).then(|| Accion::Escribir(Trama::ventana(0, tamano as u32)));
         let con_credito = |acciones: Vec<Accion>| credito().into_iter().chain(acciones).collect::<Vec<_>>();
@@ -343,14 +347,12 @@ impl Sesion {
                     f.estado = Estado::MitadCerradoRemoto;
                 }
                 f.recibido += tamano as u64;
-                let miente = match f.declarado {
-                    Some(d) => f.recibido > d || (t.fin_flujo() && f.recibido != d),
-                    None => false,
-                };
+                let miente =
+                    f.declarado.is_some_and(|d| f.recibido > d || (t.fin_flujo() && f.recibido != d));
                 if miente {
                     let porque = "el cuerpo no mide lo que dijo content-length";
                     let cortado = Some(Cortado { flujo: t.flujo, codigo: Error::Protocolo, porque });
-                    return Ok((con_credito(self.cortar(t.flujo, porque)), cortado));
+                    return Ok((con_credito(self.cortar(t.flujo)), cortado));
                 }
                 Some(f.estado)
             }

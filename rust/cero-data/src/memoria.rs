@@ -1,15 +1,12 @@
 use crate::{Conexion, Fallo, Fila, Fuente, Resultado, Valor};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
-#[derive(Default)]
-struct Datos {
-    tablas: HashMap<String, Vec<Fila>>,
-}
+type Tablas = HashMap<String, Vec<Fila>>;
 
 #[derive(Clone, Default)]
 pub struct EnMemoria {
-    datos: Arc<Mutex<Datos>>,
+    datos: Arc<Mutex<Tablas>>,
 }
 
 impl EnMemoria {
@@ -18,11 +15,11 @@ impl EnMemoria {
     }
 
     pub fn sembrar(&self, tabla: &str, filas: Vec<Fila>) {
-        self.datos.lock().expect("envenenado").tablas.insert(tabla.into(), filas);
+        self.datos.lock().expect("envenenado").insert(tabla.into(), filas);
     }
 
     pub fn cuantas(&self, tabla: &str) -> usize {
-        self.datos.lock().map(|d| d.tablas.get(tabla).map_or(0, Vec::len)).unwrap_or(0)
+        self.datos.lock().map_or(0, |d| d.get(tabla).map_or(0, Vec::len))
     }
 }
 
@@ -33,8 +30,14 @@ impl Fuente for EnMemoria {
 }
 
 struct ConexionMemoria {
-    datos: Arc<Mutex<Datos>>,
-    copia: Option<HashMap<String, Vec<Fila>>>,
+    datos: Arc<Mutex<Tablas>>,
+    copia: Option<Tablas>,
+}
+
+impl ConexionMemoria {
+    fn tablas(&self) -> Resultado<MutexGuard<'_, Tablas>> {
+        self.datos.lock().map_err(|_| Fallo("envenenado".into()))
+    }
 }
 
 enum Orden {
@@ -101,41 +104,41 @@ impl Conexion for ConexionMemoria {
         let Some(Orden::Select { tabla, columna }) = trocear(sql) else {
             return Err(Fallo(format!("consultar espera SELECT: {sql}")));
         };
-        let datos = self.datos.lock().map_err(|_| Fallo("envenenado".into()))?;
-        let filas = datos.tablas.get(&tabla).cloned().unwrap_or_default();
+        let datos = self.tablas()?;
+        let filas = datos.get(&tabla).map(Vec::as_slice).unwrap_or_default();
         let Some(col) = columna else {
             let tope = match parametros.first() {
                 Some(Valor::Entero(n)) => *n as usize,
                 _ => filas.len(),
             };
-            return Ok(filas.into_iter().take(tope).collect());
+            return Ok(filas.iter().take(tope).cloned().collect());
         };
         let buscado = parametros.first().ok_or_else(|| Fallo("falta el parámetro".into()))?;
-        Ok(filas.into_iter().filter(|f| f.valor(&col) == Some(buscado)).collect())
+        Ok(filas.iter().filter(|f| f.valor(&col) == Some(buscado)).cloned().collect())
     }
 
     fn ejecutar(&mut self, sql: &str, parametros: &[Valor]) -> Resultado<u64> {
         let orden = trocear(sql).ok_or_else(|| Fallo(format!("no sé leer: {sql}")))?;
-        let mut datos = self.datos.lock().map_err(|_| Fallo("envenenado".into()))?;
+        let mut datos = self.tablas()?;
         match orden {
             Orden::Insert { tabla, columnas } => {
                 if columnas.len() != parametros.len() {
                     return Err(Fallo("el INSERT no cuadra con sus parámetros".into()));
                 }
                 let pares = columnas.iter().map(String::as_str).zip(parametros.iter().cloned());
-                datos.tablas.entry(tabla).or_default().push(Fila::de(pares.collect()));
+                datos.entry(tabla).or_default().push(Fila::de(pares.collect()));
                 Ok(1)
             }
             Orden::Update { tabla, asigna, columna } => {
-                let (nuevos, clave) = parametros
-                    .split_at(parametros.len().checked_sub(1).ok_or_else(|| Fallo("UPDATE sin parámetros".into()))?);
+                let (clave, nuevos) =
+                    parametros.split_last().ok_or_else(|| Fallo("UPDATE sin parámetros".into()))?;
                 if asigna.len() != nuevos.len() {
                     return Err(Fallo("el UPDATE no cuadra con sus parámetros".into()));
                 }
-                let filas = datos.tablas.entry(tabla).or_default();
+                let filas = datos.entry(tabla).or_default();
                 let mut tocadas = 0;
-                for f in filas.iter_mut().filter(|f| f.valor(&columna) == Some(&clave[0])) {
-                    for (c, v) in asigna.iter().zip(nuevos.iter()) {
+                for f in filas.iter_mut().filter(|f| f.valor(&columna) == Some(clave)) {
+                    for (c, v) in asigna.iter().zip(nuevos) {
                         f.poner(c, v.clone());
                     }
                     tocadas += 1;
@@ -143,17 +146,13 @@ impl Conexion for ConexionMemoria {
                 Ok(tocadas)
             }
             Orden::Delete { tabla, columna } => {
-                let propio;
                 let buscado = match parametros.first() {
-                    Some(v) => v,
-                    None => {
-                        propio = literal(sql).ok_or_else(|| Fallo("falta el parámetro".into()))?;
-                        &propio
-                    }
+                    Some(v) => v.clone(),
+                    None => literal(sql).ok_or_else(|| Fallo("falta el parámetro".into()))?,
                 };
-                let filas = datos.tablas.entry(tabla).or_default();
+                let filas = datos.entry(tabla).or_default();
                 let antes = filas.len();
-                filas.retain(|f| f.valor(&columna) != Some(buscado));
+                filas.retain(|f| f.valor(&columna) != Some(&buscado));
                 Ok((antes - filas.len()) as u64)
             }
             Orden::Select { .. } => Err(Fallo("ejecutar no es para SELECT".into())),
@@ -161,8 +160,8 @@ impl Conexion for ConexionMemoria {
     }
 
     fn empezar(&mut self) -> Resultado<()> {
-        let datos = self.datos.lock().map_err(|_| Fallo("envenenado".into()))?;
-        self.copia = Some(datos.tablas.clone());
+        let copia = self.tablas()?.clone();
+        self.copia = Some(copia);
         Ok(())
     }
 
@@ -173,12 +172,11 @@ impl Conexion for ConexionMemoria {
 
     fn deshacer(&mut self) -> Resultado<()> {
         if let Some(copia) = self.copia.take() {
-            self.datos.lock().map_err(|_| Fallo("envenenado".into()))?.tablas = copia;
+            *self.tablas()? = copia;
         }
         Ok(())
     }
 }
-
 
 fn literal(sql: &str) -> Option<Valor> {
     let tras_igual = sql.rsplit('=').next()?.trim().trim_end_matches(';').trim();

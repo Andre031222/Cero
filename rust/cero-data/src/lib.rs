@@ -3,7 +3,9 @@ pub mod migraciones;
 pub mod sesiones;
 
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt;
+use std::iter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Valor {
@@ -41,7 +43,7 @@ pub struct Fila {
 
 impl Fila {
     pub fn de(pares: Vec<(&str, Valor)>) -> Fila {
-        Fila { columnas: pares.into_iter().map(|(k, v)| (k.to_string(), v)).collect() }
+        Fila { columnas: pares.into_iter().map(|(k, v)| (k.into(), v)).collect() }
     }
 
     pub fn valor(&self, columna: &str) -> Option<&Valor> {
@@ -83,7 +85,7 @@ impl fmt::Display for Fallo {
     }
 }
 
-impl std::error::Error for Fallo {}
+impl Error for Fallo {}
 
 pub type Resultado<T> = Result<T, Fallo>;
 
@@ -142,38 +144,33 @@ impl<'f> Repositorio<'f> {
 
     pub fn todos(&self, limite: u32) -> Resultado<Vec<Fila>> {
         let sql = format!("SELECT * FROM {} LIMIT ?", self.tabla);
-        self.fuente.conexion()?.consultar(&sql, &[Valor::Entero(limite as i64)])
+        self.fuente.conexion()?.consultar(&sql, &[Valor::Entero(i64::from(limite))])
     }
 
     pub fn guardar(&self, fila: &Fila) -> Resultado<()> {
         let clave = fila
             .valor(&self.clave)
-            .ok_or_else(|| Fallo(format!("la fila no trae su clave {}", self.clave)))?
-            .clone();
+            .ok_or_else(|| Fallo(format!("la fila no trae su clave {}", self.clave)))?;
         let otras: Vec<&String> = fila.columnas().into_iter().filter(|c| **c != self.clave).collect();
         if otras.is_empty() {
             return Err(Fallo("una fila con solo la clave no tiene nada que guardar".into()));
         }
+        let valores: Vec<&Valor> = otras.iter().filter_map(|c| fila.valor(c)).collect();
 
         let asigna: Vec<String> = otras.iter().map(|c| format!("{c} = ?")).collect();
-        let mut parametros: Vec<Valor> =
-            otras.iter().filter_map(|c| fila.valor(c).cloned()).collect();
-        parametros.push(clave.clone());
-
         let sql = format!("UPDATE {} SET {} WHERE {} = ?", self.tabla, asigna.join(", "), self.clave);
+        let parametros: Vec<Valor> = valores.iter().copied().chain(iter::once(clave)).cloned().collect();
         let mut c = self.fuente.conexion()?;
         if c.ejecutar(&sql, &parametros)? > 0 {
             return Ok(());
         }
 
-        let columnas: Vec<&str> = std::iter::once(self.clave.as_str())
-            .chain(otras.iter().map(|c| c.as_str()))
-            .collect();
+        let columnas: Vec<&str> =
+            iter::once(self.clave.as_str()).chain(otras.iter().map(|c| c.as_str())).collect();
         let huecos = vec!["?"; columnas.len()].join(", ");
         let sql = format!("INSERT INTO {} ({}) VALUES ({})", self.tabla, columnas.join(", "), huecos);
-        let mut valores = vec![clave];
-        valores.extend(otras.iter().filter_map(|c| fila.valor(c).cloned()));
-        c.ejecutar(&sql, &valores)?;
+        let parametros: Vec<Valor> = iter::once(clave).chain(valores).cloned().collect();
+        c.ejecutar(&sql, &parametros)?;
         Ok(())
     }
 

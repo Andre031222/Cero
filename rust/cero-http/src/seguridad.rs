@@ -60,7 +60,7 @@ impl Cors {
     fn cabecera_origen(&self, origen: &str) -> String {
         match (&self.origenes, self.credenciales) {
             (Origenes::Cualquiera, false) => "*".into(),
-            _ => origen.to_string(),
+            _ => origen.into(),
         }
     }
 
@@ -144,7 +144,7 @@ impl Limitador {
     pub fn pedir(&self, cliente: &str) -> Veredicto {
         let mut cuentas = self.cuentas.lock().expect("limitador envenenado");
         let ahora = Instant::now();
-        let (usadas, desde) = cuentas.entry(cliente.to_string()).or_insert((0, ahora));
+        let (usadas, desde) = cuentas.entry(cliente.into()).or_insert((0, ahora));
         if desde.elapsed() > self.ventana {
             *usadas = 0;
             *desde = ahora;
@@ -161,7 +161,7 @@ impl Limitador {
     }
 
     pub fn claves(&self) -> usize {
-        self.cuentas.lock().map(|c| c.len()).unwrap_or(0)
+        self.cuentas.lock().map_or(0, |c| c.len())
     }
 }
 
@@ -188,18 +188,16 @@ pub fn sanear_html(entrada: &str) -> String {
         let nombre: String = etiqueta
             .trim_start_matches('/')
             .chars()
-            .take_while(|c| c.is_ascii_alphanumeric())
-            .collect::<String>()
-            .to_ascii_lowercase();
+            .take_while(char::is_ascii_alphanumeric)
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
         if PROHIBIDAS.contains(&nombre.as_str()) {
             let cierre = format!("</{nombre}>");
-            resto = match resto[i..].to_ascii_lowercase().find(&cierre) {
-                Some(c) => &resto[i + c + cierre.len()..],
-                None => "",
-            };
+            let hasta = resto[i..].to_ascii_lowercase().find(&cierre);
+            resto = hasta.map_or("", |c| &resto[i + c + cierre.len()..]);
             continue;
         }
-        salida.push_str(&limpiar_atributos(&resto[i..i + fin + 1]));
+        salida.push_str(&limpiar_atributos(&resto[i..=i + fin]));
         resto = &resto[i + fin + 1..];
     }
     salida.push_str(resto);
@@ -208,8 +206,7 @@ pub fn sanear_html(entrada: &str) -> String {
 
 fn limpiar_atributos(etiqueta: &str) -> String {
     let bajo = etiqueta.to_ascii_lowercase();
-    if bajo.contains(" on") && bajo.contains('=') {
-        let corte = bajo.find(" on").unwrap();
+    if let Some(corte) = bajo.find(" on").filter(|_| bajo.contains('=')) {
         return format!("{}>", &etiqueta[..corte]);
     }
     if bajo.contains("javascript:") {
@@ -240,6 +237,6 @@ pub fn sanear_nombre(entrada: &str) -> String {
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || "._- ".contains(*c))
         .collect();
-    let limpio = limpio.trim_matches(['.', ' ']).to_string();
-    if limpio.is_empty() { "archivo".into() } else { limpio }
+    let limpio = limpio.trim_matches(['.', ' ']);
+    if limpio.is_empty() { "archivo".into() } else { limpio.into() }
 }

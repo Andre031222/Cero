@@ -276,6 +276,20 @@ eso los vectores de encuadre no comprueban nada, y su raíz responde algo más l
 h2spec necesita un cuerpo que no quepa en una ventana apretada: con dos octetos se salta la prueba
 en vez de fallarla. El ejemplo usa todo el pipeline.
 
+## Estilo
+
+- `use` arriba y nombres cortos en el cuerpo: `io::Result`, `thread::spawn`, `fs::read`, nunca
+  `std::io::Result` a media función.
+- `cargo clippy --all-targets -- -D warnings` limpio. De `clippy::pedantic` se toma lo que
+  simplifica —`map_or` en vez de `map(..).unwrap_or(..)`, `let else`, `is_some_and`, prestar en vez
+  de mover lo que no se consume, un alias para un tipo que se repite— y se deja lo que añade
+  ceremonia: `#[must_use]` en cada método, secciones `# Errors`, separadores en los literales
+  y conversiones con `From` donde `as` no pierde nada.
+- Sin `clone()`, `to_string()` ni `collect()` que no hagan falta: `"x".into()` para un `String`,
+  iterar sobre una porción en vez de copiar la tabla entera.
+- Sin comentarios: el nombre dice qué hace y este LEEME dice por qué.
+- Cero dependencias: solo `std`.
+
 ## Lo que el contrato deja a cada implementación
 
 El contrato fija algunos números —256 campos por bloque, 32 MiB en vuelo, 10 MiB de cuerpo— y

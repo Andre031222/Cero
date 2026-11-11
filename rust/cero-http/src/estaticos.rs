@@ -1,4 +1,6 @@
 use crate::contexto::Respuesta;
+use std::fs;
+use std::io;
 use std::path::{Component, Path, PathBuf};
 
 pub struct Estaticos {
@@ -7,7 +9,7 @@ pub struct Estaticos {
 }
 
 impl Estaticos {
-    pub fn en(raiz: &str) -> std::io::Result<Estaticos> {
+    pub fn en(raiz: &str) -> io::Result<Estaticos> {
         Ok(Estaticos { raiz: Path::new(raiz).canonicalize()?, respaldo: None })
     }
 
@@ -30,7 +32,7 @@ impl Estaticos {
         if !real.starts_with(&self.raiz) {
             return Respuesta::estado(403, "fuera de la raíz");
         }
-        match std::fs::read(&real) {
+        match fs::read(&real) {
             Ok(bytes) => Respuesta {
                 estado: 200,
                 tipo: tipo_de(&real).into(),
@@ -42,13 +44,15 @@ impl Estaticos {
     }
 
     fn respaldar(&self) -> Respuesta {
-        let Some(nombre) = &self.respaldo else {
-            return Respuesta::estado(404, "no encontrado");
-        };
-        match std::fs::read(self.raiz.join(nombre)) {
-            Ok(bytes) => Respuesta { estado: 200, tipo: "text/html; charset=utf-8".into(),
-                                     cuerpo: bytes, extra: Vec::new() },
-            Err(_) => Respuesta::estado(404, "no encontrado"),
+        let pagina = self.respaldo.as_ref().and_then(|n| fs::read(self.raiz.join(n)).ok());
+        match pagina {
+            Some(cuerpo) => Respuesta {
+                estado: 200,
+                tipo: "text/html; charset=utf-8".into(),
+                cuerpo,
+                extra: Vec::new(),
+            },
+            None => Respuesta::estado(404, "no encontrado"),
         }
     }
 }

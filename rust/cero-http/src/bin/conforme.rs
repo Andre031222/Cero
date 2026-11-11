@@ -1,10 +1,11 @@
-use std::io::{Error, ErrorKind};
+use std::env;
+use std::io::{self, Error, ErrorKind};
 use std::time::Duration;
 
 use cero_http::{Plazos, Respuesta, Router, Servidor};
 
-fn main() -> std::io::Result<()> {
-    let mut args = std::env::args().skip(1);
+fn main() -> io::Result<()> {
+    let mut args = env::args().skip(1);
     let puerto: u16 = args.next().and_then(|p| p.parse().ok()).unwrap_or(8777);
     let plazos = match args.next() {
         None => Plazos::default(),

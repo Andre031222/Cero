@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -31,7 +32,7 @@ impl Patron {
                 return Err(format!("variable sin nombre: {crudo}"));
             }
         }
-        Ok(Patron { crudo: crudo.to_string() })
+        Ok(Patron { crudo: crudo.into() })
     }
 
     fn segmentos(&self) -> Vec<Segmento<'_>> {
@@ -109,36 +110,30 @@ impl Router {
         self.rutas.push(Ruta {
             metodo: metodo.to_ascii_uppercase(),
             patron: Patron::nuevo(patron)?,
-            nombre: nombre.to_string(),
+            nombre: nombre.into(),
         });
         Ok(self)
     }
 
     pub fn patron_de(&self, metodo: &str, camino: &str) -> Option<String> {
-        let buscado = if metodo == "HEAD" { "GET" } else { metodo };
-        let mut c: Vec<&Ruta> =
-            self.rutas.iter().filter(|r| r.patron.casa(camino).is_some()).collect();
-        c.sort_by_key(|r| std::cmp::Reverse(r.patron.literales()));
+        let buscado = verbo(metodo);
+        let c = self.candidatas(camino);
         c.iter()
-            .find(|r| r.metodo == buscado)
-            .or_else(|| c.first())
-            .map(|r| r.patron.crudo.clone())
+            .find(|(r, _)| r.metodo == buscado)
+            .or(c.first())
+            .map(|(r, _)| r.patron.crudo.clone())
     }
 
     pub fn resolver(&self, metodo: &str, camino: &str) -> Resolucion {
-        let buscado = if metodo == "HEAD" { "GET" } else { metodo };
-
-        let mut candidatas: Vec<&Ruta> =
-            self.rutas.iter().filter(|r| r.patron.casa(camino).is_some()).collect();
-        candidatas.sort_by_key(|r| std::cmp::Reverse(r.patron.literales()));
-
-        if let Some(r) = candidatas.iter().find(|r| r.metodo == buscado) {
-            return Resolucion::Encontrada(r.nombre.clone(), r.patron.casa(camino).unwrap());
+        let buscado = verbo(metodo);
+        let candidatas = self.candidatas(camino);
+        if let Some((r, captura)) = candidatas.iter().find(|(r, _)| r.metodo == buscado) {
+            return Resolucion::Encontrada(r.nombre.clone(), captura.clone());
         }
         if candidatas.is_empty() {
             return Resolucion::NoHay;
         }
-        let mut verbos: Vec<String> = candidatas.iter().map(|r| r.metodo.clone()).collect();
+        let mut verbos: Vec<String> = candidatas.iter().map(|(r, _)| r.metodo.clone()).collect();
         if verbos.iter().any(|v| v == "GET") && !verbos.iter().any(|v| v == "HEAD") {
             verbos.push("HEAD".into());
         }
@@ -146,4 +141,15 @@ impl Router {
         verbos.dedup();
         Resolucion::VerboNoPermitido(verbos)
     }
+
+    fn candidatas(&self, camino: &str) -> Vec<(&Ruta, Captura)> {
+        let mut c: Vec<(&Ruta, Captura)> =
+            self.rutas.iter().filter_map(|r| Some((r, r.patron.casa(camino)?))).collect();
+        c.sort_by_key(|(r, _)| Reverse(r.patron.literales()));
+        c
+    }
+}
+
+fn verbo(metodo: &str) -> &str {
+    if metodo == "HEAD" { "GET" } else { metodo }
 }
