@@ -53,6 +53,15 @@ Lo de arriba no es lo único que rompe. Quien actualice desde la 0.8.0 tiene que
   pierde la conexión en vez de retener el hilo.
 - **`TestServer.start(...)` escucha en `127.0.0.1`**, no en todas las interfaces. Una prueba que
   llegaba al servidor por otra dirección de la máquina tiene que usar `127.0.0.1` o `localhost`.
+- **Las peticiones que no casan con ninguna ruta van a una sola serie de `Metrics`,
+  `(sin ruta)`.** Antes cada 404 o 405 abría una serie con su camino concreto, `GET /lo/que/sea`,
+  y quien mandara caminos al azar hacía crecer las series sin tope (`OBS-014`). Un panel que
+  filtraba los 404 por camino tiene que mirar ahora `ruta="(sin ruta)"`. Las rutas que casan
+  siguen con su etiqueta `GET /patrón`.
+- **`CeroServlet` acepta multipart de hasta 10 MiB**, por archivo y por petición; antes eran
+  20 MiB por archivo y 40 MiB por petición. Es el mismo tope que `maxBodyBytes` en el servidor
+  propio. Quien suba más dentro de Tomcat recibe el error del contenedor; para subir el tope,
+  `setMultipartConfig` sobre el registro del servlet.
 
 ### La orden y los dos instaladores hablan inglés
 

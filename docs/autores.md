@@ -17,22 +17,35 @@ Cero empezó como una bifurcación de JxMVC 3.4.0 y se reescribió entero; hoy c
 
 Cómo se mide: de cada proyecto se toman las líneas de sus `.java`, sin la sangría ni los espacios
 del final; se quedan las de 40 caracteres o más, para no contar llaves ni `return null;`; se
-ordenan y se quitan las repetidas. `comm -12` da las comunes:
+ordenan y se quitan las repetidas. `comm -12` da las comunes. De JxMVC se mide la etiqueta
+`v3.4.0`, sacada con `git archive`, no la copia de trabajo, que ya va por la 3.7:
 
 ```
 lineas() { find "$1" -name '*.java' -not -path '*/target/*' -print0 | xargs -0 cat \
   | LC_ALL=C sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'length >= 40' | LC_ALL=C sort -u; }
-lineas ruta/a/jxmvc > jxmvc.txt
+mkdir jxmvc && git -C ruta/a/jxmvc archive v3.4.0 | tar -x -C jxmvc
+lineas jxmvc > jxmvc.txt
 lineas java > cero.txt
 LC_ALL=C comm -12 jxmvc.txt cero.txt | wc -l
 ```
 
-La última medición, del 11 de noviembre de 2026, dio 46 líneas comunes de 7 513 distintas de Cero
-(0,6 %). Son `import` del JDK y de `jakarta.servlet`, bucles como
-`for (int i = 0; i < params.length; i++) {`, cabeceras HTTP como
-`.header("Content-Type", "application/json")`, la URL de autorización de Google y algunas líneas
-de `pom.xml` que van dentro de las plantillas de `cero new`: líneas que escribiría igual cualquiera
-que use el JDK y Maven.
+La última medición, del 11 de noviembre de 2026, dio 40 líneas comunes de 7 518 distintas de Cero
+(0,5 %). Son de seis clases, todas genéricas:
+
+- `import` del JDK y de `jakarta.servlet`, 22 líneas;
+- líneas de `pom.xml` que van dentro de las plantillas de `cero new`, como
+  `<groupId>org.apache.maven.plugins</groupId>`;
+- firmas que escribe igual cualquiera: las dos de `public static void main(String[] args)`,
+  `public int exec(String sql, Object... params) {`,
+  `public int execNamed(String sql, Map<String, Object> params) {`,
+  `public static <T> T call(Callable<T> work) {`, `public static boolean has(String name) {`,
+  `private static Object defaultValue(Class<?> type) {` y
+  `private Map<String, Object> parseObject() {`;
+- constantes y declaraciones de una línea: `public static final String HEADER = "X-CSRF-Token";`,
+  `private static final SecureRandom RANDOM = new SecureRandom();` y
+  `Map<String, Object> map = new LinkedHashMap<>();`;
+- el bucle `for (int i = 0; i < params.length; i++) {`;
+- `.header("Content-Type", "application/json")` y la URL de autorización de Google.
 
 ## Sobre las cabeceras del código
 
