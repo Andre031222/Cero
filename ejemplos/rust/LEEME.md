@@ -31,6 +31,7 @@ fn main() -> io::Result<()> {
             Respuesta::json(Json::objeto(vec![("saludo", format!("hola, {nombre}").into())]))
         })
         .post("/eco", |c| Ok(Respuesta::json(c.cuerpo_json()?)))
+        .direccion("127.0.0.1")
         .escuchar(puerto)
 }
 ```
@@ -39,21 +40,22 @@ Y arrancarlo:
 
 ```bash
 cargo run --release
-curl localhost:8080/
-curl localhost:8080/saludo/ana
-curl -d '{"a":1}' localhost:8080/eco
+curl 127.0.0.1:8080/
+curl 127.0.0.1:8080/saludo/ana
+curl -d '{"a":1}' 127.0.0.1:8080/eco
 ```
 
 Las respuestas son `{"hola":"mundo"}`, `{"saludo":"hola, ana"}` y el mismo JSON que se mandó. Un
 cuerpo que no es JSON da 400. En PowerShell, sin depender de cómo pase las comillas a `curl.exe`:
 
 ```powershell
-Invoke-RestMethod localhost:8080/eco -Method Post -Body '{"a":1}'
+Invoke-RestMethod 127.0.0.1:8080/eco -Method Post -Body '{"a":1}'
 ```
 
 `PUERTO` cambia el puerto: `PUERTO=9000 cargo run` en un shell POSIX, `$env:PUERTO=9000; cargo run`
-en PowerShell. El ejemplo escucha en todas las interfaces. Con `.direccion("127.0.0.1")` antes de
-`escuchar` solo responde en local, y así macOS y Windows no preguntan por el cortafuegos.
+en PowerShell. El ejemplo solo escucha en `127.0.0.1`, la propia máquina, y así macOS y Windows no
+preguntan por el cortafuegos. Para atender en todas las interfaces —otra máquina, un contenedor—,
+cambiar la línea por `.direccion("0.0.0.0")`, que es lo que hace `Servidor` si no se le dice nada.
 
 ## Las rutas en una línea
 

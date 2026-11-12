@@ -9,6 +9,8 @@ Tres rutas, sin dependencias y sin venv para Cero (Python 3.12 o posterior):
 | `POST /eco` | el JSON recibido |
 
 Escucha en `127.0.0.1`, en el puerto 8080 o en el de la variable `PUERTO`.
+Para atender en todas las interfaces —otra máquina, un contenedor—, pasar la dirección a
+`escuchar`: `Servidor(router).escuchar(puerto, "0.0.0.0")`.
 
 ## Empezar en Python
 

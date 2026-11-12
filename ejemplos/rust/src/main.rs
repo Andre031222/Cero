@@ -10,5 +10,6 @@ fn main() -> io::Result<()> {
             Respuesta::json(Json::objeto(vec![("saludo", format!("hola, {nombre}").into())]))
         })
         .post("/eco", |c| Ok(Respuesta::json(c.cuerpo_json()?)))
+        .direccion("127.0.0.1")
         .escuchar(puerto)
 }
