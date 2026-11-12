@@ -11,7 +11,7 @@ if [ -n "$salida" ]; then
   fallo=1
 fi
 
-salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results' ':!papers/LEEME.md' ':!docs/papers.md' ':!herramientas/verificar-orden.sh')
+salida=$(git grep -nIi 'jxmvc' -- ':!benchmarks/results' ':!papers/LEEME.md' ':!docs/papers.md' ':!herramientas/verificar-orden.sh' ':!NOTICE' ':!docs/autores.md')
 if [ -n "$salida" ]; then
   echo "referencias a jxmvc:"
   echo "$salida"
