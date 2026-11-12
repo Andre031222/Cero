@@ -58,7 +58,7 @@ public final class Packager {
         if (destino.getParent() != null) {
             Files.createDirectories(destino.getParent());
         }
-        try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(destino), manifiesto)) {
+        try (var jar = new JarOutputStream(Files.newOutputStream(destino), manifiesto)) {
             for (Path entrada : entradas) {
                 if (Files.isDirectory(entrada)) {
                     volcarDirectorio(jar, entrada, vistas);
@@ -91,7 +91,7 @@ public final class Packager {
     private static void volcarJar(JarOutputStream salida, Path origen, Set<String> vistas)
             throws IOException {
 
-        try (JarFile jar = new JarFile(origen.toFile())) {
+        try (var jar = new JarFile(origen.toFile())) {
             var entradas = jar.entries();
             while (entradas.hasMoreElements()) {
                 JarEntry entrada = entradas.nextElement();

@@ -76,7 +76,7 @@ final class GzipTests {
     }
 
     private static String inflate(byte[] data) throws Exception {
-        try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(data))) {
+        try (var in = new GZIPInputStream(new ByteArrayInputStream(data))) {
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }

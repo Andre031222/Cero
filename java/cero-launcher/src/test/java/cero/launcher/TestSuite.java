@@ -35,7 +35,7 @@ final class TestSuite {
         comprobar("el jar se escribe", Files.exists(salida));
         comprobar("con entradas dentro", total > 100);
 
-        try (JarFile jar = new JarFile(salida.toFile())) {
+        try (var jar = new JarFile(salida.toFile())) {
             comprobar("declara la clase principal",
                     "cero.launcher.Servidor".equals(jar.getManifest()
                             .getMainAttributes().getValue("Main-Class")));
@@ -74,8 +74,7 @@ final class TestSuite {
                 GeneradorProyecto.Peticion.de("com.ejemplo", "mi-app", "Mi app", "ninguno"));
         boolean limpio = true;
         String pom = "";
-        try (ZipInputStream entrada =
-                     new ZipInputStream(new ByteArrayInputStream(zip))) {
+        try (var entrada = new ZipInputStream(new ByteArrayInputStream(zip))) {
             for (ZipEntry e = entrada.getNextEntry(); e != null; e = entrada.getNextEntry()) {
                 var texto = new String(entrada.readAllBytes(), StandardCharsets.UTF_8);
                 if (e.getName().contains("plantillas/") || texto.contains("cero" + "-view")

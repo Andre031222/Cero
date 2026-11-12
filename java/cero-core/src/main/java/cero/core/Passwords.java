@@ -73,8 +73,7 @@ public final class Passwords {
     }
 
     private static byte[] derivar(String clara, byte[] sal, int iteraciones) {
-        PBEKeySpec especificacion =
-                new PBEKeySpec(clara.toCharArray(), sal, iteraciones, BITS_CLAVE);
+        var especificacion = new PBEKeySpec(clara.toCharArray(), sal, iteraciones, BITS_CLAVE);
         try {
             return SecretKeyFactory.getInstance(ALGORITMO).generateSecret(especificacion).getEncoded();
         } catch (NoSuchAlgorithmException | InvalidKeySpecException fallo) {

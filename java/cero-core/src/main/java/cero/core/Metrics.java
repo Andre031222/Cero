@@ -136,7 +136,12 @@ public final class Metrics implements Middleware {
     }
 
     private boolean ignorada(String ruta) {
-        return ignoradas.stream().anyMatch(ruta::startsWith);
+        for (String prefijo : ignoradas) {
+            if (ruta.startsWith(prefijo)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String clave(Context context) {

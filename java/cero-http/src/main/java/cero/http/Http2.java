@@ -1037,8 +1037,7 @@ final class Http2 implements Watchdog.Vigilada {
 
         volatile long declarado = -1;
 
-        final AtomicLong recibido =
-                new AtomicLong();
+        final AtomicLong recibido = new AtomicLong();
 
         Flujo(int id, int ventanaInicial, long maxCuerpo) {
             this.id = id;

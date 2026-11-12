@@ -57,8 +57,7 @@ final class Connection implements Runnable, Watchdog.Vigilada {
                 return;
             }
 
-            PushbackInputStream entrada =
-                    new PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
+            var entrada = new PushbackInputStream(open.getInputStream(), Http2.PREAMBULO.length);
             if (options.http2() && Http2.pareceHttp2(entrada)) {
                 ociosa = false;
                 Http2.servir(open, entrada, out, context, remoteAddress(open));

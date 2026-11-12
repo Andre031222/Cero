@@ -19,14 +19,15 @@ Sin dependencias fuera del JDK.
 ## Un ejemplo completo
 
 ```java
+import cero.test.TestClient;
 import cero.test.TestServer;
 import java.util.Map;
 
 class AccesoTest {
 
     void main() {
-        try (var app = TestServer.start(MiAplicacion.app())) {
-            var client = app.client();
+        try (TestServer app = TestServer.start(MiAplicacion.app())) {
+            TestClient client = app.client();
 
             client.get("/yo").status(401);
             client.form("/acceso", Map.of("usuario", "ada", "clave", "secreta"))

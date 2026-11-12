@@ -57,7 +57,7 @@ final class ProtocolTests {
                 .host("127.0.0.1").port(0).shutdownGraceMillis(10_000).build();
         Server server = Server.start(options, ProtocolTests::route, ErrorReporter.silent());
         long millis;
-        try (Socket socket = new Socket("127.0.0.1", server.port())) {
+        try (var socket = new Socket("127.0.0.1", server.port())) {
             socket.getOutputStream().write("GET / HTTP/1.1\r\nHost: x\r\n\r\n"
                     .getBytes(StandardCharsets.ISO_8859_1));
             socket.getOutputStream().flush();

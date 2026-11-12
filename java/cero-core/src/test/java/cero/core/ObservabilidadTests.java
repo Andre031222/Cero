@@ -7,7 +7,9 @@ import cero.http.Server;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 final class ObservabilidadTests {
 
@@ -59,8 +61,7 @@ final class ObservabilidadTests {
     }
 
     private static void salud() throws Exception {
-        AtomicBoolean bdEnPie =
-                new AtomicBoolean(true);
+        var bdEnPie = new AtomicBoolean(true);
 
         Server servidor = Cero.app().host("127.0.0.1").port(0).quiet().reporter(ErrorReporter.silent())
                 .health(Health.checks()
@@ -289,12 +290,19 @@ final class ObservabilidadTests {
         try {
             String base = "http://127.0.0.1:" + servidor.port();
             for (int n = 1; n <= 3; n++) {
+                Cliente.get(base + "/tienda/" + n);
                 Cliente.get(base + "/no/existe/" + n);
             }
+            Check.equal("un verbo no admitido es 405",
+                    Cliente.method(base + "/tienda", "DELETE").statusCode(), 405);
             List<Metrics.Ruta> rutas = metricas.snapshot().rutas();
-            Check.equal("OBS-014: las peticiones sin ruta van a una sola serie", rutas.size(), 1);
-            Check.equal("OBS-014: que se llama (sin ruta)", rutas.get(0).ruta(), "(sin ruta)");
-            Check.equal("OBS-014: y cuenta las tres", rutas.get(0).peticiones(), 3L);
+            Check.equal("OBS-014: solo hay dos series, la de la ruta y la de lo que no casó",
+                    rutas.stream().map(Metrics.Ruta::ruta).collect(Collectors.toSet()),
+                    Set.of("GET /tienda/{id}", "(sin ruta)"));
+            Metrics.Ruta sinRuta = rutas.stream()
+                    .filter(r -> r.ruta().equals("(sin ruta)")).findFirst().orElseThrow();
+            Check.equal("OBS-014: los tres 404 y el 405 van a (sin ruta)", sinRuta.peticiones(), 4L);
+            Check.equal("OBS-016: y los cuatro cuentan como error", sinRuta.errores(), 4L);
         } finally {
             servidor.stop();
         }

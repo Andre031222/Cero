@@ -44,7 +44,7 @@ final class PlazosTests {
     }
 
     private static void unaSolaPasaDelPresupuesto(int puerto) throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+        try (var c = new Http2Cliente(puerto).saludar()) {
             Http2Cliente.Respuesta r = c.respuestaDe(c.pedir("GET", "/grande"));
             Check.equal("H2-054: con nada más en vuelo, 4 MiB salen enteros con un presupuesto de 1 MiB",
                     r.cuerpo().length, 4 << 20);
@@ -64,7 +64,7 @@ final class PlazosTests {
     }
 
     private static void cuerpoDeMas(int puerto) throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+        try (var c = new Http2Cliente(puerto).saludar()) {
             int flujo = c.pedirSinCerrar("POST", "/eco");
             c.trama(Http2Cliente.DATA, 0, flujo, new byte[60]);
             c.trama(Http2Cliente.DATA, 0, flujo, new byte[60]);
@@ -89,7 +89,7 @@ final class PlazosTests {
     }
 
     private static void cortesNoGastanVentana(int puerto) throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+        try (var c = new Http2Cliente(puerto).saludar()) {
             for (int i = 0; i < 3; i++) {
                 int flujo = c.pedirSinCerrar("POST", "/grande");
                 int recibidos = 0;
@@ -129,7 +129,7 @@ final class PlazosTests {
     }
 
     private static void descargaLarga(int puerto) throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+        try (var c = new Http2Cliente(puerto).saludar()) {
             Check.equal("H2-038: 16 MiB con un WINDOW_UPDATE por trama no son una inundación",
                     c.respuestaDe(c.pedir("GET", "/descarga")).cuerpo().length, 16 << 20);
         }
@@ -188,7 +188,7 @@ final class PlazosTests {
     }
 
     private static void pingsSinTrabajo(int puerto) throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto).saludar()) {
+        try (var c = new Http2Cliente(puerto).saludar()) {
             var parar = new AtomicBoolean();
             Thread latido = Thread.ofVirtual().start(() -> {
                 try {
@@ -225,7 +225,7 @@ final class PlazosTests {
     }
 
     private static void keepAliveOcioso(int puerto) throws Exception {
-        try (Socket s = new Socket("127.0.0.1", puerto)) {
+        try (var s = new Socket("127.0.0.1", puerto)) {
             s.setSoTimeout(5_000);
             byte[] pedido = "GET / HTTP/1.1\r\nHost: a\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
             InputStream in = s.getInputStream();

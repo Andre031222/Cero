@@ -127,7 +127,7 @@ final class FuzzTests {
     }
 
     private static boolean aguanta(int puerto, byte[] crudo) {
-        try (Socket socket = new Socket("127.0.0.1", puerto)) {
+        try (var socket = new Socket("127.0.0.1", puerto)) {
             socket.setSoTimeout(1_500);
             OutputStream out = socket.getOutputStream();
             out.write(crudo);

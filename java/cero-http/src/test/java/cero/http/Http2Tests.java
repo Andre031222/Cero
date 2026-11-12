@@ -104,8 +104,7 @@ final class Http2Tests {
                 .tls(Tls.fromKeystore(Fixture.keystore(), "cerotest".toCharArray())).build();
         try (Server s = Server.start(conTls, Http2Tests::rutas, ErrorReporter.silent())) {
             SSLSocketFactory fabrica = Fixture.trustEverything().getSocketFactory();
-            try (SSLSocket socket =
-                         (SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
+            try (var socket = (SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
                 SSLParameters p = socket.getSSLParameters();
                 p.setApplicationProtocols(new String[] { "h2", "http/1.1" });
                 socket.setSSLParameters(p);
@@ -120,7 +119,7 @@ final class Http2Tests {
     private static void porUpgrade() throws Exception {
         ServerOptions opciones = ServerOptions.builder().host("127.0.0.1").port(0).build();
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
-            try (Socket socket = new Socket("127.0.0.1", s.port())) {
+            try (var socket = new Socket("127.0.0.1", s.port())) {
                 socket.setSoTimeout(10_000);
                 socket.getOutputStream().write(("GET / HTTP/1.1\r\n"
                         + "Host: 127.0.0.1\r\n"
@@ -179,8 +178,7 @@ final class Http2Tests {
         try (Server s = Server.start(opciones, Http2Tests::rutas, ErrorReporter.silent())) {
             SSLContext confiado = Fixture.trustEverything();
             SSLSocketFactory fabrica = confiado.getSocketFactory();
-            try (SSLSocket socket =
-                         (SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
+            try (var socket = (SSLSocket) fabrica.createSocket("127.0.0.1", s.port())) {
                 SSLParameters p = socket.getSSLParameters();
                 p.setApplicationProtocols(new String[] { "h2" });
                 socket.setSSLParameters(p);
@@ -259,7 +257,7 @@ final class Http2Tests {
     }
 
     private static void loBasico() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             Http2Cliente.Trama ajustes = c.esperar(Http2Cliente.SETTINGS);
             Check.that("el servidor manda sus SETTINGS antes que nada",
@@ -286,7 +284,7 @@ final class Http2Tests {
     }
 
     private static void multiplexacion() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             c.abrirVentanas(1 << 22);
             long comienzo = System.nanoTime();
@@ -312,7 +310,7 @@ final class Http2Tests {
     }
 
     private static void cuerpos() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             c.abrirVentanas(1 << 22);
             byte[] pequeno = "cuerpo con eñes y acentós".getBytes(StandardCharsets.UTF_8);
@@ -330,7 +328,7 @@ final class Http2Tests {
     }
 
     private static void ventanas() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             c.abrirVentanas(1 << 22);
             Http2Cliente.Respuesta r = c.respuestaDe(c.pedir("GET", "/grande"));
@@ -346,7 +344,7 @@ final class Http2Tests {
     }
 
     private static void senales() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             byte[] marca = "12345678".getBytes(StandardCharsets.US_ASCII);
             c.trama(Http2Cliente.PING, 0, 0, marca);
@@ -364,7 +362,7 @@ final class Http2Tests {
     }
 
     private static void cuerpoTrasResponder() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             int flujo = c.pedirSinCerrar("GET", "/", "content-length", "1");
             Check.that("la respuesta llega antes de mandar el cuerpo",
@@ -380,7 +378,7 @@ final class Http2Tests {
     }
 
     private static void streaming() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             c.abrirVentanas(1 << 22);
 
@@ -401,7 +399,7 @@ final class Http2Tests {
     }
 
     private static void trailers() throws Exception {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             c.abrirVentanas(1 << 22);
 
@@ -519,7 +517,7 @@ final class Http2Tests {
     }
 
     private static void preambuloRoto() {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.bytes("PRI * HTTP/2.0\r\n\r\nXX\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
             try {
                 c.leerTrama();
@@ -541,7 +539,7 @@ final class Http2Tests {
     }
 
     private static void rompeLaConexion(String nombre, Gesto gesto, int codigoEsperado) {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             gesto.hacer(c);
             Http2Cliente.Trama adios = c.esperar(Http2Cliente.GOAWAY);
@@ -553,7 +551,7 @@ final class Http2Tests {
     }
 
     private static void cortaElFlujoNoLaConexion(String nombre, Bloque bloque) {
-        try (Http2Cliente c = new Http2Cliente(puerto)) {
+        try (var c = new Http2Cliente(puerto)) {
             c.saludar();
             c.trama(Http2Cliente.HEADERS,
                     Http2Cliente.FIN_CABECERAS | Http2Cliente.FIN_FLUJO, 1, bloque.armar(c));

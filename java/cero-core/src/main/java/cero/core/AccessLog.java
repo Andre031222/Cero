@@ -125,6 +125,11 @@ public final class AccessLog implements Middleware {
     }
 
     private boolean ignorada(String ruta) {
-        return ignoradas.stream().anyMatch(ruta::startsWith);
+        for (String prefijo : ignoradas) {
+            if (ruta.startsWith(prefijo)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

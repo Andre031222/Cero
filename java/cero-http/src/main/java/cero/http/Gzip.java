@@ -25,7 +25,7 @@ final class Gzip {
 
     static byte[] compress(byte[] data) {
         var collected = new ByteArrayOutputStream(Math.max(64, data.length / 3));
-        try (GZIPOutputStream out = new GZIPOutputStream(collected, 8_192)) {
+        try (var out = new GZIPOutputStream(collected, 8_192)) {
             out.write(data);
         } catch (IOException cause) {
             throw new UncheckedIOException("no se pudo comprimir la respuesta", cause);

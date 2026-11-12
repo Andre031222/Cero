@@ -6,10 +6,10 @@ con `mvn -q clean install` desde esta carpeta.
 
 ## Estilo
 
-- **`void main()` de instancia** (JEP 512, Java 25) en los programas que lanza `java`: las suites
-  de pruebas, `ejemplo.App`, `Nuevo`, `Migraciones` y el `App` que genera `cero new`. Solo
-  `Packager` conserva `public static void main`, porque su único constructor recibe la clase
-  principal y un `main` de instancia obligaría a añadir otro vacío.
+- **`void main()` de instancia** (JEP 512, Java 25) en los programas que lanza `java` y que no
+  son API publicada: las suites de pruebas, `ejemplo.App` y el `App` que genera `cero new`.
+  `Nuevo`, `Migraciones` y `Packager` conservan `public static void main`: son clases públicas de
+  `cero-launcher`, que está en Maven Central, y quitarles el método cambiaría su API binaria.
 - **`var`** cuando el tipo se lee en la misma línea: un `new` o un *cast*. Si a la derecha hay una
   llamada cuyo tipo no se ve, el tipo se escribe.
 - **`import`** en lugar de nombres calificados. Queda uno, donde el nombre choca: `java.sql.Date`

@@ -28,7 +28,7 @@ public final class GeneradorProyecto {
         String ruta = peticion.paquete().replace('.', '/');
         var salida = new ByteArrayOutputStream();
 
-        try (ZipOutputStream zip = new ZipOutputStream(salida)) {
+        try (var zip = new ZipOutputStream(salida)) {
             anadir(zip, "pom.xml", pom(peticion));
             anadir(zip, "README.md", readme(peticion));
             anadir(zip, ".gitignore", "target/\n*.class\n.env\n");

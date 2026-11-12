@@ -13,10 +13,12 @@ import java.util.zip.ZipInputStream;
 
 public final class Nuevo {
 
-    private static final Set<String> MOTORES =
-            Set.of("ninguno", "h2", "postgresql", "mysql");
+    private static final Set<String> MOTORES = Set.of("ninguno", "h2", "postgresql", "mysql");
 
-    void main(String[] args) throws Exception {
+    private Nuevo() {
+    }
+
+    public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].startsWith("-")) {
             System.err.println(Idioma.t("nuevo-uso"));
             System.exit(1);
@@ -80,7 +82,7 @@ public final class Nuevo {
 
     private static int descomprimir(byte[] zip, Path destino) throws IOException {
         int archivos = 0;
-        try (ZipInputStream entrada = new ZipInputStream(new ByteArrayInputStream(zip))) {
+        try (var entrada = new ZipInputStream(new ByteArrayInputStream(zip))) {
             for (ZipEntry entrada2; (entrada2 = entrada.getNextEntry()) != null; ) {
                 Path archivo = destino.resolve(entrada2.getName()).normalize();
                 if (!archivo.startsWith(destino)) {

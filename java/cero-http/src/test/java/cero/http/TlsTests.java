@@ -94,9 +94,8 @@ final class TlsTests {
                 HttpRequest.newBuilder(URI.create("https://127.0.0.1:" + puerto + "/"))
                         .version(HttpClient.Version.HTTP_1_1).build(),
                 HttpResponse.BodyHandlers.ofString());
-        X509Certificate presentado =
-                (X509Certificate) respuesta.sslSession()
-                        .orElseThrow().getPeerCertificates()[0];
+        var presentado = (X509Certificate) respuesta.sslSession()
+                .orElseThrow().getPeerCertificates()[0];
         return presentado.getSubjectX500Principal().getName();
     }
 
