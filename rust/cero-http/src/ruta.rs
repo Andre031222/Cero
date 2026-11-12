@@ -107,12 +107,12 @@ impl Router {
     }
 
     pub fn ruta(mut self, metodo: &str, patron: &str, nombre: &str) -> Result<Router, String> {
-        self.rutas.push(Ruta {
-            metodo: metodo.to_ascii_uppercase(),
-            patron: Patron::nuevo(patron)?,
-            nombre: nombre.into(),
-        });
+        self.agregar(metodo, Patron::nuevo(patron)?, nombre);
         Ok(self)
+    }
+
+    pub(crate) fn agregar(&mut self, metodo: &str, patron: Patron, nombre: &str) {
+        self.rutas.push(Ruta { metodo: metodo.to_ascii_uppercase(), patron, nombre: nombre.into() });
     }
 
     pub fn patron_de(&self, metodo: &str, camino: &str) -> Option<String> {

@@ -24,7 +24,7 @@ use std::{env, io};
 
 fn main() -> io::Result<()> {
     let puerto = env::var("PUERTO").ok().and_then(|p| p.parse().ok()).unwrap_or(8080);
-    Servidor::nuevo_vacio()
+    Servidor::vacio()
         .get("/", |_| Respuesta::json(Json::objeto(vec![("hola", "mundo".into())])))
         .get("/saludo/{nombre}", |c| {
             let nombre = c.variable("nombre").unwrap_or("mundo");
@@ -52,13 +52,15 @@ Invoke-RestMethod localhost:8080/eco -Method Post -Body '{"a":1}'
 ```
 
 `PUERTO` cambia el puerto: `PUERTO=9000 cargo run` en un shell POSIX, `$env:PUERTO=9000; cargo run`
-en PowerShell.
+en PowerShell. El ejemplo escucha en todas las interfaces. Con `.direccion("127.0.0.1")` antes de
+`escuchar` solo responde en local, y así macOS y Windows no preguntan por el cortafuegos.
 
 ## Las rutas en una línea
 
 `get`, `post`, `put`, `delete` y `patch` registran la ruta y su acción en una sola llamada. Si un
 patrón está mal escrito, por ejemplo `/saludo/{nombre` sin cerrar, `escuchar` devuelve un error que
-nombra el patrón, en lugar de arrancar con una ruta de menos.
+nombra el patrón, en lugar de arrancar con una ruta de menos. Sin socket, `Servidor::responder`
+contesta 500 con el mismo motivo.
 
 La forma larga sigue igual: `Router::nuevo().ruta("GET", "/", "raiz")?` con
 `Servidor::nuevo(router).accion("raiz", …)`. Las dos se pueden mezclar en el mismo servidor.

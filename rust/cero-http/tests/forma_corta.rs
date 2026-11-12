@@ -18,7 +18,7 @@ fn pedir(s: &Servidor, metodo: &str, destino: &str, cuerpo: &str) -> (u16, Strin
 }
 
 fn ejemplo() -> Servidor {
-    Servidor::nuevo_vacio()
+    Servidor::vacio()
         .get("/", |_| Respuesta::json(Json::objeto(vec![("hola", "mundo".into())])))
         .get("/saludo/{nombre}", |c| {
             let nombre = c.variable("nombre").unwrap_or("mundo");
@@ -39,7 +39,7 @@ fn una_llamada_registra_la_ruta_y_la_accion() {
 
 #[test]
 fn los_cinco_verbos() {
-    let s = Servidor::nuevo_vacio()
+    let s = Servidor::vacio()
         .get("/v", |_| Respuesta::texto("get"))
         .post("/v", |_| Respuesta::texto("post"))
         .put("/v", |_| Respuesta::texto("put"))
@@ -62,7 +62,7 @@ fn convive_con_ruta_y_accion() {
 
 #[test]
 fn un_patron_mal_formado_hace_fallar_escuchar() {
-    let error = Servidor::nuevo_vacio()
+    let error = Servidor::vacio()
         .get("/bien", |_| Respuesta::texto("bien"))
         .get("/mal/{abierta", |_| Respuesta::texto("mal"))
         .direccion("127.0.0.1")
@@ -73,11 +73,20 @@ fn un_patron_mal_formado_hace_fallar_escuchar() {
 }
 
 #[test]
-fn el_patron_mal_formado_no_rompe_las_demas_rutas() {
-    let s = Servidor::nuevo_vacio()
+fn sin_socket_un_patron_mal_formado_es_500_y_lo_nombra() {
+    let s = Servidor::vacio()
         .get("/antes", |_| Respuesta::texto("antes"))
         .get("/mal/{abierta", |_| Respuesta::texto("mal"))
-        .get("/despues", |_| Respuesta::texto("despues"));
-    assert_eq!(pedir(&s, "GET", "/antes", ""), (200, "antes".into()));
-    assert_eq!(pedir(&s, "GET", "/despues", ""), (200, "despues".into()));
+        .post("/otro}", |_| Respuesta::texto("otro"));
+    for camino in ["/antes", "/mal/x", "/no-hay"] {
+        let (estado, cuerpo) = pedir(&s, "GET", camino, "");
+        assert_eq!(estado, 500, "{camino}");
+        assert!(cuerpo.contains("/mal/{abierta") && cuerpo.contains("/otro}"), "{cuerpo}");
+    }
+}
+
+#[test]
+fn head_sobre_una_ruta_corta_get() {
+    let s = Servidor::vacio().get("/", |_| Respuesta::texto("hola"));
+    assert_eq!(pedir(&s, "HEAD", "/", "").0, 200);
 }

@@ -52,4 +52,6 @@ fn las_tres_rutas() {
     assert_eq!(pedir(puerto, "GET", "/", ""), (200, r#"{"hola":"mundo"}"#.into()));
     assert_eq!(pedir(puerto, "GET", "/saludo/ana", ""), (200, r#"{"saludo":"hola, ana"}"#.into()));
     assert_eq!(pedir(puerto, "POST", "/eco", r#"{"a":[1,2]}"#), (200, r#"{"a":[1,2]}"#.into()));
+    assert_eq!(pedir(puerto, "POST", "/eco", "no es json").0, 400);
+    assert_eq!(pedir(puerto, "HEAD", "/", ""), (200, String::new()));
 }

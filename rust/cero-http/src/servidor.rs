@@ -11,7 +11,6 @@ use crate::sesion::{self, Almacen, Sesion, Sesiones};
 use crate::socket::{mandar_todo, Limites, Plazos};
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Cursor, ErrorKind, Read};
-use std::mem;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -77,7 +76,7 @@ impl Servidor {
         }
     }
 
-    pub fn nuevo_vacio() -> Servidor {
+    pub fn vacio() -> Servidor {
         Servidor::nuevo(Router::nuevo())
     }
 
@@ -107,13 +106,21 @@ impl Servidor {
         patron: &str,
         f: impl Fn(&Contexto) -> R + Send + Sync + 'static,
     ) -> Servidor {
-        if let Err(motivo) = Patron::nuevo(patron) {
-            self.mal_escritas.push(motivo);
-            return self;
+        match Patron::nuevo(patron) {
+            Ok(p) => {
+                let nombre = format!("{metodo} {patron}");
+                self.router.agregar(metodo, p, &nombre);
+                self.accion(&nombre, f)
+            }
+            Err(motivo) => {
+                self.mal_escritas.push(motivo);
+                self
+            }
         }
-        let nombre = format!("{metodo} {patron}");
-        self.router = mem::take(&mut self.router).ruta(metodo, patron, &nombre).unwrap_or_default();
-        self.accion(&nombre, f)
+    }
+
+    fn patrones_mal_escritos(&self) -> Option<String> {
+        (!self.mal_escritas.is_empty()).then(|| self.mal_escritas.join("; "))
     }
 
     pub fn accion<R: EnRespuesta>(
@@ -219,8 +226,8 @@ impl Servidor {
     }
 
     pub fn escuchar(self, puerto: u16) -> io::Result<()> {
-        if !self.mal_escritas.is_empty() {
-            return Err(io::Error::new(ErrorKind::InvalidInput, self.mal_escritas.join("; ")));
+        if let Some(motivo) = self.patrones_mal_escritos() {
+            return Err(io::Error::new(ErrorKind::InvalidInput, motivo));
         }
         if !self.plazos.validos() || !self.limites.validos() {
             return Err(io::Error::new(
@@ -286,6 +293,10 @@ impl Servidor {
     pub fn responder(&self, p: &Peticion, cliente: &str) -> Respuesta {
         let empezo = Instant::now();
         let camino = p.camino();
+
+        if let Some(motivo) = self.patrones_mal_escritos() {
+            return self.rematar(Respuesta::estado(500, &motivo), p, camino, empezo, None);
+        }
 
         if let Some(s) = &self.salud {
             let informe = match camino {
