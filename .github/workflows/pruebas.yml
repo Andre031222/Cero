@@ -318,8 +318,10 @@ jobs:
 
       - name: La prueba de punta a punta de cada ejemplo
         run: |
-          (cd java && mvn -B -q install -DskipTests)
           (cd ejemplos/java && mvn -B -q package && java pruebas/PuntaAPunta.java)
+          (cd java && mvn -B -q install -DskipTests)
+          V=$(grep -m1 '<version>' java/pom.xml | sed 's/.*<version>\(.*\)<.*/\1/')
+          (cd ejemplos/java && mvn -B -q clean package -Dcero.version="$V" && java pruebas/PuntaAPunta.java)
           (cd ejemplos/rust && cargo test)
           (cd ejemplos/c++ && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_CERO=../.. \
               && cmake --build build -j && ctest --test-dir build --output-on-failure)

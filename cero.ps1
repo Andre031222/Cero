@@ -101,7 +101,7 @@ $Implementaciones = @(
 )
 
 $Ejemplos = @(
-    'java|mvn java|mvn -B -q package -DskipTests|java::-jar target/ejemplo.jar'
+    'java|mvn java|mvn -B -q package -DskipTests -Dcero.version=%CERO_VERSION%|java::-jar target/ejemplo.jar'
     'rust|cargo|cargo build --release -q|target\release\ejemplo.exe::'
     'c++|cmake|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_CERO=%CERO_RAIZ% ;; cmake --build %OBJ% --config Release -j|%OBJ%\hola.exe::'
     'python|python3||%CERO_PY%::-B app.py'
@@ -290,10 +290,13 @@ function ArgumentosServidor([string] $servidor) {
     return , @(@(Palabras $texto)[0])
 }
 
-function ArrancarServidor([string] $dir, [string] $servidor, [string] $registro) {
-    $argumentos = @(ArgumentosServidor $servidor)[0] + @([string]$V.Puerto)
-    $V.Proceso = Start-Process -FilePath (ExeServidor $dir $servidor) -ArgumentList $argumentos -WorkingDirectory $dir -PassThru -WindowStyle Hidden `
-        -RedirectStandardOutput $registro -RedirectStandardError "$registro.err"
+function ArrancarServidor([string] $dir, [string] $servidor, [string] $registro, [bool] $conPuerto = $true) {
+    $argumentos = @(@(ArgumentosServidor $servidor)[0])
+    if ($conPuerto) { $argumentos += [string]$V.Puerto }
+    $opciones = @{ FilePath = (ExeServidor $dir $servidor); WorkingDirectory = $dir; PassThru = $true; WindowStyle = 'Hidden'
+                   RedirectStandardOutput = $registro; RedirectStandardError = "$registro.err" }
+    if ($argumentos.Count -gt 0) { $opciones.ArgumentList = $argumentos }
+    $V.Proceso = Start-Process @opciones
     for ($i = 0; $i -lt 30; $i++) {
         if (Escucha) { return $true }
         if ($V.Proceso.HasExited) { return $false }
@@ -308,9 +311,9 @@ function PararServidor {
     $V.Proceso = $null
 }
 
-function ConServidor([string] $nombre, [string] $dir, [string] $servidor, [string] $registro) {
+function ConServidor([string] $nombre, [string] $dir, [string] $servidor, [string] $registro, [bool] $conPuerto = $true) {
     if (Escucha) { Anotar $nombre (T 'ver-ocupado' @($V.Puerto)) $false; return $false }
-    if (-not (ArrancarServidor $dir $servidor $registro)) {
+    if (-not (ArrancarServidor $dir $servidor $registro $conPuerto)) {
         PararServidor
         Anotar $nombre (T 'ver-no-arranca') $false $registro
         return $false
@@ -474,6 +477,7 @@ function PasoRequisitos {
 
 function PasoEjemplos {
     $env:CERO_RAIZ = $Aqui
+    $env:CERO_VERSION = (Select-String -Path (Join-Path $JavaDir 'pom.xml') -Pattern '<version>(.+?)</version>' | Select-Object -First 1).Matches[0].Groups[1].Value
     $env:PUERTO = $V.Puerto
     $env:PYTHONPATH = Join-Path $Aqui 'python'
     foreach ($linea in $Ejemplos) {
@@ -487,7 +491,7 @@ function PasoEjemplos {
         New-Item -ItemType File -Path $registro -Force | Out-Null
         $env:OBJ = Join-Path $V.Tmp "obj-ejemplo-$($p[0])"
         if ($p[2] -and ((Ejecutar $dir (Pasos $p[2]) $registro) -ne 0)) { Anotar $etiqueta (T 'ver-no-compila') $false $registro; continue }
-        if (-not (ConServidor $etiqueta $dir $p[3] $registro)) { continue }
+        if (-not (ConServidor $etiqueta $dir $p[3] $registro $false)) { continue }
         $cuerpo = try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://127.0.0.1:$($V.Puerto)/").Content } catch { '' }
         PararServidor
         if ("$cuerpo" -eq '{"hola":"mundo"}') { Anotar $etiqueta (T 'ver-responde' @($cuerpo)) $true }

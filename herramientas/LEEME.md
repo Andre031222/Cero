@@ -53,6 +53,15 @@ una carpeta del repositorio.
 ```
 
 Para no depender de que el código esté subido, compila contra este repositorio: Rust con un
-`[patch]` pasado por `--config`, C++ con `FETCHCONTENT_SOURCE_DIR_CERO` y Python con `PYTHONPATH`.
-Java usa lo que `cero new` deja instalado en `~/.m2`. Hacen falta Maven y JDK 25, cargo, cmake,
-Python 3.12 y curl. Integración continua la corre en el trabajo `ejemplos`.
+`[patch]` pasado por `--config` y C++ con `FETCHCONTENT_SOURCE_DIR_CERO`. Python instala el proyecto
+generado con `pip` en un venv desechable, con la línea de `requirements.txt` cambiada a
+`git+file://` del repositorio (que toma lo último commiteado, no lo que haya sin guardar). Java usa
+la `0.9.0-SNAPSHOT` que `cero new` deja instalada en `~/.m2`. Hacen falta Maven y JDK 25, cargo,
+cmake, Python 3.12 y curl. Integración continua la corre en el trabajo `ejemplos`.
+
+Con `CERO_DESDE_GITHUB=1` no hay ninguna de esas desviaciones: Rust, C++ y Python bajan Cero de
+GitHub, como le pasará a quien lo use. Sirve para comprobarlo una vez subido el código:
+
+```
+CERO_DESDE_GITHUB=1 ./herramientas/prueba-cero-new.sh
+```

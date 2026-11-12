@@ -6,6 +6,8 @@ REPO=https://github.com/Andre031222/Cero
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/cero-new.XXXXXX")
 PID=""
 fallos=0
+LOCAL=1
+[ "${CERO_DESDE_GITHUB:-}" != 1 ] || LOCAL=""
 
 for p in python3.14 python3.13 python3.12 python3; do
   if command -v "$p" >/dev/null && "$p" -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then PY=$p; break; fi
@@ -25,11 +27,15 @@ construir() {
   case "$1" in
     java)   mvn -B -q package -DskipTests ;;
     rust)   grep -q "git = \"$REPO\"" Cargo.toml
-            cargo build --release -q --config "patch.\"$REPO\".cero-http.path=\"$RAIZ/rust/cero-http\"" ;;
+            cargo build --release -q ${LOCAL:+--config "patch.\"$REPO\".cero-http.path=\"$RAIZ/rust/cero-http\""} ;;
     c++)    grep -q "GIT_REPOSITORY $REPO" CMakeLists.txt
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_CERO="$RAIZ" >/dev/null
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${LOCAL:+-DFETCHCONTENT_SOURCE_DIR_CERO="$RAIZ"} >/dev/null
             cmake --build build -j >/dev/null ;;
-    python) grep -q "git+$REPO#subdirectory=python" requirements.txt ;;
+    python) grep -q "git+$REPO#subdirectory=python" requirements.txt
+            "$PY" -m venv "$TMP/venv"
+            sed "${LOCAL:+s|git+$REPO|git+file://$RAIZ|}" requirements.txt >"$TMP/requisitos-locales.txt"
+            "$TMP/venv/bin/pip" install -q -r "$TMP/requisitos-locales.txt"
+            "$TMP/venv/bin/python" -I -c 'import cero.servidor' ;;
   esac
 }
 
@@ -38,7 +44,7 @@ arrancar() {
     java)   exec java -jar "target/$2.jar" "$3" ;;
     rust)   PUERTO=$3 exec "./target/release/$2" ;;
     c++)    PUERTO=$3 exec ./build/hola ;;
-    python) PUERTO=$3 PYTHONPATH="$RAIZ/python" exec "$PY" -B app.py ;;
+    python) PUERTO=$3 exec "$TMP/venv/bin/python" -B app.py ;;
   esac
 }
 

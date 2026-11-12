@@ -17,7 +17,8 @@ atender en todas las interfaces —otra máquina, un contenedor—, cambiar `.ho
 
 Hay dos caminos, y conviene saber cuál se está usando.
 
-**Desde Maven Central.** Es la versión publicada, `0.8.0`. En el `pom.xml`:
+**Desde Maven Central.** Es la versión publicada, `0.8.0`, y la que usa el `pom.xml` de esta
+carpeta. En el `pom.xml` de un proyecto:
 
 ```xml
 <dependency>
@@ -27,18 +28,21 @@ Hay dos caminos, y conviene saber cuál se está usando.
 </dependency>
 ```
 
-**Desde el código de este repositorio.** Con el repositorio clonado:
+**Desde el código de este repositorio.** El repositorio está en `0.9.0-SNAPSHOT`, la próxima
+versión, que todavía no se ha publicado. Para probar el ejemplo contra ella, con el repositorio
+clonado:
 
 ```bash
 cd java && mvn -q install -DskipTests
+cd ../ejemplos/java && mvn -q package -Dcero.version=0.9.0-SNAPSHOT
 ```
 
-Eso compila la versión actual y la deja en `~/.m2`. Ojo: el `pom.xml` del repositorio todavía dice
-`0.8.0`, así que esa copia local tapa a la de Maven Central con el mismo número. No es la misma
-cosa: es el código de `main`, con lo que haya cambiado desde que se publicó la `0.8.0`. Para volver
-a la publicada, borrar `~/.m2/repository/dev/ginit/cero` y compilar otra vez.
+El primer paso deja la `0.9.0-SNAPSHOT` en `~/.m2`, con otro número que la publicada, así que no la
+tapa. El segundo cambia la propiedad `cero.version` del `pom.xml`, que por omisión es `0.8.0`.
 
-El ejemplo compila y pasa su prueba con las dos.
+`./cero verificar` compila este ejemplo contra la `0.9.0-SNAPSHOT`, porque lo que comprueba es el
+código del repositorio. Integración continua lo prueba dos veces: contra la `0.8.0` de Maven Central
+y contra la `0.9.0-SNAPSHOT`.
 
 ## El ejemplo
 

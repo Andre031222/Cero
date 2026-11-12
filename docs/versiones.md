@@ -12,6 +12,9 @@ auditoría del portal FINESI, y de ahí sale esta regla.
 
 ## 0.9.0 · sin publicar
 
+El repositorio está en `0.9.0-SNAPSHOT` hasta que salga. Así, compilar e instalar desde el código
+deja en `~/.m2` un número distinto del de la `0.8.0` publicada, y no la tapa.
+
 ### Cambio incompatible: fuera las vistas
 
 Sin `cero-view` ni `Live`; Cero es solo backend.
