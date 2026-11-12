@@ -20,7 +20,7 @@ struct Escribir {
 };
 struct Peticion {
     std::uint32_t flujo;
-    std::vector<Cabecera> cabeceras;
+    Cabeceras cabeceras;
     bool fin;
 };
 struct Cuerpo {
@@ -118,8 +118,8 @@ private:
     std::uint32_t cortes_ = 0;
 };
 
-std::string cabeceras_de_respuesta(unsigned estado, const std::vector<Cabecera>& cabeceras);
+std::string cabeceras_de_respuesta(unsigned estado, const Cabeceras& cabeceras);
 
-std::string_view validar(const std::vector<Cabecera>& cabeceras);
+std::string_view validar(const Cabeceras& cabeceras);
 
 }

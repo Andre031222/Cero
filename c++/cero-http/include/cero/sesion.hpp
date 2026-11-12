@@ -1,8 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <functional>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -10,10 +8,12 @@
 #include <string>
 #include <string_view>
 
+#include "cero/tipos.hpp"
+
 namespace cero {
 
 using Reloj = std::chrono::system_clock;
-using Atributos = std::map<std::string, std::string, std::less<>>;
+using Atributos = PorNombre<std::string>;
 
 struct Caducidad {
     std::chrono::seconds inactividad;
@@ -82,7 +82,7 @@ public:
 
 private:
     mutable std::shared_mutex candado_;
-    std::map<std::string, Guardada, std::less<>> sesiones_;
+    PorNombre<Guardada> sesiones_;
     Caducidad caducidad_;
 };
 

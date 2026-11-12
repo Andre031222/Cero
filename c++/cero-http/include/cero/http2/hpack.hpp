@@ -12,6 +12,7 @@
 namespace cero::http2 {
 
 using Cabecera = std::pair<std::string, std::string>;
+using Cabeceras = std::vector<Cabecera>;
 
 inline constexpr std::size_t kCosteFijo = 32;
 inline constexpr std::size_t kMaxCampos = 256;
@@ -32,7 +33,7 @@ private:
         return nombre.size() + valor.size() + kCosteFijo;
     }
 
-    std::vector<Cabecera> entradas_;
+    Cabeceras entradas_;
     std::size_t ocupado_ = 0;
     std::size_t tope_;
     std::size_t tope_maximo_;
@@ -43,7 +44,7 @@ public:
     Decodificador(std::size_t tope_tabla, std::size_t max_lista)
         : tabla_(tope_tabla), max_lista_(max_lista) {}
 
-    Resultado<std::vector<Cabecera>> decodificar(std::string_view bloque);
+    Resultado<Cabeceras> decodificar(std::string_view bloque);
 
     TablaDinamica& tabla() { return tabla_; }
     void max_lista(std::size_t cuanto) { max_lista_ = cuanto; }
@@ -56,7 +57,7 @@ private:
     std::size_t max_lista_;
 };
 
-std::string codificar(const std::vector<Cabecera>& cabeceras);
+std::string codificar(const Cabeceras& cabeceras);
 
 Resultado<std::string> descomprimir(std::string_view datos);
 std::string comprimir(std::string_view datos);

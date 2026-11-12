@@ -4,7 +4,6 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -12,6 +11,8 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include "cero/tipos.hpp"
 
 namespace cero {
 
@@ -48,24 +49,22 @@ class Log {
 public:
     Log(std::string_view origen, Nivel nivel) : origen_(origen), nivel_(nivel) {}
 
-    void escribir(Nivel nivel, std::string_view plantilla,
-                  const std::vector<std::string_view>& valores = {});
+    void escribir(Nivel nivel, std::string_view plantilla, const Vistas& valores = {});
 
-    void con_error(std::string_view plantilla, const std::vector<std::string_view>& valores,
-                   std::string_view tipo, std::string_view mensaje);
+    void con_error(std::string_view plantilla, const Vistas& valores, std::string_view tipo,
+                   std::string_view mensaje);
 
-    std::vector<std::string> lineas() const;
+    Textos lineas() const;
     Nivel nivel() const { return nivel_; }
 
 private:
     std::string origen_;
     Nivel nivel_;
     mutable std::mutex candado_;
-    std::vector<std::string> lineas_;
+    Textos lineas_;
 };
 
-std::string interpolar(std::string_view plantilla,
-                       const std::vector<std::string_view>& valores);
+std::string interpolar(std::string_view plantilla, const Vistas& valores);
 
 class Metricas {
 public:
@@ -86,8 +85,8 @@ private:
         std::vector<std::uint64_t> micros;
     };
     mutable std::shared_mutex candado_;
-    std::map<std::string, Cuenta, std::less<>> por_patron_;
-    std::vector<std::string> ignoradas_;
+    PorNombre<Cuenta> por_patron_;
+    Textos ignoradas_;
     std::atomic<std::uint64_t> total_{0};
     std::chrono::steady_clock::time_point arranque_ = std::chrono::steady_clock::now();
 };

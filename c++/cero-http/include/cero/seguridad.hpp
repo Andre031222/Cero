@@ -1,16 +1,14 @@
 #pragma once
 
 #include <chrono>
-#include <functional>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
-#include <vector>
 
 #include "cero/respuesta.hpp"
+#include "cero/tipos.hpp"
 
 namespace cero {
 
@@ -22,10 +20,10 @@ struct Proteccion {
 };
 
 struct Cors {
-    std::vector<std::string> origenes;
+    Textos origenes;
     bool credenciales = false;
-    std::vector<std::string> metodos{"GET", "POST", "PUT", "DELETE", "OPTIONS"};
-    std::vector<std::string> cabeceras{"Content-Type", "X-CSRF-Token"};
+    Textos metodos{"GET", "POST", "PUT", "DELETE", "OPTIONS"};
+    Textos cabeceras{"Content-Type", "X-CSRF-Token"};
     unsigned max_age = 600;
 
     struct Sigue {
@@ -43,10 +41,9 @@ struct Cors {
 inline constexpr std::string_view kClaveCsrf = "csrf";
 inline constexpr std::string_view kCampoCsrf = "_csrf";
 
-bool exento(std::string_view camino, const std::vector<std::string>& exenciones);
+bool exento(std::string_view camino, const Textos& exenciones);
 
-bool csrf_valido(std::string_view metodo, std::string_view camino,
-                 const std::vector<std::string>& exenciones,
+bool csrf_valido(std::string_view metodo, std::string_view camino, const Textos& exenciones,
                  std::optional<std::string_view> token_sesion,
                  std::optional<std::string_view> token_peticion);
 
@@ -70,7 +67,7 @@ private:
         std::chrono::steady_clock::time_point desde;
     };
     mutable std::mutex candado_;
-    std::map<std::string, Cuenta, std::less<>> cuentas_;
+    PorNombre<Cuenta> cuentas_;
     unsigned cupo_;
     std::chrono::seconds ventana_;
 };

@@ -8,22 +8,24 @@
 #include <string_view>
 #include <utility>
 
-namespace cero {
-namespace fs = std::filesystem;
+using namespace std;
 
-std::optional<Estaticos> Estaticos::en(std::string_view raiz) {
-    std::error_code fallo;
+namespace cero {
+namespace fs = filesystem;
+
+optional<Estaticos> Estaticos::en(string_view raiz) {
+    error_code fallo;
     auto real = fs::canonical(fs::path{raiz}, fallo);
-    if (fallo) return std::nullopt;
+    if (fallo) return nullopt;
     return Estaticos{std::move(real)};
 }
 
-Estaticos&& Estaticos::con_respaldo(std::string_view archivo) && {
-    respaldo_ = std::string{archivo};
+Estaticos&& Estaticos::con_respaldo(string_view archivo) && {
+    respaldo_ = string{archivo};
     return std::move(*this);
 }
 
-Respuesta Estaticos::servir(std::string_view camino) const {
+Respuesta Estaticos::servir(string_view camino) const {
     while (camino.starts_with('/')) camino.remove_prefix(1);
 
     fs::path limpio;
@@ -33,33 +35,33 @@ Respuesta Estaticos::servir(std::string_view camino) const {
         limpio /= t;
     }
 
-    std::error_code fallo;
+    error_code fallo;
     const auto real = fs::canonical(raiz_ / limpio, fallo);
     if (fallo) return respaldar();
 
-    const auto dentro = std::mismatch(raiz_.begin(), raiz_.end(), real.begin(), real.end()).first;
+    const auto dentro = mismatch(raiz_.begin(), raiz_.end(), real.begin(), real.end()).first;
     if (dentro != raiz_.end()) return Respuesta::codigo(403, "fuera de la raíz");
 
-    std::ifstream archivo{real, std::ios::binary};
+    ifstream archivo{real, ios::binary};
     if (!archivo) return respaldar();
-    std::ostringstream datos;
+    ostringstream datos;
     datos << archivo.rdbuf();
 
-    Respuesta r{200, std::string{tipo_de(real)}, datos.str(), {}};
+    Respuesta r{200, string{tipo_de(real)}, datos.str(), {}};
     r.extra.emplace_back("Cache-Control", "public, max-age=3600");
     return r;
 }
 
 Respuesta Estaticos::respaldar() const {
     if (!respaldo_) return Respuesta::codigo(404, "no encontrado");
-    std::ifstream archivo{raiz_ / *respaldo_, std::ios::binary};
+    ifstream archivo{raiz_ / *respaldo_, ios::binary};
     if (!archivo) return Respuesta::codigo(404, "no encontrado");
-    std::ostringstream datos;
+    ostringstream datos;
     datos << archivo.rdbuf();
     return Respuesta::html(datos.str());
 }
 
-std::string_view tipo_de(const std::filesystem::path& ruta) {
+string_view tipo_de(const filesystem::path& ruta) {
     const auto ext = ruta.extension().string();
     if (ext == ".html" || ext == ".htm") return "text/html; charset=utf-8";
     if (ext == ".css") return "text/css; charset=utf-8";

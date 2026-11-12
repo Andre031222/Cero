@@ -13,38 +13,41 @@
 #include <vector>
 
 #include "cero/formato.hpp"
+#include "cero/tipos.hpp"
+
+using namespace std;
 
 namespace cero::http2 {
 namespace {
 
-using Fallo = std::unexpected<FalloConexion>;
+using Fallo = unexpected<FalloConexion>;
 
-Fallo conexion(Error codigo, std::string_view porque) { return Fallo{FalloConexion{codigo, porque}}; }
+Fallo conexion(Error codigo, string_view porque) { return Fallo{FalloConexion{codigo, porque}}; }
 
-constexpr std::int64_t kVentanaDeConexion = 65'535;
+constexpr int64_t kVentanaDeConexion = 65'535;
 
-constexpr std::string_view kPseudo[]{":method", ":scheme", ":path", ":authority", ":status"};
-constexpr std::string_view kDeConexion[]{"connection", "keep-alive", "proxy-connection",
-                                         "transfer-encoding", "upgrade"};
+constexpr string_view kPseudo[]{":method", ":scheme", ":path", ":authority", ":status"};
+constexpr string_view kDeConexion[]{"connection", "keep-alive", "proxy-connection",
+                                    "transfer-encoding", "upgrade"};
 
-bool es_de_conexion(std::string_view nombre) {
-    return std::ranges::find(kDeConexion, nombre) != std::end(kDeConexion);
+bool es_de_conexion(string_view nombre) {
+    return ranges::find(kDeConexion, nombre) != end(kDeConexion);
 }
 
-bool depende_de_si_mismo(std::string_view carga, std::uint32_t flujo) {
+bool depende_de_si_mismo(string_view carga, uint32_t flujo) {
     return carga.size() >= 4 && (entero32(carga, 0) & 0x7fff'ffff) == flujo;
 }
 
-std::string_view prioridad_de(const Trama& t) {
+string_view prioridad_de(const Trama& t) {
     if ((t.banderas & kPrioridad) == 0) return {};
-    const std::size_t desde = (t.banderas & kRelleno) != 0 ? 1 : 0;
+    const size_t desde = (t.banderas & kRelleno) != 0 ? 1 : 0;
     if (desde + 4 > t.carga.size()) return {};
-    return std::string_view{t.carga}.substr(desde, 4);
+    return string_view{t.carga}.substr(desde, 4);
 }
 
-Resultado<std::string> recortar(const Trama& t) {
-    std::size_t desde = 0;
-    std::size_t hasta = t.carga.size();
+Resultado<string> recortar(const Trama& t) {
+    size_t desde = 0;
+    size_t hasta = t.carga.size();
     const bool con_prioridad = t.tipo == kHeaders && (t.banderas & kPrioridad) != 0;
     if (con_prioridad) {
         if (hasta < 5) {
@@ -54,7 +57,7 @@ Resultado<std::string> recortar(const Trama& t) {
     }
     if ((t.banderas & kRelleno) != 0) {
         if (t.carga.empty()) return conexion(Error::Protocolo, "relleno declarado y carga vacía");
-        const auto relleno = static_cast<std::size_t>(static_cast<unsigned char>(t.carga[0]));
+        const auto relleno = static_cast<size_t>(static_cast<unsigned char>(t.carga[0]));
         desde = con_prioridad ? desde + 1 : 1;
         if (relleno + desde > hasta) return conexion(Error::Protocolo, "relleno mayor que la carga");
         hasta -= relleno;
@@ -62,49 +65,49 @@ Resultado<std::string> recortar(const Trama& t) {
     return t.carga.substr(desde, hasta - desde);
 }
 
-std::expected<std::optional<std::uint64_t>, std::string_view> declarado(
-    const std::vector<Cabecera>& cabeceras) {
+expected<optional<uint64_t>, string_view> declarado(
+    const Cabeceras& cabeceras) {
     for (const auto& [nombre, valor] : cabeceras) {
         if (nombre != "content-length") continue;
-        std::uint64_t cuanto = 0;
+        uint64_t cuanto = 0;
         const auto fin = valor.data() + valor.size();
-        const auto leido = std::from_chars(valor.data(), fin, cuanto);
-        if (leido.ec != std::errc{} || leido.ptr != fin) {
-            return std::unexpected{std::string_view{"content-length que no es un número"}};
+        const auto leido = from_chars(valor.data(), fin, cuanto);
+        if (leido.ec != errc{} || leido.ptr != fin) {
+            return unexpected{string_view{"content-length que no es un número"}};
         }
         return cuanto;
     }
-    return std::nullopt;
+    return nullopt;
 }
 
-std::string_view recortar_blancos(std::string_view s) {
+string_view recortar_blancos(string_view s) {
     const auto desde = s.find_first_not_of(" \t");
-    if (desde == std::string_view::npos) return {};
+    if (desde == string_view::npos) return {};
     return s.substr(desde, s.find_last_not_of(" \t") - desde + 1);
 }
 
 }
 
-std::string_view validar(const std::vector<Cabecera>& cabeceras) {
+string_view validar(const Cabeceras& cabeceras) {
     bool metodo = false;
     bool esquema = false;
     bool camino = false;
     bool ya_hubo_normal = false;
-    std::vector<std::string_view> vistos;
+    Vistas vistos;
 
     for (const auto& [nombre, valor] : cabeceras) {
-        if (std::ranges::any_of(nombre, [](unsigned char c) { return std::isupper(c) != 0; })) {
+        if (ranges::any_of(nombre, [](unsigned char c) { return isupper(c) != 0; })) {
             return "nombre de campo con mayúsculas";
         }
         if (nombre.empty()) return "nombre de campo vacío";
 
         if (nombre.starts_with(':')) {
             if (ya_hubo_normal) return "pseudo-campo después de un campo normal";
-            if (std::ranges::find(kPseudo, nombre) == std::end(kPseudo)) {
+            if (ranges::find(kPseudo, nombre) == end(kPseudo)) {
                 return "pseudo-campo desconocido";
             }
             if (nombre == ":status") return ":status en una petición";
-            if (std::ranges::find(vistos, nombre) != vistos.end()) return "pseudo-campo repetido";
+            if (ranges::find(vistos, nombre) != vistos.end()) return "pseudo-campo repetido";
             vistos.push_back(nombre);
 
             if (nombre == ":method") metodo = true;
@@ -125,12 +128,10 @@ std::string_view validar(const std::vector<Cabecera>& cabeceras) {
     return {};
 }
 
-std::string cabeceras_de_respuesta(unsigned estado, const std::vector<Cabecera>& cabeceras) {
-    std::vector<Cabecera> salida{{":status", formato("{}", estado)}};
+string cabeceras_de_respuesta(unsigned estado, const Cabeceras& cabeceras) {
+    Cabeceras salida{{":status", formato("{}", estado)}};
     for (const auto& [nombre, valor] : cabeceras) {
-        std::string minusculas{nombre};
-        std::ranges::transform(minusculas, minusculas.begin(),
-                               [](unsigned char c) { return std::tolower(c); });
+        auto minusculas = minuscula(nombre);
         if (es_de_conexion(minusculas)) continue;
         salida.emplace_back(std::move(minusculas), valor);
     }
@@ -142,26 +143,26 @@ Sesion::Sesion(Ajustes mios)
       decodificador_(4096, mios.max_cabeceras),
       ventana_(kVentanaDeConexion) {}
 
-std::size_t Sesion::activos() const {
-    return flujos_.size() + static_cast<std::size_t>(std::ranges::count_if(
-                                atendidos_, [&](std::uint32_t f) { return !flujos_.contains(f); }));
+size_t Sesion::activos() const {
+    return flujos_.size() + static_cast<size_t>(ranges::count_if(
+                                atendidos_, [&](uint32_t f) { return !flujos_.contains(f); }));
 }
 
-std::optional<std::int64_t> Sesion::ventana_de(std::uint32_t flujo) const {
+optional<int64_t> Sesion::ventana_de(uint32_t flujo) const {
     const auto i = flujos_.find(flujo);
-    if (i == flujos_.end()) return std::nullopt;
+    if (i == flujos_.end()) return nullopt;
     return i->second.ventana;
 }
 
-void Sesion::respondido(std::uint32_t flujo) {
+void Sesion::respondido(uint32_t flujo) {
     atendidos_.erase(flujo);
     const auto i = flujos_.find(flujo);
     if (i != flujos_.end() && i->second.estado == Estado::MitadCerradoRemoto) flujos_.erase(i);
 }
 
-void Sesion::desechar(std::uint32_t flujo) { flujos_.erase(flujo); }
+void Sesion::desechar(uint32_t flujo) { flujos_.erase(flujo); }
 
-Resultado<void> Sesion::ascender(std::string_view ajustes_del_cliente) {
+Resultado<void> Sesion::ascender(string_view ajustes_del_cliente) {
     if (ajustes_del_cliente.size() % 6 != 0) {
         return conexion(Error::TamanoDeTrama, "HTTP2-Settings no múltiplo de seis");
     }
@@ -221,20 +222,20 @@ Resultado<Digerido> Sesion::settings(const Trama& t) {
 Resultado<Digerido> Sesion::ping(const Trama& t) {
     if ((t.banderas & kReconoce) != 0) return Digerido{};
     if (auto r = control(); !r) return Fallo{r.error()};
-    return Digerido{{Escribir{Trama::ping_ack(t.carga)}}, std::nullopt};
+    return Digerido{{Escribir{Trama::ping_ack(t.carga)}}, nullopt};
 }
 
 Resultado<Digerido> Sesion::window_update(const Trama& t) {
-    const auto cuanto = static_cast<std::int64_t>(entero32(t.carga, 0) & 0x7fff'ffff);
+    const auto cuanto = static_cast<int64_t>(entero32(t.carga, 0) & 0x7fff'ffff);
     if (t.flujo == 0) {
         if (activos() == 0) {
             if (auto r = control(); !r) return Fallo{r.error()};
         }
-        return Digerido{{Credito{0, cuanto}}, std::nullopt};
+        return Digerido{{Credito{0, cuanto}}, nullopt};
     }
     if (t.flujo > ultimo_) return conexion(Error::Protocolo, "WINDOW_UPDATE sobre un flujo ocioso");
     if (cuanto == 0) return cortar(t.flujo, "incremento cero");
-    return Digerido{{Credito{t.flujo, cuanto}}, std::nullopt};
+    return Digerido{{Credito{t.flujo, cuanto}}, nullopt};
 }
 
 Resultado<Digerido> Sesion::priority(const Trama& t) {
@@ -253,7 +254,7 @@ Resultado<Digerido> Sesion::rst(const Trama& t) {
     if (anulados_ > topes.anulados) {
         return conexion(Error::Calma, "demasiados flujos abiertos y anulados");
     }
-    return Digerido{{Anulado{t.flujo}}, std::nullopt};
+    return Digerido{{Anulado{t.flujo}}, nullopt};
 }
 
 Resultado<Digerido> Sesion::headers(const Trama& t) {
@@ -314,7 +315,7 @@ Resultado<Digerido> Sesion::continuation(const Trama& t) {
     return Digerido{};
 }
 
-Resultado<Digerido> Sesion::cortar(std::uint32_t flujo, std::string_view porque, Error por) {
+Resultado<Digerido> Sesion::cortar(uint32_t flujo, string_view porque, Error por) {
     flujos_.erase(flujo);
     if (por != Error::Rechazado && ++cortes_ > topes.cortes) {
         return conexion(Error::Calma, "demasiados flujos cortados");
@@ -325,7 +326,7 @@ Resultado<Digerido> Sesion::cortar(std::uint32_t flujo, std::string_view porque,
     return Digerido{{Escribir{Trama::rst(flujo, por)}}, Cortado{flujo, por, porque}};
 }
 
-Resultado<Digerido> Sesion::terminar_bloque(std::uint32_t flujo, std::string bloque, bool fin,
+Resultado<Digerido> Sesion::terminar_bloque(uint32_t flujo, string bloque, bool fin,
                                             bool trailers) {
     auto cabeceras = decodificador_.decodificar(bloque);
     if (!cabeceras) return Fallo{cabeceras.error()};
@@ -342,7 +343,7 @@ Resultado<Digerido> Sesion::terminar_bloque(std::uint32_t flujo, std::string blo
             return cortar(flujo, "el cuerpo no mide lo que dijo content-length");
         }
         atendidos_.insert(flujo);
-        return Digerido{{Cuerpo{flujo, {}, true}}, std::nullopt};
+        return Digerido{{Cuerpo{flujo, {}, true}}, nullopt};
     }
 
     if (const auto porque = validar(*cabeceras); !porque.empty()) return cortar(flujo, porque);
@@ -355,11 +356,11 @@ Resultado<Digerido> Sesion::terminar_bloque(std::uint32_t flujo, std::string blo
     f.declarado = *cuanto;
     if (fin) atendidos_.insert(flujo);
 
-    return Digerido{{Peticion{flujo, std::move(*cabeceras), fin}}, std::nullopt};
+    return Digerido{{Peticion{flujo, std::move(*cabeceras), fin}}, nullopt};
 }
 
 Resultado<Digerido> Sesion::data(const Trama& t) {
-    const auto tamano = static_cast<std::int64_t>(t.carga.size());
+    const auto tamano = static_cast<int64_t>(t.carga.size());
     ventana_ -= tamano;
     if (ventana_ < 0) {
         return conexion(Error::ControlDeFlujo, "el cliente se pasó de la ventana de la conexión");
@@ -373,10 +374,10 @@ Resultado<Digerido> Sesion::data(const Trama& t) {
         return conexion(Error::Protocolo, "DATA sobre un flujo que nunca se abrió");
     }
 
-    std::vector<Accion> credito;
+    vector<Accion> credito;
     if (tamano > 0) {
         ventana_ += tamano;
-        credito.emplace_back(Escribir{Trama::ventana(0, static_cast<std::uint32_t>(tamano))});
+        credito.emplace_back(Escribir{Trama::ventana(0, static_cast<uint32_t>(tamano))});
     }
     const auto con_credito = [&](Resultado<Digerido> corte) -> Resultado<Digerido> {
         if (corte) corte->acciones.insert(corte->acciones.begin(), credito.begin(), credito.end());
@@ -408,7 +409,7 @@ Resultado<Digerido> Sesion::data(const Trama& t) {
     if (t.fin_flujo()) atendidos_.insert(t.flujo);
     if (tamano > 0 && !t.fin_flujo()) {
         f.ventana += tamano;
-        d.acciones.emplace_back(Escribir{Trama::ventana(t.flujo, static_cast<std::uint32_t>(tamano))});
+        d.acciones.emplace_back(Escribir{Trama::ventana(t.flujo, static_cast<uint32_t>(tamano))});
     }
     return d;
 }

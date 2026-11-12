@@ -106,6 +106,25 @@ Ahora **cada archivo incluye lo que usa**, sin heredarlo de otro. Es más línea
 cambio el proyecto compila igual en los dos sitios, que es la mitad del argumento de no tener
 dependencias: si el framework solo construye con un compilador, el compilador es la dependencia.
 
+## Estilo
+
+Sin redundancia donde lo simple basta, siempre que funcione y sea seguro. En C++ eso quiere decir,
+siguiendo las *C++ Core Guidelines*:
+
+- **`using namespace std;` en cada `.cpp`**, tras los `#include` (SF.6), y **nunca en una
+  cabecera** (SF.7): quien incluye una cabecera no tiene por qué recibir `std` entero. Las pruebas
+  y `conforme.cpp`, que no viven dentro de `cero`, abren además `using namespace cero;`.
+- **En las cabeceras, alias del proyecto** para los tipos que se repiten: `PorNombre<T>`, `Textos`
+  y `Vistas` en [`tipos.hpp`](cero-http/include/cero/tipos.hpp), y `Cabeceras` en HPACK. `std::`
+  se queda en lo demás.
+- **`::` delante solo cuando desambigua.** Las llamadas POSIX van sin él, salvo `::bind`: con
+  `using namespace std;` a la vista, `bind(...)` elige `std::bind`, que no llama a nada.
+- **`std::move` y `std::forward` sí van calificados**: Clang avisa de las llamadas sin calificar
+  (`-Wunqualified-std-cast-call`) y el proyecto compila sin avisos.
+- **Sin `return 0;` en `main`**, que ya lo devuelve solo.
+- **Una función, un sitio**: `minuscula` estaba copiada en cinco archivos y vive ahora en
+  [`formato.hpp`](cero-http/include/cero/formato.hpp).
+
 ## Lo que el lenguaje pone fácil, y lo que no
 
 `std::expected` de C++23 es exactamente el `Result` de Rust, así que el parser se lee igual en los

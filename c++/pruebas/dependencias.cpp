@@ -11,6 +11,7 @@
 #include "prueba.hpp"
 
 using namespace std;
+using namespace cero;
 
 namespace {
 
@@ -29,26 +30,26 @@ struct Agenda {
     shared_ptr<Reloj> reloj;
 };
 
-optional<cero::Fallo> fallo_al_pedir_gallina(cero::Dependencias& d) {
+optional<Fallo> fallo_al_pedir_gallina(Dependencias& d) {
     try {
         (void)d.obtener<Gallina>();
-    } catch (const cero::Fallo& f) {
+    } catch (const Fallo& f) {
         return f;
     }
     return nullopt;
 }
 
-void con_ciclo(cero::Dependencias& d) {
-    d.registrar<Gallina>([](cero::Dependencias& r) {
+void con_ciclo(Dependencias& d) {
+    d.registrar<Gallina>([](Dependencias& r) {
         return make_shared<Gallina>(Gallina{r.obtener<Huevo>()});
     });
-    d.registrar<Huevo>([](cero::Dependencias& r) {
+    d.registrar<Huevo>([](Dependencias& r) {
         return make_shared<Huevo>(Huevo{r.obtener<Gallina>()});
     });
 }
 
 PRUEBA(rut_035_un_ciclo_se_detecta_y_se_dice) {
-    cero::Dependencias d;
+    Dependencias d;
     con_ciclo(d);
     const auto f = fallo_al_pedir_gallina(d);
     COMPRUEBA(f.has_value(), "RUT-035: falla en vez de colgarse o desbordar la pila");
@@ -57,7 +58,7 @@ PRUEBA(rut_035_un_ciclo_se_detecta_y_se_dice) {
 }
 
 PRUEBA(rut_035_tras_el_ciclo_el_contenedor_sigue_sirviendo) {
-    cero::Dependencias d;
+    Dependencias d;
     con_ciclo(d);
     (void)fallo_al_pedir_gallina(d);
     const auto otra_vez = fallo_al_pedir_gallina(d);
@@ -66,13 +67,13 @@ PRUEBA(rut_035_tras_el_ciclo_el_contenedor_sigue_sirviendo) {
 }
 
 PRUEBA(una_cadena_sin_ciclo_se_resuelve_una_vez) {
-    cero::Dependencias d;
+    Dependencias d;
     int construidos = 0;
-    d.registrar<Reloj>([&construidos](cero::Dependencias&) {
+    d.registrar<Reloj>([&construidos](Dependencias&) {
         ++construidos;
         return make_shared<Reloj>();
     });
-    d.registrar<Agenda>([](cero::Dependencias& r) {
+    d.registrar<Agenda>([](Dependencias& r) {
         return make_shared<Agenda>(Agenda{r.obtener<Reloj>()});
     });
     const auto a = d.obtener<Agenda>();
@@ -81,9 +82,9 @@ PRUEBA(una_cadena_sin_ciclo_se_resuelve_una_vez) {
 }
 
 PRUEBA(a_la_vez_la_fabrica_corre_una_sola_vez) {
-    cero::Dependencias d;
+    Dependencias d;
     atomic<int> construidos = 0;
-    d.registrar<Reloj>([&construidos](cero::Dependencias&) {
+    d.registrar<Reloj>([&construidos](Dependencias&) {
         ++construidos;
         this_thread::sleep_for(chrono::milliseconds{50});
         return make_shared<Reloj>();
@@ -98,25 +99,25 @@ PRUEBA(a_la_vez_la_fabrica_corre_una_sola_vez) {
 }
 
 PRUEBA(registrar_mientras_otro_resuelve_no_rompe_nada) {
-    cero::Dependencias d;
-    d.registrar<Reloj>([](cero::Dependencias&) { return make_shared<Reloj>(); });
+    Dependencias d;
+    d.registrar<Reloj>([](Dependencias&) { return make_shared<Reloj>(); });
     jthread lector{[&d] {
         for (int i = 0; i < 2000; ++i) (void)d.obtener<Reloj>();
     }};
     for (int i = 0; i < 2000; ++i) {
         d.registrar<Agenda>(
-            [](cero::Dependencias& r) { return make_shared<Agenda>(Agenda{r.obtener<Reloj>()}); });
+            [](Dependencias& r) { return make_shared<Agenda>(Agenda{r.obtener<Reloj>()}); });
     }
     lector.join();
     COMPRUEBA(d.obtener<Agenda>()->reloj == d.obtener<Reloj>(), "el registro sigue entero");
 }
 
 PRUEBA(lo_no_registrado_falla) {
-    cero::Dependencias d;
+    Dependencias d;
     bool fallo = false;
     try {
         (void)d.obtener<Reloj>();
-    } catch (const cero::Fallo&) {
+    } catch (const Fallo&) {
         fallo = true;
     }
     COMPRUEBA(fallo, "no se construye en silencio");

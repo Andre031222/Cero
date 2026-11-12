@@ -14,13 +14,13 @@
 #include "prueba.hpp"
 
 using namespace std;
-using namespace std::chrono_literals;
+using namespace cero;
 
 namespace {
 
 filesystem::path carpeta(string_view nombre) {
     auto c = filesystem::temp_directory_path() /
-             ("cero-sesiones-" + to_string(::getpid()) + "-" + string{nombre});
+             ("cero-sesiones-" + to_string(getpid()) + "-" + string{nombre});
     filesystem::remove_all(c);
     return c;
 }
@@ -33,8 +33,8 @@ size_t archivos(const filesystem::path& c) {
 
 PRUEBA(ses_012_dos_almacenes_sobre_la_misma_carpeta_ven_lo_mismo) {
     const auto c = carpeta("compartida");
-    cero::AlmacenEnDisco una{c, 600s, nullopt};
-    cero::AlmacenEnDisco otra{c, 600s, nullopt};
+    AlmacenEnDisco una{c, 600s, nullopt};
+    AlmacenEnDisco otra{c, 600s, nullopt};
 
     const auto g = *una.crear();
     {
@@ -54,19 +54,19 @@ PRUEBA(ses_012_dos_almacenes_sobre_la_misma_carpeta_ven_lo_mismo) {
 PRUEBA(ses_012_dos_servidores_que_no_comparten_memoria_ven_la_misma_sesion) {
     const auto c = carpeta("servidores");
     const auto montar = [&c] {
-        cero::Router r;
+        Router r;
         (void)r.ruta("GET", "/entrar", "entrar");
         (void)r.ruta("GET", "/quien", "quien");
-        return cero::Servidor{std::move(r)}
-            .sesiones(make_shared<cero::AlmacenEnDisco>(c, 600s, nullopt))
+        return Servidor{std::move(r)}
+            .sesiones(make_shared<AlmacenEnDisco>(c, 600s, nullopt))
             .accion("entrar",
-                    [](const cero::Contexto& x) {
+                    [](const Contexto& x) {
                         const auto g = x.abrir_sesion();
                         const auto tomado = g->tomar();
                         g->sesion->poner("usuario", "ana");
                         return string{"dentro"};
                     })
-            .accion("quien", [](const cero::Contexto& x) {
+            .accion("quien", [](const Contexto& x) {
                 const auto& g = x.sesion();
                 if (!g) return string{"nadie"};
                 const auto tomado = g->tomar();
@@ -76,7 +76,7 @@ PRUEBA(ses_012_dos_servidores_que_no_comparten_memoria_ven_la_misma_sesion) {
     const auto una = montar();
     const auto otra = montar();
 
-    cero::Peticion p;
+    Peticion p;
     p.metodo = "GET";
     p.version = "HTTP/1.1";
     p.destino = "/entrar";
@@ -92,7 +92,7 @@ PRUEBA(ses_012_dos_servidores_que_no_comparten_memoria_ven_la_misma_sesion) {
 
 PRUEBA(ses_001_sobre_disco_leer_no_crea) {
     const auto c = carpeta("leer");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     COMPRUEBA(!a.recuperar(nullopt).has_value(), "SES-001");
     COMPRUEBA(!a.recuperar(string(64, 'a')).has_value(), "SES-001");
     COMPRUEBA(a.cuantas() == 0 && archivos(c) == 0, "SES-001: y no dejó nada escrito");
@@ -102,8 +102,8 @@ PRUEBA(ses_001_sobre_disco_leer_no_crea) {
 PRUEBA(un_identificador_que_no_lo_es_no_sale_de_la_carpeta) {
     const auto c = carpeta("camino");
     const auto ajena = carpeta("ajena");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
-    cero::AlmacenEnDisco otra{ajena, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco otra{ajena, 600s, nullopt};
     const auto suya = otra.crear()->sesion->id();
     const auto escapada = "../" + ajena.filename().string() + "/" + suya;
     COMPRUEBA(!a.recuperar(escapada).has_value(), "no se lee una sesión de fuera: " + escapada);
@@ -116,7 +116,7 @@ PRUEBA(un_identificador_que_no_lo_es_no_sale_de_la_carpeta) {
 
 PRUEBA(ses_005_y_006_rotar_sobre_disco) {
     const auto c = carpeta("rotar");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     const auto g = *a.crear();
     {
         const auto tomado = g.tomar();
@@ -142,7 +142,7 @@ PRUEBA(ses_005_y_006_rotar_sobre_disco) {
 
 PRUEBA(invalidar_borra_el_archivo) {
     const auto c = carpeta("invalidar");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     const auto g = *a.crear();
     COMPRUEBA(archivos(c) == 1, "crear ya escribe");
     {
@@ -156,7 +156,7 @@ PRUEBA(invalidar_borra_el_archivo) {
 
 PRUEBA(una_sesion_caducada_se_borra_al_tocarla) {
     const auto c = carpeta("caducada");
-    cero::AlmacenEnDisco a{c, 0s, nullopt};
+    AlmacenEnDisco a{c, 0s, nullopt};
     const auto id = a.crear()->sesion->id();
     this_thread::sleep_for(5ms);
     COMPRUEBA(!a.recuperar(id).has_value(), "caducada por inactividad");
@@ -166,7 +166,7 @@ PRUEBA(una_sesion_caducada_se_borra_al_tocarla) {
 
 PRUEBA(la_carpeta_y_los_archivos_solo_los_lee_su_dueno) {
     const auto c = carpeta("permisos");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     (void)a.crear();
     const auto ajenos = filesystem::perms::group_all | filesystem::perms::others_all;
     COMPRUEBA((filesystem::status(c).permissions() & ajenos) == filesystem::perms::none,
@@ -179,7 +179,7 @@ PRUEBA(la_carpeta_y_los_archivos_solo_los_lee_su_dueno) {
 
 PRUEBA(ses_007_dos_peticiones_sobre_la_misma_sesion_en_disco_no_se_pisan) {
     const auto c = carpeta("pisarse");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     const auto id = a.crear()->sesion->id();
 
     const auto una = *a.recuperar(id);
@@ -195,7 +195,7 @@ PRUEBA(ses_007_dos_peticiones_sobre_la_misma_sesion_en_disco_no_se_pisan) {
     }
     a.guardar(otra);
 
-    cero::AlmacenEnDisco fresco{c, 600s, nullopt};
+    AlmacenEnDisco fresco{c, 600s, nullopt};
     const auto vista = fresco.recuperar(id);
     COMPRUEBA(vista && vista->sesion->leer("de-una") == "1", "SES-007: la primera no se perdió");
     COMPRUEBA(vista && vista->sesion->leer("de-otra") == "2", "SES-007: ni la segunda");
@@ -204,7 +204,7 @@ PRUEBA(ses_007_dos_peticiones_sobre_la_misma_sesion_en_disco_no_se_pisan) {
 
 PRUEBA(ses_007_hilos_que_recuperan_y_guardan_a_la_vez_no_pierden_nada) {
     const auto c = carpeta("hilos");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     const auto id = a.crear()->sesion->id();
     constexpr int kHilos = 8;
     constexpr int kVueltas = 25;
@@ -217,14 +217,14 @@ PRUEBA(ses_007_hilos_que_recuperan_y_guardan_a_la_vez_no_pierden_nada) {
                     if (!g) continue;
                     {
                         const auto tomado = g->tomar();
-                        g->sesion->poner(cero::formato("clave-{}-{}", h, i), "x");
+                        g->sesion->poner(formato("clave-{}-{}", h, i), "x");
                     }
                     a.guardar(*g);
                 }
             });
         }
     }
-    cero::AlmacenEnDisco fresco{c, 600s, nullopt};
+    AlmacenEnDisco fresco{c, 600s, nullopt};
     const auto vista = fresco.recuperar(id);
     COMPRUEBA(vista && vista->sesion->atributos().size() == kHilos * kVueltas,
               "SES-007: " + to_string(vista ? vista->sesion->atributos().size() : 0));
@@ -240,7 +240,7 @@ PRUEBA(los_provisionales_viejos_se_barren_al_arrancar) {
     ofstream{reciente} << "{";
     filesystem::last_write_time(viejo, filesystem::file_time_type::clock::now() - 2h);
 
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     COMPRUEBA(!filesystem::exists(viejo), "el que dejó una caída hace horas se borra");
     COMPRUEBA(filesystem::exists(reciente), "el que puede estar escribiendo otra instancia, no");
     filesystem::remove_all(c);
@@ -253,7 +253,7 @@ PRUEBA(una_carpeta_que_es_un_enlace_no_se_acepta) {
     filesystem::create_directory_symlink(destino, c);
     bool rechazada = false;
     try {
-        cero::AlmacenEnDisco a{c, 600s, nullopt};
+        AlmacenEnDisco a{c, 600s, nullopt};
     } catch (const filesystem::filesystem_error&) {
         rechazada = true;
     }
@@ -264,7 +264,7 @@ PRUEBA(una_carpeta_que_es_un_enlace_no_se_acepta) {
 
 PRUEBA(un_archivo_forjado_con_fechas_absurdas_no_vale) {
     const auto c = carpeta("forjado");
-    cero::AlmacenEnDisco a{c, 600s, nullopt};
+    AlmacenEnDisco a{c, 600s, nullopt};
     const string id(64, 'c');
     ofstream{c / id} << R"({"creada":18448744073709551,"tocada":18448744073709551,"datos":{}})";
     COMPRUEBA(!a.recuperar(id).has_value(), "una fecha que desborda el reloj no resucita la sesión");

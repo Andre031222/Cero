@@ -7,32 +7,34 @@
 #include <string_view>
 #include <utility>
 
+using namespace std;
+
 namespace cero::http2 {
 namespace {
 
-using Fallo = std::unexpected<FalloConexion>;
+using Fallo = unexpected<FalloConexion>;
 
-Fallo mal(Error codigo, std::string_view porque) { return Fallo{FalloConexion{codigo, porque}}; }
+Fallo mal(Error codigo, string_view porque) { return Fallo{FalloConexion{codigo, porque}}; }
 
-std::string cuatro(std::uint32_t v) {
-    std::string s;
+string cuatro(uint32_t v) {
+    string s;
     for (int desplaza : {24, 16, 8, 0}) s += static_cast<char>((v >> desplaza) & 0xff);
     return s;
 }
 
 }
 
-std::uint32_t entero32(std::string_view donde, std::size_t desde) {
+uint32_t entero32(string_view donde, size_t desde) {
     if (desde + 4 > donde.size()) return 0;
-    const auto b = [&](std::size_t i) {
-        return static_cast<std::uint32_t>(static_cast<unsigned char>(donde[desde + i]));
+    const auto b = [&](size_t i) {
+        return static_cast<uint32_t>(static_cast<unsigned char>(donde[desde + i]));
     };
     return (b(0) << 24) | (b(1) << 16) | (b(2) << 8) | b(3);
 }
 
-std::string Trama::octetos() const {
+string Trama::octetos() const {
     const auto n = carga.size();
-    std::string salida;
+    string salida;
     salida.reserve(9 + n);
     for (int desplaza : {16, 8, 0}) salida += static_cast<char>((n >> desplaza) & 0xff);
     salida += static_cast<char>(tipo);
@@ -90,35 +92,35 @@ Resultado<void> Trama::comprobar() const {
     return {};
 }
 
-Trama Trama::ping_ack(std::string_view carga) { return {kPing, kReconoce, 0, std::string{carga}}; }
+Trama Trama::ping_ack(string_view carga) { return {kPing, kReconoce, 0, string{carga}}; }
 
 Trama Trama::settings_ack() { return {kSettings, kReconoce, 0, {}}; }
 
-Trama Trama::rst(std::uint32_t flujo, Error codigo) {
-    return {kRstStream, 0, flujo, cuatro(static_cast<std::uint32_t>(codigo))};
+Trama Trama::rst(uint32_t flujo, Error codigo) {
+    return {kRstStream, 0, flujo, cuatro(static_cast<uint32_t>(codigo))};
 }
 
-Trama Trama::goaway(std::uint32_t ultimo, Error codigo) {
-    return {kGoaway, 0, 0, cuatro(ultimo) + cuatro(static_cast<std::uint32_t>(codigo))};
+Trama Trama::goaway(uint32_t ultimo, Error codigo) {
+    return {kGoaway, 0, 0, cuatro(ultimo) + cuatro(static_cast<uint32_t>(codigo))};
 }
 
-Trama Trama::ventana(std::uint32_t flujo, std::uint32_t cuanto) {
+Trama Trama::ventana(uint32_t flujo, uint32_t cuanto) {
     return {kWindowUpdate, 0, flujo, cuatro(cuanto)};
 }
 
-Resultado<Trama> leer_trama(Fuente& origen, std::uint32_t max) {
+Resultado<Trama> leer_trama(Fuente& origen, uint32_t max) {
     char cabecera[9];
     if (origen.leer(cabecera, 9) != 9) return mal(Error::Ninguno, "la conexión se cerró");
 
-    const auto b = [&](std::size_t i) {
-        return static_cast<std::uint32_t>(static_cast<unsigned char>(cabecera[i]));
+    const auto b = [&](size_t i) {
+        return static_cast<uint32_t>(static_cast<unsigned char>(cabecera[i]));
     };
-    const std::uint32_t largo = (b(0) << 16) | (b(1) << 8) | b(2);
+    const uint32_t largo = (b(0) << 16) | (b(1) << 8) | b(2);
     if (largo > max) return mal(Error::TamanoDeTrama, "trama mayor que el máximo negociado");
 
     Trama t;
-    t.tipo = static_cast<std::uint8_t>(b(3));
-    t.banderas = static_cast<std::uint8_t>(b(4));
+    t.tipo = static_cast<uint8_t>(b(3));
+    t.banderas = static_cast<uint8_t>(b(4));
     t.flujo = ((b(5) & 0x7f) << 24) | (b(6) << 16) | (b(7) << 8) | b(8);
     t.carga.resize(largo);
     if (largo > 0 && origen.leer(t.carga.data(), largo) != largo) {
@@ -135,8 +137,8 @@ Ajustes Ajustes::del_rfc() {
 }
 
 Trama Ajustes::trama() const {
-    std::string c;
-    const std::pair<std::uint16_t, std::uint32_t> pares[]{
+    string c;
+    const pair<uint16_t, uint32_t> pares[]{
         {0x2, 0},
         {0x3, max_flujos}, {0x4, ventana_inicial}, {0x5, max_trama}, {0x6, max_cabeceras},
     };
@@ -148,10 +150,10 @@ Trama Ajustes::trama() const {
     return {kSettings, 0, 0, std::move(c)};
 }
 
-Resultado<std::int64_t> Ajustes::aplicar(std::string_view carga) {
-    std::int64_t delta = 0;
-    for (std::size_t i = 0; i + 6 <= carga.size(); i += 6) {
-        const auto id = static_cast<std::uint16_t>(
+Resultado<int64_t> Ajustes::aplicar(string_view carga) {
+    int64_t delta = 0;
+    for (size_t i = 0; i + 6 <= carga.size(); i += 6) {
+        const auto id = static_cast<uint16_t>(
             (static_cast<unsigned char>(carga[i]) << 8) | static_cast<unsigned char>(carga[i + 1]));
         const auto v = entero32(carga, i + 2);
         switch (id) {
@@ -161,7 +163,7 @@ Resultado<std::int64_t> Ajustes::aplicar(std::string_view carga) {
             case 0x3: max_flujos = v; break;
             case 0x4:
                 if (v > 0x7fff'ffff) return mal(Error::ControlDeFlujo, "ventana inicial imposible");
-                delta += static_cast<std::int64_t>(v) - static_cast<std::int64_t>(ventana_inicial);
+                delta += static_cast<int64_t>(v) - static_cast<int64_t>(ventana_inicial);
                 ventana_inicial = v;
                 break;
             case 0x5:

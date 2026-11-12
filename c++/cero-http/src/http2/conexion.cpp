@@ -10,7 +10,6 @@
 #include <charconv>
 #include <cerrno>
 #include <chrono>
-#include <cctype>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -38,12 +37,6 @@ using namespace std;
 namespace cero::http2 {
 namespace {
 
-string minuscula(string_view s) {
-    string r{s};
-    ranges::transform(r, r.begin(), [](unsigned char c) { return tolower(c); });
-    return r;
-}
-
 bool contiene_token(string_view lista, string_view token) {
     while (!lista.empty()) {
         const auto coma = lista.find(',');
@@ -69,7 +62,7 @@ public:
 
     void despedir(const Trama& goaway) {
         const lock_guard tomado{candado_};
-        if (escribir(goaway.octetos())) ::shutdown(descriptor_, SHUT_WR);
+        if (escribir(goaway.octetos())) shutdown(descriptor_, SHUT_WR);
         rota_ = true;
     }
 
@@ -118,7 +111,7 @@ private:
         if (rota_) return false;
         if (mandar_todo(descriptor_, octetos, plazos_)) return true;
         rota_ = true;
-        ::shutdown(descriptor_, SHUT_RDWR);
+        shutdown(descriptor_, SHUT_RDWR);
         return false;
     }
 
@@ -190,7 +183,7 @@ private:
 
 bool responder(Comun& comun, uint32_t flujo, const cero::Respuesta& r, bool solo_cabeceras) {
     auto& salida = comun.salida;
-    vector<Cabecera> cabeceras{{"content-length", formato("{}", r.cuerpo.size())}};
+    Cabeceras cabeceras{{"content-length", formato("{}", r.cuerpo.size())}};
     if (!r.tipo.empty()) cabeceras.emplace_back("content-type", r.tipo);
     cabeceras.insert(cabeceras.end(), r.extra.begin(), r.extra.end());
     const auto bloque = cabeceras_de_respuesta(r.estado, cabeceras);
@@ -263,17 +256,17 @@ void lanzar(const shared_ptr<Comun>& comun, const Atender& atender, uint32_t flu
 }
 
 void despedirse(int descriptor) {
-    if (::shutdown(descriptor, SHUT_WR) != 0) return;
+    if (shutdown(descriptor, SHUT_WR) != 0) return;
     timeval espera{};
     espera.tv_usec = 250'000;
-    ::setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
+    setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
     const auto hasta = chrono::steady_clock::now() + chrono::seconds{1};
     char tirar[4096];
-    while (chrono::steady_clock::now() < hasta && ::read(descriptor, tirar, sizeof tirar) > 0) {
+    while (chrono::steady_clock::now() < hasta && read(descriptor, tirar, sizeof tirar) > 0) {
     }
 }
 
-bool anuncia_de_mas(const vector<Cabecera>& cabeceras, size_t tope) {
+bool anuncia_de_mas(const Cabeceras& cabeceras, size_t tope) {
     for (const auto& [nombre, valor] : cabeceras) {
         if (nombre != "content-length") continue;
         uint64_t largo = 0;
@@ -284,7 +277,7 @@ bool anuncia_de_mas(const vector<Cabecera>& cabeceras, size_t tope) {
 }
 
 struct EnCurso {
-    vector<Cabecera> cabeceras;
+    Cabeceras cabeceras;
     string cuerpo;
 };
 
@@ -301,7 +294,7 @@ bool DesdeSocket::llenar() {
         i_ = 0;
     }
     if (tengo_ == buf_.size()) return false;
-    const auto leidos = ::read(descriptor_, buf_.data() + tengo_, buf_.size() - tengo_);
+    const auto leidos = read(descriptor_, buf_.data() + tengo_, buf_.size() - tengo_);
     if (leidos <= 0) return false;
     tengo_ += static_cast<size_t>(leidos);
     return true;
@@ -328,7 +321,7 @@ bool DesdeSocket::esperar(chrono::milliseconds cuanto) {
     if (i_ < tengo_) return true;
     pollfd mira{descriptor_, POLLIN, 0};
     while (true) {
-        const int listo = ::poll(&mira, 1, static_cast<int>(cuanto.count()));
+        const int listo = poll(&mira, 1, static_cast<int>(cuanto.count()));
         if (listo < 0 && errno == EINTR) continue;
         return listo != 0;
     }
@@ -396,7 +389,7 @@ vector<Trama> tramas_de_cabeceras(uint32_t flujo, string_view bloque,
     return tramas;
 }
 
-cero::Peticion armar(vector<Cabecera> cabeceras, string cuerpo) {
+cero::Peticion armar(Cabeceras cabeceras, string cuerpo) {
     cero::Peticion p;
     p.version = "HTTP/2";
     p.destino = "/";

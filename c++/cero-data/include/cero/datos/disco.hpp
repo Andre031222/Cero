@@ -3,8 +3,6 @@
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
-#include <functional>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -12,6 +10,7 @@
 #include <string_view>
 
 #include "cero/sesion.hpp"
+#include "cero/tipos.hpp"
 
 namespace cero {
 
@@ -42,7 +41,7 @@ private:
     std::filesystem::path carpeta_;
     Caducidad caducidad_;
     std::mutex candado_;
-    std::map<std::string, Viva, std::less<>> vivas_;
+    PorNombre<Viva> vivas_;
 };
 
 }

@@ -15,24 +15,26 @@
 
 #include "cero/formato.hpp"
 
+using namespace std;
+
 namespace cero {
 namespace {
 
-std::string comillas(const std::vector<std::string>& v) {
-    std::string r;
+string comillas(const Textos& v) {
+    string r;
     for (const auto& s : v) r += (r.empty() ? "" : ",") + formato("\"{}\"", s);
     return r;
 }
 
-std::uint64_t segundos_desde(std::chrono::steady_clock::time_point t) {
-    using namespace std::chrono;
-    return static_cast<std::uint64_t>(duration_cast<seconds>(steady_clock::now() - t).count());
+uint64_t segundos_desde(chrono::steady_clock::time_point t) {
+    using namespace chrono;
+    return static_cast<uint64_t>(duration_cast<seconds>(steady_clock::now() - t).count());
 }
 
 }
 
-Salud& Salud::comprobacion(std::string_view nombre, std::function<Comprobado()> f) {
-    comprobaciones_.emplace_back(std::string{nombre}, std::move(f));
+Salud& Salud::comprobacion(string_view nombre, function<Comprobado()> f) {
+    comprobaciones_.emplace_back(string{nombre}, std::move(f));
     return *this;
 }
 
@@ -41,8 +43,8 @@ Informe Salud::vivo() const {
 }
 
 Informe Salud::listo() const {
-    std::vector<std::string> van;
-    std::vector<std::string> fallan;
+    Textos van;
+    Textos fallan;
     for (const auto& [nombre, f] : comprobaciones_) {
         Comprobado r = Comprobado::falla("la comprobación lanzó");
         try {
@@ -61,21 +63,20 @@ Informe Salud::listo() const {
         return {200, formato("{{\"listo\":true,\"comprobaciones\":[{}]}}", comillas(van))};
     }
     if (publico) return {503, "{\"listo\":false}"};
-    std::string detalle;
+    string detalle;
     for (const auto& f : fallan) detalle += (detalle.empty() ? "" : ",") + f;
     return {503, formato("{{\"listo\":false,\"fallan\":[{}],\"van\":[{}]}}", detalle, comillas(van))};
 }
 
-std::string interpolar(std::string_view plantilla,
-                       const std::vector<std::string_view>& valores) {
-    std::string salida;
+string interpolar(string_view plantilla, const Vistas& valores) {
+    string salida;
     salida.reserve(plantilla.size());
-    std::size_t i = 0;
+    size_t i = 0;
     while (true) {
         const auto marca = plantilla.find("{}");
-        if (marca == std::string_view::npos) break;
+        if (marca == string_view::npos) break;
         salida += plantilla.substr(0, marca);
-        salida += i < valores.size() ? valores[i] : std::string_view{"{}"};
+        salida += i < valores.size() ? valores[i] : string_view{"{}"};
         ++i;
         plantilla.remove_prefix(marca + 2);
     }
@@ -85,7 +86,7 @@ std::string interpolar(std::string_view plantilla,
 
 namespace {
 
-std::string_view nombre_de(Nivel n) {
+string_view nombre_de(Nivel n) {
     switch (n) {
         case Nivel::Traza: return "Traza";
         case Nivel::Depuracion: return "Depuracion";
@@ -99,83 +100,82 @@ std::string_view nombre_de(Nivel n) {
 
 }
 
-void Log::escribir(Nivel nivel, std::string_view plantilla,
-                   const std::vector<std::string_view>& valores) {
+void Log::escribir(Nivel nivel, string_view plantilla, const Vistas& valores) {
     if (nivel < nivel_ || nivel_ == Nivel::Nada) return;
     auto linea = formato("{} {} {}", nombre_de(nivel), origen_, interpolar(plantilla, valores));
-    const std::lock_guard tomado{candado_};
+    const lock_guard tomado{candado_};
     lineas_.push_back(std::move(linea));
 }
 
-void Log::con_error(std::string_view plantilla, const std::vector<std::string_view>& valores,
-                    std::string_view tipo, std::string_view mensaje) {
+void Log::con_error(string_view plantilla, const Vistas& valores,
+                    string_view tipo, string_view mensaje) {
     escribir(Nivel::Error, formato("{}: {}: {}", plantilla, tipo, mensaje), valores);
 }
 
-std::vector<std::string> Log::lineas() const {
-    const std::lock_guard tomado{candado_};
+Textos Log::lineas() const {
+    const lock_guard tomado{candado_};
     return lineas_;
 }
 
-void Metricas::ignorar(std::string_view patron) {
-    const std::unique_lock escritura{candado_};
+void Metricas::ignorar(string_view patron) {
+    const unique_lock escritura{candado_};
     ignoradas_.emplace_back(patron);
 }
 
-void Metricas::anotar(std::string_view patron, unsigned estado, std::chrono::microseconds tardo) {
-    const std::unique_lock escritura{candado_};
-    if (std::ranges::find(ignoradas_, patron) != ignoradas_.end()) return;
-    total_.fetch_add(1, std::memory_order_relaxed);
-    auto& c = por_patron_.try_emplace(std::string{patron}).first->second;
+void Metricas::anotar(string_view patron, unsigned estado, chrono::microseconds tardo) {
+    const unique_lock escritura{candado_};
+    if (ranges::find(ignoradas_, patron) != ignoradas_.end()) return;
+    total_.fetch_add(1, memory_order_relaxed);
+    auto& c = por_patron_.try_emplace(string{patron}).first->second;
     ++c.peticiones;
     if (estado >= 400) ++c.errores;
-    c.micros.push_back(static_cast<std::uint64_t>(tardo.count()));
+    c.micros.push_back(static_cast<uint64_t>(tardo.count()));
 }
 
-std::uint64_t Metricas::peticiones(std::string_view patron) const {
-    const std::shared_lock lectura{candado_};
+uint64_t Metricas::peticiones(string_view patron) const {
+    const shared_lock lectura{candado_};
     const auto i = por_patron_.find(patron);
     return i == por_patron_.end() ? 0 : i->second.peticiones;
 }
 
-std::uint64_t Metricas::errores(std::string_view patron) const {
-    const std::shared_lock lectura{candado_};
+uint64_t Metricas::errores(string_view patron) const {
+    const shared_lock lectura{candado_};
     const auto i = por_patron_.find(patron);
     return i == por_patron_.end() ? 0 : i->second.errores;
 }
 
-std::optional<std::uint64_t> Metricas::percentil(std::string_view patron, double p) const {
-    const std::shared_lock lectura{candado_};
+optional<uint64_t> Metricas::percentil(string_view patron, double p) const {
+    const shared_lock lectura{candado_};
     const auto i = por_patron_.find(patron);
-    if (i == por_patron_.end() || i->second.micros.empty()) return std::nullopt;
+    if (i == por_patron_.end() || i->second.micros.empty()) return nullopt;
     auto v = i->second.micros;
-    std::ranges::sort(v);
-    const auto donde = static_cast<std::size_t>(
-        std::llround((static_cast<double>(v.size()) - 1.0) * p));
+    ranges::sort(v);
+    const auto donde = static_cast<size_t>(
+        llround((static_cast<double>(v.size()) - 1.0) * p));
     return v[donde];
 }
 
-std::size_t Metricas::patrones() const {
-    const std::shared_lock lectura{candado_};
+size_t Metricas::patrones() const {
+    const shared_lock lectura{candado_};
     return por_patron_.size();
 }
 
-std::string Metricas::json() const {
-    const std::shared_lock lectura{candado_};
-    std::string rutas;
+string Metricas::json() const {
+    const shared_lock lectura{candado_};
+    string rutas;
     for (const auto& [patron, c] : por_patron_) {
         rutas += (rutas.empty() ? "" : ",") +
                  formato("{{\"ruta\":\"{}\",\"peticiones\":{},\"errores\":{}}}", patron,
                        c.peticiones, c.errores);
     }
     return formato("{{\"total\":{},\"activo_s\":{},\"rutas\":[{}]}}",
-                 total_.load(std::memory_order_relaxed), segundos_desde(arranque_), rutas);
+                 total_.load(memory_order_relaxed), segundos_desde(arranque_), rutas);
 }
 
-std::string linea_acceso(std::string_view metodo, std::string_view destino, unsigned estado,
-                         std::optional<std::string_view> usuario,
-                         std::chrono::microseconds tardo) {
-    using namespace std::chrono;
+string linea_acceso(string_view metodo, string_view destino, unsigned estado,
+                    optional<string_view> usuario,
+                    chrono::microseconds tardo) {
+    using namespace chrono;
     return formato("{} {} {} {} {}ms", metodo, destino, estado, usuario.value_or("-"),
                  duration_cast<milliseconds>(tardo).count());
 }

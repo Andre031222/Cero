@@ -7,11 +7,12 @@
 #include "prueba.hpp"
 
 using namespace std;
+using namespace cero;
 
 namespace {
 
-cero::Peticion alta(string_view cuerpo) {
-    cero::Peticion p;
+Peticion alta(string_view cuerpo) {
+    Peticion p;
     p.metodo = "POST";
     p.destino = "/usuarios";
     p.version = "HTTP/1.1";
@@ -20,25 +21,25 @@ cero::Peticion alta(string_view cuerpo) {
     return p;
 }
 
-cero::Servidor servidor() {
-    cero::Router r;
+Servidor servidor() {
+    Router r;
     (void)r.ruta("POST", "/usuarios", "alta");
-    return cero::Servidor{std::move(r)}.accion("alta", [](const cero::Contexto& c) {
-        return cero::validar(c.cuerpo_json(), {
-                                                  {"nombre", cero::Obligatorio{}},
-                                                  {"nombre", cero::Texto{2, 20}},
-                                                  {"edad", cero::Entero{0, 150}},
+    return Servidor{std::move(r)}.accion("alta", [](const Contexto& c) {
+        return validar(c.cuerpo_json(), {
+                                                  {"nombre", Obligatorio{}},
+                                                  {"nombre", Texto{2, 20}},
+                                                  {"edad", Entero{0, 150}},
                                               });
     });
 }
 
-cero::Json leido(const cero::Respuesta& r) { return cero::leer(r.cuerpo).value_or(cero::Json{}); }
+Json leido(const Respuesta& r) { return leer(r.cuerpo).value_or(Json{}); }
 
 PRUEBA(seg_027_un_cuerpo_valido_llega_sin_alterar) {
     const string cuerpo = R"({"edad":30,"extra":[1,"dos"],"nombre":"  Ana  "})";
     const auto r = servidor().responder(alta(cuerpo));
     COMPRUEBA(r.estado == 200, "SEG-027");
-    COMPRUEBA(leido(r) == cero::leer(cuerpo).value_or(cero::Json{}), "SEG-027: " + r.cuerpo);
+    COMPRUEBA(leido(r) == leer(cuerpo).value_or(Json{}), "SEG-027: " + r.cuerpo);
     COMPRUEBA(leido(r).get("nombre") && leido(r).get("nombre")->cadena() == "  Ana  ",
               "SEG-027: validar no es normalizar");
 }
@@ -92,11 +93,11 @@ PRUEBA(el_utf8_mal_formado_se_rechaza_en_todas_sus_formas) {
     }
 }
 
-cero::Servidor solo_obligatorio() {
-    cero::Router r;
+Servidor solo_obligatorio() {
+    Router r;
     (void)r.ruta("POST", "/usuarios", "alta");
-    return cero::Servidor{std::move(r)}.accion("alta", [](const cero::Contexto& c) {
-        return cero::validar(c.cuerpo_json(), {{"apodo", cero::Obligatorio{}}});
+    return Servidor{std::move(r)}.accion("alta", [](const Contexto& c) {
+        return validar(c.cuerpo_json(), {{"apodo", Obligatorio{}}});
     });
 }
 

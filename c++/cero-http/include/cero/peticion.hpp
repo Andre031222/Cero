@@ -2,11 +2,11 @@
 
 #include <cstddef>
 #include <expected>
-#include <functional>
-#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
+
+#include "cero/tipos.hpp"
 
 namespace cero {
 
@@ -47,7 +47,7 @@ struct Peticion {
     std::string metodo;
     std::string destino;
     std::string version;
-    std::map<std::string, std::string, std::less<>> cabeceras;
+    PorNombre<std::string> cabeceras;
     std::string cuerpo;
 
     std::optional<std::string_view> cabecera(std::string_view nombre) const;

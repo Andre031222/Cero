@@ -9,14 +9,16 @@
 #include <utility>
 #include <vector>
 
+using namespace std;
+
 namespace cero {
 
-std::vector<std::string_view> trocear(std::string_view camino) {
-    std::vector<std::string_view> partes;
+Vistas trocear(string_view camino) {
+    Vistas partes;
     while (!camino.empty()) {
         const auto barra = camino.find('/');
         if (const auto parte = camino.substr(0, barra); !parte.empty()) partes.push_back(parte);
-        if (barra == std::string_view::npos) break;
+        if (barra == string_view::npos) break;
         camino.remove_prefix(barra + 1);
     }
     return partes;
@@ -24,73 +26,71 @@ std::vector<std::string_view> trocear(std::string_view camino) {
 
 namespace {
 
-bool es_variable(std::string_view p) { return p.starts_with('{') && p.ends_with('}'); }
+bool es_variable(string_view p) { return p.starts_with('{') && p.ends_with('}'); }
 
 }
 
-std::expected<Patron, std::string> Patron::nuevo(std::string_view crudo) {
+expected<Patron, string> Patron::nuevo(string_view crudo) {
     const auto partes = trocear(crudo);
-    for (std::size_t i = 0; i < partes.size(); ++i) {
-        const std::string_view p = partes[i];
-        if (p == "*" && i + 1 != partes.size()) return std::unexpected("el comodín solo va al final");
-        if (p == "{}") return std::unexpected("variable sin nombre");
-        if (p.starts_with('{') != p.ends_with('}')) return std::unexpected("variable sin cerrar");
+    for (size_t i = 0; i < partes.size(); ++i) {
+        const string_view p = partes[i];
+        if (p == "*" && i + 1 != partes.size()) return unexpected("el comodín solo va al final");
+        if (p == "{}") return unexpected("variable sin nombre");
+        if (p.starts_with('{') != p.ends_with('}')) return unexpected("variable sin cerrar");
     }
     return Patron{crudo};
 }
 
-std::optional<Captura> Patron::casa(std::string_view camino) const {
+optional<Captura> Patron::casa(string_view camino) const {
     const auto patron = trocear(crudo_);
     const auto partes = trocear(camino);
     Captura captura;
-    for (std::size_t i = 0; i < patron.size(); ++i) {
-        const std::string_view seg = patron[i];
+    for (size_t i = 0; i < patron.size(); ++i) {
+        const string_view seg = patron[i];
         if (seg == "*") {
             if (i >= partes.size()) {
                 captura["*"] = "";
                 return captura;
             }
-            captura["*"] = std::string{partes[i].data(),
-                                       partes.back().data() + partes.back().size()};
+            captura["*"] = string{partes[i].data(), partes.back().data() + partes.back().size()};
             return captura;
         }
-        if (i >= partes.size()) return std::nullopt;
+        if (i >= partes.size()) return nullopt;
         if (es_variable(seg)) {
-            captura[std::string{seg.substr(1, seg.size() - 2)}] = std::string{partes[i]};
+            captura[string{seg.substr(1, seg.size() - 2)}] = string{partes[i]};
             continue;
         }
-        if (partes[i] != seg) return std::nullopt;
+        if (partes[i] != seg) return nullopt;
     }
-    return partes.size() == patron.size() ? std::optional{captura} : std::nullopt;
+    return partes.size() == patron.size() ? optional{captura} : nullopt;
 }
 
-std::size_t Patron::literales() const {
+size_t Patron::literales() const {
     const auto partes = trocear(crudo_);
-    return std::ranges::count_if(partes, [](std::string_view p) { return p != "*" && !es_variable(p); });
+    return ranges::count_if(partes, [](string_view p) { return p != "*" && !es_variable(p); });
 }
 
-std::expected<void, std::string> Router::ruta(std::string_view metodo, std::string_view patron,
-                                              std::string_view nombre) {
+expected<void, string> Router::ruta(string_view metodo, string_view patron, string_view nombre) {
     auto p = Patron::nuevo(patron);
-    if (!p) return std::unexpected(p.error());
-    std::string verbo{metodo};
-    std::ranges::transform(verbo, verbo.begin(), [](unsigned char c) { return std::toupper(c); });
-    rutas_.push_back({std::move(verbo), std::move(*p), std::string{nombre}});
+    if (!p) return unexpected(p.error());
+    string verbo{metodo};
+    ranges::transform(verbo, verbo.begin(), [](unsigned char c) { return toupper(c); });
+    rutas_.push_back({std::move(verbo), std::move(*p), string{nombre}});
     return {};
 }
 
-std::vector<const Router::Ruta*> Router::candidatas(std::string_view camino) const {
-    std::vector<const Ruta*> salida;
+vector<const Router::Ruta*> Router::candidatas(string_view camino) const {
+    vector<const Ruta*> salida;
     for (const auto& r : rutas_) {
         if (r.patron.casa(camino)) salida.push_back(&r);
     }
-    std::ranges::stable_sort(salida, std::ranges::greater{},
-                             [](const Ruta* r) { return r->patron.literales(); });
+    ranges::stable_sort(salida, ranges::greater{},
+                        [](const Ruta* r) { return r->patron.literales(); });
     return salida;
 }
 
-Resolucion Router::resolver(std::string_view metodo, std::string_view camino) const {
-    const std::string_view buscado = metodo == "HEAD" ? "GET" : metodo;
+Resolucion Router::resolver(string_view metodo, string_view camino) const {
+    const string_view buscado = metodo == "HEAD" ? "GET" : metodo;
     const auto candidatas = this->candidatas(camino);
 
     for (const Ruta* r : candidatas) {
@@ -98,22 +98,21 @@ Resolucion Router::resolver(std::string_view metodo, std::string_view camino) co
     }
     if (candidatas.empty()) return NoHay{};
 
-    std::vector<std::string> verbos;
+    Textos verbos;
     for (const Ruta* r : candidatas) verbos.push_back(r->metodo);
-    const auto tiene = [&verbos](std::string_view v) {
-        return std::ranges::find(verbos, v) != verbos.end();
+    const auto tiene = [&verbos](string_view v) {
+        return ranges::find(verbos, v) != verbos.end();
     };
     if (tiene("GET") && !tiene("HEAD")) verbos.emplace_back("HEAD");
-    std::ranges::sort(verbos);
-    verbos.erase(std::ranges::unique(verbos).begin(), verbos.end());
+    ranges::sort(verbos);
+    verbos.erase(ranges::unique(verbos).begin(), verbos.end());
     return VerboNoPermitido{std::move(verbos)};
 }
 
-std::optional<std::string> Router::patron_de(std::string_view metodo,
-                                             std::string_view camino) const {
-    const std::string_view buscado = metodo == "HEAD" ? "GET" : metodo;
+optional<string> Router::patron_de(string_view metodo, string_view camino) const {
+    const string_view buscado = metodo == "HEAD" ? "GET" : metodo;
     const auto candidatas = this->candidatas(camino);
-    if (candidatas.empty()) return std::nullopt;
+    if (candidatas.empty()) return nullopt;
     for (const Ruta* r : candidatas) {
         if (r->metodo == buscado) return r->patron.crudo();
     }

@@ -170,7 +170,7 @@ Servidor&& Servidor::limite(unsigned cupo, chrono::seconds ventana) && {
     return std::move(*this);
 }
 
-Servidor&& Servidor::csrf(vector<string> exenciones) && {
+Servidor&& Servidor::csrf(Textos exenciones) && {
     csrf_activo_ = true;
     csrf_exento_ = std::move(exenciones);
     return std::move(*this);
@@ -186,7 +186,7 @@ Servidor&& Servidor::sesiones(shared_ptr<Sesiones> s) && {
     return std::move(*this);
 }
 
-Servidor&& Servidor::sin_registrar(vector<string> caminos) && {
+Servidor&& Servidor::sin_registrar(Textos caminos) && {
     sin_registrar_ = std::move(caminos);
     for (const auto& c : sin_registrar_) metricas_->ignorar(c);
     return std::move(*this);
@@ -401,27 +401,27 @@ int abrir_oyente(const string& direccion, unsigned short puerto) {
     pista.ai_flags = AI_PASSIVE;
     addrinfo* lista = nullptr;
     const auto servicio = to_string(puerto);
-    if (const int fallo = ::getaddrinfo(direccion.c_str(), servicio.c_str(), &pista, &lista);
+    if (const int fallo = getaddrinfo(direccion.c_str(), servicio.c_str(), &pista, &lista);
         fallo != 0) {
-        aviso("cero · dirección no válida: {} ({})", direccion, ::gai_strerror(fallo));
+        aviso("cero · dirección no válida: {} ({})", direccion, gai_strerror(fallo));
         return -1;
     }
     int oyente = -1;
     int error = 0;
     for (const addrinfo* a = lista; a != nullptr; a = a->ai_next) {
-        oyente = ::socket(a->ai_family, a->ai_socktype, a->ai_protocol);
+        oyente = socket(a->ai_family, a->ai_socktype, a->ai_protocol);
         if (oyente < 0) {
             error = errno;
             continue;
         }
         const int si = 1;
-        ::setsockopt(oyente, SOL_SOCKET, SO_REUSEADDR, &si, sizeof si);
-        if (::bind(oyente, a->ai_addr, a->ai_addrlen) == 0 && ::listen(oyente, 128) == 0) break;
+        setsockopt(oyente, SOL_SOCKET, SO_REUSEADDR, &si, sizeof si);
+        if (::bind(oyente, a->ai_addr, a->ai_addrlen) == 0 && listen(oyente, 128) == 0) break;
         error = errno;
-        ::close(oyente);
+        close(oyente);
         oyente = -1;
     }
-    ::freeaddrinfo(lista);
+    freeaddrinfo(lista);
     if (oyente < 0) {
         aviso("cero · no se puede escuchar en {}:{}: {}", direccion, puerto, strerror(error));
     }
@@ -430,8 +430,8 @@ int abrir_oyente(const string& direccion, unsigned short puerto) {
 
 string quien_es(const sockaddr_storage& quien, socklen_t cuanto) {
     char texto[NI_MAXHOST] = {};
-    if (::getnameinfo(reinterpret_cast<const sockaddr*>(&quien), cuanto, texto, sizeof texto,
-                      nullptr, 0, NI_NUMERICHOST) != 0) {
+    if (getnameinfo(reinterpret_cast<const sockaddr*>(&quien), cuanto, texto, sizeof texto,
+                    nullptr, 0, NI_NUMERICHOST) != 0) {
         return "desconocido";
     }
     return texto;
@@ -479,7 +479,7 @@ int Servidor::escuchar(unsigned short puerto) const {
     while (true) {
         sockaddr_storage quien{};
         auto cuanto = static_cast<socklen_t>(sizeof quien);
-        const int cliente = ::accept(oyente, reinterpret_cast<sockaddr*>(&quien), &cuanto);
+        const int cliente = accept(oyente, reinterpret_cast<sockaddr*>(&quien), &cuanto);
         if (cliente < 0) continue;
         const auto desde = quien_es(quien, cuanto);
         sin_sigpipe(cliente);
@@ -491,12 +491,12 @@ int Servidor::escuchar(unsigned short puerto) const {
                 } catch (...) {
                     log_->escribir(Nivel::Error, "la conexión con {} cayó: {}", {desde, en_curso().mensaje});
                 }
-                ::close(cliente);
+                close(cliente);
                 --*vivas;
             }}.detach();
         } catch (const system_error&) {
             --*vivas;
-            ::close(cliente);
+            close(cliente);
         }
     }
 }

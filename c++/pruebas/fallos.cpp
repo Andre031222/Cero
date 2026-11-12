@@ -8,11 +8,12 @@
 #include "prueba.hpp"
 
 using namespace std;
+using namespace cero;
 
 namespace {
 
-cero::Peticion peticion(string_view destino) {
-    cero::Peticion p;
+Peticion peticion(string_view destino) {
+    Peticion p;
     p.metodo = "GET";
     p.destino = destino;
     p.version = "HTTP/1.1";
@@ -22,26 +23,26 @@ cero::Peticion peticion(string_view destino) {
 
 bool contiene(const string& texto, string_view trozo) { return texto.find(trozo) != string::npos; }
 
-cero::Servidor servidor() {
-    cero::Router r;
+Servidor servidor() {
+    Router r;
     (void)r.ruta("GET", "/estalla", "estalla");
     (void)r.ruta("GET", "/revienta/{id}", "revienta");
     (void)r.ruta("GET", "/no-esta", "no_esta");
     (void)r.ruta("GET", "/huerfana", "sin_accion");
     (void)r.ruta("GET", "/bien", "bien");
     (void)r.ruta("GET", "/ocupado", "ocupado");
-    return cero::Servidor{std::move(r)}
+    return Servidor{std::move(r)}
         .accion("estalla",
-                [](const cero::Contexto&) -> string {
+                [](const Contexto&) -> string {
                     throw runtime_error("la contraseña de la base es 'hunter2'");
                 })
-        .accion("revienta", [](const cero::Contexto&) -> string { throw 42; })
-        .accion("no_esta", [](const cero::Contexto&) -> string {
-            throw cero::Fallo{404, "el artículo no existe"};
+        .accion("revienta", [](const Contexto&) -> string { throw 42; })
+        .accion("no_esta", [](const Contexto&) -> string {
+            throw Fallo{404, "el artículo no existe"};
         })
-        .accion("bien", [](const cero::Contexto&) -> string { throw cero::Fallo{200, "todo bien"}; })
-        .accion("ocupado", [](const cero::Contexto&) -> string {
-            throw cero::Fallo{503, "la base no contesta", cero::Json::objeto({{"host", "db-interna:5432"}})};
+        .accion("bien", [](const Contexto&) -> string { throw Fallo{200, "todo bien"}; })
+        .accion("ocupado", [](const Contexto&) -> string {
+            throw Fallo{503, "la base no contesta", Json::objeto({{"host", "db-interna:5432"}})};
         });
 }
 
@@ -78,8 +79,8 @@ PRUEBA(rut_026_un_estado_declarado_se_conserva) {
 }
 
 PRUEBA(rut_027_el_manejador_de_error_decide) {
-    const auto s = servidor().al_fallar([](const cero::Contexto&, const cero::Fallo& f) {
-        auto r = cero::Respuesta::json(cero::Json::objeto({{"motivo", f.mensaje}}).escribir());
+    const auto s = servidor().al_fallar([](const Contexto&, const Fallo& f) {
+        auto r = Respuesta::json(Json::objeto({{"motivo", f.mensaje}}).escribir());
         r.estado = 409;
         return r;
     });
@@ -89,7 +90,7 @@ PRUEBA(rut_027_el_manejador_de_error_decide) {
     COMPRUEBA(s.responder(peticion("/estalla")).estado == 409, "RUT-027: también sobre un 500");
 }
 
-bool en_el_log(const cero::Servidor& s, string_view trozo) {
+bool en_el_log(const Servidor& s, string_view trozo) {
     for (const auto& l : s.log().lineas()) {
         if (contiene(l, trozo)) return true;
     }
@@ -111,7 +112,7 @@ PRUEBA(rut_024_el_detalle_de_un_5xx_no_sale_pero_se_anota) {
 }
 
 PRUEBA(si_al_fallar_tambien_falla_se_anotan_los_dos) {
-    const auto s = servidor().al_fallar([](const cero::Contexto&, const cero::Fallo&) -> cero::Respuesta {
+    const auto s = servidor().al_fallar([](const Contexto&, const Fallo&) -> Respuesta {
         throw runtime_error("el manejador se rompió");
     });
     const auto r = s.responder(peticion("/estalla"));
@@ -121,7 +122,7 @@ PRUEBA(si_al_fallar_tambien_falla_se_anotan_los_dos) {
 }
 
 PRUEBA(un_middleware_que_lanza_no_tumba_el_servidor) {
-    const auto s = servidor().usar([](const cero::Contexto&, const cero::Accion&) -> cero::Respuesta {
+    const auto s = servidor().usar([](const Contexto&, const Accion&) -> Respuesta {
         throw runtime_error("roto");
     });
     COMPRUEBA(s.responder(peticion("/no-esta")).estado == 500, "sale un 500, no un terminate");

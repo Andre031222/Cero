@@ -1,9 +1,7 @@
 #include "cero/http2/hpack.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cctype>
 #include <expected>
 #include <optional>
 #include <string>
@@ -11,25 +9,28 @@
 #include <utility>
 #include <vector>
 
+#include "cero/formato.hpp"
 #include "cero/http2/hpack_tablas.hpp"
+
+using namespace std;
 
 namespace cero::http2 {
 namespace {
 
-using Fallo = std::unexpected<FalloConexion>;
+using Fallo = unexpected<FalloConexion>;
 
-Fallo mal(std::string_view porque) { return Fallo{FalloConexion{Error::Compresion, porque}}; }
+Fallo mal(string_view porque) { return Fallo{FalloConexion{Error::Compresion, porque}}; }
 
-Fallo calma(std::string_view porque) { return Fallo{FalloConexion{Error::Calma, porque}}; }
+Fallo calma(string_view porque) { return Fallo{FalloConexion{Error::Calma, porque}}; }
 
-unsigned char en(std::string_view s, std::size_t i) {
+unsigned char en(string_view s, size_t i) {
     return static_cast<unsigned char>(s[i]);
 }
 
-Resultado<std::size_t> leer_entero(std::string_view bloque, std::size_t& i, std::uint8_t bits) {
-    const std::size_t mascara = (std::size_t{1} << bits) - 1;
+Resultado<size_t> leer_entero(string_view bloque, size_t& i, uint8_t bits) {
+    const size_t mascara = (size_t{1} << bits) - 1;
     if (i >= bloque.size()) return mal("entero HPACK cortado");
-    std::size_t valor = en(bloque, i) & mascara;
+    size_t valor = en(bloque, i) & mascara;
     ++i;
     if (valor < mascara) return valor;
 
@@ -38,23 +39,23 @@ Resultado<std::size_t> leer_entero(std::string_view bloque, std::size_t& i, std:
         if (desplazamiento > 28) return mal("entero HPACK demasiado grande");
         const auto octeto = en(bloque, i);
         ++i;
-        valor += static_cast<std::size_t>(octeto & 0x7f) << desplazamiento;
+        valor += static_cast<size_t>(octeto & 0x7f) << desplazamiento;
         if ((octeto & 0x80) == 0) return valor;
     }
 }
 
-std::optional<std::pair<std::size_t, unsigned>> casar(std::uint64_t acumulado, unsigned bits) {
-    for (std::size_t simbolo = 0; simbolo <= kEos; ++simbolo) {
+optional<pair<size_t, unsigned>> casar(uint64_t acumulado, unsigned bits) {
+    for (size_t simbolo = 0; simbolo <= kEos; ++simbolo) {
         const unsigned largo = kLargo[simbolo];
         if (largo > bits) continue;
-        if (static_cast<std::uint32_t>(acumulado >> (bits - largo)) == kCodigo[simbolo]) {
-            return std::pair{simbolo, largo};
+        if (static_cast<uint32_t>(acumulado >> (bits - largo)) == kCodigo[simbolo]) {
+            return pair{simbolo, largo};
         }
     }
-    return std::nullopt;
+    return nullopt;
 }
 
-Resultado<std::string> leer_cadena(std::string_view bloque, std::size_t& i) {
+Resultado<string> leer_cadena(string_view bloque, size_t& i) {
     if (i >= bloque.size()) return mal("cadena HPACK cortada");
     const bool huffman = (en(bloque, i) & 0x80) != 0;
     const auto largo = leer_entero(bloque, i, 7);
@@ -62,27 +63,26 @@ Resultado<std::string> leer_cadena(std::string_view bloque, std::size_t& i) {
     if (i + *largo > bloque.size()) return mal("cadena HPACK cortada");
     const auto datos = bloque.substr(i, *largo);
     i += *largo;
-    if (!huffman) return std::string{datos};
+    if (!huffman) return string{datos};
     return descomprimir(datos);
 }
 
-std::optional<std::size_t> indice_exacto(std::string_view nombre, std::string_view valor) {
-    for (std::size_t i = 0; i < kEstatica.size(); ++i) {
+optional<size_t> indice_exacto(string_view nombre, string_view valor) {
+    for (size_t i = 0; i < kEstatica.size(); ++i) {
         if (kEstatica[i].first == nombre && kEstatica[i].second == valor) return i + 1;
     }
-    return std::nullopt;
+    return nullopt;
 }
 
-std::optional<std::size_t> indice_de_nombre(std::string_view nombre) {
-    for (std::size_t i = 0; i < kEstatica.size(); ++i) {
+optional<size_t> indice_de_nombre(string_view nombre) {
+    for (size_t i = 0; i < kEstatica.size(); ++i) {
         if (kEstatica[i].first == nombre) return i + 1;
     }
-    return std::nullopt;
+    return nullopt;
 }
 
-void escribir_entero(std::string& salida, std::size_t valor, std::uint8_t bits,
-                     std::uint8_t bandera) {
-    const std::size_t mascara = (std::size_t{1} << bits) - 1;
+void escribir_entero(string& salida, size_t valor, uint8_t bits, uint8_t bandera) {
+    const size_t mascara = (size_t{1} << bits) - 1;
     if (valor < mascara) {
         salida += static_cast<char>(bandera | valor);
         return;
@@ -96,7 +96,7 @@ void escribir_entero(std::string& salida, std::size_t valor, std::uint8_t bits,
     salida += static_cast<char>(resto);
 }
 
-void escribir_cadena(std::string& salida, std::string_view texto) {
+void escribir_cadena(string& salida, string_view texto) {
     const auto comprimido = comprimir(texto);
     if (comprimido.size() < texto.size()) {
         escribir_entero(salida, comprimido.size(), 7, 0x80);
@@ -109,7 +109,7 @@ void escribir_cadena(std::string& salida, std::string_view texto) {
 
 }
 
-void TablaDinamica::meter(std::string nombre, std::string valor) {
+void TablaDinamica::meter(string nombre, string valor) {
     const auto cuanto = coste(nombre, valor);
     while (ocupado_ + cuanto > tope_) {
         if (entradas_.empty()) return;
@@ -120,7 +120,7 @@ void TablaDinamica::meter(std::string nombre, std::string valor) {
     entradas_.insert(entradas_.begin(), Cabecera{std::move(nombre), std::move(valor)});
 }
 
-Resultado<void> TablaDinamica::redimensionar(std::size_t nuevo) {
+Resultado<void> TablaDinamica::redimensionar(size_t nuevo) {
     if (nuevo > tope_maximo_) return mal("actualización de tabla mayor que la negociada");
     tope_ = nuevo;
     while (ocupado_ > tope_ && !entradas_.empty()) {
@@ -130,26 +130,25 @@ Resultado<void> TablaDinamica::redimensionar(std::size_t nuevo) {
     return {};
 }
 
-const Cabecera* TablaDinamica::en(std::size_t indice) const {
+const Cabecera* TablaDinamica::en(size_t indice) const {
     return indice < entradas_.size() ? &entradas_[indice] : nullptr;
 }
 
-Resultado<Cabecera> Decodificador::buscar(std::size_t indice) const {
+Resultado<Cabecera> Decodificador::buscar(size_t indice) const {
     if (indice <= kEstatica.size()) {
         const auto& [n, v] = kEstatica[indice - 1];
-        return Cabecera{std::string{n}, std::string{v}};
+        return Cabecera{string{n}, string{v}};
     }
     const auto* fila = tabla_.en(indice - kEstatica.size() - 1);
     if (fila == nullptr) return mal("índice de HPACK fuera de la tabla");
     return *fila;
 }
 
-Resultado<Cabecera> Decodificador::literal(std::string_view bloque, std::size_t& i,
-                                           std::uint8_t bits) {
+Resultado<Cabecera> Decodificador::literal(string_view bloque, size_t& i, uint8_t bits) {
     const auto indice = leer_entero(bloque, i, bits);
     if (!indice) return Fallo{indice.error()};
 
-    std::string nombre;
+    string nombre;
     if (*indice == 0) {
         auto leido = leer_cadena(bloque, i);
         if (!leido) return Fallo{leido.error()};
@@ -164,10 +163,10 @@ Resultado<Cabecera> Decodificador::literal(std::string_view bloque, std::size_t&
     return Cabecera{std::move(nombre), std::move(*valor)};
 }
 
-Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view bloque) {
-    std::vector<Cabecera> salida;
-    std::size_t tamano = 0;
-    std::size_t i = 0;
+Resultado<Cabeceras> Decodificador::decodificar(string_view bloque) {
+    Cabeceras salida;
+    size_t tamano = 0;
+    size_t i = 0;
     bool admite_actualizacion = true;
 
     while (i < bloque.size()) {
@@ -208,10 +207,10 @@ Resultado<std::vector<Cabecera>> Decodificador::decodificar(std::string_view blo
     return salida;
 }
 
-Resultado<std::string> descomprimir(std::string_view datos) {
-    std::string salida;
+Resultado<string> descomprimir(string_view datos) {
+    string salida;
     salida.reserve(datos.size() * 8 / 5);
-    std::uint64_t acumulado = 0;
+    uint64_t acumulado = 0;
     unsigned bits = 0;
 
     for (char c : datos) {
@@ -224,20 +223,20 @@ Resultado<std::string> descomprimir(std::string_view datos) {
             if (simbolo == kEos) return mal("EOS dentro de una cadena Huffman");
             salida += static_cast<char>(simbolo);
             bits -= largo;
-            acumulado &= (std::uint64_t{1} << bits) - 1;
+            acumulado &= (uint64_t{1} << bits) - 1;
         }
     }
 
     if (bits >= 8) return mal("relleno Huffman de ocho bits o más");
-    if (bits > 0 && acumulado != (std::uint64_t{1} << bits) - 1) {
+    if (bits > 0 && acumulado != (uint64_t{1} << bits) - 1) {
         return mal("relleno Huffman que no son unos");
     }
     return salida;
 }
 
-std::string comprimir(std::string_view datos) {
-    std::string salida;
-    std::uint64_t acumulado = 0;
+string comprimir(string_view datos) {
+    string salida;
+    uint64_t acumulado = 0;
     unsigned bits = 0;
     for (char c : datos) {
         const auto simbolo = static_cast<unsigned char>(c);
@@ -247,23 +246,21 @@ std::string comprimir(std::string_view datos) {
         while (bits >= 8) {
             salida += static_cast<char>((acumulado >> (bits - 8)) & 0xff);
             bits -= 8;
-            acumulado &= (std::uint64_t{1} << bits) - 1;
+            acumulado &= (uint64_t{1} << bits) - 1;
         }
     }
     if (bits > 0) {
         const auto hueco = 8 - bits;
         salida += static_cast<char>(
-            ((acumulado << hueco) | ((std::uint64_t{1} << hueco) - 1)) & 0xff);
+            ((acumulado << hueco) | ((uint64_t{1} << hueco) - 1)) & 0xff);
     }
     return salida;
 }
 
-std::string codificar(const std::vector<Cabecera>& cabeceras) {
-    std::string salida;
+string codificar(const Cabeceras& cabeceras) {
+    string salida;
     for (const auto& [nombre, valor] : cabeceras) {
-        std::string minusculas{nombre};
-        std::ranges::transform(minusculas, minusculas.begin(),
-                               [](unsigned char c) { return std::tolower(c); });
+        const auto minusculas = minuscula(nombre);
         if (const auto i = indice_exacto(minusculas, valor)) {
             escribir_entero(salida, *i, 7, 0x80);
         } else if (const auto j = indice_de_nombre(minusculas)) {

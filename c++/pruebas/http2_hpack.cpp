@@ -9,34 +9,36 @@
 #include "cero/http2/hpack_tablas.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+
 namespace {
 
 using namespace cero::http2;
 
-std::string hex(std::string_view s) {
-    std::string limpio;
+string hex(string_view s) {
+    string limpio;
     for (char c : s) {
-        if (std::isxdigit(static_cast<unsigned char>(c)) != 0) limpio += c;
+        if (isxdigit(static_cast<unsigned char>(c)) != 0) limpio += c;
     }
-    std::string salida;
-    for (std::size_t i = 0; i + 1 < limpio.size(); i += 2) {
-        salida += static_cast<char>(std::stoi(limpio.substr(i, 2), nullptr, 16));
+    string salida;
+    for (size_t i = 0; i + 1 < limpio.size(); i += 2) {
+        salida += static_cast<char>(stoi(limpio.substr(i, 2), nullptr, 16));
     }
     return salida;
 }
 
 Decodificador d() { return Decodificador{4096, 64 * 1024}; }
 
-std::vector<Cabecera> pares(std::vector<std::pair<std::string_view, std::string_view>> v) {
-    std::vector<Cabecera> salida;
-    for (const auto& [n, x] : v) salida.emplace_back(std::string{n}, std::string{x});
+vector<Cabecera> pares(vector<pair<string_view, string_view>> v) {
+    vector<Cabecera> salida;
+    for (const auto& [n, x] : v) salida.emplace_back(string{n}, string{x});
     return salida;
 }
 
 PRUEBA(el_codigo_de_huffman_es_un_codigo_prefijo_completo) {
     double suma = 0;
-    for (auto l : kLargo) suma += std::pow(2.0, -static_cast<int>(l));
-    COMPRUEBA(std::fabs(suma - 1.0) < 1e-12, "suma de Kraft");
+    for (auto l : kLargo) suma += pow(2.0, -static_cast<int>(l));
+    COMPRUEBA(fabs(suma - 1.0) < 1e-12, "suma de Kraft");
     COMPRUEBA(kCodigo.size() == 257 && kLargo.size() == 257, "257 símbolos");
     COMPRUEBA(kEstatica.size() == 61, "61 entradas estáticas");
     COMPRUEBA(kEstatica[0].first == ":authority", "la primera");
@@ -166,30 +168,30 @@ PRUEBA(h2_015_indice_fuera_de_la_tabla) {
 }
 
 PRUEBA(h2_016_eos_dentro_de_una_cadena) {
-    const std::string bloque{"\x00\x00\x84\xff\xff\xff\xff", 7};
+    const string bloque{"\x00\x00\x84\xff\xff\xff\xff", 7};
     COMPRUEBA(!d().decodificar(bloque).has_value(), "H2-016");
 }
 
 PRUEBA(h2_039_la_lista_que_se_expande_al_descomprimirse) {
     Decodificador dec{4096, 2048};
-    std::string bloque;
+    string bloque;
     bloque += '\x40';
     bloque += '\x03';
     bloque += "big";
     bloque += '\x7f';
     bloque += '\xe9';
     bloque += '\x06';
-    bloque += std::string(1000, 'a');
-    bloque += std::string(100, static_cast<char>(0x80 | 62));
+    bloque += string(1000, 'a');
+    bloque += string(100, static_cast<char>(0x80 | 62));
 
     const auto r = dec.decodificar(bloque);
     COMPRUEBA(!r.has_value() && r.error().codigo == Error::Calma, "H2-039");
 }
 
 PRUEBA(h2_050_mas_de_256_campos_con_cookies_partidas) {
-    const auto bloque = [](std::size_t campos) {
-        std::string b{"\x40\x06" "cookie" "\x03" "a=1"};
-        b += std::string(campos - 1, static_cast<char>(0x80 | 62));
+    const auto bloque = [](size_t campos) {
+        string b{"\x40\x06" "cookie" "\x03" "a=1"};
+        b += string(campos - 1, static_cast<char>(0x80 | 62));
         return b;
     };
     Decodificador justo{4096, 64 * 1024};
@@ -201,8 +203,8 @@ PRUEBA(h2_050_mas_de_256_campos_con_cookies_partidas) {
 }
 
 PRUEBA(h2_051_el_tope_de_lista_es_el_que_se_anuncia) {
-    const std::string una{"\x40\x01" "a" "\x01" "b"};
-    const std::string otra(1, static_cast<char>(0x80 | 62));
+    const string una{"\x40\x01" "a" "\x01" "b"};
+    const string otra(1, static_cast<char>(0x80 | 62));
     Decodificador dec{4096, 3 * 34};
     COMPRUEBA(dec.decodificar(una + otra + otra).has_value(), "H2-051: lo anunciado cabe");
     const auto r = dec.decodificar(otra + otra + otra + otra);
@@ -211,14 +213,14 @@ PRUEBA(h2_051_el_tope_de_lista_es_el_que_se_anuncia) {
 
 PRUEBA(las_actualizaciones_de_tabla_tienen_su_sitio_y_su_tope) {
     Decodificador vaciar{4096, 64 * 1024};
-    COMPRUEBA(vaciar.decodificar(std::string{"\x20\x82", 2}).has_value(),
+    COMPRUEBA(vaciar.decodificar(string{"\x20\x82", 2}).has_value(),
               "vaciar y luego indexar sí vale");
 
     Decodificador grande{256, 64 * 1024};
-    COMPRUEBA(!grande.decodificar(std::string{"\x3f\xe1\x1f", 3}).has_value(), "§6.3: 8192 > 256");
+    COMPRUEBA(!grande.decodificar(string{"\x3f\xe1\x1f", 3}).has_value(), "§6.3: 8192 > 256");
 
     Decodificador tarde{4096, 64 * 1024};
-    COMPRUEBA(!tarde.decodificar(std::string{"\x82\x20", 2}).has_value(),
+    COMPRUEBA(!tarde.decodificar(string{"\x82\x20", 2}).has_value(),
               "§4.2: la actualización va al principio del bloque");
 }
 
@@ -232,13 +234,13 @@ PRUEBA(reducir_la_tabla_desaloja_en_el_acto) {
 }
 
 PRUEBA(un_entero_sin_fin_no_cuelga) {
-    std::string bloque{"\x7f"};
-    bloque += std::string(20, '\xff');
+    string bloque{"\x7f"};
+    bloque += string(20, '\xff');
     COMPRUEBA(!d().decodificar(bloque).has_value(), "§5.1");
 }
 
 PRUEBA(una_cadena_cortada_no_lee_de_mas) {
-    COMPRUEBA(!d().decodificar(std::string{"\x00\x0a" "hi", 4}).has_value(), "§5.2");
+    COMPRUEBA(!d().decodificar(string{"\x00\x0a" "hi", 4}).has_value(), "§5.2");
 }
 
 PRUEBA(lo_codificado_se_decodifica_igual) {
@@ -254,7 +256,7 @@ PRUEBA(lo_codificado_se_decodifica_igual) {
 }
 
 PRUEBA(una_entrada_de_la_estatica_ocupa_un_octeto) {
-    COMPRUEBA(codificar(pares({{":status", "200"}})) == std::string{"\x88"}, "§2.3.1");
+    COMPRUEBA(codificar(pares({{":status", "200"}})) == string{"\x88"}, "§2.3.1");
 }
 
 PRUEBA(los_nombres_salen_en_minusculas) {

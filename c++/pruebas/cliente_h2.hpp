@@ -39,16 +39,16 @@ public:
     explicit Cliente(int descriptor) : d_(descriptor), entrada_(descriptor) {
         timeval espera{};
         espera.tv_sec = 5;
-        ::setsockopt(d_, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
-        ::setsockopt(d_, SOL_SOCKET, SO_SNDTIMEO, &espera, sizeof espera);
+        setsockopt(d_, SOL_SOCKET, SO_RCVTIMEO, &espera, sizeof espera);
+        setsockopt(d_, SOL_SOCKET, SO_SNDTIMEO, &espera, sizeof espera);
     }
-    ~Cliente() { ::close(d_); }
+    ~Cliente() { close(d_); }
     Cliente(const Cliente&) = delete;
     Cliente& operator=(const Cliente&) = delete;
 
     bool mandar(std::string_view octetos) {
         while (!octetos.empty()) {
-            const auto n = ::write(d_, octetos.data(), octetos.size());
+            const auto n = write(d_, octetos.data(), octetos.size());
             if (n <= 0) return false;
             octetos.remove_prefix(static_cast<std::size_t>(n));
         }
@@ -103,11 +103,11 @@ struct Par {
 
 inline Par conductor(cero::http2::Atender atender, cero::http2::Ajustes ajustes = {}) {
     int fd[2];
-    ::socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+    socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
     std::thread hilo{[d = fd[0], atender = std::move(atender), ajustes] {
         cero::http2::DesdeSocket entrada{d};
         cero::http2::servir(entrada, ajustes, atender);
-        ::close(d);
+        close(d);
     }};
     return {fd[1], std::move(hilo)};
 }

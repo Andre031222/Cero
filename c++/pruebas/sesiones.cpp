@@ -9,30 +9,31 @@
 #include "cero/sesion.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+using namespace cero;
+
 namespace {
 
-using namespace std::chrono_literals;
-
-cero::Almacen almacen() { return cero::Almacen{600s, std::nullopt}; }
+Almacen almacen() { return Almacen{600s, nullopt}; }
 
 PRUEBA(ses_001_sin_cookie_no_se_recupera_nada) {
     auto a = almacen();
     (void)a.crear();
-    COMPRUEBA(!a.recuperar(std::nullopt).has_value(), "SES-001");
+    COMPRUEBA(!a.recuperar(nullopt).has_value(), "SES-001");
     COMPRUEBA(!a.recuperar("inventado").has_value(), "SES-001");
     COMPRUEBA(a.cuantas() == 1, "SES-001: y leer no crea nada");
 }
 
 PRUEBA(ses_002_el_identificador_es_largo_y_de_fuente_apta) {
-    const auto id = cero::identificador();
+    const auto id = identificador();
     COMPRUEBA(id && id->size() >= 40, "SES-002");
-    COMPRUEBA(id && id->find_first_not_of("0123456789abcdef") == std::string::npos,
+    COMPRUEBA(id && id->find_first_not_of("0123456789abcdef") == string::npos,
               "SES-002: base16, sin alfabeto ambiguo");
 }
 
 PRUEBA(ses_003_dos_sesiones_no_comparten_identificador) {
     auto a = almacen();
-    std::set<std::string> vistos;
+    set<string> vistos;
     for (int i = 0; i < 1000; ++i) vistos.insert(a.crear()->sesion->id());
     COMPRUEBA(vistos.size() == 1000, "SES-003");
 }
@@ -75,12 +76,12 @@ PRUEBA(ses_007_dos_peticiones_simultaneas_no_se_pisan) {
     constexpr int kHilos = 8;
     constexpr int kVueltas = 500;
 
-    std::vector<std::jthread> hilos;
+    vector<jthread> hilos;
     for (int h = 0; h < kHilos; ++h) {
         hilos.emplace_back([&g, h] {
             for (int i = 0; i < kVueltas; ++i) {
                 const auto tomado = g.tomar();
-                (void)g.sesion->poner(cero::formato("clave-{}-{}", h, i), "x");
+                (void)g.sesion->poner(formato("clave-{}-{}", h, i), "x");
             }
         });
     }
@@ -97,32 +98,31 @@ PRUEBA(ses_008_la_cookie_se_emite_una_vez) {
 }
 
 PRUEBA(ses_009_los_atributos_de_la_cookie) {
-    const auto sin_tls = cero::cabecera_cookie("abc", false);
-    COMPRUEBA(sin_tls.find("HttpOnly") != std::string::npos, "SES-009");
-    COMPRUEBA(sin_tls.find("SameSite=Lax") != std::string::npos, "SES-009");
-    COMPRUEBA(sin_tls.find("Secure") == std::string::npos, "SES-009: sin TLS no se miente");
-    COMPRUEBA(cero::cabecera_cookie("abc", true).find("Secure") != std::string::npos,
-              "SES-009: con TLS sí");
+    const auto sin_tls = cabecera_cookie("abc", false);
+    COMPRUEBA(sin_tls.find("HttpOnly") != string::npos, "SES-009");
+    COMPRUEBA(sin_tls.find("SameSite=Lax") != string::npos, "SES-009");
+    COMPRUEBA(sin_tls.find("Secure") == string::npos, "SES-009: sin TLS no se miente");
+    COMPRUEBA(cabecera_cookie("abc", true).find("Secure") != string::npos, "SES-009: con TLS sí");
 }
 
 PRUEBA(el_identificador_se_saca_de_la_cabecera_cookie) {
-    COMPRUEBA(cero::id_de_cookie("otra=1; cero_sid=abc; mas=2") == "abc", "entre varias");
-    COMPRUEBA(cero::id_de_cookie("cero_sid=abc") == "abc", "sola");
-    COMPRUEBA(!cero::id_de_cookie("otra=1").has_value(), "y si no está, no está");
-    COMPRUEBA(!cero::id_de_cookie(std::nullopt).has_value(), "sin cabecera tampoco");
+    COMPRUEBA(id_de_cookie("otra=1; cero_sid=abc; mas=2") == "abc", "entre varias");
+    COMPRUEBA(id_de_cookie("cero_sid=abc") == "abc", "sola");
+    COMPRUEBA(!id_de_cookie("otra=1").has_value(), "y si no está, no está");
+    COMPRUEBA(!id_de_cookie(nullopt).has_value(), "sin cabecera tampoco");
 }
 
 PRUEBA(una_sesion_caducada_no_vuelve_a_valer) {
-    cero::Almacen apretado{0s, std::nullopt};
+    Almacen apretado{0s, nullopt};
     const auto id = apretado.crear()->sesion->id();
-    std::this_thread::sleep_for(5ms);
+    this_thread::sleep_for(5ms);
     COMPRUEBA(!apretado.recuperar(id).has_value(), "caducada por inactividad");
     COMPRUEBA(apretado.cuantas() == 0, "y se suelta al tocarla, sin barrido aparte");
 }
 
 PRUEBA(una_sesion_rescatada_no_nace_sucia_ni_pidiendo_cookie) {
-    const auto ahora = cero::Reloj::now();
-    auto s = cero::Sesion::rescatada("abc", {{"usuario", "ana"}}, ahora, ahora);
+    const auto ahora = Reloj::now();
+    auto s = Sesion::rescatada("abc", {{"usuario", "ana"}}, ahora, ahora);
     COMPRUEBA(s->leer("usuario") == "ana", "vuelve con sus atributos");
     COMPRUEBA(!s->cookie_pendiente().has_value(), "el cliente ya tiene la cookie: es la que usó");
     COMPRUEBA(!s->sucia(), "y no hay nada que volver a guardar");

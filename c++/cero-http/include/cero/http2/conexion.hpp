@@ -48,7 +48,7 @@ std::optional<std::string> base64url(std::string_view texto);
 std::vector<Trama> tramas_de_cabeceras(std::uint32_t flujo, std::string_view bloque,
                                        std::size_t max, bool fin);
 
-cero::Peticion armar(std::vector<Cabecera> cabeceras, std::string cuerpo);
+cero::Peticion armar(Cabeceras cabeceras, std::string cuerpo);
 
 void servir(DesdeSocket& entrada, Ajustes mios, const Atender& atender,
             std::optional<cero::Peticion> primera = std::nullopt, cero::Plazos plazos = {},

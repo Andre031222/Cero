@@ -5,16 +5,19 @@
 #include "cero/peticion.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+using namespace cero;
+
 namespace {
 
-std::expected<cero::Peticion, cero::Rechazo> parsea(std::string_view crudo) {
-    cero::DesdeTexto lector{crudo};
-    return cero::leer(lector);
+expected<Peticion, Rechazo> parsea(string_view crudo) {
+    DesdeTexto lector{crudo};
+    return leer(lector);
 }
 
-unsigned estado(std::string_view crudo) {
+unsigned estado(string_view crudo) {
     const auto p = parsea(crudo);
-    return p ? 200 : cero::estado_de(p.error());
+    return p ? 200 : estado_de(p.error());
 }
 
 PRUEBA(http_001_a_003_las_tres_formas_del_destino) {
@@ -40,7 +43,7 @@ PRUEBA(http_006_y_007_el_metodo_y_sus_mayusculas) {
 }
 
 PRUEBA(http_023_una_linea_desmedida) {
-    std::string larga = "GET /";
+    string larga = "GET /";
     larga.append(20000, 'a');
     larga += " HTTP/1.1\r\nHost: x\r\n\r\n";
     COMPRUEBA(estado(larga) == 431, "HTTP-023");
@@ -49,19 +52,19 @@ PRUEBA(http_023_una_linea_desmedida) {
 PRUEBA(http_026_un_cuerpo_de_mas_no_se_lee) {
     COMPRUEBA(estado("POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 11534336\r\n\r\n") == 413,
               "HTTP-026: un Content-Length de 11 MiB es 413 sin esperar al cuerpo");
-    cero::DesdeTexto justo{"POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nhola"};
-    COMPRUEBA(cero::leer(justo, 4).has_value(), "HTTP-026: lo que cabe en el tope se lee");
-    cero::DesdeTexto trozos{"POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n"
-                            "3\r\nhol\r\n2\r\nas\r\n0\r\n\r\n"};
-    const auto r = cero::leer(trozos, 4);
-    COMPRUEBA(!r && cero::estado_de(r.error()) == 413, "HTTP-026: por trozos también cuenta la suma");
+    DesdeTexto justo{"POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nhola"};
+    COMPRUEBA(leer(justo, 4).has_value(), "HTTP-026: lo que cabe en el tope se lee");
+    DesdeTexto trozos{"POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n"
+                      "3\r\nhol\r\n2\r\nas\r\n0\r\n\r\n"};
+    const auto r = leer(trozos, 4);
+    COMPRUEBA(!r && estado_de(r.error()) == 413, "HTTP-026: por trozos también cuenta la suma");
 }
 
 PRUEBA(http_008_a_011_la_forma_de_una_cabecera) {
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost : x\r\n\r\n") == 400, "HTTP-008");
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: x\r\nX-A: uno\r\n dos\r\n\r\n") == 400, "HTTP-009");
     COMPRUEBA(estado("GET / HTTP/1.1\r\nHost: x\r\nX@raro: v\r\n\r\n") == 400, "HTTP-010");
-    COMPRUEBA(estado(std::string{"GET / HTTP/1.1\r\nHost: x\r\nX-A: a\0b\r\n\r\n", 36}) == 400,
+    COMPRUEBA(estado(string{"GET / HTTP/1.1\r\nHost: x\r\nX-A: a\0b\r\n\r\n", 36}) == 400,
               "HTTP-011");
 }
 

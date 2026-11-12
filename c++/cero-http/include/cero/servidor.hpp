@@ -5,7 +5,6 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -24,18 +23,18 @@
 #include "cero/seguridad.hpp"
 #include "cero/sesion.hpp"
 #include "cero/socket.hpp"
+#include "cero/tipos.hpp"
 
 namespace cero {
 
 class Servidor;
 
+template <class T, class... Otros>
+concept UnoDe = (std::same_as<std::remove_cv_t<T>, Otros> || ...);
+
 template <class T>
-concept EnteroDeRuta =
-    std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool> &&
-    !std::same_as<std::remove_cv_t<T>, char> && !std::same_as<std::remove_cv_t<T>, signed char> &&
-    !std::same_as<std::remove_cv_t<T>, unsigned char> && !std::same_as<std::remove_cv_t<T>, wchar_t> &&
-    !std::same_as<std::remove_cv_t<T>, char8_t> && !std::same_as<std::remove_cv_t<T>, char16_t> &&
-    !std::same_as<std::remove_cv_t<T>, char32_t>;
+concept EnteroDeRuta = std::integral<T> && !UnoDe<T, bool, char, signed char, unsigned char,
+                                                  wchar_t, char8_t, char16_t, char32_t>;
 
 template <class T>
 concept DesdeJson = requires(const Json& j) {
@@ -125,10 +124,10 @@ public:
     Servidor&& proteccion(Proteccion p) &&;
     Servidor&& cors(Cors c) &&;
     Servidor&& limite(unsigned cupo, std::chrono::seconds ventana) &&;
-    Servidor&& csrf(std::vector<std::string> exenciones) &&;
+    Servidor&& csrf(Textos exenciones) &&;
     Servidor&& salud(std::shared_ptr<Salud> s) &&;
     Servidor&& sesiones(std::shared_ptr<Sesiones> s) &&;
-    Servidor&& sin_registrar(std::vector<std::string> caminos) &&;
+    Servidor&& sin_registrar(Textos caminos) &&;
     Servidor&& plazos(Plazos p) &&;
     Servidor&& limites(Limites l) &&;
     Servidor&& direccion(std::string d) &&;
@@ -156,7 +155,7 @@ private:
                       const std::optional<Guardada>& sesion) const;
 
     Router router_;
-    std::map<std::string, Accion, std::less<>> acciones_;
+    PorNombre<Accion> acciones_;
     std::vector<Medio> medios_;
     AlFallar al_fallar_;
     Accion por_defecto_;
@@ -166,9 +165,9 @@ private:
     std::optional<Cors> cors_;
     std::shared_ptr<Limitador> limitador_;
     std::shared_ptr<Salud> salud_;
-    std::vector<std::string> csrf_exento_;
+    Textos csrf_exento_;
     bool csrf_activo_ = false;
-    std::vector<std::string> sin_registrar_;
+    Textos sin_registrar_;
     bool seguro_ = false;
     Plazos plazos_;
     Limites limites_;

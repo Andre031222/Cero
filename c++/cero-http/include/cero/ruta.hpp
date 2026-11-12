@@ -1,17 +1,17 @@
 #pragma once
 
 #include <expected>
-#include <functional>
-#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
 
+#include "cero/tipos.hpp"
+
 namespace cero {
 
-using Captura = std::map<std::string, std::string, std::less<>>;
+using Captura = PorNombre<std::string>;
 
 class Patron {
 public:
@@ -31,7 +31,7 @@ struct Encontrada {
     Captura variables;
 };
 struct VerboNoPermitido {
-    std::vector<std::string> verbos;
+    Textos verbos;
 };
 struct NoHay {};
 
@@ -55,6 +55,6 @@ private:
     std::vector<Ruta> rutas_;
 };
 
-std::vector<std::string_view> trocear(std::string_view camino);
+Vistas trocear(std::string_view camino);
 
 }

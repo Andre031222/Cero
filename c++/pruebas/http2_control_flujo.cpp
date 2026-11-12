@@ -17,35 +17,36 @@
 #include "cliente_h2.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+
 namespace {
 
 using namespace cero::http2;
-using namespace std::chrono_literals;
 using prueba::ajuste;
 using prueba::Cliente;
 using prueba::conductor;
 using prueba::get;
 
-constexpr std::uint16_t kVentanaInicial = 0x4;
-constexpr std::uint32_t kTope = 0x7fff'ffff;
-const auto kSiempre = std::chrono::steady_clock::now() + 24h;
+constexpr uint16_t kVentanaInicial = 0x4;
+constexpr uint32_t kTope = 0x7fff'ffff;
+const auto kSiempre = chrono::steady_clock::now() + 24h;
 
-Trama pide(std::uint32_t flujo) {
+Trama pide(uint32_t flujo) {
     return Trama{kHeaders, kFinCabeceras | kFinFlujo, flujo, codificar(get())};
 }
 
-Atender cuerpo_de(std::size_t n) {
-    return [n](const cero::Peticion&) { return cero::Respuesta::texto(std::string(n, 'x')); };
+Atender cuerpo_de(size_t n) {
+    return [n](const cero::Peticion&) { return cero::Respuesta::texto(string(n, 'x')); };
 }
 
 struct Recibido {
-    std::size_t datos = 0;
+    size_t datos = 0;
     int tramas = 0;
     bool fin = false;
     bool ping = false;
 };
 
-Recibido hasta_el_ping(Cliente& c, std::uint32_t flujo) {
+Recibido hasta_el_ping(Cliente& c, uint32_t flujo) {
     c.mandar(Trama{kPing, 0, 0, "12345678"});
     Recibido r;
     for (auto x = c.trama(); x; x = c.trama()) {
@@ -62,7 +63,7 @@ Recibido hasta_el_ping(Cliente& c, std::uint32_t flujo) {
     return r;
 }
 
-Recibido datos_hasta_el_fin(Cliente& c, std::uint32_t flujo) {
+Recibido datos_hasta_el_fin(Cliente& c, uint32_t flujo) {
     Recibido r;
     for (auto x = c.trama(); x; x = c.trama()) {
         if (x->tipo == kData && x->flujo == flujo) {
@@ -77,25 +78,25 @@ Recibido datos_hasta_el_fin(Cliente& c, std::uint32_t flujo) {
     return r;
 }
 
-std::size_t primer_data(Cliente& c, std::uint32_t flujo) {
+size_t primer_data(Cliente& c, uint32_t flujo) {
     const auto x = c.hasta(kData);
     return x && x->flujo == flujo ? x->carga.size() : 0;
 }
 
-std::optional<Error> codigo_de(const std::optional<Trama>& x) {
-    if (!x) return std::nullopt;
-    const std::size_t donde = x->tipo == kGoaway ? 4 : 0;
+optional<Error> codigo_de(const optional<Trama>& x) {
+    if (!x) return nullopt;
+    const size_t donde = x->tipo == kGoaway ? 4 : 0;
     return static_cast<Error>(entero32(x->carga, donde));
 }
 
 PRUEBA(h2_040_las_ventanas_reservan_lo_que_cabe) {
     Ventanas v{10};
     v.abrir(1);
-    COMPRUEBA(v.reservar(1, 4, kSiempre) == std::size_t{4}, "H2-040: pide menos de lo que hay");
-    COMPRUEBA(v.reservar(1, 100, kSiempre) == std::size_t{6}, "H2-040: el flujo pone el tope");
+    COMPRUEBA(v.reservar(1, 4, kSiempre) == size_t{4}, "H2-040: pide menos de lo que hay");
+    COMPRUEBA(v.reservar(1, 100, kSiempre) == size_t{6}, "H2-040: el flujo pone el tope");
     COMPRUEBA(v.ventana(1) == 0 && v.ventana(0) == 65'535 - 10, "H2-040: y se descuenta de los dos");
     COMPRUEBA(v.ampliar(1, 1'000'000), "crédito para el flujo");
-    COMPRUEBA(v.reservar(1, 1'000'000, kSiempre) == std::size_t{65'535 - 10}, "H2-040: la conexión pone el tope");
+    COMPRUEBA(v.reservar(1, 1'000'000, kSiempre) == size_t{65'535 - 10}, "H2-040: la conexión pone el tope");
     COMPRUEBA(v.ampliar(0, 0x7fff'ffff) && !v.ampliar(0, 1), "H2-041: la conexión no pasa de 2^31-1");
     COMPRUEBA(!v.ampliar(1, 0x7fff'ffff), "H2-041: ni el flujo");
     COMPRUEBA(v.ampliar(9, 0x7fff'ffff) && !v.ventana(9), "un flujo que ya no está se ignora");
@@ -107,13 +108,13 @@ PRUEBA(h2_040_quien_espera_ventana_despierta_al_soltar_o_cerrar) {
     for (const bool soltar : {true, false}) {
         Ventanas v{0};
         v.abrir(1);
-        std::atomic<bool> vuelto{false};
-        std::optional<std::size_t> dado{7};
-        std::thread espera{[&] {
+        atomic<bool> vuelto{false};
+        optional<size_t> dado{7};
+        thread espera{[&] {
             dado = v.reservar(1, 10, kSiempre);
             vuelto = true;
         }};
-        std::this_thread::sleep_for(50ms);
+        this_thread::sleep_for(50ms);
         COMPRUEBA(!vuelto.load(), "H2-040: sin ventana se espera");
         if (soltar) {
             v.soltar(1);
@@ -128,9 +129,9 @@ PRUEBA(h2_040_quien_espera_ventana_despierta_al_soltar_o_cerrar) {
 PRUEBA(h2_052_quien_espera_ventana_tiene_plazo) {
     Ventanas v{0};
     v.abrir(1);
-    const auto empezo = std::chrono::steady_clock::now();
+    const auto empezo = chrono::steady_clock::now();
     COMPRUEBA(!v.reservar(1, 10, empezo + 100ms), "H2-052: sin crédito en el plazo, no hay reserva");
-    COMPRUEBA(std::chrono::steady_clock::now() - empezo < 1s, "H2-052: y no se espera más");
+    COMPRUEBA(chrono::steady_clock::now() - empezo < 1s, "H2-052: y no se espera más");
 }
 
 PRUEBA(h2_040_no_sale_data_sin_ventana_en_el_flujo) {
@@ -161,7 +162,7 @@ PRUEBA(h2_040_ni_mas_de_lo_que_cabe_en_la_conexion) {
         Cliente c{d};
         c.abrir_h2(ajuste(kVentanaInicial, kTope));
         c.mandar(pide(1));
-        std::size_t llegados = 0;
+        size_t llegados = 0;
         while (llegados < 65'535) {
             const auto x = c.trama();
             if (!x) break;
@@ -216,7 +217,7 @@ void sin_ventana_de_conexion(Cliente& c) {
     c.mandar(pide(1));
     c.mandar(pide(3));
     c.mandar(Trama::ventana(3, 65'535));
-    std::size_t llegados = 0;
+    size_t llegados = 0;
     while (llegados < 65'535) {
         const auto x = c.trama();
         if (!x) break;
@@ -296,7 +297,7 @@ PRUEBA(h2_046_un_cliente_en_el_tope_nunca_es_rechazado) {
         Cliente c{d};
         c.abrir_h2();
         constexpr int kTotal = 1'100;
-        std::uint32_t siguiente = 1;
+        uint32_t siguiente = 1;
         int pedidas = 0;
         for (; pedidas < 2; ++pedidas, siguiente += 2) c.mandar(pide(siguiente));
         while (respuestas < kTotal) {
@@ -331,7 +332,7 @@ PRUEBA(h2_038_rechazar_por_el_tope_no_cuenta_como_corte) {
     s.topes.cortes = 5;
     (void)s.recibir(pide(1));
     bool siempre = true;
-    for (std::uint32_t id = 3; id < 60; id += 2) {
+    for (uint32_t id = 3; id < 60; id += 2) {
         const auto r = s.recibir(pide(id));
         siempre = siempre && r && r->cortado && r->cortado->codigo == Error::Rechazado;
     }
@@ -350,7 +351,7 @@ PRUEBA(h2_038_una_descarga_larga_no_choca_con_el_tope) {
 
     auto vacia = Sesion{Ajustes{}};
     vacia.topes.control_sin_flujo = 20;
-    std::optional<Error> fallo;
+    optional<Error> fallo;
     for (int i = 0; i < 200 && !fallo; ++i) {
         const auto r = vacia.recibir(Trama::ventana(0, 1));
         if (!r) fallo = r.error().codigo;

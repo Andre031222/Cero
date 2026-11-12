@@ -10,6 +10,7 @@
 #include "prueba.hpp"
 
 using namespace std;
+using namespace cero;
 
 namespace {
 
@@ -17,7 +18,7 @@ struct Alta {
     string nombre;
     long long edad;
 
-    static optional<Alta> de_json(const cero::Json& j) {
+    static optional<Alta> de_json(const Json& j) {
         const auto* nombre = j.get("nombre");
         const auto* edad = j.get("edad");
         if (nombre == nullptr || edad == nullptr || !nombre->cadena() || !edad->entero()) {
@@ -27,8 +28,8 @@ struct Alta {
     }
 };
 
-cero::Peticion peticion(string_view metodo, string_view destino, string_view cuerpo = {}) {
-    cero::Peticion p;
+Peticion peticion(string_view metodo, string_view destino, string_view cuerpo = {}) {
+    Peticion p;
     p.metodo = metodo;
     p.destino = destino;
     p.version = "HTTP/1.1";
@@ -37,7 +38,7 @@ cero::Peticion peticion(string_view metodo, string_view destino, string_view cue
     return p;
 }
 
-optional<string> cabecera(const cero::Respuesta& r, string_view n) {
+optional<string> cabecera(const Respuesta& r, string_view n) {
     for (const auto& [nombre, valor] : r.extra) {
         if (nombre == n) return valor;
     }
@@ -50,8 +51,8 @@ string octetos() {
     return todos;
 }
 
-cero::Router router() {
-    cero::Router r;
+Router router() {
+    Router r;
     for (const auto& [metodo, camino, nombre] : vector<tuple<string, string, string>>{
              {"GET", "/a", "texto"},
              {"POST", "/a", "texto"},
@@ -70,37 +71,37 @@ cero::Router router() {
     return r;
 }
 
-cero::Servidor servidor() {
-    return cero::Servidor{router()}
-        .accion("texto", [](const cero::Contexto&) { return string{"hola"}; })
+Servidor servidor() {
+    return Servidor{router()}
+        .accion("texto", [](const Contexto&) { return string{"hola"}; })
         .accion("objeto",
-                [](const cero::Contexto&) { return cero::Json::objeto({{"a", 1}}); })
-        .accion("nada", [](const cero::Contexto&) {})
-        .accion("fuera", [](const cero::Contexto&) { return cero::Respuesta::redirigir("/a"); })
-        .accion("binario", [](const cero::Contexto&) {
-            auto r = cero::Respuesta::codigo(200, octetos());
+                [](const Contexto&) { return Json::objeto({{"a", 1}}); })
+        .accion("nada", [](const Contexto&) {})
+        .accion("fuera", [](const Contexto&) { return Respuesta::redirigir("/a"); })
+        .accion("binario", [](const Contexto&) {
+            auto r = Respuesta::codigo(200, octetos());
             r.tipo = "application/octet-stream";
             return r;
         })
-        .accion("eco", [](const cero::Contexto& c) { return c.peticion.cuerpo; })
-        .accion("descarga", [](const cero::Contexto&) {
-            return cero::Respuesta::descarga("x", "a\"b\r\nSet-Cookie: robada",
-                                             "application/octet-stream");
+        .accion("eco", [](const Contexto& c) { return c.peticion.cuerpo; })
+        .accion("descarga", [](const Contexto&) {
+            return Respuesta::descarga("x", "a\"b\r\nSet-Cookie: robada",
+                                       "application/octet-stream");
         })
         .accion("numero",
-                [](const cero::Contexto& c) { return to_string(c.variable_como<unsigned>("id") * 2); })
+                [](const Contexto& c) { return to_string(c.variable_como<unsigned>("id") * 2); })
         .accion("alta",
-                [](const cero::Contexto& c) {
+                [](const Contexto& c) {
                     const auto a = c.cuerpo_como<Alta>();
                     return a.nombre + " · " + to_string(a.edad);
                 })
-        .accion("agente", [](const cero::Contexto& c) {
+        .accion("agente", [](const Contexto& c) {
             return string{c.cabecera("user-agent").value_or("sin agente")};
         });
 }
 
 template <class T>
-concept SeConvierte = requires(const cero::Contexto& c) { c.template variable_como<T>(""); };
+concept SeConvierte = requires(const Contexto& c) { c.template variable_como<T>(""); };
 
 static_assert(SeConvierte<int> && SeConvierte<unsigned long long>);
 static_assert(!SeConvierte<bool> && !SeConvierte<char> && !SeConvierte<char8_t> &&
@@ -172,13 +173,13 @@ PRUEBA(rut_023_el_binario_llega_entero) {
 PRUEBA(rut_028_el_middleware_envuelve_en_orden) {
     vector<string> traza;
     const auto s = servidor()
-                       .usar([&traza](const cero::Contexto& c, const cero::Accion& siguiente) {
+                       .usar([&traza](const Contexto& c, const Accion& siguiente) {
                            traza.push_back("entra 1");
                            auto r = siguiente(c);
                            traza.push_back("sale 1");
                            return r;
                        })
-                       .usar([&traza](const cero::Contexto& c, const cero::Accion& siguiente) {
+                       .usar([&traza](const Contexto& c, const Accion& siguiente) {
                            traza.push_back("entra 2");
                            auto r = siguiente(c);
                            traza.push_back("sale 2");
@@ -190,7 +191,7 @@ PRUEBA(rut_028_el_middleware_envuelve_en_orden) {
 
 PRUEBA(rut_029_el_middleware_ve_tambien_los_404) {
     int vistos = 0;
-    const auto s = servidor().usar([&vistos](const cero::Contexto& c, const cero::Accion& siguiente) {
+    const auto s = servidor().usar([&vistos](const Contexto& c, const Accion& siguiente) {
         ++vistos;
         return siguiente(c).cabecera("X-Paso-Por-Aqui", "si");
     });
@@ -202,11 +203,11 @@ PRUEBA(rut_029_el_middleware_ve_tambien_los_404) {
 
 PRUEBA(rut_030_y_031_el_manejador_por_defecto_no_se_come_el_405) {
     const auto s = servidor()
-                       .usar([](const cero::Contexto& c, const cero::Accion& siguiente) {
+                       .usar([](const Contexto& c, const Accion& siguiente) {
                            return siguiente(c).cabecera("X-Marca", "puesta");
                        })
-                       .por_defecto([](const cero::Contexto&) {
-                           return cero::Respuesta::html("<!doctype html><title>spa</title>");
+                       .por_defecto([](const Contexto&) {
+                           return Respuesta::html("<!doctype html><title>spa</title>");
                        });
 
     const auto spa = s.responder(peticion("GET", "/una/ruta/del/cliente"));

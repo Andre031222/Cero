@@ -1,8 +1,6 @@
 #pragma once
 
 #include <expected>
-#include <functional>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -11,6 +9,8 @@
 #include <variant>
 #include <vector>
 
+#include "cero/tipos.hpp"
+
 namespace cero {
 
 class Json {
@@ -18,7 +18,7 @@ public:
     struct Nulo {
         bool operator==(const Nulo&) const = default;
     };
-    using Objeto = std::map<std::string, Json, std::less<>>;
+    using Objeto = PorNombre<Json>;
     using Lista = std::vector<Json>;
 
     Json() = default;

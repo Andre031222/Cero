@@ -6,18 +6,21 @@
 #include "cero/ruta.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+using namespace cero;
+
 namespace {
 
-cero::Patron patron(std::string_view crudo) { return *cero::Patron::nuevo(crudo); }
+Patron patron(string_view crudo) { return *Patron::nuevo(crudo); }
 
-std::string atiende(const cero::Router& r, std::string_view metodo, std::string_view camino) {
+string atiende(const Router& r, string_view metodo, string_view camino) {
     const auto res = r.resolver(metodo, camino);
-    if (const auto* e = std::get_if<cero::Encontrada>(&res)) return e->nombre;
-    if (std::holds_alternative<cero::VerboNoPermitido>(res)) return "405";
+    if (const auto* e = get_if<Encontrada>(&res)) return e->nombre;
+    if (holds_alternative<VerboNoPermitido>(res)) return "405";
     return "404";
 }
 
-std::string variable(const cero::Patron& p, std::string_view camino, std::string_view nombre) {
+string variable(const Patron& p, string_view camino, string_view nombre) {
     const auto c = p.casa(camino);
     if (!c) return "<no casa>";
     const auto i = c->find(nombre);
@@ -50,14 +53,14 @@ PRUEBA(rut_005_el_comodin_captura_el_resto) {
 }
 
 PRUEBA(rut_006_y_007_un_patron_malo_no_llega_a_existir) {
-    COMPRUEBA(!cero::Patron::nuevo("/a/*/b").has_value(), "RUT-006");
-    COMPRUEBA(!cero::Patron::nuevo("/a/{id").has_value(), "RUT-007");
-    COMPRUEBA(!cero::Patron::nuevo("/a/id}").has_value(), "RUT-007: y sin abrir");
-    COMPRUEBA(!cero::Patron::nuevo("/a/{}").has_value(), "RUT-007: y sin nombre");
+    COMPRUEBA(!Patron::nuevo("/a/*/b").has_value(), "RUT-006");
+    COMPRUEBA(!Patron::nuevo("/a/{id").has_value(), "RUT-007");
+    COMPRUEBA(!Patron::nuevo("/a/id}").has_value(), "RUT-007: y sin abrir");
+    COMPRUEBA(!Patron::nuevo("/a/{}").has_value(), "RUT-007: y sin nombre");
 }
 
 PRUEBA(rut_008_el_literal_gana_al_variable) {
-    cero::Router r;
+    Router r;
     COMPRUEBA(r.ruta("GET", "/usuarios/{id}", "ver").has_value(), "se registra");
     COMPRUEBA(r.ruta("GET", "/usuarios/nuevo", "alta").has_value(), "se registra");
     COMPRUEBA(atiende(r, "GET", "/usuarios/nuevo") == "alta", "RUT-008");
@@ -65,19 +68,19 @@ PRUEBA(rut_008_el_literal_gana_al_variable) {
 }
 
 PRUEBA(rut_009_a_011_no_hay_ruta_no_es_verbo_equivocado) {
-    cero::Router r;
+    Router r;
     (void)r.ruta("GET", "/a", "ver");
     COMPRUEBA(atiende(r, "GET", "/no-existe") == "404", "RUT-009");
     COMPRUEBA(atiende(r, "POST", "/a") == "405", "RUT-009");
 
     const auto res = r.resolver("POST", "/a");
-    const auto* mal = std::get_if<cero::VerboNoPermitido>(&res);
-    COMPRUEBA(mal && mal->verbos == std::vector<std::string>{"GET", "HEAD"}, "RUT-010");
+    const auto* mal = get_if<VerboNoPermitido>(&res);
+    COMPRUEBA(mal && mal->verbos == vector<string>{"GET", "HEAD"}, "RUT-010");
     COMPRUEBA(atiende(r, "HEAD", "/a") == "ver", "RUT-011");
 }
 
 PRUEBA(el_patron_que_atendio_se_puede_nombrar) {
-    cero::Router r;
+    Router r;
     (void)r.ruta("GET", "/usuarios/{id}", "ver");
     COMPRUEBA(r.patron_de("GET", "/usuarios/7") == "/usuarios/{id}", "OBS-014");
     COMPRUEBA(!r.patron_de("GET", "/nada").has_value(), "y lo que no casa no tiene patrón");

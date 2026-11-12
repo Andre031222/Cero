@@ -7,16 +7,19 @@
 #include "cero/estaticos.hpp"
 #include "prueba.hpp"
 
+using namespace std;
+using namespace cero;
+
 namespace {
 
-namespace fs = std::filesystem;
+namespace fs = filesystem;
 
-void escribir(const fs::path& donde, std::string_view que) {
-    std::ofstream{donde, std::ios::binary} << que;
+void escribir(const fs::path& donde, string_view que) {
+    ofstream{donde, ios::binary} << que;
 }
 
-fs::path raiz(std::string_view prueba) {
-    const auto caja = fs::temp_directory_path() / ("cero-est-cpp-" + std::string{prueba});
+fs::path raiz(string_view prueba) {
+    const auto caja = fs::temp_directory_path() / ("cero-est-cpp-" + string{prueba});
     const auto d = caja / "raiz";
     fs::create_directories(d / "sub");
     escribir(d / "index.html", "<h1>portada</h1>");
@@ -26,12 +29,12 @@ fs::path raiz(std::string_view prueba) {
     return d;
 }
 
-cero::Estaticos estaticos(std::string_view prueba) {
-    return *cero::Estaticos::en(raiz(prueba).string());
+Estaticos estaticos(string_view prueba) {
+    return *Estaticos::en(raiz(prueba).string());
 }
 
-bool dice(const cero::Respuesta& r, std::string_view que) {
-    return r.cuerpo.find(que) != std::string::npos;
+bool dice(const Respuesta& r, string_view que) {
+    return r.cuerpo.find(que) != string::npos;
 }
 
 PRUEBA(sirve_lo_que_hay_con_su_tipo) {
@@ -50,9 +53,9 @@ PRUEBA(lo_que_no_esta_da_404) {
 
 PRUEBA(no_se_puede_salir_de_la_raiz) {
     const auto e = estaticos("salir");
-    for (std::string_view intento : {"/../cero-secreto.txt", "/../../etc/passwd",
-                                     "/sub/../../cero-secreto.txt", "//etc/passwd",
-                                     "/./../../cero-secreto.txt"}) {
+    for (string_view intento : {"/../cero-secreto.txt", "/../../etc/passwd",
+                                "/sub/../../cero-secreto.txt", "//etc/passwd",
+                                "/./../../cero-secreto.txt"}) {
         const auto r = e.servir(intento);
         COMPRUEBA(r.estado != 200, intento);
         COMPRUEBA(!dice(r, "no deberías"), intento);
@@ -60,7 +63,7 @@ PRUEBA(no_se_puede_salir_de_la_raiz) {
 }
 
 PRUEBA(el_respaldo_atiende_las_rutas_de_cliente) {
-    auto suelto = *cero::Estaticos::en(raiz("respaldo").string());
+    auto suelto = *Estaticos::en(raiz("respaldo").string());
     const auto e = std::move(suelto).con_respaldo("index.html");
     const auto r = e.servir("/panel/usuarios/7");
     COMPRUEBA(r.estado == 200, "el respaldo atiende");
@@ -74,13 +77,13 @@ PRUEBA(el_respaldo_atiende_las_rutas_de_cliente) {
 PRUEBA(lo_desconocido_no_se_adivina) {
     const auto d = raiz("desconocido");
     escribir(d / "raro.xyz", "datos");
-    const auto e = *cero::Estaticos::en(d.string());
+    const auto e = *Estaticos::en(d.string());
     COMPRUEBA(e.servir("/raro.xyz").tipo == "application/octet-stream",
               "adivinar el tipo es lo que nosniff existe para impedir");
 }
 
 PRUEBA(una_raiz_que_no_existe_no_construye_nada) {
-    COMPRUEBA(!cero::Estaticos::en("/no/existe/esta/raiz").has_value(), "no se construye");
+    COMPRUEBA(!Estaticos::en("/no/existe/esta/raiz").has_value(), "no se construye");
 }
 
 }

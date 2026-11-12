@@ -7,27 +7,28 @@
 #include "cero/seguridad.hpp"
 #include "cero/formato.hpp"
 
+using namespace std;
+
 namespace cero {
 
-Respuesta Respuesta::texto(std::string_view cuerpo) {
-    return {200, "text/plain; charset=utf-8", std::string{cuerpo}, {}};
+Respuesta Respuesta::texto(string_view cuerpo) {
+    return {200, "text/plain; charset=utf-8", string{cuerpo}, {}};
 }
 
-Respuesta Respuesta::json(std::string_view ya_formado) {
-    return {200, "application/json; charset=utf-8", std::string{ya_formado}, {}};
+Respuesta Respuesta::json(string_view ya_formado) {
+    return {200, "application/json; charset=utf-8", string{ya_formado}, {}};
 }
 
-Respuesta Respuesta::html(std::string_view cuerpo) {
-    return {200, "text/html; charset=utf-8", std::string{cuerpo}, {}};
+Respuesta Respuesta::html(string_view cuerpo) {
+    return {200, "text/html; charset=utf-8", string{cuerpo}, {}};
 }
 
-Respuesta Respuesta::codigo(unsigned estado, std::string_view cuerpo) {
-    return {estado, "text/plain; charset=utf-8", std::string{cuerpo}, {}};
+Respuesta Respuesta::codigo(unsigned estado, string_view cuerpo) {
+    return {estado, "text/plain; charset=utf-8", string{cuerpo}, {}};
 }
 
-Respuesta Respuesta::descarga(std::string cuerpo, std::string_view nombre,
-                             std::string_view tipo) {
-    Respuesta r{200, std::string{tipo}, std::move(cuerpo), {}};
+Respuesta Respuesta::descarga(string cuerpo, string_view nombre, string_view tipo) {
+    Respuesta r{200, string{tipo}, std::move(cuerpo), {}};
     r.extra.emplace_back("Content-Disposition",
                          formato("attachment; filename=\"{}\"", sanear_nombre(nombre)));
     return r;
@@ -35,18 +36,18 @@ Respuesta Respuesta::descarga(std::string cuerpo, std::string_view nombre,
 
 Respuesta Respuesta::nada() { return {204, "text/plain; charset=utf-8", {}, {}}; }
 
-Respuesta Respuesta::redirigir(std::string_view a) {
+Respuesta Respuesta::redirigir(string_view a) {
     Respuesta r{302, "text/plain; charset=utf-8", {}, {}};
-    r.extra.emplace_back("Location", std::string{a});
+    r.extra.emplace_back("Location", string{a});
     return r;
 }
 
-Respuesta&& Respuesta::cabecera(std::string_view nombre, std::string_view valor) && {
+Respuesta&& Respuesta::cabecera(string_view nombre, string_view valor) && {
     extra.emplace_back(nombre, valor);
     return std::move(*this);
 }
 
-std::string_view razon(unsigned estado) {
+string_view razon(unsigned estado) {
     switch (estado) {
         case 200: return "OK";
         case 204: return "No Content";
