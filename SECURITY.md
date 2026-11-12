@@ -2,10 +2,14 @@
 
 ## Cómo avisar de una vulnerabilidad
 
-No abras un issue público. Usa el aviso privado de GitHub: en el repositorio, pestaña
-**Security**, botón **Report a vulnerability**
+No publiques los detalles en un issue. El canal es el aviso privado de GitHub: en el repositorio,
+pestaña **Security**, botón **Report a vulnerability**
 ([enlace directo](https://github.com/Andre031222/Cero/security/advisories/new)). El informe solo lo
 ven los mantenedores hasta que se publique la corrección.
+
+Si ese botón no aparece, abre un issue público titulado «Contacto de seguridad» **sin ningún
+detalle**: ni qué parte falla ni cómo. El mantenedor te responde ahí y abre un canal privado para
+el informe.
 
 ## Qué versiones se corrigen
 
@@ -35,8 +39,10 @@ quiere.
 
 ## In English
 
-Do not open a public issue. Report vulnerabilities privately through GitHub Security Advisories
-(**Security** tab, **Report a vulnerability**). Fixes go to the latest release on Maven Central
+Do not post details in a public issue. Report vulnerabilities privately through GitHub Security
+Advisories (**Security** tab, **Report a vulnerability**). If that button is not available, open a
+public issue titled "Contacto de seguridad" with no details at all, and the maintainer will open a
+private channel. Fixes go to the latest release on Maven Central
 (currently 0.8.x) and to `main`; older releases are not patched. Include the affected
 implementation and version, the impact, reproduction steps and, if known, the `spec/` requirement
 that breaks. This is an academic project with a single maintainer, so response times are
