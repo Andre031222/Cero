@@ -6,7 +6,7 @@ los mismos vectores de conformidad, que son bytes sobre un socket y no saben en 
 escrito quien responde.
 
 **Estado: hito 4.** HTTP/1.1, ruteo, sesiones, seguridad transversal y observabilidad. **23 de 23
-vectores del banco**, 3 de 3 ataques de HTTP/1.1 y 240 pruebas propias.
+vectores del banco**, 3 de 3 ataques de HTTP/1.1 y 253 pruebas propias.
 
 | Hito | Qué cubre | Estado |
 |---|---|---|
@@ -16,6 +16,62 @@ vectores del banco**, 3 de 3 ataques de HTTP/1.1 y 240 pruebas propias.
 | 3 | Seguridad transversal | 28 de 28 · `SEG-001`–`SEG-028` · 83 pruebas |
 | 4 | Observabilidad | 23 de 23 · `OBS-001`–`OBS-023` · 48 pruebas |
 | 4 bis | Plazos y topes | 3 de 3 · `HTTP-024`–`HTTP-026` · 3 de 3 ataques de HTTP/1.1 · 10 pruebas |
+
+## Empezar en Python
+
+Cero no tiene dependencias en ejecución, así que **no necesita un venv**: ni para instalarlo ni para
+correrlo. Hay dos caminos y los dos funcionan con Python 3.12 o posterior.
+
+**Con pip, desde el repositorio:**
+
+```bash
+pip install "git+https://github.com/Andre031222/Cero#subdirectory=python"
+```
+
+Instala solo `cero`, sin arrastrar nada más (`pip show cero` deja «Requires» vacío). Si el Python del
+sistema no admite `pip install` fuera de un entorno, `pipx` o un venv son decisión de tu proyecto, no
+de Cero.
+
+**Con un solo archivo `.pyz`, sin pip:** con el repositorio clonado, Cero y tu aplicación se cierran
+en un archivo que se arranca con `python3` (ver «Usarlo»):
+
+```bash
+python3 -m cero.empaquetar miapp/ app.pyz app:main
+python3 app.pyz
+```
+
+Tres rutas, `app.py`:
+
+```python
+import os
+
+from cero.respuesta import en_json
+from cero.ruta import Router
+from cero.servidor import Servidor
+
+
+def main():
+    router = Router()
+    router.get("/", lambda p: {"hola": "mundo"})
+    router.get("/saludo/{nombre}", lambda p: {"saludo": "hola, " + p.variables["nombre"]})
+    router.post("/eco", lambda p: en_json(p.json()))
+    Servidor(router).escuchar(int(os.environ.get("PUERTO", 8080)))
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash
+python3 app.py
+curl 127.0.0.1:8080/saludo/ana     # {"saludo":"hola, ana"}
+```
+
+`router.get`, `post`, `put`, `delete` y `patch` registran la ruta en una línea, y sin la acción
+sirven de decorador (`@router.get("/x")`). `router.agregar(verbo, patrón, acción)` sigue igual. Una
+acción puede devolver un `dict` o una `list`, que salen como JSON, y `peticion.json()` lee el
+cuerpo (un JSON mal formado responde 400). El ejemplo completo, con su prueba de punta a punta y la
+memoria medida, está en [`ejemplos/python`](../ejemplos/python).
 
 ## Usarlo
 
