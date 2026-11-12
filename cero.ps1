@@ -60,11 +60,51 @@ function Classpath([string] $modulo) {
     return ($partes -join ';')
 }
 
+$Repo = 'https://github.com/Andre031222/Cero'
+
+function NuevoDesdeEjemplo([string] $lenguaje, [string] $destino) {
+    $origen = Join-Path (Join-Path $Aqui 'ejemplos') $lenguaje
+    $nombre = Split-Path $destino -Leaf
+    if (Test-Path $destino) { Malo "ya existe $destino" }
+    Azul "creando $destino…"
+    New-Item -ItemType Directory -Path $destino | Out-Null
+    switch ($lenguaje) {
+        'rust' {
+            Copy-Item -Recurse (Join-Path $origen 'src'), (Join-Path $origen 'tests') $destino
+            $cargo = (Get-Content -Raw (Join-Path $origen 'Cargo.toml')).Replace('name = "ejemplo"', "name = `"$nombre`"").Replace('path = "../../rust/cero-http"', "git = `"$Repo`"")
+            Set-Content -NoNewline -Path (Join-Path $destino 'Cargo.toml') -Value $cargo
+            $prueba = Join-Path (Join-Path $destino 'tests') 'punta_a_punta.rs'
+            Set-Content -NoNewline -Path $prueba -Value (Get-Content -Raw $prueba).Replace('CARGO_BIN_EXE_ejemplo', "CARGO_BIN_EXE_$nombre")
+            $pasos = @('cargo run --release')
+        }
+        'c++' {
+            Copy-Item -Recurse (Join-Path $origen 'CMakeLists.txt'), (Join-Path $origen 'main.cpp'), (Join-Path $origen 'pruebas') $destino
+            $pasos = @('cmake -S . -B build -DCMAKE_BUILD_TYPE=Release; cmake --build build -j', './build/hola')
+        }
+        'python' {
+            Copy-Item (Join-Path $origen 'app.py') $destino
+            Set-Content -Path (Join-Path $destino 'requirements.txt') -Value "cero @ git+$Repo#subdirectory=python"
+            $pasos = @('pip install -r requirements.txt', 'python app.py')
+        }
+    }
+    Write-Host ''
+    Write-Host "    cd $destino"
+    foreach ($paso in $pasos) { Write-Host "    $paso" }
+    Write-Host ''
+}
+
 $Implementaciones = @(
     'java|java|mvn java|mvn -B install||java::-cp cero-http/target/classes;cero-http/target/test-classes cero.http.Conforme|||h2'
     'rust|rust|cargo|cargo test --all ;; cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|target\release\conforme.exe::|cero-http\tests cero-data\tests|159|h2'
     'c++|c++|cmake ctest|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release ;; cmake --build %OBJ% --config Release -j ;; ctest --test-dir %OBJ% -C Release --output-on-failure||%OBJ%\conforme.exe::|pruebas|175|h2'
     'python|python|python3|%CERO_PY% -B -I -m unittest discover -s pruebas -t . -v||%CERO_PY%::-B -m cero.conforme|pruebas|83|'
+)
+
+$Ejemplos = @(
+    'java|mvn java|mvn -B -q package -DskipTests|java::-jar target/ejemplo.jar'
+    'rust|cargo|cargo build --release -q|target\release\ejemplo.exe::'
+    'c++|cmake|cmake -S . -B %OBJ% -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_CERO=%CERO_RAIZ% ;; cmake --build %OBJ% --config Release -j|%OBJ%\hola.exe::'
+    'python|python3||%CERO_PY%::-B app.py'
 )
 
 $Codigo = if ($env:CERO_LANG) { $env:CERO_LANG } elseif ($env:LC_ALL) { $env:LC_ALL } elseif ($env:LANG) { $env:LANG } else { (Get-Culture).Name }
@@ -101,6 +141,9 @@ $TextoEs = @{
     'ver-detalle'       = 'lo último que dijo «{0}»:'
     'ver-todo-bien'     = 'todo está bien'
     'ver-fallan'        = '{0} comprobaciones fallan'
+    'ver-ejemplo'       = 'ejemplo'
+    'ver-no-compila'    = 'no compila'
+    'ver-responde'      = 'GET / da {0}'
 }
 
 $TextoEn = @{
@@ -134,6 +177,9 @@ $TextoEn = @{
     'ver-detalle'       = 'the last thing «{0}» said:'
     'ver-todo-bien'     = 'everything is fine'
     'ver-fallan'        = '{0} checks fail'
+    'ver-ejemplo'       = 'example'
+    'ver-no-compila'    = 'does not build'
+    'ver-responde'      = 'GET / gives {0}'
 }
 
 function T([string] $clave, [object[]] $valores = @()) {
@@ -292,7 +338,7 @@ function CifraVectores([string] $registro) {
 function CarpetasCodigo {
     $carpetas = @()
     foreach ($linea in $Implementaciones) { $carpetas += $linea.Split('|')[1] }
-    $carpetas += 'herramientas'
+    $carpetas += 'herramientas', 'ejemplos'
     return ($carpetas -join ' ')
 }
 
@@ -426,6 +472,30 @@ function PasoRequisitos {
     }
 }
 
+function PasoEjemplos {
+    $env:CERO_RAIZ = $Aqui
+    $env:PUERTO = $V.Puerto
+    $env:PYTHONPATH = Join-Path $Aqui 'python'
+    foreach ($linea in $Ejemplos) {
+        $p = $linea.Split('|')
+        $etiqueta = "$(T 'ver-ejemplo') · $($p[0])"
+        $dir = Join-Path (Join-Path $Aqui 'ejemplos') $p[0]
+        Azul (T 'ver-comprobando' @($etiqueta))
+        $f = Faltan (@('curl') + ($p[1] -split ' '))
+        if ($f) { Anotar $etiqueta (T 'ver-falta' @($f)) $false; continue }
+        $registro = Join-Path $V.Tmp "ejemplo-$($p[0]).log"
+        New-Item -ItemType File -Path $registro -Force | Out-Null
+        $env:OBJ = Join-Path $V.Tmp "obj-ejemplo-$($p[0])"
+        if ($p[2] -and ((Ejecutar $dir (Pasos $p[2]) $registro) -ne 0)) { Anotar $etiqueta (T 'ver-no-compila') $false $registro; continue }
+        if (-not (ConServidor $etiqueta $dir $p[3] $registro)) { continue }
+        $cuerpo = try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://127.0.0.1:$($V.Puerto)/").Content } catch { '' }
+        PararServidor
+        if ("$cuerpo" -eq '{"hola":"mundo"}') { Anotar $etiqueta (T 'ver-responde' @($cuerpo)) $true }
+        else { Anotar $etiqueta (T 'ver-responde' @($(if ($cuerpo) { $cuerpo } else { '—' }))) $false $registro }
+    }
+    Remove-Item Env:PUERTO, Env:PYTHONPATH -ErrorAction SilentlyContinue
+}
+
 function Tabla {
     Write-Host ''
     $fallos = 0
@@ -468,6 +538,7 @@ function Verificar([bool] $sinMotores) {
         PasoBanco
         PasoH2spec
         PasoRequisitos
+        PasoEjemplos
         return [int](Tabla)
     }
     finally {
@@ -529,11 +600,27 @@ switch -Regex ($Orden) {
     }
 
     '^(new|nuevo)$' {
-        Requisitos
-        if ($Resto.Count -eq 0) { Malo 'dime el nombre:  cero nuevo mi-app [grupo] [motor]' }
-        Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'install')
-        Azul "creando $($Resto[0])…"
-        & java -cp (Join-Path $JavaDir 'cero-launcher\target\classes') 'cero.launcher.Nuevo' @Resto
+        $lenguaje = 'java'
+        $libres = @()
+        for ($i = 0; $i -lt $Resto.Count; $i++) {
+            if ($Resto[$i] -in '--lenguaje', '--language') {
+                if ($i + 1 -ge $Resto.Count) { Malo 'dime el nombre:  cero new mi-app [--lenguaje java|rust|c++|python]' }
+                $lenguaje = $Resto[++$i]
+            }
+            elseif ($Resto[$i] -match '^--(lenguaje|language)=(.+)$') { $lenguaje = $Matches[2] }
+            else { $libres += $Resto[$i] }
+        }
+        if ($libres.Count -eq 0 -or $libres[0].StartsWith('-')) { Malo 'dime el nombre:  cero new mi-app [--lenguaje java|rust|c++|python]' }
+        switch ($lenguaje) {
+            'java' {
+                Requisitos
+                Mvn @('-B', '-q', '-f', (Join-Path $JavaDir 'pom.xml'), '-DskipTests', 'install')
+                Azul "creando $($libres[0])…"
+                & java -cp (Join-Path $JavaDir 'cero-launcher\target\classes') 'cero.launcher.Nuevo' @libres
+            }
+            { $_ -in 'rust', 'c++', 'python' } { NuevoDesdeEjemplo $lenguaje $libres[0] }
+            default { Malo "no hay plantilla en ${lenguaje}: elige java, rust, c++ o python" }
+        }
     }
 
     '^fatjar$' {
@@ -643,7 +730,7 @@ switch -Regex ($Orden) {
     default {
         Azul 'cero — órdenes de Cero'
         Write-Host ''
-        Write-Host ('  {0,-24} {1}' -f 'cero new <nombre>',    'crea un proyecto nuevo y listo para arrancar')
+        Write-Host ('  {0,-24} {1}' -f 'cero new <nombre>',    'crea un proyecto listo para arrancar; --lenguaje java|rust|c++|python')
         Write-Host ('  {0,-24} {1}' -f 'cero run [puerto]',    'arranca la aplicación de ejemplo')
         Write-Host ('  {0,-24} {1}' -f 'cero test [módulo]',   'corre las pruebas')
         Write-Host ('  {0,-24} {1}' -f 'cero package',         'genera los JAR y muestra sus tamaños')

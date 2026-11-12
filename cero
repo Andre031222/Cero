@@ -31,7 +31,9 @@ texto_es() {
     java-viejo)       printf '%s' 'Cero necesita Java 25 o superior (hilos virtuales); tienes %s' ;;
     jdk-afectado)     printf '%s' 'nota: no se puede confirmar que el JDK %s traiga la corrección de CVE-2026-91403, porque el aviso de OpenJDK no nombra todavía ninguna versión corregida; usa la build más reciente de tu proveedor y consulta https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
     creando)          printf '%s' 'creando %s…' ;;
-    dime-nombre)      printf '%s' 'dime el nombre:  cero new mi-app [grupo] [motor]' ;;
+    dime-nombre)      printf '%s' 'dime el nombre:  cero new mi-app [--lenguaje java|rust|c++|python]' ;;
+    sin-lenguaje)     printf '%s' 'no hay plantilla en %s: elige java, rust, c++ o python' ;;
+    ya-existe)        printf '%s' 'ya existe %s' ;;
     compilando-ej)    printf '%s' 'compilando la aplicación de ejemplo…' ;;
     arrancando)       printf '%s' 'arrancando en http://localhost:%s' ;;
     probando)         printf '%s' 'probando %s' ;;
@@ -86,6 +88,9 @@ texto_es() {
     ver-detalle)      printf '%s' 'lo último que dijo «%s»:' ;;
     ver-todo-bien)    printf '%s' 'todo está bien' ;;
     ver-fallan)       printf '%s' '%s comprobaciones fallan' ;;
+    ver-ejemplo)      printf '%s' 'ejemplo' ;;
+    ver-no-compila)   printf '%s' 'no compila' ;;
+    ver-responde)     printf '%s' 'GET / da %s' ;;
     ayuda-titulo)     printf '%s' 'cero — órdenes de Cero' ;;
     *)                printf '%s' '' ;;
   esac
@@ -98,7 +103,9 @@ texto_en() {
     java-viejo)       printf '%s' 'Cero needs Java 25 or newer (virtual threads); you have %s' ;;
     jdk-afectado)     printf '%s' 'note: it cannot be confirmed that JDK %s carries the fix for CVE-2026-91403, because the OpenJDK advisory names no fixed version yet; use the newest build from your vendor and see https://openjdk.org/groups/vulnerability/advisories/2026-10-21' ;;
     creando)          printf '%s' 'creating %s…' ;;
-    dime-nombre)      printf '%s' 'give it a name:  cero new my-app [group] [engine]' ;;
+    dime-nombre)      printf '%s' 'give it a name:  cero new my-app [--lenguaje java|rust|c++|python]' ;;
+    sin-lenguaje)     printf '%s' 'there is no template for %s: choose java, rust, c++ or python' ;;
+    ya-existe)        printf '%s' '%s already exists' ;;
     compilando-ej)    printf '%s' 'building the example application…' ;;
     arrancando)       printf '%s' 'starting on http://localhost:%s' ;;
     probando)         printf '%s' 'testing %s' ;;
@@ -153,6 +160,9 @@ texto_en() {
     ver-detalle)      printf '%s' 'the last thing «%s» said:' ;;
     ver-todo-bien)    printf '%s' 'everything is fine' ;;
     ver-fallan)       printf '%s' '%s checks fail' ;;
+    ver-ejemplo)      printf '%s' 'example' ;;
+    ver-no-compila)   printf '%s' 'does not build' ;;
+    ver-responde)     printf '%s' 'GET / gives %s' ;;
     ayuda-titulo)     printf '%s' 'cero — Cero commands' ;;
     *)                printf '%s' '' ;;
   esac
@@ -196,6 +206,34 @@ classpath_ejemplo() {
   echo "$JAVA_DIR/ejemplo/target/classes:$(cat "$destino")"
 }
 
+REPO=https://github.com/Andre031222/Cero
+
+nuevo_desde_ejemplo() {
+  local lenguaje=$1 destino=$2 origen="$AQUI/ejemplos/$1" nombre
+  nombre=$(basename "$destino")
+  [ ! -e "$destino" ] || { malo "$(t ya-existe "$destino")"; exit 1; }
+  azul "$(t creando "$destino")"
+  mkdir -p "$destino"
+  case "$lenguaje" in
+    rust)
+      cp -R "$origen/src" "$origen/tests" "$destino/"
+      sed -e "s|^name = \"ejemplo\"|name = \"$nombre\"|" \
+          -e "s|path = \"../../rust/cero-http\"|git = \"$REPO\"|" "$origen/Cargo.toml" >"$destino/Cargo.toml"
+      sed "s|CARGO_BIN_EXE_ejemplo|CARGO_BIN_EXE_$nombre|" "$origen/tests/punta_a_punta.rs" >"$destino/tests/punta_a_punta.rs"
+      set -- "cargo run --release" ;;
+    c++)
+      cp -R "$origen/CMakeLists.txt" "$origen/main.cpp" "$origen/pruebas" "$destino/"
+      set -- "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j" "./build/hola" ;;
+    python)
+      cp "$origen/app.py" "$destino/"
+      printf 'cero @ git+%s#subdirectory=python\n' "$REPO" >"$destino/requirements.txt"
+      set -- "pip install -r requirements.txt" "python3 app.py" ;;
+  esac
+  printf '\n    cd %s\n' "$destino"
+  printf '    %s\n' "$@"
+  echo
+}
+
 version() { grep -m1 '<version>' "$JAVA_DIR/pom.xml" | sed 's/.*<version>\(.*\)<.*/\1/'; }
 
 IMPLEMENTACIONES='
@@ -203,6 +241,13 @@ java|java|mvn java|mvn -B install||java -cp cero-http/target/classes:cero-http/t
 rust|rust|cargo|cargo test --all && cargo clippy --all-targets -- -D warnings|cargo build --release --bin conforme|./target/release/conforme|cero-http/tests cero-data/tests|159|h2
 c++|c++|cmake ctest|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release && cmake --build "$OBJ" -j && ctest --test-dir "$OBJ" --output-on-failure||"$OBJ/conforme"|pruebas|175|h2
 python|python|python3|python3 -B -I -m unittest discover -s pruebas -t . -v||python3 -B -m cero.conforme|--include=*.py pruebas|83|
+'
+
+EJEMPLOS='
+java|mvn java|mvn -B -q package -DskipTests|java -jar target/ejemplo.jar
+rust|cargo|cargo build --release -q|./target/release/ejemplo
+c++|cmake|cmake -S . -B "$OBJ" -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_CERO="$AQUI" && cmake --build "$OBJ" -j|"$OBJ/hola"
+python|python3||env PYTHONPATH="$AQUI/python" python3 -B app.py
 '
 
 V_PUERTO="${CERO_PUERTO:-8777}"
@@ -272,7 +317,7 @@ cifra_vectores() {
 
 carpetas_codigo() {
   printf '%s' "$IMPLEMENTACIONES" | awk -F'|' 'NF > 1 { printf "%s ", $2 }'
-  printf 'herramientas'
+  printf 'herramientas ejemplos'
 }
 
 arrancar_servidor() {
@@ -447,6 +492,31 @@ paso_requisitos() {
   done 3<<<"$IMPLEMENTACIONES"
 }
 
+paso_ejemplos() {
+  local nombre herr construir arrancar f etiqueta registro cuerpo
+  while IFS='|' read -u 3 -r nombre herr construir arrancar; do
+    [ -n "$nombre" ] || continue
+    etiqueta="$(t ver-ejemplo) · $nombre"
+    azul "$(t ver-comprobando "$etiqueta")"
+    f=$(faltan curl $herr)
+    if [ -n "$f" ]; then anotar_falta "$etiqueta" "$f"; continue; fi
+    export OBJ="$V_TMP/obj-ejemplo-$nombre" PUERTO="$V_PUERTO"
+    registro="$V_TMP/ejemplo-$nombre.log"
+    : >"$registro"
+    if [ -n "$construir" ] && ! ejecutar "$AQUI/ejemplos/$nombre" "$construir" "$registro"; then
+      anotar "$etiqueta" "$(t ver-no-compila)" mal "$registro"
+      continue
+    fi
+    if con_servidor "$etiqueta" "$AQUI/ejemplos/$nombre" "$arrancar" "$registro"; then
+      cuerpo=$(curl -sS --max-time 5 "http://127.0.0.1:$V_PUERTO/" 2>>"$registro" || true)
+      parar_servidor
+      if [ "$cuerpo" = '{"hola":"mundo"}' ]; then anotar "$etiqueta" "$(t ver-responde "$cuerpo")" ok
+      else anotar "$etiqueta" "$(t ver-responde "${cuerpo:-—}")" mal "$registro"; fi
+    fi
+  done 3<<<"$EJEMPLOS"
+  unset PUERTO
+}
+
 rellenar() {
   local n=${#1}
   printf '%s' "$1"
@@ -513,6 +583,7 @@ verificar() {
   paso_banco
   paso_h2spec
   paso_requisitos
+  paso_ejemplos
   tabla_verificar || rc=1
   return $rc
 }
@@ -524,11 +595,26 @@ case "${1:-ayuda}" in
     ;;
 
   new|nuevo)
-    requisitos
-    [ -n "${2:-}" ] || { malo "$(t dime-nombre)"; exit 1; }
-    (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
-    azul "$(t creando "$2")"
-    java -cp "$JAVA_DIR/cero-launcher/target/classes" cero.launcher.Nuevo "${@:2}"
+    shift
+    lenguaje=java
+    libres=()
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --lenguaje|--language) [ $# -ge 2 ] || { malo "$(t dime-nombre)"; exit 1; }; lenguaje=$2; shift 2 ;;
+        --lenguaje=*|--language=*) lenguaje=${1#*=}; shift ;;
+        *) libres+=("$1"); shift ;;
+      esac
+    done
+    [ ${#libres[@]} -gt 0 ] && [ "${libres[0]#-}" = "${libres[0]}" ] || { malo "$(t dime-nombre)"; exit 1; }
+    case "$lenguaje" in
+      java)
+        requisitos
+        (cd "$JAVA_DIR" && "${MVN[@]}" -DskipTests install)
+        azul "$(t creando "${libres[0]}")"
+        java -cp "$JAVA_DIR/cero-launcher/target/classes" cero.launcher.Nuevo "${libres[@]}" ;;
+      rust|c++|python) nuevo_desde_ejemplo "$lenguaje" "${libres[0]}" ;;
+      *) malo "$(t sin-lenguaje "$lenguaje")"; exit 1 ;;
+    esac
     ;;
 
   dist|paquete)
@@ -547,7 +633,8 @@ case "${1:-ayuda}" in
     mkdir -p "$tmp/cero-$v"
     COPYFILE_DISABLE=1 tar -cf - \
         --exclude target --exclude '*.class' --exclude .DS_Store --exclude classpath.txt \
-        -C "$AQUI" java cero cero.cmd cero.ps1 LICENSE NOTICE README.md \
+        --exclude 'ejemplos/*/build' --exclude __pycache__ --exclude Cargo.lock \
+        -C "$AQUI" java ejemplos cero cero.cmd cero.ps1 LICENSE NOTICE README.md \
                   docs/instalar.sh docs/instalar.ps1 \
       | tar -xf - -C "$tmp/cero-$v"
     COPYFILE_DISABLE=1 tar -czf "$destino/cero-$v.tar.gz" -C "$tmp" "cero-$v"
@@ -717,7 +804,7 @@ case "${1:-ayuda}" in
     azul "$(t ayuda-titulo)"
     echo
     if [ "$IDIOMA" = es ]; then
-      set -- "crea un proyecto nuevo y listo para arrancar" "arranca la aplicación de ejemplo" \
+      set -- "crea un proyecto listo para arrancar; --lenguaje java|rust|c++|python" "arranca la aplicación de ejemplo" \
              "corre las pruebas" "genera los JAR y muestra sus tamaños" \
              "un solo jar ejecutable con java -jar" "compila, prueba e instala en ~/.m2" \
              "arma el .tar.gz y el .zip del instalador" "borra lo generado" \
@@ -726,7 +813,7 @@ case "${1:-ayuda}" in
              "migra una aplicación anterior a Cero 0.6.0" \
              "lo esencial de CI, en una orden: ✓ o ✗ por comprobación"
     else
-      set -- "create a new project, ready to run" "start the example application" \
+      set -- "create a project ready to run; --lenguaje java|rust|c++|python" "start the example application" \
              "run the tests" "build the JARs and show their sizes" \
              "a single jar you can run with java -jar" "build, test and install into ~/.m2" \
              "build the .tar.gz and .zip the installer serves" "remove build output" \

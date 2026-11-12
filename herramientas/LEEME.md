@@ -39,3 +39,20 @@ Un comentario que ocupa una línea entera se lleva la línea. Uno que va al fina
 ```
 python3 -I herramientas/pruebas_comentarios.py
 ```
+
+## prueba-cero-new.sh
+
+Crea con `./cero new` un proyecto en cada lenguaje dentro de una carpeta temporal, fuera del
+repositorio, lo compila, lo arranca en un puerto libre de 127.0.0.1 y comprueba que `GET /`
+responde. Antes de compilar mira que la dependencia del proyecto generado apunte a GitHub, y no a
+una carpeta del repositorio.
+
+```
+./herramientas/prueba-cero-new.sh              # los cuatro
+./herramientas/prueba-cero-new.sh rust c++     # solo esos
+```
+
+Para no depender de que el código esté subido, compila contra este repositorio: Rust con un
+`[patch]` pasado por `--config`, C++ con `FETCHCONTENT_SOURCE_DIR_CERO` y Python con `PYTHONPATH`.
+Java usa lo que `cero new` deja instalado en `~/.m2`. Hacen falta Maven y JDK 25, cargo, cmake,
+Python 3.12 y curl. Integración continua la corre en el trabajo `ejemplos`.

@@ -244,7 +244,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sin comentarios
-        run: python3 herramientas/comentarios.py --verificar java rust c++ python herramientas
+        run: python3 herramientas/comentarios.py --verificar java rust c++ python herramientas ejemplos
 
       - name: Las pruebas de la herramienta
         run: python3 -I herramientas/pruebas_comentarios.py
@@ -295,6 +295,38 @@ jobs:
       - name: HTTP/2 no aplica todavía
         run: |
           echo "::notice::Python no habla HTTP/2: h2spec y los ocho ataques de h2 no se corren."
+
+  ejemplos:
+    name: ejemplos/ y cero new en los cuatro lenguajes
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+          cache: maven
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: La prueba de punta a punta de cada ejemplo
+        run: |
+          (cd java && mvn -B -q install -DskipTests)
+          (cd ejemplos/java && mvn -B -q package && java pruebas/PuntaAPunta.java)
+          (cd ejemplos/rust && cargo test)
+          (cd ejemplos/c++ && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_CERO=../.. \
+              && cmake --build build -j && ctest --test-dir build --output-on-failure)
+          (cd ejemplos/python && python3 prueba_punta_a_punta.py)
+
+      - name: cero new genera, compila y arranca cada lenguaje
+        run: ./herramientas/prueba-cero-new.sh
 
   dependencias:
     name: dependencias con CVE conocido
