@@ -1,3 +1,4 @@
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -52,6 +53,12 @@ class Peticion:
     def todas(self, nombre):
         nombre = nombre.lower()
         return [v for n, v in self.cabeceras if n == nombre]
+
+    def json(self):
+        try:
+            return json.loads(self.cuerpo)
+        except ValueError as fallo:
+            raise Rechazo(400, "el cuerpo no es JSON válido") from fallo
 
     def sesion(self):
         if self.buscada or self.almacen is None:

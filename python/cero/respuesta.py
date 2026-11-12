@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, field
 from email.utils import formatdate
 from http import HTTPStatus
@@ -15,6 +16,11 @@ def texto(estado, contenido, cabeceras=()):
                      contenido.encode())
 
 
+def en_json(valor, estado=200):
+    cuerpo = json.dumps(valor, ensure_ascii=False, separators=(",", ":")).encode()
+    return Respuesta(estado, [("Content-Type", "application/json")], cuerpo)
+
+
 def como_respuesta(valor):
     if isinstance(valor, Respuesta):
         return valor
@@ -24,6 +30,8 @@ def como_respuesta(valor):
         return texto(200, valor)
     if isinstance(valor, (bytes, bytearray)):
         return Respuesta(200, [("Content-Type", "application/octet-stream")], bytes(valor))
+    if isinstance(valor, (dict, list)):
+        return en_json(valor)
     raise TypeError(f"una acción no puede devolver {type(valor).__name__}")
 
 

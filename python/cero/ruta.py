@@ -76,6 +76,27 @@ class Router:
             raise ValueError(f"ruta duplicada: {verbo} {patron.texto}")
         self.rutas.append((verbo, patron, accion))
 
+    def _verbo(self, verbo, patron, accion):
+        if accion is None:
+            return lambda funcion: self._verbo(verbo, patron, funcion)
+        self.agregar(verbo, patron, accion)
+        return accion
+
+    def get(self, patron, accion=None):
+        return self._verbo("GET", patron, accion)
+
+    def post(self, patron, accion=None):
+        return self._verbo("POST", patron, accion)
+
+    def put(self, patron, accion=None):
+        return self._verbo("PUT", patron, accion)
+
+    def delete(self, patron, accion=None):
+        return self._verbo("DELETE", patron, accion)
+
+    def patch(self, patron, accion=None):
+        return self._verbo("PATCH", patron, accion)
+
     def resolver(self, verbo, camino):
         casan = [(v, p, a, variables) for v, p, a in self.rutas
                  if (variables := p.casar(camino)) is not None]

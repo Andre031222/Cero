@@ -123,7 +123,10 @@ class Servidor:
         if self.csrf is not None and not self.csrf.admite(peticion):
             return texto(403, "token CSRF ausente o inválido")
         peticion.variables = resultado.variables
-        return como_respuesta(resultado.accion(peticion))
+        try:
+            return como_respuesta(resultado.accion(peticion))
+        except Rechazo as rechazo:
+            return texto(rechazo.estado, rechazo.motivo)
 
     def escuchar(self, puerto, anfitrion="127.0.0.1"):
         try:
