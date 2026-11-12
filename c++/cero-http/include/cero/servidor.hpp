@@ -164,6 +164,7 @@ public:
 
 private:
     std::string anotar(std::string_view metodo, std::string_view patron);
+    Respuesta interno(const Json& cuerpo) const;
     Respuesta despachar(const Peticion& p, std::string_view cliente) const;
     void conversar(int cliente, const std::string& desde, Plazos plazos, Limites limites) const;
     Respuesta cadena(std::size_t i, const Contexto& ctx, std::string_view camino,

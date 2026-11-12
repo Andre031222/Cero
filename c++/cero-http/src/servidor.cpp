@@ -220,18 +220,26 @@ Servidor&& Servidor::tras_tls() && {
     return std::move(*this);
 }
 
+Respuesta Servidor::interno(const Json& cuerpo) const {
+    auto r = Respuesta::json(cuerpo.escribir());
+    r.estado = 500;
+    const auto proteccion = proteccion_.aplicar(seguro_);
+    r.extra.insert(r.extra.end(), proteccion.begin(), proteccion.end());
+    return r;
+}
+
 Respuesta Servidor::responder(const Peticion& p, string_view cliente) const {
+    if (!mal_formadas_.empty()) {
+        const Json::Lista rutas{mal_formadas_.begin(), mal_formadas_.end()};
+        return interno(Json::objeto({{"error", "rutas mal formadas"}, {"rutas", rutas}}));
+    }
     try {
         return despachar(p, cliente);
     } catch (...) {
         const auto camino = p.camino();
         log_->escribir(Nivel::Error, "{} {} falló fuera de la acción: {}",
                        {p.metodo, camino, en_curso().mensaje});
-        auto r = Respuesta::json(Json::objeto({{"error", "error interno"}, {"ruta", camino}}).escribir());
-        r.estado = 500;
-        const auto proteccion = proteccion_.aplicar(seguro_);
-        r.extra.insert(r.extra.end(), proteccion.begin(), proteccion.end());
-        return r;
+        return interno(Json::objeto({{"error", "error interno"}, {"ruta", camino}}));
     }
 }
 

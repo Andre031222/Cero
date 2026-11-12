@@ -43,29 +43,47 @@ FetchContent_MakeAvailable(cero)
 target_link_libraries(app PRIVATE cero::http)
 ```
 
+`GIT_TAG main` funciona en cuanto este código esté en la rama `main` de GitHub; hasta entonces, o
+con una copia local, `-DFETCHCONTENT_SOURCE_DIR_CERO=<ruta-al-repositorio>` hace que CMake la use
+sin descargar nada.
+
 Y una ruta es una línea:
 
 ```cpp
-return Servidor{}
-    .get("/", [](const Contexto&) { return Json::objeto({{"hola", "mundo"}}); })
-    .get("/saludo/{nombre}", [](const Contexto& c) {
-        return Json::objeto({{"saludo", "hola, " + string{*c.variable("nombre")}}});
-    })
-    .post("/eco", [](const Contexto& c) { return c.cuerpo_json(); })
-    .direccion("127.0.0.1")
-    .escuchar(puerto ? stoi(puerto) : 8080);
+#include <string>
+
+#include "cero/servidor.hpp"
+
+using namespace std;
+using namespace cero;
+
+int main() {
+    return Servidor{}
+        .get("/", [](const Contexto&) { return Json::objeto({{"hola", "mundo"}}); })
+        .get("/saludo/{nombre}", [](const Contexto& c) {
+            return Json::objeto({{"saludo", "hola, " + string{*c.variable("nombre")}}});
+        })
+        .post("/eco", [](const Contexto& c) { return c.cuerpo_json(); })
+        .direccion("127.0.0.1")
+        .escuchar(8080);
+}
 ```
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && ./build/hola
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && ./build/app
 ```
 
-El proyecto entero, con su prueba de punta a punta y la memoria medida (1 632 KiB en reposo), está
-en [`ejemplos/c++`](../ejemplos/c++). `get`, `post`, `put`, `delete_` y `patch` registran la ruta y
-la acción de una vez; `delete_` lleva guion bajo porque `delete` es palabra reservada. La forma
-larga, `Router::ruta` y `.accion(nombre, …)`, sigue igual y las dos se mezclan. Un patrón mal
-formado en la forma corta no lanza al registrarse: `escuchar` lo dice en stderr y devuelve 1 sin
-abrir el puerto.
+Escucha solo en `127.0.0.1`; para todas las interfaces, `.direccion("0.0.0.0")`. Es solo POSIX
+(Linux, macOS, los BSD): en Windows no compila todavía, el soporte está previsto y mientras sirve
+WSL.
+
+El proyecto entero, que además lee el puerto de `PUERTO`, con su prueba de punta a punta y la
+memoria medida (1 632 KiB en reposo), está en [`ejemplos/c++`](../ejemplos/c++). `get`, `post`,
+`put`, `delete_` y `patch` registran la ruta y la acción de una vez; `delete_` lleva guion bajo
+porque `delete` es palabra reservada. La forma larga, `Router::ruta` y `.accion(nombre, …)`, sigue
+igual y las dos se mezclan. Un patrón mal formado en la forma corta no lanza al registrarse:
+`escuchar` lo dice en stderr y devuelve 1 sin abrir el puerto, y `responder` contesta 500 con los
+patrones malos en el cuerpo, para que tampoco pase en silencio sin socket.
 
 ## Cuántos requisitos citan las pruebas
 
