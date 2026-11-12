@@ -1,270 +1,169 @@
 # Cero
 
-**Cero no es un framework; es el contrato de un framework de backend, con implementaciones en varios
-lenguajes que lo cumplen y un juez que no conoce el lenguaje.**
+**Un framework de backend escrito como contrato: el mismo comportamiento en Java, Rust, C++ y
+Python, juzgado por un banco de pruebas que no sabe en qué lenguaje está escrito quien responde.**
 
-El contrato son los 182 requisitos numerados de [`spec/`](spec/). El juez es el banco de
-[`spec/banco/`](spec/banco/): bytes sobre un socket, que no saben en qué lenguaje está escrito
-quien responde. Sin dependencias de terceros en ejecución, en ninguna implementación.
+Cero dependencias en ejecución, en ninguna implementación. Tú eliges el lenguaje; el contrato
+garantiza que todos se portan igual.
+
+[![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=000&color=555)](https://central.sonatype.com/namespace/dev.ginit.cero)
+[![Dependencias: 0](https://img.shields.io/badge/dependencias-0-555?style=flat-square&labelColor=000)](spec/)
+[![Licencia: Apache 2.0](https://img.shields.io/badge/licencia-Apache_2.0-555?style=flat-square&labelColor=000)](LICENSE)
+[![En vivo: cero.ginit.dev](https://img.shields.io/badge/en_vivo-cero.ginit.dev-555?style=flat-square&labelColor=000)](https://cero.ginit.dev)
+
+> [!NOTE]
+> **English** — Cero is a backend framework defined as a language-neutral contract: 182 numbered
+> requirements in [`spec/`](spec/), implemented in Java, Rust, C++ and Python, and checked by a
+> black-box test bench that only sees bytes on a socket. Zero runtime dependencies everywhere.
+> One install line per language is in the table below. Documentation in English lives at
+> **[cero.ginit.dev/en](https://cero.ginit.dev/en)**; this repository is written in Spanish on
+> purpose.
+
+![La portada de cero.ginit.dev, servida por el propio framework](docs/imagenes/portada.png)
+
+## Empezar en cinco minutos
+
+Una línea para instalar y una orden para arrancar. Cada carpeta de [`ejemplos/`](ejemplos/) trae la
+misma API de tres rutas, su prueba de punta a punta y el comando con el que se midió su memoria.
+
+| Lenguaje | Instalar | Arrancar | Memoria en reposo |
+|---|---|---|---|
+| [Rust](ejemplos/rust/) | `cargo add cero-http --git https://github.com/Andre031222/Cero` | `cargo run --release` | 1,7 MiB |
+| [C++](ejemplos/c++/) | `FetchContent_Declare(cero GIT_REPOSITORY https://github.com/Andre031222/Cero GIT_TAG main SOURCE_SUBDIR c++)` | `cmake -S . -B build && cmake --build build && ./build/hola` | 1,6 MiB |
+| [Python](ejemplos/python/) | `pip install "git+https://github.com/Andre031222/Cero#subdirectory=python"` | `python3 app.py` | 23,5 MiB |
+| [Java](ejemplos/java/) | `dev.ginit.cero:cero-core:0.8.0` desde Maven Central | `mvn -q package && java -jar target/ejemplo.jar` | 57 MiB |
+
+Las tres rutas son las mismas en los cuatro:
+
+```text
+GET  /                 → {"hola":"mundo"}
+GET  /saludo/{nombre}  → {"saludo":"hola, <nombre>"}
+POST /eco              → el JSON que recibió, o 400 si no es JSON
+```
+
+Así se ven en Rust:
+
+```rust
+use cero_http::{Json, Respuesta, Servidor};
+use std::{env, io};
+
+fn main() -> io::Result<()> {
+    let puerto = env::var("PUERTO").ok().and_then(|p| p.parse().ok()).unwrap_or(8080);
+    Servidor::vacio()
+        .get("/", |_| Respuesta::json(Json::objeto(vec![("hola", "mundo".into())])))
+        .get("/saludo/{nombre}", |c| {
+            let nombre = c.variable("nombre").unwrap_or("mundo");
+            Respuesta::json(Json::objeto(vec![("saludo", format!("hola, {nombre}").into())]))
+        })
+        .post("/eco", |c| Ok(Respuesta::json(c.cuerpo_json()?)))
+        .direccion("127.0.0.1")
+        .escuchar(puerto)
+}
+```
+
+Es [`ejemplos/rust/src/main.rs`](ejemplos/rust/src/main.rs) completo. Los otros tres lenguajes
+están en sus carpetas de `ejemplos/`.
+
+O, con la orden `cero`, un proyecto nuevo ya montado:
+
+```bash
+cero new mi-api --lenguaje rust      # o c++, python, java
+```
+
+La memoria es una medición del ejemplo recién arrancado y sin peticiones, en un Mac con arm64. El
+comando para repetirla está en el LEEME de cada ejemplo. Los ejemplos escuchan solo en `127.0.0.1`;
+su LEEME dice cómo abrirlos a la red.
+
+## Qué lenguaje elegir
+
+Todos cumplen el mismo contrato, así que la elección depende de dónde va a correr:
+
+| Si tienes… | Elige | Por qué |
+|---|---|---|
+| Un VPS pequeño o un equipo con poca RAM | **Rust** o **C++** | Menos de 2 MiB en reposo y un solo binario |
+| Una aplicación de escritorio en Rust (por ejemplo, con Tauri) | **Rust** | El mismo crate, sin servidor aparte |
+| Un equipo que ya programa en Python | **Python** | Sin dependencias; también se empaqueta en un solo `.pyz` |
+| Un ecosistema Java y Maven | **Java** | Publicado en Maven Central, con el conjunto de módulos más completo |
+
+## Qué es
+
+Cero empezó por una molestia concreta: para desplegar una aplicación Java había que montar Tomcat,
+empaquetar un WAR y confiar en la configuración del servidor. Por eso Cero trae su propio servidor
+HTTP/1.1 y HTTP/2, con TLS: `java -jar app.jar` y está corriendo.
+
+De ahí salió la idea que lo define: **lo que importa no es una implementación, sino el
+comportamiento**. Ese comportamiento está escrito en [`spec/`](spec/) como 182 requisitos numerados
+—rutas, pipeline, petición y respuesta, sesiones, seguridad, HTTP/2— y cada lenguaje lo implementa
+desde cero, sin copiar el código de otro.
+
+El juez es [`spec/banco/`](spec/banco/): manda bytes por un socket y mira lo que vuelve. No sabe si
+del otro lado hay Java o C++.
+
+Tres principios:
+
+- **Cero dependencias en ejecución.** Solo la biblioteca estándar de cada lenguaje. Las
+  herramientas de construcción (cargo, CMake, pip, Maven) no cuentan.
+- **Medido, no proclamado.** Toda cifra de este README sale de un comando que se puede repetir.
+- **Solo backend.** Cero responde JSON y bytes, y sirve a cualquier frontend.
+
+## Estado
 
 | Implementación | Estado | Banco | Ataques | h2spec | Requisitos |
 |---|---|---|---|---|---|
 | [Java](java/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 182 de 182 |
 | [Rust](rust/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 182 de 182 |
 | [C++](c++/) | completa | 23 de 23 | 11 de 11 | 145 de 146 | 175 de 175 aplicables |
-| [Python](python/) | en marcha, hito 4 | 23 de 23 | 3 de 3, sin h2 | no aplica, sin h2 | 83 citados en pruebas, de 182 |
-| PHP | planeada | por empezar | por empezar | por empezar | por empezar |
+| [Python](python/) | en marcha | 23 de 23 | 3 de 3, sin HTTP/2 | todavía no | 83 citados en pruebas |
+| PHP | planeada | | | | |
 
-C++ no cita siete requisitos que se retiran por no poderse observar desde fuera —`RUT-032` a
-`RUT-034`, `RUT-036`, `RUT-037`, `SES-011` y `SES-013`—; de ahí 175 y no 182.
+- **Banco:** 23 vectores de conformidad con HTTP/1.1 (RFC 9112).
+- **Ataques:** 11 vectores de abuso, inspirados en la familia HTTP/2 Bomb, más pruebas de que el
+  tráfico legítimo grande no se castiga. Están en [`spec/banco/ataques.py`](spec/banco/ataques.py).
+- **h2spec:** el único fallo es el mismo en las tres, porque la prueba asume un puerto dedicado a h2c.
+- **C++** no cita siete requisitos que se retiran por no poderse observar desde fuera (`RUT-032` a
+  `RUT-034`, `RUT-036`, `RUT-037`, `SES-011` y `SES-013`), de ahí 175.
+- **Python** tiene HTTP/1.1, ruteo, sesiones, seguridad y observabilidad. Le faltan HTTP/2,
+  `RUT-014` a `RUT-037` y `SES-010`.
 
-El único fallo de h2spec es el mismo en las tres que hablan HTTP/2: asume un puerto dedicado a
-h2c. Python todavía no habla h2, así que de los once ataques corre los tres de HTTP/1.1. Los ataques,
-inspirados en la familia de ataques HTTP/2 Bomb, y los plazos están en
-[`spec/banco/ataques.py`](spec/banco/ataques.py).
+Diez requisitos (`H2-040` a `H2-049`) nacieron en la implementación de Rust, de fallos que h2spec le
+encontró. Java ya los cumplía, pero nadie los había escrito. Es la prueba de que el contrato no es
+una transcripción de Java.
 
-[![Maven Central](https://img.shields.io/maven-central/v/dev.ginit.cero/cero-core?style=flat-square&label=maven%20central&labelColor=0b1220&color=38bdf8)](https://central.sonatype.com/namespace/dev.ginit.cero)
-[![Java 25+](https://img.shields.io/badge/java-25%2B-38bdf8?style=flat-square&labelColor=0b1220&logo=openjdk&logoColor=38bdf8)](https://openjdk.org/)
-[![Dependencias: 0](https://img.shields.io/badge/dependencias-0-38bdf8?style=flat-square&labelColor=0b1220)](#principios)
-[![Pruebas: 1600](https://img.shields.io/badge/pruebas-1%E2%80%AF600-38bdf8?style=flat-square&labelColor=0b1220)](#estado)
-[![Licencia: Apache 2.0](https://img.shields.io/badge/licencia-Apache_2.0-38bdf8?style=flat-square&labelColor=0b1220)](LICENSE)
-[![En vivo: cero.ginit.dev](https://img.shields.io/badge/en_vivo-cero.ginit.dev-38bdf8?style=flat-square&labelColor=0b1220&logo=googlechrome&logoColor=38bdf8)](https://cero.ginit.dev)
+> [!IMPORTANT]
+> **Nadie lo ha usado en producción con tráfico real durante meses.** El parser HTTP es la
+> superficie que da a internet: hasta que acumule kilómetros, no es honesto llamarlo maduro. Lo que
+> falta está en [docs/produccion.md](docs/produccion.md).
 
-> [!NOTE]
-> **English** — Cero is not a framework; it is the contract of a backend framework, with
-> implementations in several languages that satisfy it and a judge that does not know the
-> language. The Java implementation has its own HTTP server, one virtual thread per connection and
-> zero runtime dependencies. Documentation is available in English at
-> **[cero.ginit.dev/en](https://cero.ginit.dev/en)**; this repository and its commit history are
-> written in Spanish, which is deliberate.
-
-**En producción:** [cero.ginit.dev](https://cero.ginit.dev) — el sitio de este proyecto,
-servido por el propio framework, sin Tomcat detrás. Su código está abierto en
-[`cero-sitio`](https://github.com/Andre031222/cero-sitio): React con Vite delante, Cero detrás,
-los dos dentro del mismo jar. Es la aplicación de ejemplo más completa que hay, y se puede
-comprobar que la afirmación de arriba es cierta en vez de creerla.
-
-![La portada de cero.ginit.dev, servida por el propio framework](docs/imagenes/portada.png)
-
-* * *
-
-## Qué es
-
-Cero sale de una molestia concreta: desplegar una aplicación Java suponía montar un contenedor de
-servlets, empaquetar un WAR, copiarlo a Tomcat y confiar en que la configuración del servidor
-fuera la que uno creía. Nada de eso es el programa que uno escribió.
-
-De ahí las tres decisiones que definen el proyecto:
-
-1. **Arranca solo.** Servidor HTTP/1.1 y HTTP/2 propio, con un hilo virtual por conexión. `java -jar app.jar`
-   y está corriendo: sin contenedor de servlets, sin `web.xml`, sin despliegue.
-2. **No es solo Java.** Lo que define a Cero es un *contrato* —rutas, pipeline,
-   request/response, inyección, configuración— escrito de forma neutral e implementado en
-   **Java, Rust y C++**, con Python en marcha, PHP por venir y un mismo banco de conformidad para todos. Por
-   eso existe [`spec/`](spec/) en vez de tomar el código Java como referencia.
-3. **Solo backend.** Cero responde JSON y bytes; no pinta HTML.
-
-## Principios
-
-- **Cero dependencias en ejecución.** Solo el JDK. El driver JDBC lo pone la aplicación, y es la
-  única excepción.
-- **Legible antes que ingenioso.** Si una clase no se puede leer de corrido, se parte.
-- **Medido, no proclamado.** Toda afirmación de rendimiento sale de [`benchmarks/`](benchmarks/),
-  con el mismo harness para todos los contendientes.
-- **El contrato manda.** Ninguna implementación es la de referencia: la referencia
-  es `spec/`, y todas pasan las mismas pruebas.
-
-## Rendimiento
-
-*Ocho frameworks, contenedores idénticos, 120 mediciones sin un solo error ni una sola respuesta
-no-2xx, sobre Cero 0.8.0. La tabla completa y sus parámetros están en
-[`RESULTS-docker.md`](benchmarks/results/RESULTS-docker.md), con su CSV al lado
-([`raw-docker.csv`](benchmarks/results/raw-docker.csv)). [Cómo se rehace](benchmarks/results/LEEME.md).*
-
-> [!WARNING]
-> **Qué entorno describe `ENV.md` y qué no.** El único
-> [`ENV.md`](benchmarks/results/ENV.md) del repositorio describe un portátil con macOS y Docker
-> Desktop: el motor corre dentro de una máquina virtual, el cliente de carga comparte máquina con el
-> servidor y había otros servicios en marcha. Dice de sí mismo que no cumple el protocolo y que los
-> números absolutos no son publicables. La tabla de abajo es la de `RESULTS-docker.md`, cuya
-> cabecera anota otro anfitrión (Linux x86_64, cliente fijado a núcleos aparte), pero esa corrida
-> no tiene un `ENV.md` propio. Por eso **este README no afirma nada sobre la virtualización de esa corrida**:
-> valen las comparaciones dentro de la misma corrida, no los absolutos.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/imagenes/banco.png">
-  <img alt="Cero frente a siete frameworks JVM: arranque, memoria y peticiones por segundo" src="docs/imagenes/banco-claro.png">
-</picture>
-
-| Framework | Arranque | Imagen | RSS | rps `/plaintext` | rps `/json` | rps `/db` |
-|---|---|---|---|---|---|---|
-| **Cero** | **155 ms** | 323,2 MB | 307,9 MB | 93 577 | 94 634 | 86 690 |
-| Jooby | 443 ms | 310,8 MB | **73,4 MB** | 94 112 | 93 281 | 84 429 |
-| Vert.x | 481 ms | 316,3 MB | 79,5 MB | **99 241** | **98 589** | **88 368** |
-| Javalin | 518 ms | 311,4 MB | 117,4 MB | 89 193 | 88 773 | 68 686 |
-| Helidon | 583 ms | **308,4 MB** | 83,3 MB | 90 078 | 92 693 | 79 402 |
-| Quarkus | 711 ms | 321,0 MB | 104,6 MB | 93 409 | 91 823 | 65 069 |
-| Micronaut | 1 102 ms | 317,6 MB | 104,7 MB | 76 941 | 76 465 | 64 751 |
-| Spring Boot | 2 446 ms | 325,0 MB | 176,5 MB | 60 903 | 64 133 | 49 870 |
-
-**En arranque no hay discusión.** 155 ms, **2,9× por debajo del segundo** y 15,8× por debajo de
-Spring Boot.
-
-**En peticiones por segundo, Cero está arriba pero no gana.** Vert.x lo supera de forma medible:
-98 589 contra 94 634 en `/json`, y los intervalos de las cinco repeticiones no se solapan
-—Cero entre 93 095 y 95 777, Vert.x entre 97 913 y 99 828—. Con Jooby y Helidon sí hay empate:
-las diferencias caben dentro de la variación de cada uno.
-
-**En memoria Cero es el peor**, y por mucho: 307,9 MB frente a los 73,4 de Jooby. No es una fuga
-—el RSS se estanca, y con `-Xmx96m` sirve el mismo tráfico algo más rápido en 176 MB—, es que
-asigna más por petición y llena el montón que se le da. Es lo siguiente que hay que arreglar.
-
-> [!NOTE]
-> El generador de carga comparte máquina con el servidor, así que los rps son una **cota
-> inferior** limitada por el camino de red del contenedor, idéntico para todos.
-
-## Instalar
-
-> [!NOTE]
-> **English** — One install line and one run command per language; each `ejemplos/<language>`
-> folder holds the same three-route API, its end-to-end test and the command used to measure its
-> idle memory. The Rust, C++ and Python lines read from GitHub and work once this code is pushed;
-> the memory figures are single measurements on one Mac.
-
-| Lenguaje | Instalar | Arrancar | Memoria en reposo |
-|---|---|---|---|
-| [Java](ejemplos/java/) | `dev.ginit.cero:cero-core:0.8.0` en el `pom.xml`, desde Maven Central | `mvn -q package && java -jar target/ejemplo.jar` | 58 464 KiB, unos 57 MiB |
-| [Rust](ejemplos/rust/) | `cargo add cero-http --git https://github.com/Andre031222/Cero` | `cargo run --release` | 1 712 KiB, unos 1,7 MiB |
-| [C++](ejemplos/c++/) | `FetchContent_Declare(cero GIT_REPOSITORY https://github.com/Andre031222/Cero GIT_TAG main SOURCE_SUBDIR c++)` | `cmake -S . -B build && cmake --build build && ./build/hola` | 1 632 KiB, unos 1,6 MiB |
-| [Python](ejemplos/python/) | `pip install "git+https://github.com/Andre031222/Cero#subdirectory=python"` | `python3 app.py` | 24 032 KiB, unos 23,5 MiB |
-
-Cada carpeta de [`ejemplos/`](ejemplos/) tiene la misma API de tres rutas (`GET /`,
-`GET /saludo/{nombre}` y `POST /eco`), su prueba de punta a punta y un LEEME con el resto de los
-pasos. Todos escuchan solo en `127.0.0.1`; el LEEME de cada uno dice cómo abrirlo a todas las
-interfaces. La orden `cero` crea un proyecto nuevo en cualquiera de los cuatro:
+## Comprobar todo con una orden
 
 ```bash
-cero new mi-api --lenguaje rust      # o c++, python, java
+./cero verificar               # en Windows: cero verificar
+./cero verificar --sin-motores # sin PostgreSQL ni MySQL escuchando
 ```
 
-En Rust, C++ y Python copia el ejemplo de `ejemplos/`, con la dependencia apuntando a GitHub y no a
-una carpeta de este repositorio. En Java, que es lo que sale sin `--lenguaje`, genera el proyecto de
-siempre (`cero new mi-app [grupo] [motor] [--front]`), con un controlador y el `pom.xml` listo para
-`java -jar`.
+Corre lo esencial de la integración continua sin parar en el primer fallo:
 
-Dos avisos, para no prometer de más:
+- el orden del repositorio y la ausencia de comentarios en el código;
+- las pruebas de los cuatro lenguajes;
+- el banco y los ataques contra cada uno;
+- h2spec contra los tres que hablan HTTP/2;
+- la cuenta de requisitos;
+- y cada ejemplo, que arranca y debe responder `{"hola":"mundo"}`.
 
-- **Las líneas de Rust, C++ y Python leen de GitHub.** Funcionan en cuanto este código esté subido a
-  la rama `main`; hasta entonces, cada LEEME explica cómo usar una copia local del repositorio. La de
-  Java es la única que sale de un registro público.
-- **Las cifras de memoria son una sola medición en un solo Mac** (macOS 26 sobre arm64), con el
-  servidor recién arrancado y sin peticiones. El comando para repetirla está en cada LEEME. En Java
-  es la JVM sin opciones; con `-Xmx64m -XX:+UseSerialGC` da casi lo mismo en reposo, unos 56 MiB.
+Termina con una línea por comprobación y un ✓ o un ✗. Si falta una herramienta, su línea sale con ✗
+y la razón: nada se omite en silencio. Los detalles están en [docs/guiones.md](docs/guiones.md).
 
-### Java con Maven
+## Java
 
-Java 25 o superior (hilos virtuales) y Maven. Nada más.
-
-Está en Maven Central. Tres líneas y ya está:
+Java 25 o superior y Maven. Está en Maven Central:
 
 ```xml
 <dependency>
     <groupId>dev.ginit.cero</groupId>
-    <artifactId>cero-core</artifactId>   <!-- arrastra cero-http -->
+    <artifactId>cero-core</artifactId>
     <version>0.8.0</version>
 </dependency>
 ```
-
-`cero-data`, `cero-test`, `cero-adapter-servlet` y `cero-launcher` van aparte, y se toman solo si
-se usan. Ninguno arrastra nada de fuera.
-
-### El instalador
-
-Sirve para tener la orden `cero`, que es la que crea proyectos ya montados.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/imagenes/instalar.gif">
-  <img alt="Una orden instala Cero, crea un proyecto y lo arranca en 10 ms" src="docs/imagenes/instalar-claro.gif">
-</picture>
-
-```bash
-curl -fsSL https://cero.ginit.dev/instalar | sh          # macOS y Linux
-irm https://cero.ginit.dev/instalar.ps1 | iex            # Windows (PowerShell)
-```
-
-Baja el paquete, comprueba su `sha256`, lo compila, deja los artefactos en tu `~/.m2` y te pone la
-orden `cero` en el PATH. No pide contraseña y no escribe fuera de tu carpeta personal. Los dos
-guiones se sirven como texto plano a propósito —[instalar](https://cero.ginit.dev/instalar) ·
-[instalar.ps1](https://cero.ginit.dev/instalar.ps1)— para que puedas leerlos antes de ejecutarlos.
-
-Después:
-
-```bash
-cero new mi-app
-cd mi-app && mvn -q package && java -jar target/mi-app.jar
-```
-
-Y desde el código fuente, que es lo mismo paso a paso:
-
-```bash
-git clone https://github.com/Andre031222/Cero.git && cd Cero
-cd java && mvn install     # 1 600 pruebas, runner propio (sin JUnit)
-./cero fatjar ejemplo       # un solo jar: java -jar ejemplo.jar
-```
-
-<details>
-<summary>Las pruebas contra PostgreSQL y MySQL reales, si las quieres correr</summary>
-
-<br>
-
-`cero-data` corre su batería contra motores de verdad. Sin ellos escuchando se omiten esos grupos
-y el resto sigue:
-
-```bash
-docker run -d --name cero-pg -e POSTGRES_PASSWORD=cero -e POSTGRES_DB=ceropruebas \
-       -p 55432:5432 postgres:16-alpine
-docker run -d --name cero-my -e MYSQL_ROOT_PASSWORD=cero -e MYSQL_DATABASE=ceropruebas \
-       -p 53306:3306 mysql:8
-```
-
-</details>
-
-En [integración continua](.github/workflows/pruebas.yml) se levantan siempre, y la corrida **falla
-si algún motor quedó sin probar** — para que la suite no pueda mentir por omisión.
-
-### Saber si todo está bien, en una orden
-
-```bash
-./cero verificar          # cero verificar en Windows
-```
-
-Corre lo esencial de integración continua, sin parar en el primer fallo: el orden y los comentarios,
-las pruebas de Java, Rust, C++ (esta en un directorio de compilación nuevo) y Python, el banco y los
-ataques contra las cuatro, h2spec contra las tres que hablan HTTP/2, la cuenta de requisitos y una
-línea por cada carpeta de `ejemplos/`, que compila el ejemplo si hace falta, lo arranca y comprueba
-que `GET /` da `{"hola":"mundo"}`. La línea de h2spec de Python sale con «n/a», que no cuenta como
-fallo, y sus ataques corren con `--solo-http1`. Termina con una línea por
-comprobación, con su cifra y un ✓ o un ✗, y sale con 1 si alguna falla. Hacen falta Maven y JDK 25,
-cargo, cmake, h2spec y Python 3.12 o superior (busca `python3.14`, `python3.13`, `python3.12` y
-`python3`, y dice cuál usó). Una herramienta que falta marca su línea con ✗ y la razón: nada se
-omite en silencio.
-
-Lo que CI hace y `verificar` no: comprobar que el núcleo no arrastra dependencias en runtime,
-empaquetar los JAR, el inventario de dependencias, la revisión de dependencias con CVE conocido y la
-matriz de versiones. Y al revés, `verificar` pasa h2spec también contra C++, que CI no.
-
-Sin PostgreSQL ni MySQL escuchando, la línea de Java sale ✗ ("motores reales sin probar"), porque en
-integración continua eso es un fallo. Con `./cero verificar --sin-motores` esa línea sale con un `–`
-("omitido a pedido"), el código de salida es 0 y la última línea avisa de que la corrida no equivale
-a CI.
-
-Para sumar una implementación nueva basta una línea en `IMPLEMENTACIONES`, al principio de la
-función en `cero` (y en `$Implementaciones` en `cero.ps1`): nombre, carpeta, herramientas, orden de
-pruebas, preparación del servidor, cómo arrancarlo, dónde están los requisitos y su mínimo. La
-carpeta entra sola en la comprobación de comentarios. El puerto es el 8777 y se cambia con
-`CERO_PUERTO`.
-
-## Un vistazo
 
 ```java
 @Route("/api")
@@ -281,119 +180,97 @@ class ApiController {
 Cero.run(8080, ApiController.class);
 ```
 
-Eso levanta ruteo, inyección de dependencias, serialización JSON y manejo de errores. De dónde sale
-cada argumento se decide **al registrar la ruta**, no en cada petición: el camino caliente no toca
-la reflexión.
+De dónde sale cada argumento se decide al registrar la ruta, no en cada petición, así que el camino
+caliente no usa reflexión.
 
-## Los módulos
+| Módulo | Qué trae |
+|---|---|
+| [`cero-http`](java/cero-http) | Servidor HTTP/1.1 y HTTP/2 (h2c y h2 por ALPN) con un hilo virtual por conexión, TLS recargable, sesiones, multipart, gzip, estáticos con `Range`, WebSocket y eventos del servidor |
+| [`cero-core`](java/cero-core) | Router, middleware, inyección, JSON propio, validación, CORS, CSRF, límites de peticiones, métricas, OAuth 2.0 con PKCE, tareas con cron, correo SMTP, trazado W3C y OpenAPI |
+| [`cero-data`](java/cero-data) | `Db`, `Pool`, `Tx`, `Repository`, sesiones en tabla y migraciones, probado contra H2, PostgreSQL 16 y MySQL 8 reales |
+| [`cero-test`](java/cero-test) | Pruebas de punta a punta para quien usa Cero |
+| [`cero-adapter-servlet`](java/cero-adapter-servlet) | La puerta de salida: la misma aplicación en Tomcat sin tocar el código |
+| [`cero-launcher`](java/cero-launcher) | La orden `cero`: `new`, empaquetado en un jar y migraciones |
 
-| Módulo | Pruebas | Qué trae |
-|---|---|---|
-| [`cero-http`](java/cero-http) | 434 | Servidor HTTP/1.1 y HTTP/2 con un hilo virtual por conexión: keep-alive, chunked, `Expect: 100-continue`, TLS recargable sin reiniciar, cookies, sesiones con rotación de identificador y almacén enchufable, multipart, gzip, estáticos con `Range`, `Cache-Control` y respaldo para aplicaciones de una sola página, **WebSocket** (RFC 6455), **eventos del servidor** (SSE), **HTTP/2** —h2c y h2 sobre TLS por ALPN— y confianza en proxy configurable |
-| [`cero-core`](java/cero-core) | 781 | Router, pipeline con middleware, inyección con detección de ciclos, JSON propio, vinculación de parámetros, clase base de controlador **opcional**, CORS, CSRF, rate limiting, validación, cabeceras de seguridad, métricas, logs, OAuth 2.0 con PKCE, PBKDF2, caché, eventos, tareas en segundo plano con cron, **correo SMTP**, **trazado W3C** y OpenAPI |
-| [`cero-data`](java/cero-data) | 250 | `Row`, `Db`, `Pool`, `Tx`, `Repository<T, ID>`, `JdbcSessions` —sesiones en tabla— y `Migrations` —esquema versionado—. Todo por `PreparedStatement`. La misma batería corre contra **H2, PostgreSQL 16 y MySQL 8 reales** |
-| [`cero-test`](java/cero-test) | 29 | Pruebas de punta a punta para quien usa Cero: levanta la aplicación en un puerto libre, cliente HTTP que mantiene las cookies y deja fijar la versión del protocolo, y aserciones legibles sobre la respuesta |
-| [`cero-adapter-servlet`](java/cero-adapter-servlet) | 35 | La puerta de salida: la misma aplicación se despliega en Tomcat sin tocar el código, para que migrar sea reversible |
-| [`cero-launcher`](java/cero-launcher) | 12 | La línea de órdenes: el generador de `cero new`, el empaquetado en un jar ejecutable con `java.util.jar` y sin plugins de terceros, y las migraciones |
-| [`ejemplo`](java/ejemplo) | 59 | Aplicación pequeña de punta a punta: API REST paginada con validación, base de datos, sesiones y CSRF |
+El núcleo (`cero-http`, `cero-core` y `cero-data`) pesa unos 370 KiB y no declara ninguna
+dependencia externa. El driver JDBC lo pone la aplicación.
 
-El núcleo son tres módulos —`cero-http`, `cero-core` y `cero-data`—, no declaran ninguna dependencia
-externa y pesan **378 796 bytes** (≈ 370 KiB, `ls -l` de los tres jars de `0.8.0` tras `mvn install`: 137 857 +
-187 306 + 53 633). La única referencia a `jakarta.*` en todo el proyecto está en
-`cero-adapter-servlet`, en *scope* `provided`.
+El instalador deja la orden `cero` en el PATH:
 
-## Estado
+```bash
+curl -fsSL https://cero.ginit.dev/instalar | sh     # macOS y Linux
+irm https://cero.ginit.dev/instalar.ps1 | iex       # Windows (PowerShell)
+```
 
-**Versión 0.8.0**, publicada en Maven Central. El framework está completo en Java y el sitio de
-este proyecto corre sobre él.
+Comprueba el `sha256` del paquete, no pide contraseña y no escribe fuera de tu carpeta personal. Los
+dos guiones se sirven como texto plano para que puedas leerlos antes:
+[instalar](https://cero.ginit.dev/instalar) · [instalar.ps1](https://cero.ginit.dev/instalar.ps1).
 
-Lo que cerró la fase 2 no fue una lista de casillas: fue que el framework tuvo su **primer
-consumidor externo** y con él la primera auditoría de alguien que no lo escribió — once hallazgos
-leyendo el código, dos explotables desde fuera sin credenciales. Los once están cerrados con
-prueba propia.
+### Rendimiento en la JVM
 
-La 0.8.0 salió de una segunda revisión externa, y el hallazgo mayor da la medida de para qué
-sirven: **la cookie de sesión no viajaba en ninguna respuesta HTTP/2**. Dos implementaciones
-hermanas de la misma interfaz y solo una preguntaba por la cookie pendiente, así que sobre h2
-ningún cliente podía iniciar sesión — y sin sesión no hay token CSRF, con lo que toda escritura
-respondía 403 señalando al sitio equivocado. Ninguna de las 432 comprobaciones del módulo lo vio,
-porque todas entraban por HTTP/1.1: no fue un descuido de escritura, fue un camino de salida
-entero sin ejercitar. Ver [versiones.md](docs/versiones.md).
+Ocho frameworks en contenedores idénticos, 120 mediciones sin errores, sobre Cero 0.8.0:
 
-Lo verificado, y cómo:
+| Framework | Arranque | RSS | rps `/json` |
+|---|---|---|---|
+| **Cero** | **155 ms** | 307,9 MB | 94 634 |
+| Jooby | 443 ms | **73,4 MB** | 93 281 |
+| Vert.x | 481 ms | 79,5 MB | **98 589** |
+| Javalin | 518 ms | 117,4 MB | 88 773 |
+| Helidon | 583 ms | 83,3 MB | 92 693 |
+| Quarkus | 711 ms | 104,6 MB | 91 823 |
+| Micronaut | 1 102 ms | 104,7 MB | 76 465 |
+| Spring Boot | 2 446 ms | 176,5 MB | 64 133 |
 
-- **1 600 pruebas** con runner propio, en macOS y en Linux, sobre JDK 25.
-- **Bases de datos reales** — la misma batería contra H2, PostgreSQL 16 y MySQL 8.
-- **Clientes hostiles** — sockets lentos, cuerpos que mienten, 1000 peticiones simultáneas,
-  24 entradas malformadas.
-- **23 vectores de conformidad** con RFC 9112, que al escribirse destaparon cuatro incumplimientos.
-- **Media hora de carga continua** sin fuga: el RSS acabó más bajo que al empezar y los
-  descriptores no se movieron.
+- **Arranque:** Cero es el más rápido, 2,9 veces por debajo del segundo.
+- **Peticiones por segundo:** Vert.x lo supera de forma medible; con Jooby y Helidon hay empate.
+- **Memoria bajo carga:** Cero es el peor. No es una fuga: llena el montón que se le da, y con
+  `-Xmx96m` sirve lo mismo en 176 MB. Es lo siguiente que hay que arreglar.
 
-Lo que falta está en [docs/produccion.md](docs/produccion.md), sin adornos. Cómo se publica una
-versión, en [docs/publicar.md](docs/publicar.md).
-
-> [!IMPORTANT]
-> **Nadie lo ha usado en producción con tráfico real durante meses**, y eso no se arregla
-> programando. El parser HTTP es la superficie que da a internet y la que más castigo recibe:
-> hasta que no acumule kilómetros, no es honesto llamarlo maduro.
-
-### Las otras implementaciones
-
-El contrato de [`spec/`](spec/) tiene **182 requisitos numerados** y **dos implementaciones los
-pasan todos**: `java/` y [`rust/`](rust/). Las dos dan 23 de 23 en el banco de conformidad y 145 de
-146 en h2spec, con el mismo único fallo, que asume un puerto dedicado a h2c.
-
-Lo que dice que el contrato no es una transcripción de Java: diez de esos requisitos —`H2-040` a
-`H2-049`— **nacieron en la segunda implementación**, de los fallos que h2spec le encontró. Java los
-cumple, pero nadie los había escrito. En lo que el contrato cubre, manda el contrato y no `java/`.
-
-[`c++/`](c++/) es la tercera que lo cumple: 23 de 23 en el banco, 11 de 11 en los ataques, 145 de
-146 en h2spec y los 175 requisitos aplicables citados en sus pruebas —los otros siete se retiran
-por no poderse observar desde fuera—, con las sesiones compartidas en disco en vez de en una tabla.
-
-[`python/`](python/) va por el hito 4: HTTP/1.1, ruteo, sesiones, seguridad transversal y
-observabilidad, sin HTTP/2 todavía. Da 23 de 23 en el banco y 3 de 3 en los ataques de HTTP/1.1
-(los ocho de h2 y h2spec no aplican), y sus pruebas citan 83 requisitos; con los 19 de HTTP/1.1 que
-solo cubre el banco son 102 de 182. Le faltan HTTP/2, `RUT-014`–`RUT-037` y `SES-010`. Después
-viene PHP, escrito, como las demás, contra los requisitos y no contra el código de otro lenguaje.
+Valen las comparaciones dentro de la misma corrida, no los absolutos: el generador de carga comparte
+máquina con el servidor. La tabla completa, sus parámetros y cómo rehacerla están en
+[`benchmarks/results/`](benchmarks/results/RESULTS-docker.md).
 
 ## Estructura
 
 ```text
-java/         Primera implementación: los siete módulos — 182 de 182
-rust/         Segunda implementación del contrato — 182 de 182
-c++/          Tercera implementación del contrato — 175 de 175 aplicables
-python/       Cuarta implementación, en marcha: hito 4, sin HTTP/2
 spec/         El contrato y su banco, neutrales respecto al lenguaje
-benchmarks/   Harness comparativo y prueba de carga sostenida
+java/         Implementación en Java: siete módulos
+rust/         Implementación en Rust
+c++/          Implementación en C++
+python/       Implementación en Python, en marcha
+ejemplos/     La misma API de tres rutas en cada lenguaje
+herramientas/ Comprobaciones del repositorio
+benchmarks/   Comparativa entre frameworks y prueba de carga sostenida
 docs/         Documentación
-papers/       Los manuscritos; el principal es el 06, contrato poliglota
-cero         Órdenes del proyecto: ./cero test, new, fatjar…
+papers/       Los manuscritos
+cero          La orden del proyecto: new, verificar, test, fatjar…
 ```
 
 ## Documentación
 
 | Documento | Qué responde |
 |---|---|
-| [produccion.md](docs/produccion.md) | ¿Está listo para producción? (respuesta corta: todavía no, y ahí está la lista) |
-| [arquitectura.md](docs/arquitectura.md) | El diseño y las tres fases |
-| [auditoria-2026-08-01.md](docs/auditoria-2026-08-01.md) | Auditoría interna del núcleo, capa por capa |
-| [versiones.md](docs/versiones.md) | Qué cambió en cada versión, y por qué una publicada no se toca |
-| [papers.md](docs/papers.md) | Plan de publicación: el paper principal y los aparcados |
+| [produccion.md](docs/produccion.md) | ¿Está listo para producción? Todavía no, y ahí está la lista |
+| [arquitectura.md](docs/arquitectura.md) | El diseño |
+| [versiones.md](docs/versiones.md) | Qué cambió en cada versión |
 | [guiones.md](docs/guiones.md) | La orden `cero` y la integración continua |
-| [autores.md](docs/autores.md) | Autoría y atribución |
+| [SECURITY.md](SECURITY.md) | Cómo informar de una vulnerabilidad |
+| [autores.md](docs/autores.md) | Autoría y procedencia |
 
-## Licencia
+**Versión publicada:** 0.8.0 en Maven Central. **En desarrollo:** 0.9.0, con Rust, C++ y Python
+instalables desde este repositorio.
 
-Apache 2.0 — ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
+## Licencia y autoría
+
+Apache 2.0. Ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
 
 Autor: **Richar Andre Vilca-Solorzano**. Universidad Nacional del Altiplano, Facultad de Ingeniería
-Estadística e Informática, Puno, Perú. Quién hizo qué, en [docs/autores.md](docs/autores.md).
+Estadística e Informática, Puno, Perú. La procedencia del código está en
+[docs/autores.md](docs/autores.md).
 
 ```bibtex
 @software{vilcasolorzano2026cero,
-  title  = {Cero: núcleo de framework web poliglota sin dependencias},
+  title  = {Cero: un framework de backend poliglota definido por contrato},
   author = {Vilca-Solorzano, Richar Andre},
   year   = {2026},
   url    = {https://github.com/Andre031222/Cero}
