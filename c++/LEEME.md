@@ -175,9 +175,10 @@ siguiendo las *C++ Core Guidelines*:
 - **En las cabeceras, alias del proyecto** para los tipos que se repiten: `PorNombre<T>`, `Textos`
   y `Vistas` en [`tipos.hpp`](cero-http/include/cero/tipos.hpp), y `Cabeceras` en HPACK. `std::`
   se queda en lo demás.
-- **`::` delante solo cuando desambigua.** Las llamadas POSIX van sin él, salvo `::bind`: con
-  `using namespace std;` a la vista, `bind(...)` elige `std::bind`, que no llama a nada. Por lo
-  mismo, dentro de `Servidor` se escribe `std::get`: el `get` del propio servidor tapa al de `std`.
+- **Sin `::` delante.** Las llamadas POSIX van sin él. `enlazar` envuelve `bind` en
+  [`socket.cpp`](cero-http/src/socket.cpp), antes del `using namespace std;`: con `std` a la vista,
+  `bind(...)` elige `std::bind`, que compila y no llama a nada. Por lo mismo, dentro de `Servidor`
+  se escribe `std::get`: el `get` del propio servidor tapa al de `std`.
 - **`std::move` y `std::forward` sí van calificados**: Clang avisa de las llamadas sin calificar
   (`-Wunqualified-std-cast-call`) y el proyecto compila sin avisos.
 - **Sin `return 0;` en `main`**, que ya lo devuelve solo.

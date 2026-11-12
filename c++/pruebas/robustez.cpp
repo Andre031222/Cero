@@ -226,7 +226,7 @@ PRUEBA(una_direccion_que_no_vale_o_un_puerto_ocupado_no_arranca) {
     a.sin_family = AF_INET;
     a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     a.sin_port = htons(puerto);
-    const bool ocupado = ::bind(ocupa, reinterpret_cast<sockaddr*>(&a), sizeof a) == 0 && listen(ocupa, 1) == 0;
+    const bool ocupado = enlazar(ocupa, reinterpret_cast<sockaddr*>(&a), sizeof a) == 0 && listen(ocupa, 1) == 0;
     COMPRUEBA(ocupado, "el puerto queda ocupado");
     COMPRUEBA(Servidor{Router{}}.direccion("127.0.0.1").escuchar(puerto) == 1,
               "un puerto ocupado no arranca");
@@ -277,7 +277,7 @@ void par_tcp(int fd[2]) {
     a.sin_family = AF_INET;
     a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     auto largo = static_cast<socklen_t>(sizeof a);
-    ::bind(oyente, reinterpret_cast<sockaddr*>(&a), largo);
+    enlazar(oyente, reinterpret_cast<sockaddr*>(&a), largo);
     listen(oyente, 1);
     getsockname(oyente, reinterpret_cast<sockaddr*>(&a), &largo);
     fd[1] = socket(AF_INET, SOCK_STREAM, 0);

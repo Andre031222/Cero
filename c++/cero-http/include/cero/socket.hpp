@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/socket.h>
+
 #include <chrono>
 #include <cstddef>
 #include <string_view>
@@ -26,6 +28,7 @@ struct Limites {
     bool validos() const { return en_vuelo > 0 && cuerpo > 0 && conexiones > 0; }
 };
 
+int enlazar(int descriptor, const sockaddr* direccion, socklen_t largo);
 void sin_sigpipe(int descriptor);
 void plazo_de_lectura(int descriptor, std::chrono::milliseconds plazo);
 bool mandar_todo(int descriptor, std::string_view datos, const Plazos& plazos);

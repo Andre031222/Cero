@@ -11,6 +11,7 @@
 
 #include "cero/json.hpp"
 #include "cero/servidor.hpp"
+#include "cero/socket.hpp"
 #include "prueba.hpp"
 
 using namespace std;
@@ -39,7 +40,7 @@ sockaddr_in local(unsigned short puerto) {
 unsigned short puerto_libre() {
     const int s = socket(AF_INET, SOCK_STREAM, 0);
     auto d = local(0);
-    ::bind(s, reinterpret_cast<sockaddr*>(&d), sizeof d);
+    enlazar(s, reinterpret_cast<sockaddr*>(&d), sizeof d);
     socklen_t largo = sizeof d;
     getsockname(s, reinterpret_cast<sockaddr*>(&d), &largo);
     close(s);

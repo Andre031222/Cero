@@ -9,6 +9,14 @@
 #include <cstddef>
 #include <string_view>
 
+namespace cero {
+
+int enlazar(int descriptor, const sockaddr* direccion, socklen_t largo) {
+    return bind(descriptor, direccion, largo);
+}
+
+}
+
 using namespace std;
 
 namespace cero {

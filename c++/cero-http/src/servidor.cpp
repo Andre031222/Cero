@@ -432,7 +432,7 @@ int abrir_oyente(const string& direccion, unsigned short puerto) {
         }
         const int si = 1;
         setsockopt(oyente, SOL_SOCKET, SO_REUSEADDR, &si, sizeof si);
-        if (::bind(oyente, a->ai_addr, a->ai_addrlen) == 0 && listen(oyente, 128) == 0) break;
+        if (enlazar(oyente, a->ai_addr, a->ai_addrlen) == 0 && listen(oyente, 128) == 0) break;
         error = errno;
         close(oyente);
         oyente = -1;
