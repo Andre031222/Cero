@@ -125,6 +125,44 @@ asigna más por petición y llena el montón que se le da. Es lo siguiente que h
 
 ## Instalar
 
+> [!NOTE]
+> **English** — One install line and one run command per language; each `ejemplos/<language>`
+> folder holds the same three-route API, its end-to-end test and the command used to measure its
+> idle memory. The Rust, C++ and Python lines read from GitHub and work once this code is pushed;
+> the memory figures are single measurements on one Mac.
+
+| Lenguaje | Instalar | Arrancar | Memoria en reposo |
+|---|---|---|---|
+| [Java](ejemplos/java/) | `dev.ginit.cero:cero-core:0.8.0` en el `pom.xml`, desde Maven Central | `mvn -q package && java -jar target/ejemplo.jar` | 58 464 KiB, unos 57 MiB |
+| [Rust](ejemplos/rust/) | `cargo add cero-http --git https://github.com/Andre031222/Cero` | `cargo run --release` | 1 712 KiB, unos 1,7 MiB |
+| [C++](ejemplos/c++/) | `FetchContent_Declare(cero GIT_REPOSITORY https://github.com/Andre031222/Cero GIT_TAG main SOURCE_SUBDIR c++)` | `cmake -S . -B build && cmake --build build && ./build/hola` | 1 632 KiB, unos 1,6 MiB |
+| [Python](ejemplos/python/) | `pip install "git+https://github.com/Andre031222/Cero#subdirectory=python"` | `python3 app.py` | 24 032 KiB, unos 23,5 MiB |
+
+Cada carpeta de [`ejemplos/`](ejemplos/) tiene la misma API de tres rutas (`GET /`,
+`GET /saludo/{nombre}` y `POST /eco`), su prueba de punta a punta y un LEEME con el resto de los
+pasos. Todos escuchan solo en `127.0.0.1`; el LEEME de cada uno dice cómo abrirlo a todas las
+interfaces. La orden `cero` crea un proyecto nuevo en cualquiera de los cuatro:
+
+```bash
+cero new mi-api --lenguaje rust      # o c++, python, java
+```
+
+En Rust, C++ y Python copia el ejemplo de `ejemplos/`, con la dependencia apuntando a GitHub y no a
+una carpeta de este repositorio. En Java, que es lo que sale sin `--lenguaje`, genera el proyecto de
+siempre (`cero new mi-app [grupo] [motor] [--front]`), con un controlador y el `pom.xml` listo para
+`java -jar`.
+
+Dos avisos, para no prometer de más:
+
+- **Las líneas de Rust, C++ y Python leen de GitHub.** Funcionan en cuanto este código esté subido a
+  la rama `main`; hasta entonces, cada LEEME explica cómo usar una copia local del repositorio. La de
+  Java es la única que sale de un registro público.
+- **Las cifras de memoria son una sola medición en un solo Mac** (macOS 26 sobre arm64), con el
+  servidor recién arrancado y sin peticiones. El comando para repetirla está en cada LEEME. En Java
+  es la JVM sin opciones; con `-Xmx64m -XX:+UseSerialGC` da casi lo mismo en reposo, unos 56 MiB.
+
+### Java con Maven
+
 Java 25 o superior (hilos virtuales) y Maven. Nada más.
 
 Está en Maven Central. Tres líneas y ya está:
@@ -202,9 +240,10 @@ si algún motor quedó sin probar** — para que la suite no pueda mentir por om
 
 Corre lo esencial de integración continua, sin parar en el primer fallo: el orden y los comentarios,
 las pruebas de Java, Rust, C++ (esta en un directorio de compilación nuevo) y Python, el banco y los
-ataques contra las cuatro, h2spec contra las tres que hablan HTTP/2 y la cuenta de requisitos. La
-línea de h2spec de Python sale con «n/a», que no cuenta como fallo, y sus ataques corren con
-`--solo-http1`. Termina con una línea por
+ataques contra las cuatro, h2spec contra las tres que hablan HTTP/2, la cuenta de requisitos y una
+línea por cada carpeta de `ejemplos/`, que compila el ejemplo si hace falta, lo arranca y comprueba
+que `GET /` da `{"hola":"mundo"}`. La línea de h2spec de Python sale con «n/a», que no cuenta como
+fallo, y sus ataques corren con `--solo-http1`. Termina con una línea por
 comprobación, con su cifra y un ✓ o un ✗, y sale con 1 si alguna falla. Hacen falta Maven y JDK 25,
 cargo, cmake, h2spec y Python 3.12 o superior (busca `python3.14`, `python3.13`, `python3.12` y
 `python3`, y dice cuál usó). Una herramienta que falta marca su línea con ✗ y la razón: nada se

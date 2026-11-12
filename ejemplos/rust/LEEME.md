@@ -80,8 +80,9 @@ cargo test
 ## Memoria
 
 En reposo, recién arrancado y sin haber atendido ninguna petición, el ejemplo ocupa **1,7 MB de
-memoria residente** (1728 KB, igual en tres arranques). Tras una petición sube a 1,8 MB (1824 KB).
-Medido en macOS 26.6 sobre arm64, con Rust 1.96.1 y el binario de `--release`:
+memoria residente** (1712 KB, igual en tres arranques, ya escuchando solo en `127.0.0.1`). Tras una
+petición sube a 1,8 MB (1824 KB). Medido en macOS 26.6 sobre arm64, con Rust 1.96.1 y el binario
+de `--release`:
 
 ```bash
 cargo build --release
