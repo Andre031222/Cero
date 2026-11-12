@@ -140,6 +140,14 @@ optional<string> Contexto::token_csrf() const {
     return nuevo;
 }
 
+string Servidor::anotar(string_view metodo, string_view patron) {
+    auto nombre = formato("{} {}", metodo, patron);
+    if (auto hecho = router_.ruta(metodo, patron, nombre); !hecho) {
+        mal_formadas_.push_back(formato("{}: {}", nombre, hecho.error()));
+    }
+    return nombre;
+}
+
 Servidor&& Servidor::usar(Medio m) && {
     medios_.push_back(std::move(m));
     return std::move(*this);
@@ -260,7 +268,7 @@ Respuesta Servidor::despachar(const Peticion& p, string_view cliente) const {
             r.extra = corta->cabeceras;
             return rematar(std::move(r), p, camino, empezo, nullopt);
         }
-        de_cors = get<Cors::Sigue>(decision).cabeceras;
+        de_cors = std::get<Cors::Sigue>(decision).cabeceras;
     }
 
     auto llegada = sesiones_->recuperar(id_de_cookie(p.cabecera("cookie")));
@@ -467,6 +475,10 @@ void Servidor::conversar(int cliente, const string& desde, Plazos plazos, Limite
 }
 
 int Servidor::escuchar(unsigned short puerto) const {
+    if (!mal_formadas_.empty()) {
+        for (const auto& m : mal_formadas_) aviso("cero · ruta mal formada, {}", m);
+        return 1;
+    }
     if (!plazos_.validos() || !limites_.validos()) {
         aviso("cero · los plazos y los topes tienen que ser mayores que cero");
         return 1;

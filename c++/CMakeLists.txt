@@ -25,6 +25,7 @@ add_library(cero-http
     cero-http/src/socket.cpp
     cero-http/src/validacion.cpp)
 target_include_directories(cero-http PUBLIC cero-http/include)
+target_compile_features(cero-http PUBLIC cxx_std_23)
 find_package(Threads REQUIRED)
 target_link_libraries(cero-http PUBLIC Threads::Threads)
 
@@ -32,11 +33,18 @@ add_library(cero-data cero-data/src/disco.cpp)
 target_include_directories(cero-data PUBLIC cero-data/include)
 target_link_libraries(cero-data PUBLIC cero-http)
 
+add_library(cero::http ALIAS cero-http)
+add_library(cero::data ALIAS cero-data)
+
+if(NOT PROJECT_IS_TOP_LEVEL)
+    return()
+endif()
+
 add_executable(conforme cero-http/src/conforme.cpp)
 target_link_libraries(conforme PRIVATE cero-http)
 
 enable_testing()
-foreach(suite conformidad dependencias despacho estaticos fallos http2_control_flujo http2_flujos http2_hpack http2_tramas json observabilidad pipeline robustez ruteo seguridad sesiones validacion)
+foreach(suite conformidad dependencias despacho estaticos fallos forma_corta http2_control_flujo http2_flujos http2_hpack http2_tramas json observabilidad pipeline robustez ruteo seguridad sesiones validacion)
     add_executable(pruebas-${suite} pruebas/${suite}.cpp)
     target_include_directories(pruebas-${suite} PRIVATE pruebas)
     target_link_libraries(pruebas-${suite} PRIVATE cero-http)

@@ -109,6 +109,7 @@ Respuesta en_respuesta(const F& f, const Contexto& c) {
 
 class Servidor {
 public:
+    Servidor() = default;
     explicit Servidor(Router router) : router_(std::move(router)) {}
 
     template <class F>
@@ -116,6 +117,27 @@ public:
         acciones_.emplace(nombre,
                           [f = std::move(f)](const Contexto& c) { return en_respuesta(f, c); });
         return std::move(*this);
+    }
+
+    template <class F>
+    Servidor&& get(std::string_view patron, F f) && {
+        return std::move(*this).accion(anotar("GET", patron), std::move(f));
+    }
+    template <class F>
+    Servidor&& post(std::string_view patron, F f) && {
+        return std::move(*this).accion(anotar("POST", patron), std::move(f));
+    }
+    template <class F>
+    Servidor&& put(std::string_view patron, F f) && {
+        return std::move(*this).accion(anotar("PUT", patron), std::move(f));
+    }
+    template <class F>
+    Servidor&& delete_(std::string_view patron, F f) && {
+        return std::move(*this).accion(anotar("DELETE", patron), std::move(f));
+    }
+    template <class F>
+    Servidor&& patch(std::string_view patron, F f) && {
+        return std::move(*this).accion(anotar("PATCH", patron), std::move(f));
     }
 
     Servidor&& usar(Medio m) &&;
@@ -141,6 +163,7 @@ public:
     Log& log() const { return *log_; }
 
 private:
+    std::string anotar(std::string_view metodo, std::string_view patron);
     Respuesta despachar(const Peticion& p, std::string_view cliente) const;
     void conversar(int cliente, const std::string& desde, Plazos plazos, Limites limites) const;
     Respuesta cadena(std::size_t i, const Contexto& ctx, std::string_view camino,
@@ -155,6 +178,7 @@ private:
                       const std::optional<Guardada>& sesion) const;
 
     Router router_;
+    Textos mal_formadas_;
     PorNombre<Accion> acciones_;
     std::vector<Medio> medios_;
     AlFallar al_fallar_;

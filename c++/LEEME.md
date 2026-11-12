@@ -27,6 +27,46 @@ Rust— y **175 de los 175 requisitos aplicables** citados por una prueba.
 | 12 | Ruteo, fallos, dependencias y validación | `RUT-014`–`RUT-031`, `RUT-035`, `SEG-027`, `SEG-028` · 24 pruebas |
 | 13 | Sesiones en disco, y `cero-data` | `SES-012` entre almacenes que no comparten memoria · **175 de 175** · 8 pruebas |
 
+## Empezar en C++
+
+Con CMake 3.28 y un compilador de C++23, Cero entra en un proyecto por `FetchContent`:
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(cero
+    GIT_REPOSITORY https://github.com/Andre031222/Cero
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR c++)
+FetchContent_MakeAvailable(cero)
+
+target_link_libraries(app PRIVATE cero::http)
+```
+
+Y una ruta es una línea:
+
+```cpp
+return Servidor{}
+    .get("/", [](const Contexto&) { return Json::objeto({{"hola", "mundo"}}); })
+    .get("/saludo/{nombre}", [](const Contexto& c) {
+        return Json::objeto({{"saludo", "hola, " + string{*c.variable("nombre")}}});
+    })
+    .post("/eco", [](const Contexto& c) { return c.cuerpo_json(); })
+    .direccion("127.0.0.1")
+    .escuchar(puerto ? stoi(puerto) : 8080);
+```
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && ./build/hola
+```
+
+El proyecto entero, con su prueba de punta a punta y la memoria medida (1 632 KiB en reposo), está
+en [`ejemplos/c++`](../ejemplos/c++). `get`, `post`, `put`, `delete_` y `patch` registran la ruta y
+la acción de una vez; `delete_` lleva guion bajo porque `delete` es palabra reservada. La forma
+larga, `Router::ruta` y `.accion(nombre, …)`, sigue igual y las dos se mezclan. Un patrón mal
+formado en la forma corta no lanza al registrarse: `escuchar` lo dice en stderr y devuelve 1 sin
+abrir el puerto.
+
 ## Cuántos requisitos citan las pruebas
 
 La cuenta que hace la integración continua, desde `c++/`: **175** requisitos distintos, que son
@@ -118,7 +158,8 @@ siguiendo las *C++ Core Guidelines*:
   y `Vistas` en [`tipos.hpp`](cero-http/include/cero/tipos.hpp), y `Cabeceras` en HPACK. `std::`
   se queda en lo demás.
 - **`::` delante solo cuando desambigua.** Las llamadas POSIX van sin él, salvo `::bind`: con
-  `using namespace std;` a la vista, `bind(...)` elige `std::bind`, que no llama a nada.
+  `using namespace std;` a la vista, `bind(...)` elige `std::bind`, que no llama a nada. Por lo
+  mismo, dentro de `Servidor` se escribe `std::get`: el `get` del propio servidor tapa al de `std`.
 - **`std::move` y `std::forward` sí van calificados**: Clang avisa de las llamadas sin calificar
   (`-Wunqualified-std-cast-call`) y el proyecto compila sin avisos.
 - **Sin `return 0;` en `main`**, que ya lo devuelve solo.
@@ -337,7 +378,9 @@ Lo que explicaban los comentarios, y no está ya contado arriba:
   encuadre no comprueban nada. `/grande` da 1 MiB para `H2-054`, y un segundo argumento fija los
   plazos en milisegundos —el de inactividad, el doble—, que es como lo arranca `ataques.py`.
 - **`CMakeLists.txt`.** CMake es a C++ lo que Maven a Java y Cargo a Rust: construye, no se enlaza.
-  Lo que se enlaza es la biblioteca estándar y nada más.
+  Lo que se enlaza es la biblioteca estándar y nada más. Exporta `cero::http` y `cero::data`, y
+  cuando Cero entra como subproyecto —por `FetchContent` o `add_subdirectory`— se para ahí: ni las
+  pruebas ni `conforme` se compilan en el proyecto de otro.
 - **`pruebas/prueba.hpp`.** `COMPRUEBA` es variádico y no de dos argumentos: con dos, una condición
   con llaves dentro —`T{a, b}`— parte el macro por la coma y el error no habla de eso.
 
