@@ -5,12 +5,13 @@ use crate::http2;
 use crate::json::Json;
 use crate::peticion::{self, Peticion};
 use crate::registro::Registro;
-use crate::ruta::{Captura, Resolucion, Router};
+use crate::ruta::{Captura, Patron, Resolucion, Router};
 use crate::seguridad::{self, Cabeceras, Cors, Decision, Limitador};
 use crate::sesion::{self, Almacen, Sesion, Sesiones};
 use crate::socket::{mandar_todo, Limites, Plazos};
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Cursor, ErrorKind, Read};
+use std::mem;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -43,6 +44,7 @@ pub struct Servidor {
     plazos: Plazos,
     limites: Limites,
     direccion: String,
+    mal_escritas: Vec<String>,
 }
 
 impl Servidor {
@@ -71,7 +73,47 @@ impl Servidor {
             plazos: Plazos::default(),
             limites: Limites::default(),
             direccion: "0.0.0.0".into(),
+            mal_escritas: Vec::new(),
         }
+    }
+
+    pub fn nuevo_vacio() -> Servidor {
+        Servidor::nuevo(Router::nuevo())
+    }
+
+    pub fn get<R: EnRespuesta>(self, patron: &str, f: impl Fn(&Contexto) -> R + Send + Sync + 'static) -> Servidor {
+        self.atajo("GET", patron, f)
+    }
+
+    pub fn post<R: EnRespuesta>(self, patron: &str, f: impl Fn(&Contexto) -> R + Send + Sync + 'static) -> Servidor {
+        self.atajo("POST", patron, f)
+    }
+
+    pub fn put<R: EnRespuesta>(self, patron: &str, f: impl Fn(&Contexto) -> R + Send + Sync + 'static) -> Servidor {
+        self.atajo("PUT", patron, f)
+    }
+
+    pub fn delete<R: EnRespuesta>(self, patron: &str, f: impl Fn(&Contexto) -> R + Send + Sync + 'static) -> Servidor {
+        self.atajo("DELETE", patron, f)
+    }
+
+    pub fn patch<R: EnRespuesta>(self, patron: &str, f: impl Fn(&Contexto) -> R + Send + Sync + 'static) -> Servidor {
+        self.atajo("PATCH", patron, f)
+    }
+
+    fn atajo<R: EnRespuesta>(
+        mut self,
+        metodo: &str,
+        patron: &str,
+        f: impl Fn(&Contexto) -> R + Send + Sync + 'static,
+    ) -> Servidor {
+        if let Err(motivo) = Patron::nuevo(patron) {
+            self.mal_escritas.push(motivo);
+            return self;
+        }
+        let nombre = format!("{metodo} {patron}");
+        self.router = mem::take(&mut self.router).ruta(metodo, patron, &nombre).unwrap_or_default();
+        self.accion(&nombre, f)
     }
 
     pub fn accion<R: EnRespuesta>(
@@ -177,6 +219,9 @@ impl Servidor {
     }
 
     pub fn escuchar(self, puerto: u16) -> io::Result<()> {
+        if !self.mal_escritas.is_empty() {
+            return Err(io::Error::new(ErrorKind::InvalidInput, self.mal_escritas.join("; ")));
+        }
         if !self.plazos.validos() || !self.limites.validos() {
             return Err(io::Error::new(
                 ErrorKind::InvalidInput,

@@ -46,6 +46,44 @@ nada. Al mirar solo `tests/` la cifra honesta era 120, no 155.
 Queda fuera **ALPN sobre TLS**, que no es un requisito del contrato y no se va a hacer: más abajo
 se explica por qué.
 
+## Empezar en Rust
+
+Una línea de cargo en un proyecto nuevo:
+
+```bash
+cargo new mi-api && cd mi-api
+cargo add cero-http --git https://github.com/Andre031222/Cero
+```
+
+Tres rutas en `src/main.rs`:
+
+```rust
+use cero_http::{Json, Respuesta, Servidor};
+use std::{env, io};
+
+fn main() -> io::Result<()> {
+    let puerto = env::var("PUERTO").ok().and_then(|p| p.parse().ok()).unwrap_or(8080);
+    Servidor::nuevo_vacio()
+        .get("/", |_| Respuesta::json(Json::objeto(vec![("hola", "mundo".into())])))
+        .get("/saludo/{nombre}", |c| {
+            let nombre = c.variable("nombre").unwrap_or("mundo");
+            Respuesta::json(Json::objeto(vec![("saludo", format!("hola, {nombre}").into())]))
+        })
+        .post("/eco", |c| Ok(Respuesta::json(c.cuerpo_json()?)))
+        .escuchar(puerto)
+}
+```
+
+Y `cargo run --release`. `curl localhost:8080/saludo/ana` responde `{"saludo":"hola, ana"}`.
+
+`get`, `post`, `put`, `delete` y `patch` registran la ruta y la acción a la vez, con un nombre
+interno que no hay que inventar. Un patrón mal escrito no obliga a un `.expect` por ruta: se anota,
+y `escuchar` devuelve `Err` nombrándolo antes de abrir el puerto. La forma larga,
+`Router::ruta` más `Servidor::accion`, no cambia y se puede mezclar con la corta.
+
+En reposo el ejemplo ocupa 1,7 MB de memoria residente. El ejemplo, su prueba de punta a punta y
+cómo se midió están en [`ejemplos/rust`](../ejemplos/rust).
+
 ## El hito 13: plazos, que no había
 
 La implementación nació sin un solo plazo: ni de lectura, ni de escritura, ni de inactividad. Un
