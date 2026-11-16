@@ -242,7 +242,6 @@ ejemplos/     La misma API de tres rutas en cada lenguaje
 herramientas/ Comprobaciones del repositorio
 benchmarks/   Comparativa entre frameworks y prueba de carga sostenida
 docs/         Documentación
-papers/       Los manuscritos
 cero          La orden del proyecto: new, verificar, test, fatjar…
 ```
 

@@ -235,5 +235,5 @@ framework de Java.
 ## Fuera de alcance
 
 Repetir el benchmark con su propio `ENV.md`, el DOI de Zenodo y la autoría con ORCID son trabajo de
-publicación y siguen su curso aparte: ver [papers.md](papers.md). No bloquean al framework ni el
+publicación y siguen su curso aparte, fuera de este repositorio. No bloquean al framework ni el
 framework depende de ellos.

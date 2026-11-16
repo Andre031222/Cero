@@ -132,3 +132,8 @@ papers/**/*.spl
 .superpowers/
 Soft_Cero-Web/
 docs/superpowers/
+
+# Los manuscritos se guardan fuera del repositorio
+papers/
+PENDIENTES-PAPER-*.md
+docs/papers.md
